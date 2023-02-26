@@ -1,28 +1,26 @@
-<!-- logo -->
-<p align="center">
-    <a href="https://logseq.com" alt="Logseq Logo">
-    <img src="https://user-images.githubusercontent.com/25513724/220608753-f33db466-af72-4611-b603-411440c15ed0.png?sanatize=true" height="173"/></a>
-</p>
-
-<h1 align="center"> Logseq </h1>
-
-<h4 align="center">
-    A privacy-first, open-source platform for knowledge management and collaboration
-</h4>
-
-<div align="center">
-    <a href="https://logseq.com">Home Page</a> |
-    <a href="https://blog.logseq.com/">Blog</a> |
-    <a href="https://docs.logseq.com/">Documentation</a> |
-    <a href="https://trello.com/b/8txSM12G/roadmap">Roadmap</a>
-</div>
-<br></br>
-
-<p align="center">
+<table>
+  <tr> 
+    <td>
+      <h1 align="center"> Logseq </h1>
+      <p align="center">
+        <a href="https://logseq.com" alt="Logseq Logo">
+            <img src="https://user-images.githubusercontent.com/25513724/220608753-f33db466-af72-4611-b603-411440c15ed0.png?sanatize=true" height="173"/>         </a>
+      </p>
+    </td>
+    <td><h4 align="center">
+        A privacy-first, open-source knowledge management and collaboration platform that enables user control and data longetivity
+    </h4>
+    <div align="center">
+      <a href="https://logseq.com">Home Page</a> |
+      <a href="https://blog.logseq.com/">Blog</a> |
+      <a href="https://docs.logseq.com/">Documentation</a> |
+      <a href="https://trello.com/b/8txSM12G/roadmap">Roadmap</a>
+    </div>
+    <p align="center">
     <a href="https://github.com/logseq/logseq/releases/latest/">
         <img src="https://img.shields.io/badge/Download_Logseq-100000?style=for-the-badge&logo=flatpak&logoColor=white&labelColor=002b36&color=85c8c8"
             alt="Download Logseq"/></a>
-</p>
+    </p>
 
 <!-- social badges -->
 <p align="center">
@@ -51,47 +49,28 @@
         <img src="https://img.shields.io/github/v/release/logseq/logseq?color=%2385c8c8&style=for-the-badge"
             alt="latest release version"></a>
 </p>
+      </td>
+  </tr>
 
-## Table of Contents
-
-  * [<g-emoji class="g-emoji" alias="thinking" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f914.png">🤔</g-emoji> Why Logseq?](#-why-logseq)
-  * [<g-emoji class="g-emoji" alias="eyes" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f440.png">👀</g-emoji> How can I use it?](#-how-can-i-use-it)
-  * [<g-emoji class="g-emoji" alias="books" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f4da.png">📚</g-emoji> Learn more](#-learn-more)
-  * [🫶 Support Logseq Development](#-support-logseq-development)
-  * [<g-emoji class="g-emoji" alias="bulb" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f4a1.png">💡</g-emoji> Feature requests](#-feature-requests)
-  * [<g-emoji class="g-emoji" alias="electric_plug" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f50c.png">🔌</g-emoji> Plugin API](#-plugin-api)
-  * [<g-emoji class="g-emoji" alias="star2" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f31f.png">🌟</g-emoji> Contributing to Logseq](#-contributing-to-logseq)
-    * [<g-emoji class="g-emoji" alias="hammer_and_wrench" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f6e0.png">🛠️</g-emoji> Setting Up a Development Environment](#️-setting-up-a-development-environment)
-    * [<g-emoji class="g-emoji" alias="mortar_board" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f393.png">🎓</g-emoji> Good First Issues](#-good-first-issues)
-  * [<g-emoji class="g-emoji" alias="sparkles" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/2728.png">✨</g-emoji> Inspiration](#-inspiration)
-* [<g-emoji class="g-emoji" alias="pray" fallback-src="https://github.githubassets.com/images/icons/emoji/unicode/1f64f.png">🙏</g-emoji> Thank You](#-thank-you)
-
-## 🤔 Why Logseq?
-
-[Logseq](https://logseq.com) is a **knowledge management** and **collaboration** platform. It focuses on **privacy**, **longevity**, and [**user control**](https://www.gnu.org/philosophy/free-sw.en.html). Logseq offers a range of **powerful tools** for **knowledge management**, **collaboration**, **PDF annotation**, and **task management** with support for multiple file formats, including **Markdown** and **Org-mode**, and **various features** for organizing and structuring your notes.
-
-Logseq's **Whiteboard** feature lets you organize your knowledge and ideas using a spatial **canvas** with **shapes**, **drawings**, **website embeds**, and **connectors**. You can **visually group** and **link** your **notes** and external media (such as **videos** and **images**), enabling visual thinkers to compose, remix, **annotate**, and connect content from their knowledge base and emerging thoughts in a new way.
-
-In addition to its core features, Logseq has a growing ecosystem of **plugins** and **themes** that enable a wide range of workflows and **customization** options. **Mobile apps** are also available, providing access to most of the features of the desktop application. Whether you're a student, a professional, or anyone who values a clear and organized approach to managing your ideas and notes, Logseq is an excellent choice for anyone looking to improve their productivity and streamline their workflow.
-
+</table>
 ![logseq-demo](https://user-images.githubusercontent.com/25513724/221387376-4dc419c2-0d0a-460c-a920-2d211e78b456.gif)
 
-<a href="https://github.com/logseq/logseq/releases/latest/">
-        <img src="https://img.shields.io/badge/Download_Logseq-100000?style=for-the-badge&logo=flatpak&logoColor=white&labelColor=002b36&color=85c8c8"
-            align="right"
-            alt="Download Logseq"/></a>
+## Overview
 
-## 👀 How can I use it?
+[Logseq](https://logseq.com)  is a **knowledge management** and collaboration platform focusing on **privacy**, **data longevity**, **outlining**, and [**user control**](https://www.gnu.org/philosophy/free-sw.en.html). Logseq offers a range of powerful capabilities for knowledge management across multiple devices, mobile and desktop **(macOS, Windows, IOS, IpadOS, Android)**, **collaboration**, **PDF annotation**, **Space repetition**, **Task or Project management**, and **Whiteboard**.
 
-To start using Logseq, follow these simple steps:
+At its core, Logseq supports **Markdown** and **Org-mode** file formats for **interoperability**.
 
-1. [Download](https://github.com/logseq/logseq/releases/latest) the latest version of Logseq
-2. Install Logseq on your device and launch the application
-3. Start writing ✍️
+In addition to its core features, Logseq is extensible with a growing ecosystem of **plugins** and **themes** that enable a wide range of workflows and customization options. 
+Logseq is excellent for ideating, organizing, and your ideas and notes, improving productivity and streamlining workflow.
 
-That's it! You can now enjoy the benefits of using Logseq to streamline your workflow, manage your projects, and stay on top of your goals. Have fun! 🎉
+### New Feature: *Logseg integrated Whiteboard*
 
-## 📚 Learn more
+Logseq's Whiteboard feature lets you organize your knowledge and ideas using a spatial canvas with shapes, drawings, website embeds, and connectors. You can visually group and link your notes and external media (such as videos and images), enabling visual thinkers to compose, remix, annotate, and connect content from their knowledge base and emerging thoughts in a new way.
+
+![Whiteboard](https://user-images.githubusercontent.com/536716/210489314-0d89f4ea-e36e-428f-b822-a532420ac7bc.png)
+
+### Learn more from the Community and Documentation
 
 * Website: [logseq.com](https://logseq.com)
 * Documentation: [docs.logseq.com](https://docs.logseq.com)
@@ -104,11 +83,22 @@ That's it! You can now enjoy the benefits of using Logseq to streamline your wor
 * Discord: [discord.gg/logseq](https://discord.gg/logseq)
   * [中文 Discord](https://discord.gg/xYqcrXWymg)
 
-## 🫶 Support Logseq Development
 
-If you find Logseq useful and want to help us keep the project growing, please consider supporting our contributors on [Open Collective](https://opencollective.com/logseq). Your support shows our contributors that their efforts are appreciated and motivates them to continue their excellent work. Every contribution, no matter how small, helps us keep improving Logseq.
+## How can I use it?
 
-## 💡 Feature requests
+To start using Logseq, follow these simple steps:
+
+1. [Download](https://github.com/logseq/logseq/releases/latest) the latest version of Logseq
+2. Install Logseq on your device and launch the application
+3. Start writing
+
+That's it! You can now enjoy the benefits of using Logseq to streamline your workflow, manage your projects, and stay on top of your goals. Have fun! 🎉
+
+## Support and Contribute to Logseq Development
+
+If you find Logseq useful and want to help us keep the project growing, please consider supporting via [Open Collective](https://opencollective.com/logseq). Additionally, a contribution can be feedback, feature request, documentation, code, and plugin creation or updates. Every contribution, no matter how small, helps us keep improving Logseq.
+
+### Feature requests
 
 We value your input on improving Logseq and making it more useful for you. If you have any ideas or feature requests, please share them in the [Logseq Forum: Feature
 Requests](https://discuss.logseq.com/new-topic?category=feature-requests) section.
@@ -116,6 +106,27 @@ Requests](https://discuss.logseq.com/new-topic?category=feature-requests) sectio
 Your feedback helps us understand our users' needs and prioritize the features that matter most to you. We appreciate your time and effort in sharing your thoughts with us.
 
 We appreciate your support, and we look forward to hearing your ideas!
+
+### Contributing to Logseq
+
+To start contributing to Logseq, please follow the guidelines outlined in [CONTRIBUTING.md](CONTRIBUTING.md). We have a dedicated [overview page](CODEBASE_OVERVIEW.md) for Logseq's codebase and a [development practices guide](docs/dev-practices.md) that provides detailed information on our development process.
+
+We welcome all contributions, big or small, and we appreciate your time and effort in helping us improve Logseq.
+
+We look forward to your contributions 🚀
+
+#### Setting Up a Development Environment
+
+If you want to set up a development environment for the Logseq web or desktop app, please refer to the [Develop Logseq](docs/develop-logseq.md) guide for macOS/Linux users and the [Develop Logseq on Windows](docs/develop-logseq-on-windows.md) guide for Windows users.
+
+In addition to these guides, you can also find other helpful resources in the [docs/](docs/) folder, such as the [Guide for Contributing to Translations](docs/contributing-to-translations.md), the [Docker Web App Guide](docs/docker-web-app-guide.md) and the [mobile development guide](docs/develop-logseq-on-mobile.md)
+
+#### Good First Issues
+
+We have compiled a list of [good first issues](https://github.com/logseq/logseq/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) to help you get started. These are issues that are beginner-friendly and do not require advanced knowledge of the codebase. We encourage new contributors to start with these issues and gradually work their way up to more challenging tasks.
+We also have a project board to keep track of community contributions [Logseq - Develop Together 💪](https://github.com/orgs/logseq/projects/5?query=is%3Aopen+sort%3Aupdated-desc).
+
+Thank you for considering contributing to Logseq!
 
 ## 🔌 Plugin API
 
@@ -125,28 +136,8 @@ We value your feedback and suggestions on how to improve our documentation. Plea
 
 Thank you for using Logseq, and we look forward to seeing what you create with our plugin API!
 
-## 🌟 Contributing to Logseq
 
-To start contributing to Logseq, please follow the guidelines outlined in [CONTRIBUTING.md](CONTRIBUTING.md). We have a dedicated [overview page](CODEBASE_OVERVIEW.md) for Logseq's codebase and a [development practices guide](docs/dev-practices.md) that provides detailed information on our development process.
-
-We welcome all contributions, big or small, and we appreciate your time and effort in helping us improve Logseq.
-
-We look forward to your contributions 🚀
-
-### 🛠️ Setting Up a Development Environment
-
-If you want to set up a development environment for the Logseq web or desktop app, please refer to the [Develop Logseq](docs/develop-logseq.md) guide for macOS/Linux users and the [Develop Logseq on Windows](docs/develop-logseq-on-windows.md) guide for Windows users.
-
-In addition to these guides, you can also find other helpful resources in the [docs/](docs/) folder, such as the [Guide for Contributing to Translations](docs/contributing-to-translations.md), the [Docker Web App Guide](docs/docker-web-app-guide.md) and the [mobile development guide](docs/develop-logseq-on-mobile.md)
-
-### 🎓 Good First Issues
-
-We have compiled a list of [good first issues](https://github.com/logseq/logseq/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) to help you get started. These are issues that are beginner-friendly and do not require advanced knowledge of the codebase. We encourage new contributors to start with these issues and gradually work their way up to more challenging tasks.
-We also have a project board to keep track of community contributions [Logseq - Develop Together 💪](https://github.com/orgs/logseq/projects/5?query=is%3Aopen+sort%3Aupdated-desc).
-
-Thank you for considering contributing to Logseq!
-
-## ✨ Inspiration
+## ✨ Credits and Inspiration
 
 Logseq is inspired by several unique tools and projects, including [Roam Research](https://roamresearch.com/), [Org Mode](https://orgmode.org/), [TiddlyWiki](https://tiddlywiki.com/), [Workflowy](https://workflowy.com/), and [Cuekeeper](https://github.com/talex5/cuekeeper).
 
