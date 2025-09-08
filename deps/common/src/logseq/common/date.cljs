@@ -32,7 +32,11 @@
    "yyyy/MM/dd"
    "yyyy-MM-dd"
    "yyyy-MM-dd EEE"
+   "yyyy-MM-dd E"
+   "yyyy-MM-dd, E"
    "yyyy-MM-dd EEEE"
+   "yyyy.MM.dd, E"
+   "yyyy MMM do, E"
    "yyyy_MM_dd"
    "yyyyMMdd"
    "yyyy年MM月dd日"))
