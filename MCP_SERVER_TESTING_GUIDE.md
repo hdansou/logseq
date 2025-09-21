@@ -393,3 +393,14 @@ The MCP server implementation passes testing when:
 5. Security requirements are met
 6. Cross-platform compatibility is confirmed
 7. Integration with MCP clients works seamlessly
+
+
+
+  {
+    "mcpServers": {
+      "logseq": {
+        "command": "/Users/dzu/.nvm/versions/node/v22.17.0/bin/node",
+        "args": ["/Users/dzu/Projects/src/github.com/logseq/deps/cli/cli.mjs", "mcp-server", "-g", "merge"]
+      }
+    }
+  }
