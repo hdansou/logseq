@@ -54,6 +54,7 @@ The transformation happens automatically before results are shown to you.
 Let's start with something simple: reversing the order of results.
 
 **Before (no transform):**
+
 ```clojure
 {:title "My Tasks"
  :query [:find (pull ?b [*])
@@ -61,6 +62,7 @@ Let's start with something simple: reversing the order of results.
 ```
 
 **After (with transform):**
+
 ```clojure
 {:title "My Tasks (Newest First)"
  :query [:find (pull ?b [*])
@@ -91,12 +93,14 @@ Every `:result-transform` follows this structure:
 ### 1. Sort by Priority
 
 **File-Based Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by :block/priority result))
 ```
 
 **DB Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by :logseq.property/priority result))
@@ -111,12 +115,14 @@ Every `:result-transform` follows this structure:
 ### 3. Sort by Date (Newest First)
 
 **File-Based:**
+
 ```clojure
 :result-transform (fn [result]
                     (reverse (sort-by :block/created-at result)))
 ```
 
 **DB Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (reverse (sort-by :block/created-at result)))
@@ -125,12 +131,14 @@ Every `:result-transform` follows this structure:
 ### 4. Filter High Priority Only
 
 **File-Based:**
+
 ```clojure
 :result-transform (fn [result]
                     (filter #(= "A" (:block/priority %)) result))
 ```
 
 **DB Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (filter #(= "A" (:logseq.property/priority %)) result))
@@ -174,6 +182,7 @@ First, let's identify if you're using a file-based or DB graph:
 - **DB graph:** Your graph is database-based (newer format)
 
 **For File-Based Graphs:**
+
 ```clojure
 {:title "High Priority Tasks"
  :query [:find (pull ?b [*])
@@ -186,6 +195,7 @@ First, let's identify if you're using a file-based or DB graph:
 ```
 
 **For DB Graphs:**
+
 ```clojure
 {:title "High Priority Tasks"
  :query [:find (pull ?b [*])
@@ -200,6 +210,7 @@ First, let's identify if you're using a file-based or DB graph:
 ### Step 3: Add Deadline Sorting
 
 **For File-Based Graphs:**
+
 ```clojure
 {:title "High Priority Tasks"
  :query [:find (pull ?b [*])
@@ -213,6 +224,7 @@ First, let's identify if you're using a file-based or DB graph:
 ```
 
 **For DB Graphs:**
+
 ```clojure
 {:title "High Priority Tasks"
  :query [:find (pull ?b [*])
@@ -264,12 +276,14 @@ Copy-paste these recipes and adapt them to your needs!
 ### Recipe 3: Sort by Priority (A → B → C)
 
 **File-Based:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by #(get % :block/priority "Z") result))
 ```
 
 **DB Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by #(get % :logseq.property/priority "Z") result))
@@ -280,6 +294,7 @@ The `"Z"` is a fallback value for blocks without priority (sorts them last).
 ### Recipe 4: Advanced Priority Sort (A=1, B=2, C=3)
 
 **File-Based:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by #(case (:block/priority %)
@@ -291,6 +306,7 @@ The `"Z"` is a fallback value for blocks without priority (sorts them last).
 ```
 
 **DB Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by #(case (:logseq.property/priority %)
@@ -311,6 +327,7 @@ The `"Z"` is a fallback value for blocks without priority (sorts them last).
 ### Recipe 6: Show Only Today's Tasks
 
 **File-Based:**
+
 ```clojure
 :result-transform (fn [result]
                     (let [today (quot (.now js/Date) 86400000)]
@@ -323,6 +340,7 @@ The `"Z"` is a fallback value for blocks without priority (sorts them last).
 Priority first, then deadline:
 
 **DB Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by (fn [block]
@@ -354,6 +372,7 @@ Priority first, then deadline:
 ### Recipe 10: Group by Tag and Flatten
 
 **File-Based:**
+
 ```clojure
 :result-transform (fn [result]
                     (->> result
@@ -371,6 +390,7 @@ The biggest difference when using `:result-transform` between graph types is **p
 ### How to Check Your Graph Type
 
 1. Look at your graph folder:
+
    - **Files ending in `.md`** → File-based graph
    - **`logseq.db` file** → DB graph
 
@@ -381,20 +401,21 @@ The biggest difference when using `:result-transform` between graph types is **p
 
 ### Property Name Reference
 
-| Property | File-Based | DB Graph |
-|----------|-----------|----------|
-| Priority | `:block/priority` | `:logseq.property/priority` |
-| Deadline | `:block/deadline` | `:logseq.property/deadline` |
-| Scheduled | `:block/scheduled` | `:logseq.property/scheduled` |
-| Tags | `:block/tags` | `:logseq.property/tags` |
-| Created | `:block/created-at` | `:block/created-at` (same) |
-| Updated | `:block/updated-at` | `:block/updated-at` (same) |
-| Marker | `:block/marker` | `:block/marker` (same) |
-| Content | `:block/content` | `:block/content` (same) |
+| Property  | File-Based          | DB Graph                     |
+| --------- | ------------------- | ---------------------------- |
+| Priority  | `:block/priority`   | `:logseq.property/priority`  |
+| Deadline  | `:block/deadline`   | `:logseq.property/deadline`  |
+| Scheduled | `:block/scheduled`  | `:logseq.property/scheduled` |
+| Tags      | `:block/tags`       | `:logseq.property/tags`      |
+| Created   | `:block/created-at` | `:block/created-at` (same)   |
+| Updated   | `:block/updated-at` | `:block/updated-at` (same)   |
+| Marker    | `:block/marker`     | `:block/marker` (same)       |
+| Content   | `:block/content`    | `:block/content` (same)      |
 
 ### Universal Properties (Same for Both)
 
 These properties work the same in both graph types:
+
 - `:block/uuid`
 - `:block/content`
 - `:block/marker`
@@ -426,10 +447,12 @@ Replace `:block/priority` with `:logseq.property/priority`
 **Solutions:**
 
 1. **Check spelling:**
+
    - Must be `:result-transform` (singular)
    - Not `:transform`, `:result-transforms`, or `:transform-result`
 
 2. **Check syntax:**
+
    ```clojure
    ;; ✅ Correct
    :result-transform (fn [result] ...)
@@ -457,6 +480,7 @@ Replace `:block/priority` with `:logseq.property/priority`
 1. Verify your graph type (see [File-Based vs DB Graphs](#file-based-vs-db-graphs))
 
 2. Use correct property names:
+
    ```clojure
    ;; File-based
    (sort-by :block/priority result)
@@ -466,6 +490,7 @@ Replace `:block/priority` with `:logseq.property/priority`
    ```
 
 3. **Debug tip:** Add this transform to see available properties:
+
    ```clojure
    :result-transform (fn [result]
                        (do
@@ -484,6 +509,7 @@ Replace `:block/priority` with `:logseq.property/priority`
 **Solutions:**
 
 1. **Make sure you return something:**
+
    ```clojure
    ;; ❌ Wrong - doesn't return anything
    :result-transform (fn [result]
@@ -496,6 +522,7 @@ Replace `:block/priority` with `:logseq.property/priority`
    ```
 
 2. **Check your filter isn't too strict:**
+
    ```clojure
    ;; This might filter out everything
    (filter #(= "A" (:block/priority %)) result)
@@ -511,6 +538,7 @@ Replace `:block/priority` with `:logseq.property/priority`
 **Common Causes:**
 
 1. **Syntax error in function:**
+
    ```clojure
    ;; ❌ Missing closing bracket
    :result-transform (fn [result] (sort-by :priority result)
@@ -520,6 +548,7 @@ Replace `:block/priority` with `:logseq.property/priority`
    ```
 
 2. **Using unavailable functions:**
+
    ```clojure
    ;; ❌ Some functions might not be available
    :result-transform (fn [result] (println result))
@@ -535,6 +564,7 @@ Replace `:block/priority` with `:logseq.property/priority`
 **Solutions:**
 
 1. **Add fallback values:**
+
    ```clojure
    ;; Without fallback, missing values cause unexpected sorting
    (sort-by :block/priority result)
@@ -544,6 +574,7 @@ Replace `:block/priority` with `:logseq.property/priority`
    ```
 
 2. **Reverse if needed:**
+
    ```clojure
    ;; For descending order
    (reverse (sort-by :block/created-at result))
@@ -631,6 +662,7 @@ Help your future self understand what the transform does:
 For transforms you use often, define them in `config.edn`:
 
 **In `logseq/config.edn`:**
+
 ```clojure
 :query/result-transforms
 {:priority-sort (fn [result]
@@ -643,6 +675,7 @@ For transforms you use often, define them in `config.edn`:
 ```
 
 **In your queries:**
+
 ```clojure
 ;; Use by keyword reference
 {:title "Tasks"
@@ -699,14 +732,14 @@ Transforms run every time your query updates. Keep them efficient:
 
 **A:** No, transforms use Clojure syntax only. But don't worry—most common operations have Clojure equivalents:
 
-| JavaScript | Clojure |
-|------------|---------|
-| `array.sort()` | `(sort-by :key coll)` |
-| `array.filter()` | `(filter fn coll)` |
-| `array.map()` | `(map fn coll)` |
-| `array.slice(0, 10)` | `(take 10 coll)` |
-| `array.reverse()` | `(reverse coll)` |
-| `array.length` | `(count coll)` |
+| JavaScript           | Clojure               |
+| -------------------- | --------------------- |
+| `array.sort()`       | `(sort-by :key coll)` |
+| `array.filter()`     | `(filter fn coll)`    |
+| `array.map()`        | `(map fn coll)`       |
+| `array.slice(0, 10)` | `(take 10 coll)`      |
+| `array.reverse()`    | `(reverse coll)`      |
+| `array.length`       | `(count coll)`        |
 
 ### Q: Why do my properties return nil?
 
@@ -772,6 +805,7 @@ Then check the browser console (DevTools).
 ### Q: Where should I put my transform definitions?
 
 **A:** Two options:
+
 1. **Inline** (in the query itself) - good for one-off transforms
 2. **Config file** (`logseq/config.edn`) - good for reusable transforms
 
@@ -794,6 +828,7 @@ Then check the browser console (DevTools).
 Sort by priority, then by deadline, then by title:
 
 **DB Graphs:**
+
 ```clojure
 :result-transform (fn [result]
                     (sort-by (fn [block]
@@ -922,5 +957,5 @@ Now that you know how to use `:result-transform`, try:
 
 **Happy querying!**
 
-*Last updated: 2025-10-17*
-*Version: 1.0*
+_Last updated: 2025-10-17_
+_Version: 1.0_
