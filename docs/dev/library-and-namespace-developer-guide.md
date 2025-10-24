@@ -18,12 +18,14 @@ The **Library and Namespace** features are two distinct but related organization
 ### Why do they exist?
 
 **Library Page**:
+
 - Provides a dedicated space for reusable content like templates, code snippets, and frequently-referenced blocks
 - Replaces the old `{{namespace}}` macro functionality from file-based graphs
 - Allows users to organize shared content separate from their main graph structure
 - Supports the "Add pages to Library" workflow for moving existing pages into the Library
 
 **Namespace Pages**:
+
 - Enables hierarchical organization of pages (e.g., "Programming/JavaScript" is a child of "Programming")
 - Provides automatic grouping and navigation for related pages
 - Supports namespace-aware search and queries
@@ -32,18 +34,21 @@ The **Library and Namespace** features are two distinct but related organization
 ### Key Discovery Highlights
 
 📦 **Library Page** (DB Graphs):
+
 - Built-in page with UUID: `00000004-1294-7765-6000-000000000000`
 - Marked as `logseq.property/built-in? true`
 - Pages can be added to Library via UI or by setting `:block/parent` relationship
 - Filtered from page hierarchy displays to reduce noise
 
 🌳 **Namespace Pages** (File & DB Graphs):
+
 - Identified by "/" character in page name (e.g., "parent/child")
 - File graphs: Uses `:block/namespace` attribute to track hierarchy
 - DB graphs: Uses `:block/parent` for page hierarchy
 - Supports nested hierarchies (e.g., "a/b/c" where "c" is child of "a/b", which is child of "a")
 
 🔄 **Migration Path**:
+
 - Old `:logseq.property/parent` renamed to `:logseq.property.class/extends` (for classes) or `:block/parent` (for pages)
 - Top-level parent pages automatically moved into Library page during migration
 
@@ -94,19 +99,23 @@ The **Library and Namespace** features are two distinct but related organization
 ### System Components
 
 1. **Configuration Layer** (`logseq.common.config`):
+
    - Defines `library-page-name` constant: "Library"
    - Shared between frontend and backend
 
 2. **Utility Layer** (`logseq.common.util.namespace`):
+
    - Detects namespace pages via "/" character
    - Extracts last part of namespace (e.g., "c" from "a/b/c")
    - Validates namespace page names (excludes URLs, relative paths)
 
 3. **Database Layer**:
+
    - **DB Graphs**: Library page stored with special UUID, uses `:block/parent` for hierarchy
    - **File Graphs**: Namespace stored in `:block/namespace` attribute, uses datalog rules for queries
 
 4. **UI Layer**:
+
    - Library page UI for adding/managing pages
    - Hierarchy display for namespace navigation
    - Search integration with namespace awareness
@@ -239,6 +248,7 @@ User Renames: "Projects" → "MyProjects"
 **Lines**: 41
 
 **Context**: Defined alongside other special page names like:
+
 - `favorites-page-name` = "$$$favorites"
 - `views-page-name` = "$$$views"
 - `quick-add-page-name` = "Quick add"
@@ -274,6 +284,7 @@ User Renames: "Projects" → "MyProjects"
 **Lines**: 7-27
 
 **Key Insights**:
+
 - Namespace pages identified by "/" character
 - Excludes URLs (e.g., "http://example.com")
 - Excludes relative paths (e.g., "./folder", "../parent")
@@ -354,6 +365,7 @@ User Renames: "Projects" → "MyProjects"
 **Lines**: 277-280, 585-597
 
 **Key Insights**:
+
 - `get-library-page`: Retrieves Library page by name (uses built-in UUID)
 - `library?`: Checks if a page entity is the Library page
 - `page-in-library?`: Recursively walks up parent chain to check if page is descendant of Library
@@ -416,6 +428,7 @@ User Renames: "Projects" → "MyProjects"
 **Lines**: 15-71
 
 **Workflow**:
+
 1. User clicks "Add existing pages to Library" button
 2. Search popup opens with `library-page-search? true` flag
 3. User searches and selects pages
@@ -455,12 +468,14 @@ User Renames: "Projects" → "MyProjects"
 **Lines**: 8-23
 
 **Key Insights**:
+
 - Uses datalog query with custom `:namespace` rule
 - Accepts case-insensitive namespace names
 - Returns all child pages with their `:block/namespace` attribute
 - Returns file path for each page
 
 **Datalog Rule** (from `logseq.db.file-based.rules`):
+
 ```clojure
 :namespace
 [[(namespace ?parent ?child)
@@ -590,6 +605,7 @@ This recursive rule finds all pages where `:block/namespace` points to the paren
 **Lines**: 140-161
 
 **Key Insights**:
+
 1. **Renaming to namespace page**: Creates parent if doesn't exist, sets `:block/namespace`
 2. **Renaming from namespace page**: Retracts `:block/namespace` attribute
 3. **Example**: Renaming "Work" → "Projects/Work"
@@ -624,6 +640,7 @@ This recursive rule finds all pages where `:block/namespace` points to the paren
 **Key Insight**: In DB graphs, namespace-like hierarchies are represented using `:block/parent` relationships. This function recursively walks up the parent chain to build the full hierarchy.
 
 **Example**:
+
 ```clojure
 ;; Page: "Client A"
 ;; :block/parent → "Work"
@@ -652,6 +669,7 @@ This recursive rule finds all pages where `:block/namespace` points to the paren
 **Key Insight**: Classes use `:logseq.property.class/extends` for inheritance, which is displayed similarly to namespace hierarchy using "/" separator.
 
 **Example**:
+
 ```clojure
 ;; Class: "Meeting Note"
 ;; :logseq.property.class/extends → "Note"
@@ -672,6 +690,7 @@ This recursive rule finds all pages where `:block/namespace` points to the paren
 **Line**: 533
 
 This unified function handles both:
+
 - **Classes**: Shows extends hierarchy (e.g., "Document/Note/Meeting Note")
 - **Pages**: Shows parent hierarchy (e.g., "Projects/Work/Client A")
 
@@ -702,6 +721,7 @@ This unified function handles both:
 ```
 
 **Key Features**:
+
 1. **`select-pages` component**: Search interface with autocomplete
 2. **`add-pages` component**: Button to open page selector
 3. **Search integration**: Uses `library-page-search? true` flag
@@ -709,6 +729,7 @@ This unified function handles both:
 5. **Remove operation**: Retracts `:block/parent` to unlink from Library
 
 **User Flow**:
+
 ```
 1. User opens Library page
 2. Clicks "Add existing pages to Library" button
@@ -727,6 +748,7 @@ This unified function handles both:
 This component displays the namespace tree structure for file-based graphs, showing parent-child relationships visually.
 
 **Features**:
+
 - Tree view of namespace hierarchy
 - Collapsible/expandable nodes
 - Links to navigate to namespace pages
@@ -772,6 +794,7 @@ This component displays the namespace tree structure for file-based graphs, show
 3. **Namespace-aware Matching**: Uses `text/get-namespace-last-part` for substring matching
 
 **Search Configuration**:
+
 ```clojure
 {:library-page-search? true   ; Include/exclude Library pages
  :built-in? false              ; Exclude built-in pages
@@ -780,6 +803,7 @@ This component displays the namespace tree structure for file-based graphs, show
 ```
 
 **Namespace Search Example**:
+
 ```clojure
 ;; User searches for "work"
 ;; Matches:
@@ -969,6 +993,7 @@ Page C
 **Rename Operations**:
 
 1. **`rename-namespace-pages!`**: Renames all child pages of a namespace
+
    ```clojure
    ;; Rename "Projects" → "MyProjects"
    ;; Automatically renames:
@@ -1016,6 +1041,7 @@ Page C
 **Lines**: 113-138
 
 **Updates**:
+
 - Block content (title)
 - Block properties
 - Block references (`:block/refs`)
@@ -1046,6 +1072,7 @@ Page C
 ```
 
 **Context**: These functions are part of the Logseq Plugin API, allowing plugins to:
+
 1. **`get_pages_from_namespace`**: Retrieve all pages under a namespace (flat list)
 2. **`get_pages_tree_from_namespace`**: Retrieve namespace hierarchy as tree structure
 
@@ -1053,11 +1080,11 @@ Page C
 
 ```javascript
 // Get all pages under "Projects" namespace
-const pages = await logseq.api.get_pages_from_namespace("Projects");
+const pages = await logseq.api.get_pages_from_namespace('Projects')
 // Returns: [{name: "projects/work", title: "Projects/Work"}, ...]
 
 // Get namespace hierarchy tree
-const tree = await logseq.api.get_pages_tree_from_namespace("Projects");
+const tree = await logseq.api.get_pages_tree_from_namespace('Projects')
 // Returns: {name: "projects", children: [{name: "projects/work", children: [...]}, ...]}
 ```
 
@@ -1072,6 +1099,7 @@ const tree = await logseq.api.get_pages_tree_from_namespace("Projects");
 ### 1. Dual Systems for Different Graph Types
 
 **Library Page** (DB Graphs Only):
+
 - Purpose: Centralized storage for reusable content
 - Implementation: Built-in page with special UUID
 - Hierarchy: Uses `:block/parent` relationships
@@ -1079,6 +1107,7 @@ const tree = await logseq.api.get_pages_tree_from_namespace("Projects");
 - Migration: Automatically created during schema upgrade, top-level parents moved in
 
 **Namespace Pages** (Primarily File Graphs):
+
 - Purpose: Hierarchical page organization using "/" separator
 - Implementation: `:block/namespace` attribute pointing to parent page
 - Queries: Datalog rules for recursive hierarchy traversal
@@ -1086,6 +1115,7 @@ const tree = await logseq.api.get_pages_tree_from_namespace("Projects");
 - API: Exposed to plugins for programmatic access
 
 **DB Graphs Namespace-like Feature**:
+
 - Uses `:block/parent` for page hierarchy (similar to namespace concept)
 - Displays with "/" separator in title (e.g., "Parent/Child/Grandchild")
 - Library page filtered from display to reduce noise
@@ -1093,6 +1123,7 @@ const tree = await logseq.api.get_pages_tree_from_namespace("Projects");
 ### 2. Migration Path and Backward Compatibility
 
 **Key Migration (Schema 65.1)**:
+
 ```
 Old System (Pre-Migration):
 - :logseq.property/parent → used for both classes and pages
@@ -1105,6 +1136,7 @@ New System (Post-Migration):
 ```
 
 **Compatibility Considerations**:
+
 - Old `{{namespace}}` macro deprecated in favor of Library page
 - Namespace concept preserved in file graphs via `:block/namespace`
 - DB graphs use parent-child relationships for similar functionality
@@ -1112,12 +1144,14 @@ New System (Post-Migration):
 ### 3. Search and Query Integration
 
 **Search Features**:
+
 - `library-page-search?` flag for filtering Library pages
 - Namespace-aware matching on last part of namespace (e.g., "work" matches "projects/work")
 - Built-in page filtering to exclude system pages
 - SQLite FTS (Full-Text Search) with trigram tokenizer for substring matching
 
 **Query Features**:
+
 - Datalog rules for namespace hierarchy traversal
 - Recursive parent-child queries for page hierarchy
 - Tree structure generation for UI display
@@ -1126,12 +1160,14 @@ New System (Post-Migration):
 ### 4. User Experience Design
 
 **Library Page UX**:
+
 1. Search-based page selection (debounced for performance)
 2. Multi-select for bulk operations
 3. Instant add/remove from Library
 4. Filtered from hierarchy display to reduce clutter
 
 **Namespace Page UX**:
+
 1. Automatic parent page creation on namespace page creation
 2. Cascade rename for all children when parent renamed
 3. Hierarchy visualization in sidebar
@@ -1140,6 +1176,7 @@ New System (Post-Migration):
 ### 5. Data Consistency and Integrity
 
 **Rename Operations**:
+
 - Update all block references in content
 - Update all property values
 - Update `:block/refs` attribute
@@ -1148,6 +1185,7 @@ New System (Post-Migration):
 - Cascade to all child pages in namespace
 
 **Parent-Child Integrity**:
+
 - Prevent circular references
 - Automatic order generation using fractional indexing
 - Library page always exists (created in migration)
@@ -1156,12 +1194,14 @@ New System (Post-Migration):
 ### 6. Performance Considerations
 
 **Search Optimization**:
+
 - SQLite FTS virtual table for fast full-text search
 - Triggers for automatic index updates
 - Debounced search input (200ms) to reduce query load
 - Page-only search option to reduce result set
 
 **Query Optimization**:
+
 - Datalog rules compiled once, reused for all queries
 - Indexed lookups on `:block/name` and `:block/namespace`
 - Tree structure cached in UI components
@@ -1351,19 +1391,20 @@ New System (Post-Migration):
 
 ```javascript
 // Get all pages in namespace (JavaScript plugin)
-const pages = await logseq.api.get_pages_from_namespace("Projects");
-console.log(pages);
+const pages = await logseq.api.get_pages_from_namespace('Projects')
+console.log(pages)
 // [{name: "projects/work", title: "Projects/Work", ...}, ...]
 
 // Get namespace hierarchy tree
-const tree = await logseq.api.get_pages_tree_from_namespace("Projects");
-console.log(tree);
+const tree = await logseq.api.get_pages_tree_from_namespace('Projects')
+console.log(tree)
 // {name: "projects", children: [...]}
 ```
 
 ### Common Patterns
 
 **Pattern 1: Check graph type before namespace operations**
+
 ```clojure
 (defn safe-namespace-operation [repo]
   (if (config/db-based-graph? repo)
@@ -1374,6 +1415,7 @@ console.log(tree);
 ```
 
 **Pattern 2: Filter Library pages from display**
+
 ```clojure
 (defn display-page-title [page]
   (if (ldb/library? page)
@@ -1382,6 +1424,7 @@ console.log(tree);
 ```
 
 **Pattern 3: Handle namespace in search**
+
 ```clojure
 (defn search-with-namespace-awareness [query]
   (let [results (search/block-search repo query opts)
@@ -1416,12 +1459,14 @@ console.log(tree);
 ### Migration Considerations
 
 **When adding new Library-related features**:
+
 1. Check if Library page exists (use `ldb/get-library-page`)
 2. Handle case where Library doesn't exist (older graphs)
 3. Filter Library from displays to avoid clutter
 4. Use `:block/parent` for DB graphs, `:block/namespace` for file graphs
 
 **When working with namespaces**:
+
 1. Always sanitize page names before queries
 2. Check graph type (DB vs file) before using namespace APIs
 3. Handle both "/" and "." separators (old vs new)
@@ -1439,6 +1484,7 @@ The Library and Namespace system represents two complementary organizational fea
 Both systems achieve similar goals (organization and hierarchy) but are optimized for their respective graph types. The migration system ensures backward compatibility while moving users toward the newer, more robust Library-based approach.
 
 **Key Takeaways**:
+
 - Library page is a built-in page with special UUID in DB graphs
 - Namespace pages use "/" separator and `:block/namespace` attribute in file graphs
 - DB graphs use `:block/parent` for page hierarchy (similar to namespaces)
@@ -1447,6 +1493,7 @@ Both systems achieve similar goals (organization and hierarchy) but are optimize
 - Public API available for plugins (file graphs only)
 
 **Files to Watch**:
+
 - `logseq.common.config` - Library page name constant
 - `logseq.common.util.namespace` - Namespace detection
 - `logseq.db.frontend.db` - Library and parent hierarchy functions
@@ -1456,6 +1503,6 @@ Both systems achieve similar goals (organization and hierarchy) but are optimize
 
 ---
 
-*Investigation completed: 2025-10-21*
-*Lead Detective: Claude Code*
-*Case Status: CLOSED - Documentation Complete*
+_Investigation completed: 2025-10-21_
+_Lead Detective: Claude Code_
+_Case Status: CLOSED - Documentation Complete_
