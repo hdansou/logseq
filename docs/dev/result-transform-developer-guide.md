@@ -5,6 +5,7 @@
 The `:result-transform` feature is a powerful query customization mechanism that allows users to programmatically transform, sort, and filter query results in Logseq. This investigation reveals a sophisticated system that works across both file-based and DB graphs, using a secure sandboxed execution environment (SCI - Small Clojure Interpreter) to run user-defined transformation functions.
 
 **Key Discoveries:**
+
 - ✅ Fully supported in both file-based AND DB graphs (contrary to documentation gaps)
 - 🔍 Uses SCI for secure function evaluation
 - ⚠️ Property naming differs between file-based (`:block/*`) and DB graphs (`:logseq.property/*`)
@@ -66,6 +67,7 @@ graph TB
 ```
 
 **Key Architectural Principles:**
+
 1. **Post-Query Processing:** Transforms run AFTER database queries complete
 2. **Sandboxed Execution:** SCI ensures user code can't access system internals
 3. **Registry Pattern:** Named transforms can be reused across queries
@@ -165,10 +167,12 @@ The heart of the transformation system lives in the `custom-query-result-transfo
 
 **Discovery #1: Dual Transform Resolution**
 The function accepts TWO types of transforms:
+
 - **Keyword reference:** `:result-transform :sort-by-priority` → looks up in registry
 - **Direct function:** `:result-transform (fn [r] (sort-by :priority r))` → uses inline
 
 **Location:** `query_react.cljs:49-51`
+
 ```clojure
 (if-let [result-transform (if (keyword? result-transform-fn)
                             (get-in (state/sub-config) [:query/result-transforms result-transform-fn])
@@ -179,6 +183,7 @@ The function accepts TWO types of transforms:
 Every transform function is evaluated through SCI (Small Clojure Interpreter), providing security isolation:
 
 **Location:** `query_react.cljs:52-58`
+
 ```clojure
 (if-let [f (sci/eval-string (pr-str result-transform))]
   (try
@@ -255,6 +260,7 @@ Users can define reusable transform functions in their `config.edn` file:
 ```
 
 This schema validates that:
+
 - The key is a `:query/result-transforms` map
 - Each entry maps a keyword to a sequential collection (the function definition)
 
@@ -331,12 +337,12 @@ flowchart TD
 
 The most important finding in this investigation is that **property names differ** between graph types:
 
-| Property Type | File-Based | DB Graph |
-|--------------|------------|----------|
-| Priority | `:block/priority` | `:logseq.property/priority` |
-| Deadline | `:block/deadline` | `:logseq.property/deadline` |
-| Scheduled | `:block/scheduled` | `:logseq.property/scheduled` |
-| Tags | `:block/tags` | `:logseq.property/tags` |
+| Property Type | File-Based         | DB Graph                     |
+| ------------- | ------------------ | ---------------------------- |
+| Priority      | `:block/priority`  | `:logseq.property/priority`  |
+| Deadline      | `:block/deadline`  | `:logseq.property/deadline`  |
+| Scheduled     | `:block/scheduled` | `:logseq.property/scheduled` |
+| Tags          | `:block/tags`      | `:logseq.property/tags`      |
 
 ### Evidence Location
 
@@ -392,6 +398,7 @@ graph TB
 ### Correct Usage Examples
 
 **For File-Based Graphs:**
+
 ```clojure
 :query/result-transforms
 {:urgent-first
@@ -405,6 +412,7 @@ graph TB
 ```
 
 **For DB Graphs:**
+
 ```clojure
 :query/result-transforms
 {:urgent-first
@@ -468,6 +476,7 @@ The `transform-query-result` function serves as the integration point between th
 **Discovery #1: Transform Happens BEFORE Grouping**
 
 The execution order is critical:
+
 1. Database query executes
 2. `:result-transform` applies
 3. `:group-by-page?` applies (if enabled)
@@ -478,6 +487,7 @@ This means your transform function receives flat results, not grouped ones.
 **Discovery #2: File-Based Graphs Have Extra Filtering**
 
 **Location:** `result.cljs:79-81`
+
 ```clojure
 (cond-> result
   (and (not (:db-graph? config))
@@ -492,6 +502,7 @@ File-based graphs can filter out child blocks AFTER transformation, but DB graph
 If the query runs from within a block (e.g., embedded query), that block's UUID is automatically removed from results:
 
 **Location:** `result.cljs:72`
+
 ```clojure
 (let [remove-blocks (if current-block-uuid [current-block-uuid] nil)
 ```
@@ -534,14 +545,14 @@ sequenceDiagram
 
 ## Key Witnesses (Main Files)
 
-| File Path | Role | Lines of Interest | Criticality |
-|-----------|------|-------------------|-------------|
-| `src/main/frontend/db/query_react.cljs` | Core transformation logic | 35-62 | 🔴 Critical |
-| `src/main/frontend/components/query/result.cljs` | UI integration point | 70-91 | 🔴 Critical |
-| `src/main/frontend/schema/handler/common_config.cljc` | Schema validation | 49-51 | 🟡 Important |
-| `deps/common/resources/templates/config.edn` | Default config template | 279-289 | 🟡 Important |
-| `deps/graph-parser/test/resources/exporter-test-graph/logseq/config.edn` | Real-world examples | 193-217 | 🟢 Reference |
-| `src/test/frontend/components/query/result_test.cljs` | Test coverage | 11-52 | 🟢 Reference |
+| File Path                                                                | Role                      | Lines of Interest | Criticality  |
+| ------------------------------------------------------------------------ | ------------------------- | ----------------- | ------------ |
+| `src/main/frontend/db/query_react.cljs`                                  | Core transformation logic | 35-62             | 🔴 Critical  |
+| `src/main/frontend/components/query/result.cljs`                         | UI integration point      | 70-91             | 🔴 Critical  |
+| `src/main/frontend/schema/handler/common_config.cljc`                    | Schema validation         | 49-51             | 🟡 Important |
+| `deps/common/resources/templates/config.edn`                             | Default config template   | 279-289           | 🟡 Important |
+| `deps/graph-parser/test/resources/exporter-test-graph/logseq/config.edn` | Real-world examples       | 193-217           | 🟢 Reference |
+| `src/test/frontend/components/query/result_test.cljs`                    | Test coverage             | 11-52             | 🟢 Reference |
 
 ---
 
@@ -592,6 +603,7 @@ sequenceDiagram
 **Impact:** Medium - Improves maintainability for users with many similar queries.
 
 **Example:**
+
 ```clojure
 ;; Define once
 :query/result-transforms
@@ -613,6 +625,7 @@ sequenceDiagram
 **Impact:** High - Users need to understand when their function runs in the pipeline.
 
 **Implications:**
+
 - Transform receives flat results (not grouped)
 - Transform doesn't receive current block (already filtered)
 - Transform runs before `:group-by-page?`
@@ -644,6 +657,7 @@ sequenceDiagram
 **Evidence:** `src/test/frontend/components/query/result_test.cljs:11-52`
 
 **Tests verify:**
+
 - Basic transformation in list view
 - Transformation in table view
 - Edge cases with empty results
@@ -658,6 +672,7 @@ sequenceDiagram
 **Issue:** Invalid transform functions are only detected at query execution time.
 
 **Example:**
+
 ```clojure
 :query/result-transforms
 {:bad-transform (fn [r] (/ 1 0))}  ;; ← Won't error until used
@@ -672,6 +687,7 @@ sequenceDiagram
 ### 2. ❌ No Debugging Tools for Transforms
 
 **Issue:** When a transform doesn't work as expected, there's no way to:
+
 - Inspect intermediate values
 - See what the function receives
 - Step through execution
@@ -695,6 +711,7 @@ sequenceDiagram
 ### 4. ⚠️ No IDE Support for Config Functions
 
 **Issue:** Writing Clojure functions in EDN config files has no:
+
 - Syntax highlighting
 - Error checking
 - Auto-completion
@@ -708,6 +725,7 @@ sequenceDiagram
 ### 5. ❌ Limited Error Messages
 
 **Issue:** When transforms fail, error messages are generic:
+
 ```
 :sci/call-error [object Object]
 ```
@@ -739,6 +757,7 @@ sequenceDiagram
 **Description:** Transforms query results after database execution but before rendering.
 
 **Location in Query Map:**
+
 ```clojure
 {:title "My Query"
  :query [:find (pull ?b [*]) ...]
@@ -754,6 +773,7 @@ sequenceDiagram
 **Behavior:** Looks up function in `config.edn` at `:query/result-transforms/<keyword-name>`
 
 **Example:**
+
 ```clojure
 ;; In config.edn
 :query/result-transforms
@@ -771,6 +791,7 @@ sequenceDiagram
 **Behavior:** Function executes directly on results
 
 **Example:**
+
 ```clojure
 {:query [...]
  :result-transform (fn [result]
@@ -784,9 +805,11 @@ sequenceDiagram
 ```
 
 **Parameter:**
+
 - `result` - `vector` - Query results
 
 **For block queries:**
+
 ```clojure
 [{:block/uuid <uuid>
   :block/content "..."
@@ -796,6 +819,7 @@ sequenceDiagram
 ```
 
 **For DB graphs, properties use `:logseq.property/*` namespace:**
+
 ```clojure
 [{:block/uuid <uuid>
   :block/content "..."
@@ -805,12 +829,14 @@ sequenceDiagram
 ```
 
 **Return Value:** `vector | any`
+
 - Usually returns transformed vector
 - Can return any structure (used by table views)
 
 ### Available Standard Functions
 
 Within the SCI environment, you have access to:
+
 - `map`, `filter`, `reduce`, `sort-by`
 - `take`, `drop`, `take-while`, `drop-while`
 - `group-by`, `partition`, `partition-by`
@@ -821,6 +847,7 @@ Within the SCI environment, you have access to:
 - Logic: `and`, `or`, `not`
 
 **NOT available:**
+
 - File system access
 - Network requests
 - Java interop
@@ -893,6 +920,7 @@ Within the SCI environment, you have access to:
 **Schema Validation:** `[:map-of :keyword [:sequential any?]]`
 
 **Rules:**
+
 - Keys must be keywords
 - Values must be function definitions (sequential forms)
 - Function definitions are evaluated with SCI at runtime
@@ -998,12 +1026,14 @@ sequenceDiagram
 ### Problem: Transform Not Running
 
 **Symptoms:**
+
 - Query returns results, but they're not transformed
 - No errors in console
 
 **Diagnosis Steps:**
 
 1. **Check Query Syntax**
+
 ```clojure
 ;; ✅ Correct
 {:query [:find ...]
@@ -1015,6 +1045,7 @@ sequenceDiagram
 ```
 
 2. **Verify Transform Key Spelling**
+
 ```clojure
 ;; ❌ Common typos
 :result-tranform
@@ -1027,12 +1058,14 @@ sequenceDiagram
 Open browser DevTools → Console → Filter for "sci" or "query"
 
 Look for:
+
 ```
 :sci/call-error
 :query/failed
 ```
 
 4. **Test with Simple Transform**
+
 ```clojure
 :result-transform (fn [r] (take 5 r))
 ```
@@ -1044,6 +1077,7 @@ If this works, your original transform has a bug.
 ### Problem: Keyword Transform Not Found
 
 **Symptoms:**
+
 - Using `:result-transform :my-transform`
 - Results are untransformed
 - No error message
@@ -1060,12 +1094,14 @@ Open `logseq/config.edn` and check:
 ```
 
 Not:
+
 ```clojure
 :result-transforms  ;; ❌ Missing "query/" prefix
 :query-result-transforms  ;; ❌ Wrong separator
 ```
 
 2. **Check Keyword Match**
+
 ```clojure
 ;; In config
 :query/result-transforms
@@ -1079,8 +1115,9 @@ Not:
 3. **Verify Config Loaded**
 
 In browser console:
+
 ```javascript
-logseq.api.get_user_config()["query/result-transforms"]
+logseq.api.get_user_config()['query/result-transforms']
 ```
 
 Should show your transforms object.
@@ -1090,6 +1127,7 @@ Should show your transforms object.
 ### Problem: Properties Return Nil
 
 **Symptoms:**
+
 - Transform runs but doesn't sort/filter correctly
 - `(get result :block/priority)` returns `nil`
 
@@ -1132,6 +1170,7 @@ Check console to see actual property names.
 ### Problem: Transform Causes Error
 
 **Symptoms:**
+
 - Query was working before adding transform
 - Console shows `:sci/call-error`
 - Results are untransformed
@@ -1139,6 +1178,7 @@ Check console to see actual property names.
 **Common Causes:**
 
 1. **Undefined Function**
+
 ```clojure
 ;; ❌ `println` might not be available in SCI
 :result-transform (fn [r] (println r) r)
@@ -1148,6 +1188,7 @@ Check console to see actual property names.
 ```
 
 2. **Wrong Arity**
+
 ```clojure
 ;; ❌ Transform receives 1 argument
 :result-transform (fn [r opts] ...)
@@ -1157,6 +1198,7 @@ Check console to see actual property names.
 ```
 
 3. **Accessing Invalid Path**
+
 ```clojure
 ;; ❌ Crashes if :block/properties is nil
 (get-in block [:block/properties :custom-prop])
@@ -1166,6 +1208,7 @@ Check console to see actual property names.
 ```
 
 4. **Division by Zero**
+
 ```clojure
 ;; ❌ Crashes if count is 0
 (/ (count result) 0)
@@ -1181,12 +1224,14 @@ Check console to see actual property names.
 ### Problem: Transform Too Slow
 
 **Symptoms:**
+
 - Query takes seconds to complete
 - UI freezes during query execution
 
 **Diagnosis:**
 
 1. **Check Result Size**
+
 ```clojure
 :result-transform (fn [r]
                     (println "Processing" (count r) "blocks")
@@ -1254,14 +1299,14 @@ Time different approaches:
 
 ### Benchmark Results
 
-| Scenario | Result Count | Transform Operation | Time | Notes |
-|----------|-------------|---------------------|------|-------|
-| No transform | 1000 | - | 45ms | Baseline |
-| Simple sort | 1000 | `(sort-by :block/content result)` | 52ms | +15% |
-| Complex sort | 1000 | Multi-key sort | 68ms | +51% |
-| Filter + sort | 1000 → 100 | Filter then sort | 54ms | +20% |
-| Take first 10 | 1000 → 10 | `(take 10 result)` | 46ms | +2% |
-| Reverse | 1000 | `(reverse result)` | 47ms | +4% |
+| Scenario      | Result Count | Transform Operation               | Time | Notes    |
+| ------------- | ------------ | --------------------------------- | ---- | -------- |
+| No transform  | 1000         | -                                 | 45ms | Baseline |
+| Simple sort   | 1000         | `(sort-by :block/content result)` | 52ms | +15%     |
+| Complex sort  | 1000         | Multi-key sort                    | 68ms | +51%     |
+| Filter + sort | 1000 → 100   | Filter then sort                  | 54ms | +20%     |
+| Take first 10 | 1000 → 10    | `(take 10 result)`                | 46ms | +2%      |
+| Reverse       | 1000         | `(reverse result)`                | 47ms | +4%      |
 
 ### Key Findings
 
@@ -1332,6 +1377,7 @@ Time different approaches:
 ### When Performance Matters
 
 Transforms impact user experience when:
+
 - Result count > 500 blocks
 - Transform runs in query tables (updates frequently)
 - Query used in dashboard (multiple instances)
@@ -1364,6 +1410,7 @@ Transforms impact user experience when:
 **Proposal:** Validate transform functions when config loads, not when query executes
 
 **Implementation:**
+
 - Try evaluating each transform with empty vector
 - Report errors immediately
 - Cache compiled functions for faster execution
@@ -1377,6 +1424,7 @@ Transforms impact user experience when:
 **Proposal:** Add `:result-transform-debug? true` to query map
 
 **Behavior:**
+
 - Log input results
 - Log intermediate values
 - Log output results
@@ -1384,6 +1432,7 @@ Transforms impact user experience when:
 - Display in UI
 
 **Example:**
+
 ```clojure
 {:query [...]
  :result-transform (fn [r] (sort-by :priority r))
@@ -1391,6 +1440,7 @@ Transforms impact user experience when:
 ```
 
 **Output:**
+
 ```
 Transform Debug:
   Input: 45 blocks
@@ -1406,6 +1456,7 @@ Transform Debug:
 **Proposal:** Automatically convert property names based on graph type
 
 **Implementation:**
+
 ```clojure
 ;; User writes (works for both graph types):
 :result-transform (fn [r] (sort-by [:priority] r))
@@ -1428,6 +1479,7 @@ Transform Debug:
 ```
 
 **Equivalent to:**
+
 ```clojure
 :result-transform (fn [r]
                     (->> r
@@ -1462,6 +1514,7 @@ Transform Debug:
 **Proposal:** UI button to preview transform results
 
 **Mockup:**
+
 ```
 [Query Results: 45 blocks]
 [Preview Transform] ← Button
@@ -1501,6 +1554,7 @@ The `:result-transform` feature is a **mature, well-architected system** that su
 ### Investigation Summary
 
 Through this deep dive, we've uncovered:
+
 - 📁 **7 critical files** involved in the transformation pipeline
 - 🔍 **7 major discoveries** about implementation details
 - ⚠️ **6 known limitations** that affect users
@@ -1510,12 +1564,14 @@ Through this deep dive, we've uncovered:
 ### Final Recommendation
 
 **For Users:**
+
 - ✅ Use this feature confidently in both graph types
 - ⚠️ Always use correct property namespaces for your graph type
 - 🔧 Test transforms with small queries before applying to large ones
 - 📝 Define reusable transforms in config for consistency
 
 **For Developers:**
+
 - 📖 Update docs to clearly state DB graph support
 - 🛡️ Add property namespace validation/conversion
 - 🔍 Build debugging tools for transform development
