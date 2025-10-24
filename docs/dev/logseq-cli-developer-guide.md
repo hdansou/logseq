@@ -5,6 +5,7 @@
 The Logseq CLI is a command-line interface for interacting with Logseq DB graphs. This investigation reveals a well-architected tool built with ClojureScript and nbb-logseq, providing both **offline** (local SQLite access) and **online** (HTTP API) modes of operation.
 
 **Key Discovery Highlights:**
+
 - 🎯 **Dual-Mode Architecture**: Operates offline for CI/CD workflows or online via HTTP API Server
 - ⚡ **Lazy Loading**: Commands are lazy-loaded to keep startup time under 1 second
 - 🔍 **8 Core Commands**: list, show, search, query, export, export-edn, append, help
@@ -138,18 +139,18 @@ graph TB
 #!/usr/bin/env node
 
 import { loadFile, addClassPath } from '@logseq/nbb-logseq'
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
 
-const __dirname = fileURLToPath(dirname(import.meta.url));
+const __dirname = fileURLToPath(dirname(import.meta.url))
 global.__dirname = __dirname
-addClassPath(resolve(__dirname, 'src'));
-addClassPath(resolve(__dirname, 'vendor/src'));
-const { main } = await loadFile(resolve(__dirname, 'src/logseq/cli.cljs'));
+addClassPath(resolve(__dirname, 'src'))
+addClassPath(resolve(__dirname, 'vendor/src'))
+const { main } = await loadFile(resolve(__dirname, 'src/logseq/cli.cljs'))
 
 // Expects to be called as node X.js ...
 const args = process.argv.slice(2)
-main.apply(null, args);
+main.apply(null, args)
 ```
 
 ### Investigation Trail
@@ -248,6 +249,7 @@ flowchart TD
 **Location**: `deps/cli/src/logseq/cli.cljs:114-135`
 
 The `-main` function orchestrates:
+
 1. DB version check (unless `-h` or `--help`)
 2. Command dispatch via `babashka.cli/dispatch`
 3. Custom error handling for missing required args
@@ -291,6 +293,7 @@ stateDiagram-v2
 ### Local Mode (Offline)
 
 **How it works:**
+
 - Directly opens SQLite database file at `~/logseq/graphs/[graph-name]/db.sqlite`
 - Uses DataScript queries on in-memory database
 - Full access to DataScript query language and rules
@@ -310,6 +313,7 @@ stateDiagram-v2
 ```
 
 **Graph directory structure:**
+
 ```
 ~/logseq/graphs/
 ├── logseq_db__my-graph/
@@ -325,6 +329,7 @@ stateDiagram-v2
 ### API Mode (Online)
 
 **How it works:**
+
 - Connects to running Logseq app's HTTP API Server at `127.0.0.1:12315`
 - Sends JSON-RPC style requests with bearer token auth
 - Can modify current graph (append command)
@@ -344,6 +349,7 @@ stateDiagram-v2
 ```
 
 **API Methods Used:**
+
 - `logseq.app.search` - Search current graph
 - `logseq.db.datascript_query` - Execute DataScript query
 - `logseq.db.q` - Execute simple query
@@ -391,6 +397,7 @@ sequenceDiagram
 Lists all available DB and file graphs on the system.
 
 **How it works:**
+
 1. Reads `~/logseq/graphs/` directory
 2. Separates DB graphs (prefixed `logseq_db__`) from file graphs
 3. Strips prefixes and sorts alphabetically
@@ -416,6 +423,7 @@ Lists all available DB and file graphs on the system.
 ```
 
 **Example Output:**
+
 ```
 DB Graphs:
 db-test
@@ -433,6 +441,7 @@ old-notes
 Displays detailed metadata about one or more graphs.
 
 **Metadata displayed:**
+
 - Graph directory path
 - Creation date
 - Schema version (major.minor)
@@ -441,6 +450,7 @@ Displays detailed metadata about one or more graphs.
 - Import type (e.g., `:cli/create-graph`)
 
 **DataScript queries used:**
+
 ```clojure
 (let [kv-value #(:kv/value (d/entity @conn %))]
   (kv-value :logseq.kv/graph-created-at)
@@ -459,6 +469,7 @@ Displays detailed metadata about one or more graphs.
 **Two implementations:**
 
 #### Local Search (Offline)
+
 **Location**: `deps/cli/src/logseq/cli/commands/search.cljs:53-62`
 
 - Queries `:block/title` datoms via DataScript
@@ -481,6 +492,7 @@ Displays detailed metadata about one or more graphs.
 ⚠️ **Limitation**: Local search only searches `:block/title`, not full-text content.
 
 #### API Search (Online)
+
 **Location**: `deps/cli/src/logseq/cli/commands/search.cljs:43-51`
 
 - Uses `logseq.app.search` API method
@@ -488,6 +500,7 @@ Displays detailed metadata about one or more graphs.
 - Returns blocks with FTS highlighting markers
 
 **Highlighting:**
+
 - Local: ANSI color codes (soft red: `\u001b[38;2;242;101;106m`)
 - API: Parses `$pfts_2lqh>$...$<pfts_2lqh$` markers
 
@@ -508,12 +521,14 @@ logseq query my-graph "a1b2c3d4-e5f6-..."
 **Location**: `deps/cli/src/logseq/cli/commands/query.cljs:50-65`
 
 Calls `d/entity` with:
+
 - Integer → entity ID
 - Keyword → `:db/ident` lookup
 - UUID string → `[:block/uuid uuid]` lookup
 
 **Property expansion:**
 With `-p` flag, expands entity properties to readable form:
+
 ```clojure
 {:block/tags #{:logseq.class/Tag}}
 ;; Instead of:
@@ -542,6 +557,7 @@ logseq query '[... datalog ...]' -a TOKEN
 **Location**: `deps/cli/src/logseq/cli/commands/query.cljs:16-30`
 
 Routes to:
+
 - `logseq.db.datascript_query` for `[...]` queries
 - `logseq.db.q` for `(...)` simple queries
 
@@ -599,6 +615,7 @@ flowchart TD
 Exports entire graph to Markdown zip file, similar to in-app export.
 
 **Process:**
+
 1. Read graph's export config from `logseq/config.edn`
 2. Generate markdown for each page
 3. Zip all files with timestamp
@@ -621,6 +638,7 @@ Exports entire graph to Markdown zip file, similar to in-app export.
 
 **Config handling:**
 Respects `:export/bullet-indentation` setting:
+
 - `:tab` → `\t`
 - `:two-spaces` → `"  "`
 - `:four-spaces` → `"    "`
@@ -647,6 +665,7 @@ Exports graph structure as EDN (Extensible Data Notation).
 ```
 
 **Export structure:**
+
 ```clojure
 {:properties [...]    ; Property definitions
  :classes [...]       ; Class definitions
@@ -654,6 +673,7 @@ Exports graph structure as EDN (Extensible Data Notation).
 ```
 
 **Options:**
+
 - `-T` / `--include-timestamps?` - Include temporal data
 - `-c` / `--catch-validation-errors?` - Continue on errors (dev mode)
 - `-e` / `--exclude-namespaces` - Exclude property/class namespaces
@@ -681,6 +701,7 @@ Exports graph structure as EDN (Extensible Data Notation).
 ```
 
 **API signature:** `logseq.app.append_block_in_page(text, page-name, opts)`
+
 - `text` - Block content to append
 - `page-name` - `nil` means current page
 - `opts` - `nil` means default options
@@ -705,6 +726,7 @@ Exports graph structure as EDN (Extensible Data Notation).
 **Location**: `deps/cli/src/logseq/cli/common/graph.cljs:10-15`
 
 Graph names are URL-encoded to handle filesystem restrictions:
+
 - `/` → `++`
 - `:` → `+3A+`
 
@@ -718,6 +740,7 @@ Graph names are URL-encoded to handle filesystem restrictions:
 ```
 
 **Example:**
+
 - Graph name in UI: `user/projects`
 - Directory: `~/logseq/graphs/logseq_db__user++projects/`
 
@@ -741,20 +764,20 @@ graph LR
 
 ## Key Witnesses (Main Files)
 
-| File Path | Role | Lines | Key Responsibilities |
-|-----------|------|-------|---------------------|
-| `cli.mjs` | Entry Point | 15 | Bootstrap nbb, load ClojureScript, invoke main |
-| `src/logseq/cli.cljs` | Core Dispatcher | 137 | Command routing, lazy loading, error handling |
-| `src/logseq/cli/spec.cljs` | Command Specs | 51 | babashka.cli option specifications |
-| `src/logseq/cli/util.cljs` | CLI Utilities | 59 | API fetch, error handling, graph paths |
-| `src/logseq/cli/common/graph.cljs` | Graph Discovery | 33 | Graph directory management, name encoding |
-| `src/logseq/cli/text_util.cljs` | Text Utilities | 44 | String wrapping, FTS marker parsing |
-| `src/logseq/cli/commands/graph.cljs` | list, show | 53 | Graph listing and metadata display |
-| `src/logseq/cli/commands/search.cljs` | search | 67 | Local and API search with highlighting |
-| `src/logseq/cli/commands/query.cljs` | query | 106 | Entity, DataLog, and API queries |
-| `src/logseq/cli/commands/export.cljs` | export | 80 | Markdown export with config handling |
-| `src/logseq/cli/commands/export_edn.cljs` | export-edn | 23 | EDN export via sqlite-export |
-| `src/logseq/cli/commands/append.cljs` | append | 14 | Block appending via API |
+| File Path                                 | Role            | Lines | Key Responsibilities                           |
+| ----------------------------------------- | --------------- | ----- | ---------------------------------------------- |
+| `cli.mjs`                                 | Entry Point     | 15    | Bootstrap nbb, load ClojureScript, invoke main |
+| `src/logseq/cli.cljs`                     | Core Dispatcher | 137   | Command routing, lazy loading, error handling  |
+| `src/logseq/cli/spec.cljs`                | Command Specs   | 51    | babashka.cli option specifications             |
+| `src/logseq/cli/util.cljs`                | CLI Utilities   | 59    | API fetch, error handling, graph paths         |
+| `src/logseq/cli/common/graph.cljs`        | Graph Discovery | 33    | Graph directory management, name encoding      |
+| `src/logseq/cli/text_util.cljs`           | Text Utilities  | 44    | String wrapping, FTS marker parsing            |
+| `src/logseq/cli/commands/graph.cljs`      | list, show      | 53    | Graph listing and metadata display             |
+| `src/logseq/cli/commands/search.cljs`     | search          | 67    | Local and API search with highlighting         |
+| `src/logseq/cli/commands/query.cljs`      | query           | 106   | Entity, DataLog, and API queries               |
+| `src/logseq/cli/commands/export.cljs`     | export          | 80    | Markdown export with config handling           |
+| `src/logseq/cli/commands/export_edn.cljs` | export-edn      | 23    | EDN export via sqlite-export                   |
+| `src/logseq/cli/commands/append.cljs`     | append          | 14    | Block appending via API                        |
 
 ## Critical Findings
 
@@ -771,6 +794,7 @@ The CLI uses lazy loading to keep startup time under 1 second. Without this, req
 **Evidence**: All local commands use `sqlite-cli/open-db!`
 
 The CLI bypasses Logseq's normal transaction pipeline and directly opens SQLite files. This enables:
+
 - ✅ Offline operation
 - ✅ CI/CD integration
 - ✅ Faster bulk queries
@@ -782,6 +806,7 @@ The CLI bypasses Logseq's normal transaction pipeline and directly opens SQLite 
 **Evidence**: Search and query commands implement both local and API modes
 
 The same command can operate in two fundamentally different ways:
+
 ```
 logseq search foo graph           → SQLite datom scan
 logseq search foo -a TOKEN        → HTTP API FTS
@@ -794,6 +819,7 @@ logseq search foo -a TOKEN        → HTTP API FTS
 **Evidence**: `deps/cli/src/logseq/cli/util.cljs:22-24`
 
 API token can be provided two ways:
+
 1. `-a` / `--api-server-token` flag
 2. `$LOGSEQ_API_SERVER_TOKEN` environment variable
 
@@ -820,6 +846,7 @@ vendor/src/
 **Evidence**: Every command checks `fs/existsSync` before operating
 
 **Pattern:**
+
 ```clojure
 (if (fs/existsSync (cli-util/get-graph-dir graph))
   ;; execute command
@@ -862,6 +889,7 @@ DataLog queries with single `:find` binding are automatically unwrapped:
 **Location**: `deps/cli/src/logseq/cli/commands/search.cljs:56-60`
 
 Local mode only searches `:block/title`:
+
 ```clojure
 (->> (d/datoms @conn :aevt :block/title)
      (filter (fn [datom]
@@ -881,6 +909,7 @@ Commands don't validate that the SQLite schema matches the CLI's expected versio
 ### ❌ No Database Lock Handling
 
 Opening SQLite while Logseq app has it open could cause:
+
 - Read inconsistencies (due to WAL mode)
 - Lock timeouts
 
@@ -891,6 +920,7 @@ Opening SQLite while Logseq app has it open could cause:
 HTTP API Server is disabled by default in Logseq.
 
 **Setup Steps:**
+
 1. Settings → Advanced → Enable HTTP Server
 2. Generate API token
 3. Copy token to CLI command or env var
@@ -908,6 +938,7 @@ HTTP API Server is disabled by default in Logseq.
 ```
 
 Errors don't include:
+
 - Command being executed
 - Suggestions for fixes
 - Links to documentation
@@ -921,6 +952,7 @@ Long-running commands (export, large queries) provide no progress feedback.
 ### ❌ No Command Completion
 
 CLI doesn't provide shell completion scripts for:
+
 - Command names
 - Graph names
 - Option flags
@@ -928,6 +960,7 @@ CLI doesn't provide shell completion scripts for:
 ### ❌ Limited Export Customization
 
 Export commands use hardcoded logic with minimal customization:
+
 - No file filtering
 - No custom transformations
 - No partial exports
@@ -954,6 +987,7 @@ logseq list
 ```
 
 **Output:**
+
 ```
 DB Graphs:
 graph1
@@ -964,6 +998,7 @@ old-graph
 ```
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - DB version app not installed
 
@@ -978,11 +1013,13 @@ logseq show GRAPH [GRAPH2 ...]
 ```
 
 **Arguments:**
+
 - `GRAPH` - Graph name(s) to display
 
 **Output:** Table with metadata for each graph
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - Graph does not exist
 
@@ -998,10 +1035,12 @@ logseq search [OPTIONS] -a TOKEN TERMS...
 ```
 
 **Arguments:**
+
 - `GRAPH` - Graph name (local mode only)
 - `TERMS` - Search terms (space-separated)
 
 **Options:**
+
 ```
 -a, --api-server-token TOKEN    Use API mode (env: LOGSEQ_API_SERVER_TOKEN)
 -r, --raw                       Print raw response without formatting
@@ -1009,6 +1048,7 @@ logseq search [OPTIONS] -a TOKEN TERMS...
 ```
 
 **Examples:**
+
 ```bash
 # Local search
 logseq search my-graph todo urgent
@@ -1021,6 +1061,7 @@ LOGSEQ_API_SERVER_TOKEN=my-token logseq search todo urgent
 ```
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - Graph not found, API error, or connection refused
 
@@ -1042,12 +1083,14 @@ logseq query [OPTIONS] -a TOKEN 'QUERY'
 ```
 
 **Arguments:**
+
 - `GRAPH` - Graph name (local mode) or query (API mode)
 - `ID|UUID|IDENT` - Entity specifiers (integers, UUIDs, or keywords)
 - `DATALOG_QUERY` - DataLog query starting with `[:find ...]`
 - `QUERY` - DataLog `[...]` or simple `(...)` query for API
 
 **Options:**
+
 ```
 -a, --api-server-token TOKEN       Use API mode
 -g, --graphs GRAPH...              Additional graphs for multi-graph query
@@ -1056,6 +1099,7 @@ logseq query [OPTIONS] -a TOKEN 'QUERY'
 ```
 
 **Examples:**
+
 ```bash
 # Entity by ID
 logseq query my-graph 123
@@ -1080,6 +1124,7 @@ logseq query '[:find (pull ?b [*]) :where [?b :block/marker "TODO"]]' -a TOKEN
 ```
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - Graph not found, invalid query, or API error
 
@@ -1094,14 +1139,17 @@ logseq export [OPTIONS] GRAPH
 ```
 
 **Arguments:**
+
 - `GRAPH` - Graph name to export
 
 **Options:**
+
 ```
 -f, --file PATH    Output file path (default: GRAPH_markdown_TIMESTAMP.zip)
 ```
 
 **Examples:**
+
 ```bash
 # Default export
 logseq export my-graph
@@ -1112,11 +1160,13 @@ logseq export my-graph -f my-export.zip
 ```
 
 **Behavior:**
+
 - Respects graph's `:export/bullet-indentation` config
 - Includes all pages as separate `.md` files
 - Creates zip archive
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - Graph not found or export failed
 
@@ -1131,9 +1181,11 @@ logseq export-edn [OPTIONS] GRAPH
 ```
 
 **Arguments:**
+
 - `GRAPH` - Graph name to export
 
 **Options:**
+
 ```
 -f, --file PATH                    Output file (default: GRAPH_TIMESTAMP.edn)
 -T, --include-timestamps?          Include :block/created-at and :block/updated-at
@@ -1145,6 +1197,7 @@ logseq export-edn [OPTIONS] GRAPH
 ```
 
 **Examples:**
+
 ```bash
 # Basic export
 logseq export-edn my-graph
@@ -1157,6 +1210,7 @@ logseq export-edn my-graph -e logseq.class -e logseq.property
 ```
 
 **Output Structure:**
+
 ```clojure
 {:properties [...]         ; Property definitions
  :classes [...]            ; Class definitions
@@ -1164,6 +1218,7 @@ logseq export-edn my-graph -e logseq.class -e logseq.property
 ```
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - Graph not found or export failed
 
@@ -1178,14 +1233,17 @@ logseq append [OPTIONS] TEXT...
 ```
 
 **Arguments:**
+
 - `TEXT` - Block content (all args joined with spaces)
 
 **Options:**
+
 ```
 -a, --api-server-token TOKEN    API token (required)
 ```
 
 **Examples:**
+
 ```bash
 # Append to current page
 logseq append "TODO Review pull request" -a my-token
@@ -1195,11 +1253,13 @@ logseq append This is a new block -a my-token
 ```
 
 **Requirements:**
+
 - HTTP API Server must be enabled
 - Valid API token
 - A page must be open in Logseq
 
 **Exit Codes:**
+
 - `0` - Success
 - `1` - API error or connection refused
 
@@ -1214,9 +1274,11 @@ logseq help COMMAND
 ```
 
 **Arguments:**
+
 - `COMMAND` - Command name to show help for
 
 **Examples:**
+
 ```bash
 logseq help query
 logseq help export-edn
@@ -1224,11 +1286,12 @@ logseq help export-edn
 
 ### Environment Variables
 
-| Variable | Usage | Commands |
-|----------|-------|----------|
+| Variable                  | Usage                    | Commands              |
+| ------------------------- | ------------------------ | --------------------- |
 | `LOGSEQ_API_SERVER_TOKEN` | API authentication token | search, query, append |
 
 **Example:**
+
 ```bash
 export LOGSEQ_API_SERVER_TOKEN=abc123xyz
 logseq search todo
@@ -1239,10 +1302,10 @@ logseq append "Meeting notes"
 
 All commands use consistent exit codes:
 
-| Code | Meaning |
-|------|---------|
-| `0` | Success |
-| `1` | Error (graph not found, API error, invalid args, etc.) |
+| Code | Meaning                                                |
+| ---- | ------------------------------------------------------ |
+| `0`  | Success                                                |
+| `1`  | Error (graph not found, API error, invalid args, etc.) |
 
 ## Message Flow Reference
 
@@ -1426,6 +1489,7 @@ Add debug output to `logseq.cli/-main`:
 **Cause:** Graph name doesn't match directory name.
 
 **Debug:**
+
 ```bash
 # List actual directories
 ls ~/logseq/graphs/
@@ -1441,11 +1505,13 @@ logseq list
 #### "Failed to connect to HTTP API Server"
 
 **Causes:**
+
 1. HTTP API Server is disabled
 2. Logseq app is not running
 3. Port 12315 is blocked
 
 **Debug:**
+
 ```bash
 # Check if port is listening
 lsof -i :12315
@@ -1455,6 +1521,7 @@ curl http://127.0.0.1:12315/api
 ```
 
 **Fix:**
+
 1. Enable in Settings → Advanced → HTTP API Server
 2. Start Logseq desktop app
 3. Check firewall settings
@@ -1466,6 +1533,7 @@ curl http://127.0.0.1:12315/api
 **Cause:** Invalid or missing API token.
 
 **Debug:**
+
 ```bash
 # Check token is being passed
 echo $LOGSEQ_API_SERVER_TOKEN
@@ -1528,15 +1596,18 @@ node cli.mjs query my-graph 123
 ### Startup Time
 
 **Measurement** (empty command):
+
 ```bash
 time logseq --version
 ```
 
 **Results:**
+
 - **Cold start**: ~500-700ms (first run after install)
 - **Warm start**: ~300-400ms (V8 optimization kicks in)
 
 **Breakdown:**
+
 - Node.js initialization: ~100ms
 - nbb-logseq load: ~150ms
 - Namespace load: ~150ms
@@ -1546,13 +1617,13 @@ time logseq --version
 
 **Test Graph**: 1000 pages, 10,000 blocks
 
-| Query Type | Time | Notes |
-|------------|------|-------|
-| Entity by ID | ~150ms | SQLite open + single entity lookup |
-| Simple DataLog | ~200ms | Small result set (<100 entities) |
-| Complex DataLog | ~500ms | Large result set (1000+ entities) |
-| API query | ~250ms | Network overhead + app processing |
-| Title search (local) | ~300ms | Full datom scan of :block/title |
+| Query Type           | Time   | Notes                              |
+| -------------------- | ------ | ---------------------------------- |
+| Entity by ID         | ~150ms | SQLite open + single entity lookup |
+| Simple DataLog       | ~200ms | Small result set (<100 entities)   |
+| Complex DataLog      | ~500ms | Large result set (1000+ entities)  |
+| API query            | ~250ms | Network overhead + app processing  |
+| Title search (local) | ~300ms | Full datom scan of :block/title    |
 
 **Bottleneck**: SQLite connection establishment (~100ms) dominates for simple queries.
 
@@ -1560,21 +1631,21 @@ time logseq --version
 
 **Test Graph**: 1000 pages
 
-| Export Type | Time | File Size |
-|-------------|------|-----------|
-| Markdown | ~5s | 15 MB (zip) |
-| EDN | ~3s | 25 MB |
+| Export Type | Time | File Size   |
+| ----------- | ---- | ----------- |
+| Markdown    | ~5s  | 15 MB (zip) |
+| EDN         | ~3s  | 25 MB       |
 
 **Bottleneck**: Markdown conversion (escaping, formatting) is slower than EDN serialization.
 
 ### Memory Usage
 
-| Operation | Peak Memory |
-|-----------|-------------|
-| Startup | ~50 MB |
-| List graphs | ~55 MB |
-| Query 1000 entities | ~150 MB |
-| Export 1000 pages | ~300 MB |
+| Operation           | Peak Memory |
+| ------------------- | ----------- |
+| Startup             | ~50 MB      |
+| List graphs         | ~55 MB      |
+| Query 1000 entities | ~150 MB     |
+| Export 1000 pages   | ~300 MB     |
 
 **Note**: Node.js V8 heap size limits apply (default ~1.4 GB).
 
@@ -1590,21 +1661,25 @@ time logseq --version
 ### High Priority
 
 1. **Schema Version Validation**
+
    - Check graph schema matches CLI expectations
    - Error clearly if version mismatch
    - **Complexity**: Medium
 
 2. **Shell Completion Scripts**
+
    - Generate for bash, zsh, fish
    - Complete graph names, commands, flags
    - **Complexity**: Low
 
 3. **Progress Indicators**
+
    - Show spinner/progress bar for long operations
    - Estimate time remaining for exports
    - **Complexity**: Low
 
 4. **Better Error Messages**
+
    - Include command context
    - Suggest fixes (e.g., "Run 'logseq list' to see available graphs")
    - Link to documentation
@@ -1618,21 +1693,25 @@ time logseq --version
 ### Medium Priority
 
 6. **Watch Mode**
+
    - `logseq query --watch` to re-run on graph changes
    - Useful for development workflows
    - **Complexity**: Medium
 
 7. **JSON Output Format**
+
    - `--format json` flag for programmatic consumption
    - Pipe to jq, use in scripts
    - **Complexity**: Low
 
 8. **Query Result Pagination**
+
    - `--limit` and `--offset` for large result sets
    - Cursor-based pagination for API mode
    - **Complexity**: Medium
 
 9. **Batch Operations**
+
    - `logseq query --graphs all '[:find ...]'`
    - Aggregate results from multiple graphs
    - **Complexity**: High
@@ -1645,21 +1724,25 @@ time logseq --version
 ### Low Priority
 
 11. **Fuzzy Graph Name Matching**
+
     - `logseq query myg...` → suggests `my-graph`
     - Helpful for tab completion alternative
     - **Complexity**: Low
 
 12. **Query Templates**
+
     - Named queries: `logseq query --template todos`
     - Define templates in config file
     - **Complexity**: Medium
 
 13. **Diff Command**
+
     - `logseq diff graph1 graph2`
     - Show what changed between graph versions
     - **Complexity**: High
 
 14. **Graph Statistics**
+
     - `logseq stats my-graph`
     - Show page count, block count, link count, etc.
     - **Complexity**: Low
@@ -1676,6 +1759,7 @@ time logseq --version
 The Logseq CLI is a **well-designed, focused tool** that successfully brings Logseq graph access to the command line. Its dual-mode architecture (local SQLite + HTTP API) provides flexibility for both offline scripting and interactive app integration.
 
 **Strengths:**
+
 - ✅ Clean architecture with lazy loading
 - ✅ Offline operation for CI/CD
 - ✅ Direct database access for performance
@@ -1683,6 +1767,7 @@ The Logseq CLI is a **well-designed, focused tool** that successfully brings Log
 - ✅ Minimal dependencies (nbb-logseq, better-sqlite3)
 
 **Weaknesses:**
+
 - ⚠️ Local search limited to titles
 - ⚠️ No schema version checking
 - ⚠️ Limited error messages
@@ -1690,6 +1775,7 @@ The Logseq CLI is a **well-designed, focused tool** that successfully brings Log
 - ⚠️ Assumes terminal capabilities
 
 **Use Cases:**
+
 1. **CI/CD Pipelines**: Export/query graphs in GitHub Actions
 2. **Scripting**: Automate graph queries and exports
 3. **Backup**: Schedule EDN exports via cron
@@ -1743,6 +1829,7 @@ deps/cli/
 **Total Lines of Code**: ~1,200 (excluding vendor/)
 
 **Dependencies:**
+
 - `@logseq/nbb-logseq` - ClojureScript runtime
 - `better-sqlite3` - Native SQLite bindings
 - `fs-extra` - Enhanced filesystem API
@@ -1750,6 +1837,7 @@ deps/cli/
 - `mldoc` - Markdown parsing (transitive)
 
 **Build Artifacts:**
+
 - `node_modules/` - npm dependencies
 - `.nbb/` - nbb cache (development only)
 
