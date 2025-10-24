@@ -611,7 +611,7 @@ const unsubscribe = logseq.DB.onBlockChanged(
 
 ### Creating Blocks with Properties
 
-In DB graphs, you can set properties at block creation time:
+In DB graphs, you can set properties at block creation time. Properties will be created automatically with inferred types if they don't exist:
 
 ```javascript
 const newBlock = await logseq.Editor.insertBlock(
@@ -619,16 +619,39 @@ const newBlock = await logseq.Editor.insertBlock(
   'Task description',
   {
     properties: {
-      priority: 5,
-      status: 'active',
-      'due-date': new Date('2025-12-31'),
-      tags: ['urgent', 'client']
+      priority: 5,               // Auto-inferred as number
+      status: 'active',          // Auto-inferred as default/string
+      'due-date': new Date('2025-12-31'), // Auto-inferred as date
+      tags: ['urgent', 'client'], // Auto-inferred as cardinality:many
+      completed: false           // Auto-inferred as checkbox
     },
     sibling: false  // Create as child
   }
 );
 
 console.log('Created block:', newBlock.uuid);
+```
+
+**With Explicit Schema (Advanced):**
+
+You can optionally provide schema definitions to control property types:
+
+```javascript
+const newBlock = await logseq.Editor.insertBlock(
+  parentBlock.uuid,
+  'Task with custom types',
+  {
+    properties: {
+      priority: 5,
+      url: 'https://example.com'
+    },
+    schema: {
+      priority: { type: 'number', cardinality: 'one' },
+      url: { type: 'url', cardinality: 'one' }
+    },
+    sibling: false
+  }
+);
 ```
 
 ```clojure
@@ -665,7 +688,13 @@ const batchBlocks = [
 const created = await logseq.Editor.insertBatchBlock(
   parentBlock.uuid,
   batchBlocks,
-  { sibling: false }
+  {
+    sibling: false,
+    schema: {  // Optional: Define schemas for batch properties
+      priority: { type: 'number', cardinality: 'one' },
+      status: { type: 'default', cardinality: 'one' }
+    }
+  }
 );
 
 console.log(`Created ${created.length} blocks`);
@@ -682,6 +711,10 @@ await logseq.Editor.updateBlock(
     properties: {
       priority: 4,
       status: 'in-progress'
+    },
+    schema: {  // Optional: Define schemas if properties don't exist
+      priority: { type: 'number' },
+      status: { type: 'default' }
     }
   }
 );
@@ -1257,16 +1290,37 @@ Get all properties in the graph.
 
 ### Block Properties
 
-#### `upsertBlockProperty(block, key, value)`
+#### `upsertBlockProperty(block, key, value, options?)`
 
-Set a property value on a block.
+Set a property value on a block. If the property doesn't exist, it will be created with auto-inferred types.
 
 **Parameters:**
 - `block` (BlockIdentity) - Block UUID or entity
 - `key` (string) - Property name
-- `value` (any) - Value (type-checked against schema)
+- `value` (any) - Value (type-checked against schema if exists)
+- `options` (object, optional)
+  - `schema` (object) - Inline schema definition for creating the property if it doesn't exist
 
 **Returns:** Promise<void>
+
+**Auto Type Inference:**
+When a property doesn't exist, the type is automatically inferred from the value:
+- `boolean` → `checkbox` type
+- `number` → `number` type
+- URL string or array of URLs → `url` type
+- `object` → `json` type
+- `string` → `default` type
+- Array → `cardinality: 'many'`
+
+**Example with schema:**
+```javascript
+await logseq.Editor.upsertBlockProperty(
+  blockUuid,
+  'priority',
+  5,
+  { schema: { type: 'number', cardinality: 'one' } }
+);
+```
 
 #### `getBlockProperty(block, key)`
 
