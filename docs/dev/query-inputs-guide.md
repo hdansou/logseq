@@ -9,13 +9,17 @@
 **This guide shows query examples in their "raw" format.** How you write them depends on your graph type:
 
 ### File-Based Graphs
+
 Wrap queries in `{{query ...}}` or code blocks:
+
 ```clojure
 {{query (and [[page]])}}
 ```
 
 ### DB-Based Graphs
+
 Use `query::` property (**NO `{{query}}` wrapper!**):
+
 ```markdown
 query:: (and [[page]])
 ```
@@ -50,14 +54,14 @@ query:: (and [[page]])
 
 ### Key Differences from DSL Queries
 
-| Aspect | DSL Query (Simple) | Advanced Query with Inputs |
-|--------|-------------------|---------------------------|
-| **Query Structure** | `(and [[foo]])` | `{:query [...] :inputs [...]}` |
-| **File-based Syntax** | `{{query (and [[foo]])}}` | `{{query {:query [...]}}}` or code block |
-| **DB-based Syntax** | `query:: (and [[foo]])` | `query::` with code block |
-| **Variables** | Template variables `<% %>` | Query inputs `:keyword` |
-| **When Resolved** | Before parsing | At query execution |
-| **Use Case** | Simple filtering | Complex datalog queries |
+| Aspect                | DSL Query (Simple)         | Advanced Query with Inputs               |
+| --------------------- | -------------------------- | ---------------------------------------- |
+| **Query Structure**   | `(and [[foo]])`            | `{:query [...] :inputs [...]}`           |
+| **File-based Syntax** | `{{query (and [[foo]])}}`  | `{{query {:query [...]}}}` or code block |
+| **DB-based Syntax**   | `query:: (and [[foo]])`    | `query::` with code block                |
+| **Variables**         | Template variables `<% %>` | Query inputs `:keyword`                  |
+| **When Resolved**     | Before parsing             | At query execution                       |
+| **Use Case**          | Simple filtering           | Complex datalog queries                  |
 
 ### Why Use Query Inputs?
 
@@ -76,6 +80,7 @@ Understanding the difference is crucial:
 ### Dynamic Variables (`<% %>`)
 
 **DSL Query Example** (syntax varies by graph type):
+
 ```clojure
 # File-based:
 {{query (and <% today %> (task TODO))}}
@@ -85,6 +90,7 @@ query:: (and <% today %> (task "Todo"))
 ```
 
 **Note**: Task statuses differ between graph types:
+
 - File-based: Uppercase keywords (`TODO`, `DOING`, `DONE`)
 - DB-based: Quoted, title-case strings (`"Todo"`, `"Doing"`, `"Done"`)
 
@@ -96,6 +102,7 @@ query:: (and <% today %> (task "Todo"))
 ### Query Inputs (`:keyword`)
 
 **Advanced Query Example** (syntax varies by graph type):
+
 ```clojure
 # Both graphs use same query structure:
 {:query [:find (pull ?b [*])
@@ -114,14 +121,14 @@ query:: (and <% today %> (task "Todo"))
 
 ### When to Use Which?
 
-| Use Case | Recommended |
-|----------|-------------|
-| Simple page queries | Dynamic variables `<% today %>` |
-| Block relationships | Query inputs `:current-block` |
-| Timestamp comparisons | Query inputs `:right-now-ms` |
-| Relative date ranges | Query inputs `:-7d` to `:today` |
-| Templates | Dynamic variables |
-| Context-aware queries | Query inputs `:current-page` |
+| Use Case              | Recommended                     |
+| --------------------- | ------------------------------- |
+| Simple page queries   | Dynamic variables `<% today %>` |
+| Block relationships   | Query inputs `:current-block`   |
+| Timestamp comparisons | Query inputs `:right-now-ms`    |
+| Relative date ranges  | Query inputs `:-7d` to `:today` |
+| Templates             | Dynamic variables               |
+| Context-aware queries | Query inputs `:current-page`    |
 
 ---
 
@@ -164,6 +171,7 @@ flowchart LR
 **Implementation**: `deps/db/src/logseq/db/frontend/inputs.cljs`
 
 **Key Function**:
+
 ```clojure
 (defn resolve-input [db input opts]
   ;; Resolves :current-page, :today, :-7d, etc.
@@ -184,6 +192,7 @@ Context inputs provide information about the current editing context.
 **Use Case**: Query blocks on the active page
 
 **Example**:
+
 ```clojure
 {:title "Blocks on Current Page"
  :query [:find (pull ?b [*])
@@ -197,6 +206,7 @@ Context inputs provide information about the current editing context.
 **Output**: All blocks on whatever page you're currently viewing
 
 **Important**:
+
 - Returns lowercase page name
 - Returns `nil` if no page context available
 - Works differently in sidebars (see `:query-page`)
@@ -209,15 +219,16 @@ Context inputs provide information about the current editing context.
 
 **Difference from `:current-page`**:
 
-| Scenario | `:current-page` | `:query-page` |
-|----------|----------------|---------------|
-| Query on Page A, viewing Page A | "page a" | "page a" |
-| Query on Page A, viewing Page B | "page b" | "page a" |
-| Query in sidebar while on Page A | "page a" | (page where query is) |
+| Scenario                         | `:current-page` | `:query-page`         |
+| -------------------------------- | --------------- | --------------------- |
+| Query on Page A, viewing Page A  | "page a"        | "page a"              |
+| Query on Page A, viewing Page B  | "page b"        | "page a"              |
+| Query in sidebar while on Page A | "page a"        | (page where query is) |
 
 **Use Case**: Query context relative to where the query is defined
 
 **Example**:
+
 ```clojure
 {:title "Tasks for This Project"
  :query [:find (pull ?b [*])
@@ -240,6 +251,7 @@ Context inputs provide information about the current editing context.
 **Use Case**: Query children, siblings, or related blocks
 
 **Example - Children of Current Block**:
+
 ```clojure
 {:title "My Children"
  :query [:find (pull ?child [*])
@@ -250,6 +262,7 @@ Context inputs provide information about the current editing context.
 ```
 
 **Example - Siblings of Current Block**:
+
 ```clojure
 {:title "My Siblings"
  :query [:find (pull ?sibling [*])
@@ -262,6 +275,7 @@ Context inputs provide information about the current editing context.
 ```
 
 **Important**:
+
 - Only available when editing/viewing a block
 - Returns `db/id`, not UUID
 - Can be used to traverse block tree
@@ -275,6 +289,7 @@ Context inputs provide information about the current editing context.
 **Use Case**: Query siblings or parent's properties
 
 **Example - All Siblings (including self)**:
+
 ```clojure
 {:title "All Children of My Parent"
  :query [:find (pull ?sibling [*])
@@ -285,6 +300,7 @@ Context inputs provide information about the current editing context.
 ```
 
 **Example - Parent's Properties**:
+
 ```clojure
 {:title "Parent's Tags"
  :query [:find (pull ?parent [:block/tags])
@@ -307,6 +323,7 @@ Date inputs return integer representations of dates (YYYYMMDD format).
 **Use Case**: Query journal pages or blocks with today's date
 
 **Example**:
+
 ```clojure
 {:title "Today's Journal"
  :query [:find (pull ?b [*])
@@ -317,6 +334,7 @@ Date inputs return integer representations of dates (YYYYMMDD format).
 ```
 
 **Data Format**:
+
 - `20251016` = October 16, 2025
 - Used for `:block/journal-day` attribute
 
@@ -327,6 +345,7 @@ Date inputs return integer representations of dates (YYYYMMDD format).
 **Returns**: Integer for yesterday's date
 
 **Example**:
+
 ```clojure
 {:title "Yesterday's Tasks"
  :query [:find (pull ?b [*])
@@ -344,6 +363,7 @@ Date inputs return integer representations of dates (YYYYMMDD format).
 **Returns**: Integer for tomorrow's date
 
 **Example**:
+
 ```clojure
 {:title "Tomorrow's Schedule"
  :query [:find (pull ?b [*])
@@ -375,15 +395,15 @@ Relative date inputs let you query date ranges dynamically.
 
 ### Examples
 
-| Input | Today is Oct 16 | Returns |
-|-------|----------------|---------|
-| `:-1d` | Oct 16, 2025 | `20251015` (Oct 15) |
-| `:-7d` | Oct 16, 2025 | `20251009` (Oct 9) |
-| `:-1w` | Oct 16, 2025 | `20251009` (Oct 9) |
-| `:-1m` | Oct 16, 2025 | `20250916` (Sep 16) |
-| `:-1y` | Oct 16, 2025 | `20241016` (Oct 16, 2024) |
-| `:+3d` | Oct 16, 2025 | `20251019` (Oct 19) |
-| `:+1w` | Oct 16, 2025 | `20251023` (Oct 23) |
+| Input  | Today is Oct 16 | Returns                   |
+| ------ | --------------- | ------------------------- |
+| `:-1d` | Oct 16, 2025    | `20251015` (Oct 15)       |
+| `:-7d` | Oct 16, 2025    | `20251009` (Oct 9)        |
+| `:-1w` | Oct 16, 2025    | `20251009` (Oct 9)        |
+| `:-1m` | Oct 16, 2025    | `20250916` (Sep 16)       |
+| `:-1y` | Oct 16, 2025    | `20241016` (Oct 16, 2024) |
+| `:+3d` | Oct 16, 2025    | `20251019` (Oct 19)       |
+| `:+1w` | Oct 16, 2025    | `20251023` (Oct 23)       |
 
 ### Real Example - Last 7 Days
 
@@ -401,6 +421,7 @@ Relative date inputs let you query date ranges dynamically.
 ```
 
 **Explanation**:
+
 - `:-7d` resolves to 7 days ago (e.g., `20251009`)
 - `:today` resolves to today (e.g., `20251016`)
 - Query finds all journal entries between those dates
@@ -418,6 +439,7 @@ Timestamp inputs return **milliseconds since Unix epoch** for precise time queri
 **Use Case**: Query recently created/modified blocks
 
 **Example - Blocks Created in Last Hour**:
+
 ```clojure
 {:title "Recent Blocks"
  :query [:find (pull ?b [*])
@@ -438,6 +460,7 @@ Timestamp inputs return **milliseconds since Unix epoch** for precise time queri
 **Returns**: Timestamp for today at 00:00:00.000
 
 **Example - Blocks Created Today**:
+
 ```clojure
 {:title "Created Today"
  :query [:find (pull ?b [*])
@@ -462,6 +485,7 @@ Timestamp inputs return **milliseconds since Unix epoch** for precise time queri
 **Pattern**: `:today-HHMM`, `:today-HHMMSS`, `:today-HHMMSSmmm`
 
 **Examples**:
+
 - `:today-0900` = Today at 9:00 AM (9:00:00.000)
 - `:today-1430` = Today at 2:30 PM (14:30:00.000)
 - `:today-143045` = Today at 2:30:45 PM (14:30:45.000)
@@ -470,6 +494,7 @@ Timestamp inputs return **milliseconds since Unix epoch** for precise time queri
 **Use Case**: Query blocks within specific time windows
 
 **Example - Morning Blocks**:
+
 ```clojure
 {:title "Morning Work (6am-12pm)"
  :query [:find (pull ?b [*])
@@ -504,14 +529,14 @@ Combine relative dates with timestamps for powerful time-range queries.
 
 ### Examples
 
-| Input | Today is Oct 16, 12:00 PM | Returns (ms timestamp) |
-|-------|---------------------------|----------------------|
-| `:-1d-ms` | Oct 16, 2025 | Oct 15, 23:59:59.999 |
-| `:+1d-ms` | Oct 16, 2025 | Oct 17, 00:00:00.000 |
-| `:-3d-start` | Oct 16, 2025 | Oct 13, 00:00:00.000 |
-| `:-3d-end` | Oct 16, 2025 | Oct 13, 23:59:59.999 |
-| `:-1d-0900` | Oct 16, 2025 | Oct 15, 09:00:00.000 |
-| `:+2d-1430` | Oct 16, 2025 | Oct 18, 14:30:00.000 |
+| Input        | Today is Oct 16, 12:00 PM | Returns (ms timestamp) |
+| ------------ | ------------------------- | ---------------------- |
+| `:-1d-ms`    | Oct 16, 2025              | Oct 15, 23:59:59.999   |
+| `:+1d-ms`    | Oct 16, 2025              | Oct 17, 00:00:00.000   |
+| `:-3d-start` | Oct 16, 2025              | Oct 13, 00:00:00.000   |
+| `:-3d-end`   | Oct 16, 2025              | Oct 13, 23:59:59.999   |
+| `:-1d-0900`  | Oct 16, 2025              | Oct 15, 09:00:00.000   |
+| `:+2d-1430`  | Oct 16, 2025              | Oct 18, 14:30:00.000   |
 
 ### Real Example - Last 24 Hours
 
@@ -547,70 +572,70 @@ Combine relative dates with timestamps for powerful time-range queries.
 
 ### Context Inputs
 
-| Input | Returns | Type | Use Case |
-|-------|---------|------|----------|
-| `:current-page` | Page name (lowercase) | String | Page where you're currently viewing |
-| `:query-page` | Page name (lowercase) | String | Page where query block lives |
-| `:current-block` | Block ID | Integer | Block being edited/viewed |
-| `:parent-block` | Block ID | Integer | Parent of current block |
+| Input            | Returns               | Type    | Use Case                            |
+| ---------------- | --------------------- | ------- | ----------------------------------- |
+| `:current-page`  | Page name (lowercase) | String  | Page where you're currently viewing |
+| `:query-page`    | Page name (lowercase) | String  | Page where query block lives        |
+| `:current-block` | Block ID              | Integer | Block being edited/viewed           |
+| `:parent-block`  | Block ID              | Integer | Parent of current block             |
 
 ### Date Inputs (Integer - YYYYMMDD)
 
-| Input | Returns | Example |
-|-------|---------|---------|
-| `:today` | Today's date | `20251016` |
-| `:yesterday` | Yesterday | `20251015` |
-| `:tomorrow` | Tomorrow | `20251017` |
+| Input        | Returns      | Example    |
+| ------------ | ------------ | ---------- |
+| `:today`     | Today's date | `20251016` |
+| `:yesterday` | Yesterday    | `20251015` |
+| `:tomorrow`  | Tomorrow     | `20251017` |
 
 ### Relative Date Inputs (Integer - YYYYMMDD)
 
 | Pattern | Example | Returns (if today is Oct 16, 2025) |
-|---------|---------|-----------------------------------|
-| `:-Xd` | `:-7d` | `20251009` (Oct 9) |
-| `:-Xw` | `:-2w` | `20251002` (Oct 2) |
-| `:-Xm` | `:-1m` | `20250916` (Sep 16) |
-| `:-Xy` | `:-1y` | `20241016` (Oct 16, 2024) |
-| `:+Xd` | `:+3d` | `20251019` (Oct 19) |
-| `:+Xw` | `:+1w` | `20251023` (Oct 23) |
-| `:+Xm` | `:+2m` | `20251216` (Dec 16) |
-| `:+Xy` | `:+1y` | `20261016` (Oct 16, 2026) |
+| ------- | ------- | ---------------------------------- |
+| `:-Xd`  | `:-7d`  | `20251009` (Oct 9)                 |
+| `:-Xw`  | `:-2w`  | `20251002` (Oct 2)                 |
+| `:-Xm`  | `:-1m`  | `20250916` (Sep 16)                |
+| `:-Xy`  | `:-1y`  | `20241016` (Oct 16, 2024)          |
+| `:+Xd`  | `:+3d`  | `20251019` (Oct 19)                |
+| `:+Xw`  | `:+1w`  | `20251023` (Oct 23)                |
+| `:+Xm`  | `:+2m`  | `20251216` (Dec 16)                |
+| `:+Xy`  | `:+1y`  | `20261016` (Oct 16, 2026)          |
 
 ### Timestamp Inputs (Milliseconds)
 
-| Input | Returns | Description |
-|-------|---------|-------------|
-| `:right-now-ms` | Current timestamp | Exact moment query runs |
-| `:start-of-today-ms` | Today 00:00:00.000 | Start of day |
-| `:end-of-today-ms` | Today 23:59:59.999 | End of day |
-| `:today-start` | Today 00:00:00.000 | Alias for start-of-today-ms |
-| `:today-end` | Today 23:59:59.999 | Alias for end-of-today-ms |
-| `:today-HHMM` | Today at HH:MM:00.000 | Specific time |
-| `:today-HHMMSS` | Today at HH:MM:SS.000 | Specific time with seconds |
-| `:today-HHMMSSmmm` | Today at HH:MM:SS.mmm | Specific time with milliseconds |
+| Input                | Returns               | Description                     |
+| -------------------- | --------------------- | ------------------------------- |
+| `:right-now-ms`      | Current timestamp     | Exact moment query runs         |
+| `:start-of-today-ms` | Today 00:00:00.000    | Start of day                    |
+| `:end-of-today-ms`   | Today 23:59:59.999    | End of day                      |
+| `:today-start`       | Today 00:00:00.000    | Alias for start-of-today-ms     |
+| `:today-end`         | Today 23:59:59.999    | Alias for end-of-today-ms       |
+| `:today-HHMM`        | Today at HH:MM:00.000 | Specific time                   |
+| `:today-HHMMSS`      | Today at HH:MM:SS.000 | Specific time with seconds      |
+| `:today-HHMMSSmmm`   | Today at HH:MM:SS.mmm | Specific time with milliseconds |
 
 ### Relative Timestamp Inputs (Milliseconds)
 
-| Pattern | Example | Description |
-|---------|---------|-------------|
-| `:-Xd-ms` | `:-1d-ms` | X days ago at end of day |
-| `:+Xd-ms` | `:+1d-ms` | X days from now at start of day |
-| `:-Xd-start` | `:-3d-start` | X days ago at 00:00:00.000 |
-| `:-Xd-end` | `:-3d-end` | X days ago at 23:59:59.999 |
-| `:+Xd-start` | `:+2d-start` | X days from now at 00:00:00.000 |
-| `:+Xd-end` | `:+2d-end` | X days from now at 23:59:59.999 |
-| `:-Xd-HHMM` | `:-1d-0900` | X days ago at HH:MM |
-| `:+Xd-HHMM` | `:+2d-1430` | X days from now at HH:MM |
-| `:-Xd-HHMMSS` | `:-1d-143045` | X days ago at HH:MM:SS |
-| `:+Xd-HHMMSS` | `:+1d-083000` | X days from now at HH:MM:SS |
+| Pattern       | Example       | Description                     |
+| ------------- | ------------- | ------------------------------- |
+| `:-Xd-ms`     | `:-1d-ms`     | X days ago at end of day        |
+| `:+Xd-ms`     | `:+1d-ms`     | X days from now at start of day |
+| `:-Xd-start`  | `:-3d-start`  | X days ago at 00:00:00.000      |
+| `:-Xd-end`    | `:-3d-end`    | X days ago at 23:59:59.999      |
+| `:+Xd-start`  | `:+2d-start`  | X days from now at 00:00:00.000 |
+| `:+Xd-end`    | `:+2d-end`    | X days from now at 23:59:59.999 |
+| `:-Xd-HHMM`   | `:-1d-0900`   | X days ago at HH:MM             |
+| `:+Xd-HHMM`   | `:+2d-1430`   | X days from now at HH:MM        |
+| `:-Xd-HHMMSS` | `:-1d-143045` | X days ago at HH:MM:SS          |
+| `:+Xd-HHMMSS` | `:+1d-083000` | X days from now at HH:MM:SS     |
 
 ### Deprecated (Still Works)
 
-| Input | Replacement | Description |
-|-------|-------------|-------------|
-| `:Xd-before` | `:-Xd` | Old relative date syntax |
-| `:Xd-after` | `:+Xd` | Old relative date syntax |
-| `:Xd-before-ms` | `:-Xd-ms` | Old relative timestamp |
-| `:Xd-after-ms` | `:+Xd-ms` | Old relative timestamp |
+| Input           | Replacement | Description              |
+| --------------- | ----------- | ------------------------ |
+| `:Xd-before`    | `:-Xd`      | Old relative date syntax |
+| `:Xd-after`     | `:+Xd`      | Old relative date syntax |
+| `:Xd-before-ms` | `:-Xd-ms`   | Old relative timestamp   |
+| `:Xd-after-ms`  | `:+Xd-ms`   | Old relative timestamp   |
 
 ---
 
@@ -775,35 +800,36 @@ Place this in your daily note template!
 
 ### Query Inputs Compatibility Matrix
 
-| Input | DB-Based | File-Based | Notes |
-|-------|----------|------------|-------|
-| **Context Inputs** ||||
-| `:current-page` | ✅ Yes | ✅ Yes | Returns page name |
-| `:query-page` | ✅ Yes | ✅ Yes | Returns page where query lives |
-| `:current-block` | ✅ Yes | ✅ Yes | Returns :db/id |
-| `:parent-block` | ✅ Yes | ✅ Yes | Returns :db/id |
-| **Date Inputs** ||||
-| `:today` | ✅ Yes | ✅ Yes | Integer format |
-| `:yesterday` | ✅ Yes | ✅ Yes | Integer format |
-| `:tomorrow` | ✅ Yes | ✅ Yes | Integer format |
-| **Relative Dates** ||||
-| `:-Xd/w/m/y` | ✅ Yes | ✅ Yes | All units supported |
-| `:+Xd/w/m/y` | ✅ Yes | ✅ Yes | All units supported |
-| **Timestamp Inputs** ||||
-| `:right-now-ms` | ✅ Yes | ✅ Yes | Current timestamp |
-| `:start-of-today-ms` | ✅ Yes | ✅ Yes | Midnight |
-| `:end-of-today-ms` | ✅ Yes | ✅ Yes | 23:59:59.999 |
-| `:today-HHMM` | ✅ Yes | ✅ Yes | Specific times |
-| **Relative Timestamps** ||||
-| `:-Xd-ms` | ✅ Yes | ✅ Yes | All formats supported |
-| `:-Xd-start/end` | ✅ Yes | ✅ Yes | All formats supported |
-| `:-Xd-HHMM` | ✅ Yes | ✅ Yes | All formats supported |
+| Input                   | DB-Based | File-Based | Notes                          |
+| ----------------------- | -------- | ---------- | ------------------------------ |
+| **Context Inputs**      |          |            |                                |
+| `:current-page`         | ✅ Yes   | ✅ Yes     | Returns page name              |
+| `:query-page`           | ✅ Yes   | ✅ Yes     | Returns page where query lives |
+| `:current-block`        | ✅ Yes   | ✅ Yes     | Returns :db/id                 |
+| `:parent-block`         | ✅ Yes   | ✅ Yes     | Returns :db/id                 |
+| **Date Inputs**         |          |            |                                |
+| `:today`                | ✅ Yes   | ✅ Yes     | Integer format                 |
+| `:yesterday`            | ✅ Yes   | ✅ Yes     | Integer format                 |
+| `:tomorrow`             | ✅ Yes   | ✅ Yes     | Integer format                 |
+| **Relative Dates**      |          |            |                                |
+| `:-Xd/w/m/y`            | ✅ Yes   | ✅ Yes     | All units supported            |
+| `:+Xd/w/m/y`            | ✅ Yes   | ✅ Yes     | All units supported            |
+| **Timestamp Inputs**    |          |            |                                |
+| `:right-now-ms`         | ✅ Yes   | ✅ Yes     | Current timestamp              |
+| `:start-of-today-ms`    | ✅ Yes   | ✅ Yes     | Midnight                       |
+| `:end-of-today-ms`      | ✅ Yes   | ✅ Yes     | 23:59:59.999                   |
+| `:today-HHMM`           | ✅ Yes   | ✅ Yes     | Specific times                 |
+| **Relative Timestamps** |          |            |                                |
+| `:-Xd-ms`               | ✅ Yes   | ✅ Yes     | All formats supported          |
+| `:-Xd-start/end`        | ✅ Yes   | ✅ Yes     | All formats supported          |
+| `:-Xd-HHMM`             | ✅ Yes   | ✅ Yes     | All formats supported          |
 
 **Verdict**: ✅ **All query inputs work in both DB and file-based graphs!**
 
 ### DB-Based Advantages
 
 While inputs work in both, DB-based graphs offer:
+
 - ✅ Faster query execution
 - ✅ More efficient indexing
 - ✅ Better support for complex relationships
@@ -816,6 +842,7 @@ While inputs work in both, DB-based graphs offer:
 ### 1. Choose the Right Input Type
 
 **❌ Don't** mix integer dates with timestamps:
+
 ```clojure
 ;; WRONG - Comparing journal-day (int) with timestamp (ms)
 [?b :block/journal-day ?today]
@@ -823,6 +850,7 @@ While inputs work in both, DB-based graphs offer:
 ```
 
 **✅ Do** use consistent types:
+
 ```clojure
 ;; RIGHT - Both are integers
 [?b :block/journal-day ?today]
@@ -834,6 +862,7 @@ While inputs work in both, DB-based graphs offer:
 Input order must match `:in` declaration:
 
 **❌ Wrong Order**:
+
 ```clojure
 {:query [:find (pull ?b [*])
          :in $ ?end ?start  ;; Reversed!
@@ -842,6 +871,7 @@ Input order must match `:in` declaration:
 ```
 
 **✅ Correct Order**:
+
 ```clojure
 {:query [:find (pull ?b [*])
          :in $ ?start ?end
@@ -852,11 +882,13 @@ Input order must match `:in` declaration:
 ### 3. Use Descriptive Variable Names
 
 **❌ Generic**:
+
 ```clojure
 :in $ ?x ?y
 ```
 
 **✅ Descriptive**:
+
 ```clojure
 :in $ ?start-date ?end-date
 ```
@@ -874,6 +906,7 @@ Add `:title` to explain what the query does:
 ### 5. Test Edge Cases
 
 Test your queries:
+
 - At midnight (day transitions)
 - On month boundaries
 - With no data in the range
@@ -882,11 +915,13 @@ Test your queries:
 ### 6. Prefer Relative Inputs Over Hardcoded
 
 **❌ Hardcoded**:
+
 ```clojure
 [?b :block/journal-day 20251016]  ;; Breaks tomorrow!
 ```
 
 **✅ Relative**:
+
 ```clojure
 :inputs [:today]
 ```
@@ -909,6 +944,7 @@ Define reusable rules for common patterns:
 ### 8. Combine Context and Time Inputs
 
 **Powerful Pattern**:
+
 ```clojure
 {:title "This Project's Recent Activity"
  :query [:find (pull ?b [*])
@@ -922,6 +958,7 @@ Define reusable rules for common patterns:
 ```
 
 This query is:
+
 - Context-aware (`:current-page`)
 - Time-aware (`:-7d-start`)
 - Reusable (works on any page)
@@ -937,20 +974,24 @@ This query is:
 **Debugging Steps**:
 
 1. **Test inputs separately**:
+
    ```clojure
    {:query [:find ?input
             :in $ ?input
             :where [(identity ?input)]]
     :inputs [:current-page]}
    ```
+
    This shows what `:current-page` resolves to.
 
 2. **Check data exists**:
+
    ```clojure
    {:query [:find ?b
             :where [?b :block/journal-day]]
     :inputs []}
    ```
+
    Verify you have journal data.
 
 3. **Verify input type matches attribute**:
@@ -966,6 +1007,7 @@ This query is:
 **Cause**: No block context available
 
 **Solution**:
+
 - Ensure you're viewing/editing a block when query runs
 - Check if `:current-block-uuid` is provided in query options
 - Verify the block exists in database
@@ -979,6 +1021,7 @@ This query is:
 **Debugging**:
 
 1. **Check resolved values**:
+
    ```clojure
    {:query [:find ?start ?end
             :in $ ?start ?end
@@ -998,6 +1041,7 @@ This query is:
 **Symptom**: Comparing timestamps doesn't work as expected
 
 **Common Mistake**:
+
 ```clojure
 ;; WRONG - Comparing different types
 [?b :block/journal-day ?d]
@@ -1006,6 +1050,7 @@ This query is:
 ```
 
 **Solution**: Use consistent types
+
 ```clojure
 ;; RIGHT - Both timestamps
 [?b :block/created-at ?t]
@@ -1019,6 +1064,7 @@ This query is:
 **Symptom**: `:current-page` doesn't match visible page
 
 **Causes**:
+
 1. **Sidebar**: Query runs in sidebar context, not main page
 2. **Editing**: If editing a block, might return block's page
 3. **Lowercase**: Always returns lowercase name
@@ -1034,6 +1080,7 @@ This query is:
 **Explanation**: All times are in **local browser timezone**
 
 **Solution**:
+
 - Times are relative to user's system time
 - `:start-of-today-ms` = midnight in local timezone
 - Cannot override timezone in queries
@@ -1058,6 +1105,7 @@ This query is:
 ```
 
 **Calculation**:
+
 - 1 hour = 3,600,000 ms
 - 1 day = 86,400,000 ms
 - 1 week = 604,800,000 ms
@@ -1203,6 +1251,7 @@ This gives you 4 date variables to work with.
 ### Q2: What's the difference between `:current-page` and `:query-page`?
 
 **A**:
+
 - `:current-page` = Page you're viewing
 - `:query-page` = Page where query block lives
 
@@ -1213,6 +1262,7 @@ Use `:query-page` for stable context, `:current-page` for dynamic views.
 ### Q3: Can I combine query inputs with template variables?
 
 **A**: Not directly. They're separate systems:
+
 - Template variables `<% %>` work in DSL queries (simple)
 - Query inputs `:keyword` work in advanced queries (datalog)
 
@@ -1221,6 +1271,7 @@ Use `:query-page` for stable context, `:current-page` for dynamic views.
 ### Q4: Why does `:today` return an integer instead of a page reference?
 
 **A**: Different purposes:
+
 - `<% today %>` → Page reference `[[2025-10-16]]` for linking
 - `:today` → Integer `20251016` for database comparisons
 
@@ -1229,6 +1280,7 @@ Use `:query-page` for stable context, `:current-page` for dynamic views.
 ### Q5: Can I create custom inputs?
 
 **A**: No, inputs are hardcoded in `logseq.db.frontend.inputs` namespace. You can:
+
 - Use page references: `:inputs [[:page "Page Name"]]`
 - Use literals: `:inputs ["string" 42]`
 - But not custom resolved keywords
@@ -1246,6 +1298,7 @@ For simple queries, use template variables `<% %>`.
 ### Q7: How do I query "between X and Y days ago"?
 
 **A**:
+
 ```clojure
 :inputs [:-7d :-3d]  ;; 7 days ago to 3 days ago
 ```
@@ -1255,6 +1308,7 @@ For simple queries, use template variables `<% %>`.
 ### Q8: Can inputs access block properties?
 
 **A**: No. Inputs resolve to:
+
 - Page names (strings)
 - Block IDs (integers)
 - Dates (integers)
@@ -1267,6 +1321,7 @@ They don't resolve property values. Use the query `:where` clause for that.
 ### Q9: Why is my `:current-block` query failing?
 
 **A**: Check:
+
 1. Are you editing/viewing a block? (not just on a page)
 2. Is the block in the database?
 3. Does your query use `?current-block` correctly?
@@ -1276,6 +1331,7 @@ They don't resolve property values. Use the query `:where` clause for that.
 ### Q10: How precise are timestamp inputs?
 
 **A**:
+
 - `:right-now-ms` = millisecond precision
 - `:-Xd-HHMMSS` = second precision
 - `:-Xd-HHMM` = minute precision
@@ -1286,6 +1342,7 @@ They don't resolve property values. Use the query `:where` clause for that.
 ### Q11: Can I query "last Monday" or "next Friday"?
 
 **A**: Not directly with inputs. You'd need to:
+
 1. Calculate the date manually
 2. Use `:inputs [20251013]` (hardcoded)
 3. Or use template variables `<% last monday %>` in DSL queries
@@ -1301,6 +1358,7 @@ They don't resolve property values. Use the query `:where` clause for that.
 ### Q13: Do inputs update automatically?
 
 **A**: Yes! Queries re-run when:
+
 - Page changes (`:current-page` updates)
 - Block context changes
 - Time passes (`:today` changes at midnight)
@@ -1310,6 +1368,7 @@ They don't resolve property values. Use the query `:where` clause for that.
 ### Q14: Can I use negative numbers for `:+Xd`?
 
 **A**: No, use `:-Xd` for past dates. Signs matter:
+
 - `:-7d` = 7 days ago ✅
 - `:+7d` = 7 days from now ✅
 - `:-(-7)d` = Invalid ❌
@@ -1319,6 +1378,7 @@ They don't resolve property values. Use the query `:where` clause for that.
 ### Q15: How do I debug query inputs?
 
 **A**: Use this pattern:
+
 ```clojure
 {:query [:find ?input
          :in $ ?input
@@ -1365,16 +1425,19 @@ Shows exactly what the input resolves to.
 ## Resources
 
 ### Documentation
+
 - **Dynamic Variables Guide**: [dynamic-variables-user-guide.md](./dynamic-variables-user-guide.md)
 - **Developer Guide**: [dynamic-variables-developer-guide.md](./dynamic-variables-developer-guide.md)
 - **Logseq Docs**: [docs.logseq.com](https://docs.logseq.com/)
 
 ### Code References
+
 - **Implementation**: `deps/db/src/logseq/db/frontend/inputs.cljs`
 - **Tests**: `deps/db/test/logseq/db/frontend/inputs_test.cljs`
 - **Query React**: `src/main/frontend/db/query_react.cljs:19-33`
 
 ### Community
+
 - **Forum**: forum.logseq.com
 - **Discord**: #advanced-queries channel
 - **GitHub**: Report issues or request features
@@ -1385,24 +1448,24 @@ Shows exactly what the input resolves to.
 
 ### How Each Input Resolves
 
-| Input | Resolution Function | Return Type | Depends On |
-|-------|-------------------|-------------|------------|
-| `:current-page` | `resolve-keyword-input` | String | `current-page-fn` from state |
-| `:query-page` | `resolve-keyword-input` | String | `current-block-uuid` → block's page |
-| `:current-block` | `resolve-keyword-input` | Integer | `current-block-uuid` → :db/id |
-| `:parent-block` | `resolve-keyword-input` | Integer | `current-block-uuid` → parent's :db/id |
-| `:today` | `resolve-keyword-input` | Integer | `(t/today)` |
-| `:yesterday` | `resolve-keyword-input` | Integer | `(t/minus (t/today) (t/days 1))` |
-| `:tomorrow` | `resolve-keyword-input` | Integer | `(t/plus (t/today) (t/days 1))` |
-| `:right-now-ms` | `resolve-keyword-input` | Integer | `(common-util/time-ms)` |
-| `:start-of-today-ms` | `resolve-keyword-input` | Integer | `(date-at-local-ms 0 0 0 0)` |
-| `:end-of-today-ms` | `resolve-keyword-input` | Integer | `(date-at-local-ms 23 59 59 999)` |
-| `:-Xd/w/m/y` | `resolve-keyword-input :relative-date` | Integer | `(get-offset-date ...)` |
-| `:+Xd/w/m/y` | `resolve-keyword-input :relative-date` | Integer | `(get-offset-date ...)` |
-| `:-Xd-ms` | `resolve-keyword-input :relative-date-time` | Integer | `(date-at-local-ms ...)` |
-| `:-Xd-start` | `resolve-keyword-input :relative-date-time` | Integer | `(date-at-local-ms ... 0 0 0 0)` |
-| `:-Xd-end` | `resolve-keyword-input :relative-date-time` | Integer | `(date-at-local-ms ... 23 59 59 999)` |
-| `:-Xd-HHMM` | `resolve-keyword-input :relative-date-time` | Integer | `(date-at-local-ms ... HH MM 0 0)` |
+| Input                | Resolution Function                         | Return Type | Depends On                             |
+| -------------------- | ------------------------------------------- | ----------- | -------------------------------------- |
+| `:current-page`      | `resolve-keyword-input`                     | String      | `current-page-fn` from state           |
+| `:query-page`        | `resolve-keyword-input`                     | String      | `current-block-uuid` → block's page    |
+| `:current-block`     | `resolve-keyword-input`                     | Integer     | `current-block-uuid` → :db/id          |
+| `:parent-block`      | `resolve-keyword-input`                     | Integer     | `current-block-uuid` → parent's :db/id |
+| `:today`             | `resolve-keyword-input`                     | Integer     | `(t/today)`                            |
+| `:yesterday`         | `resolve-keyword-input`                     | Integer     | `(t/minus (t/today) (t/days 1))`       |
+| `:tomorrow`          | `resolve-keyword-input`                     | Integer     | `(t/plus (t/today) (t/days 1))`        |
+| `:right-now-ms`      | `resolve-keyword-input`                     | Integer     | `(common-util/time-ms)`                |
+| `:start-of-today-ms` | `resolve-keyword-input`                     | Integer     | `(date-at-local-ms 0 0 0 0)`           |
+| `:end-of-today-ms`   | `resolve-keyword-input`                     | Integer     | `(date-at-local-ms 23 59 59 999)`      |
+| `:-Xd/w/m/y`         | `resolve-keyword-input :relative-date`      | Integer     | `(get-offset-date ...)`                |
+| `:+Xd/w/m/y`         | `resolve-keyword-input :relative-date`      | Integer     | `(get-offset-date ...)`                |
+| `:-Xd-ms`            | `resolve-keyword-input :relative-date-time` | Integer     | `(date-at-local-ms ...)`               |
+| `:-Xd-start`         | `resolve-keyword-input :relative-date-time` | Integer     | `(date-at-local-ms ... 0 0 0 0)`       |
+| `:-Xd-end`           | `resolve-keyword-input :relative-date-time` | Integer     | `(date-at-local-ms ... 23 59 59 999)`  |
+| `:-Xd-HHMM`          | `resolve-keyword-input :relative-date-time` | Integer     | `(date-at-local-ms ... HH MM 0 0)`     |
 
 ---
 
@@ -1412,4 +1475,4 @@ Shows exactly what the input resolves to.
 
 ---
 
-*Master query inputs to build powerful, context-aware queries that adapt dynamically to your workflow!* 🚀
+_Master query inputs to build powerful, context-aware queries that adapt dynamically to your workflow!_ 🚀
