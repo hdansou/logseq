@@ -49,28 +49,30 @@ Add to your `deps.edn`:
 
 The SDK is organized into 8 main namespaces under `com.logseq`:
 
-| Namespace | Description | Functions |
-|-----------|-------------|-----------|
-| `com.logseq.core` | Core plugin lifecycle and main UI | 15 functions |
-| `com.logseq.app` | Application-level operations | 72+ functions |
-| `com.logseq.editor` | Block and page manipulation | 70+ functions |
-| `com.logseq.db` | Database queries and subscriptions | 4 functions |
-| `com.logseq.ui` | User interface utilities | 6 functions |
-| `com.logseq.assets` | Asset and file management | 4 functions |
-| `com.logseq.git` | Git operations | 3 functions |
-| `com.logseq.util` | Data conversion utilities | Internal use |
+| Namespace           | Description                        | Functions     |
+| ------------------- | ---------------------------------- | ------------- |
+| `com.logseq.core`   | Core plugin lifecycle and main UI  | 15 functions  |
+| `com.logseq.app`    | Application-level operations       | 72+ functions |
+| `com.logseq.editor` | Block and page manipulation        | 70+ functions |
+| `com.logseq.db`     | Database queries and subscriptions | 4 functions   |
+| `com.logseq.ui`     | User interface utilities           | 6 functions   |
+| `com.logseq.assets` | Asset and file management          | 4 functions   |
+| `com.logseq.git`    | Git operations                     | 3 functions   |
+| `com.logseq.util`   | Data conversion utilities          | Internal use  |
 
 ### Data Conversion
 
 The SDK automatically handles conversion between JavaScript and ClojureScript data types:
 
 **JavaScript → ClojureScript:**
+
 - JS objects → ClojureScript maps
 - JS arrays → ClojureScript vectors
 - JS strings → ClojureScript strings
 - Promises → Normalized promises that resolve to ClojureScript data
 
 **ClojureScript → JavaScript:**
+
 - Maps → JS objects
 - Vectors → JS arrays
 - Keywords → Encoded strings (with special `___kw___` prefix for round-tripping)
@@ -710,15 +712,31 @@ Create or update a property definition.
 Delete a property definition.
 
 **`(upsert-block-property block key value)`**
+**`(upsert-block-property block key value options)`**
 
-Set a property on a block.
+Set a property on a block. Properties are auto-created with inferred types if they don't exist.
 
 ```clojure
+;; Simple usage (auto type inference)
 (editor/upsert-block-property
   "block-uuid"
   "priority"
-  "high")
+  5)  ; Auto-inferred as number type
+
+;; With explicit schema
+(editor/upsert-block-property
+  "block-uuid"
+  "priority"
+  5
+  {:schema {:type "number" :cardinality "one"}})
 ```
+
+**Auto Type Inference:**
+- Boolean → checkbox type
+- Number → number type
+- URL string/array → url type
+- Object → json type
+- Array → cardinality many
 
 **`(remove-block-property block key)`**
 
@@ -1295,6 +1313,7 @@ libs/
 **1. Data conversion issues**
 
 If you see unexpected data types:
+
 - Check if keywords are being properly converted
 - Use `js/console.log` to inspect data at boundaries
 - Ensure you're using ClojureScript data structures internally
@@ -1302,6 +1321,7 @@ If you see unexpected data types:
 **2. Promise handling**
 
 If promises aren't resolving:
+
 - Make sure to chain `.then` calls properly
 - Always include `.catch` for error handling
 - Check browser console for rejection errors
@@ -1309,6 +1329,7 @@ If promises aren't resolving:
 **3. Event listener cleanup**
 
 If listeners persist after plugin reload:
+
 - Always use `beforeunload` to clean up
 - Store listener references for later removal
 - Test plugin reload behavior
@@ -1316,16 +1337,19 @@ If listeners persist after plugin reload:
 ### Debugging Tips
 
 1. **Enable verbose logging:**
+
    ```clojure
    (set! js/console.debug (.-log js/console))
    ```
 
 2. **Inspect API proxy:**
+
    ```clojure
    (js/console.dir js/logseq)
    ```
 
 3. **Check data conversion:**
+
    ```clojure
    (require '[cljs-bean.core :as bean])
 
