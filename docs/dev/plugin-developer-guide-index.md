@@ -287,19 +287,29 @@ async function initPlugin() {
 
 ### 🗄️ DB Graphs Only
 
-- 🗄️ `Editor.upsertProperty()` - Create property schemas
+- 🗄️ `Editor.upsertProperty()` - Create property schemas with types
 - 🗄️ `Editor.getProperty()` - Get property definitions
 - 🗄️ `Editor.removeProperty()` - Remove property schemas
-- 🗄️ `Editor.getAllProperties()` - List all properties
-- 🗄️ `Editor.upsertBlockProperty()` - Set typed property values
+- 🗄️ `Editor.getAllProperties()` - List all property definitions
+- 🗄️ `Editor.getAllTags()` - List all tags/classes
+- 🗄️ `Editor.getTagObjects()` - Get all blocks tagged with a specific class
+- 🗄️ `Editor.upsertBlockProperty()` - Set typed property values (with optional schema)
 - 🗄️ `Editor.getBlockProperty()` - Get typed property values
-- 🗄️ `Editor.getTagObjects()` - Get class members
+- 🗄️ `Editor.getPageProperties()` - Get all properties of a page
 - 🗄️ `DB.datascriptQuery()` - Advanced Datalog queries
 
 ### 📁 File-Based Graphs Only
 
 - 📁 `Assets.listFilesOfCurrentGraph()` - List files
 - 📁 `Git.execCommand()` - Git operations
+- 📁 `App.getCurrentGraphTemplates()` - Get all templates
+- 📁 `App.getTemplate()` - Get template by name
+- 📁 `App.insertTemplate()` - Insert template at location
+- 📁 `App.existTemplate()` - Check if template exists
+- 📁 `App.createTemplate()` - Create new template
+- 📁 `App.removeTemplate()` - Delete template
+- 📁 `App.getPagesFromNamespace()` - Get pages in namespace
+- 📁 `App.getPagesTreeFromNamespace()` - Get namespace hierarchy
 - 📁 Direct file system access
 
 ---
