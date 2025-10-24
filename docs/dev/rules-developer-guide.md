@@ -5,6 +5,7 @@
 The `:rules` feature enables Datalog rule definitions within Logseq queries, providing a powerful mechanism for encapsulating reusable query logic. Rules are similar to functions—they define custom predicates that can be invoked in the `:where` clause to simplify complex queries, create recursive relationships, and build sophisticated query abstractions.
 
 **Key Discoveries:**
+
 - ✅ Fully supported in both file-based AND DB graphs
 - 🔄 Different rule sets: DB graphs have 20+ complex rules, file graphs have 13 simpler rules
 - 🎯 Auto-dependency resolution in DB graphs (request one rule, get all dependencies)
@@ -73,6 +74,7 @@ graph TB
 ```
 
 **Key Architectural Principles:**
+
 1. **Declarative Definitions:** Rules are data, not code
 2. **Dependency Resolution:** Rules can depend on other rules (auto-resolved)
 3. **Datascript Integration:** Rules passed as `%` parameter in `:in` clause
@@ -176,6 +178,7 @@ The `add-rules-to-query` function is the heart of rule processing:
 The system scans the `:where` clause for rule invocations and automatically includes them:
 
 **Location:** `query_custom.cljs:36-39`
+
 ```clojure
 rules' (if dsl-query?
          (find-rules-in-where (:where query-m) dsl-rules)
@@ -184,6 +187,7 @@ rules' (if dsl-query?
 ```
 
 **How it works:**
+
 1. For DSL queries: scan `:where` against file-based rules
 2. For advanced queries: scan `:where` against DB rules
 3. Extract only the rules actually used in the query
@@ -191,10 +195,12 @@ rules' (if dsl-query?
 **Discovery #2: User Rules Take Precedence**
 
 Users can provide rules in two places:
+
 - `:rules` key in query map (preferred)
 - As a vector in `:inputs` array (legacy)
 
 **Location:** `query_custom.cljs:41-43`
+
 ```clojure
 user-rules (or (:rules query-m)
               (when-let [inputs (:inputs query-m)]
@@ -206,6 +212,7 @@ user-rules (or (:rules query-m)
 If rules are found, the query is automatically enhanced with `:in $ %`:
 
 **Location:** `query_custom.cljs:48-52`
+
 ```clojure
 (if (seq all-rules)
   (let [query' (if dsl-query?
@@ -219,6 +226,7 @@ If rules are found, the query is automatically enhanced with `:in $ %`:
 The `add-rules-to-in` function adds or updates the `:in` clause:
 
 **Location:** `query_custom.cljs:15-25`
+
 ```clojure
 (defn- add-rules-to-in
   "Adds % to query's :in clause if not already present"
@@ -298,10 +306,12 @@ DB graphs have a sophisticated rule system with 20+ rules covering various query
 ```
 
 **What it does:** Finds parent-child relationships recursively
+
 - First clause: Direct parent
 - Second clause: Transitive parent (grandparent, great-grandparent, etc.)
 
 **Usage:**
+
 ```clojure
 ;; Find all ancestors of block
 [:find ?ancestor
@@ -386,6 +396,7 @@ DB graphs have a sophisticated rule system with 20+ rules covering various query
 **What it does:** Filters blocks by journal date range
 
 **Usage:**
+
 ```clojure
 ;; Blocks between two dates
 [:find (pull ?b [*])
@@ -408,12 +419,14 @@ DB graphs have a sophisticated rule system with 20+ rules covering various query
 ```
 
 This is part of a complex property system that includes:
+
 - `property-value` - Gets property with default values
 - `property-default-value` - Handles class-level defaults
 - `existing-property-value` - Gets direct property value
 - `object-has-class-property` - Checks class properties
 
 **What it does:** Queries properties with full support for:
+
 - Class inheritance
 - Default values
 - Object properties
@@ -667,14 +680,14 @@ File-based graphs have a simpler rule system (13 rules) that works with the bloc
 
 ### File-Based vs DB Rules Comparison
 
-| Feature | File-Based | DB Graphs |
-|---------|-----------|-----------|
+| Feature             | File-Based        | DB Graphs                    |
+| ------------------- | ----------------- | ---------------------------- |
 | **Property Access** | Direct map lookup | Entity references + defaults |
-| **Task/Priority** | Direct attribute | Via property system |
-| **Class System** | Not supported | Full inheritance |
-| **Defaults** | Not supported | Class-level defaults |
-| **Complexity** | 13 simpler rules | 20+ complex rules |
-| **Performance** | Generally faster | Requires optimization |
+| **Task/Priority**   | Direct attribute  | Via property system          |
+| **Class System**    | Not supported     | Full inheritance             |
+| **Defaults**        | Not supported     | Class-level defaults         |
+| **Complexity**      | 13 simpler rules  | 20+ complex rules            |
+| **Performance**     | Generally faster  | Requires optimization        |
 
 ---
 
@@ -728,6 +741,7 @@ DB graphs have an automatic dependency resolution system:
 ```
 
 **How it works:**
+
 1. Start with requested rules (e.g., `[:task]`)
 2. Look up dependencies (`:task` depends on `:simple-query-property`)
 3. Recursively resolve dependencies of dependencies
@@ -776,6 +790,7 @@ graph TD
 **Real Example:**
 
 When you use `(task ?b #{"TODO"})` in your query, you automatically get 9 rules included:
+
 1. `task`
 2. `simple-query-property`
 3. `property-value`
@@ -818,6 +833,7 @@ Users can define custom rules alongside built-in Logseq rules.
 ```
 
 **What it does:**
+
 - Defines custom `starts-with` rule for string prefix matching
 - Combines with built-in `task` rule
 - Both rules automatically merged and passed to query
@@ -838,6 +854,7 @@ Users can define custom rules alongside built-in Logseq rules.
 ```
 
 **What it does:**
+
 - Defines `not-task` rule that excludes blocks with markers
 - Uses built-in `block-content` rule
 - User rule passed via `:inputs` (legacy pattern)
@@ -852,6 +869,7 @@ Users can define custom rules alongside built-in Logseq rules.
 ```
 
 **What it does:**
+
 - Defines rule with multiple clauses (OR semantics)
 - Block is "important" if priority A OR marker NOW
 - Multiple clauses for same rule name = logical OR
@@ -867,6 +885,7 @@ Users can define custom rules alongside built-in Logseq rules.
 ```
 
 **What it does:**
+
 - Defines recursive ancestor traversal
 - First clause: direct parent
 - Second clause: recursive call for transitive ancestors
@@ -874,6 +893,7 @@ Users can define custom rules alongside built-in Logseq rules.
 ### Custom Rule Syntax
 
 **Format:**
+
 ```clojure
 [(rule-name ?var1 ?var2 ...)
  clause1
@@ -882,6 +902,7 @@ Users can define custom rules alongside built-in Logseq rules.
 ```
 
 **Components:**
+
 - **Rule head:** `(rule-name ?var1 ?var2)` - defines name and parameters
 - **Rule body:** Datalog clauses that must be satisfied
 - **Variables:** Prefixed with `?` - must be bound in body clauses
@@ -969,15 +990,15 @@ Rules are converted to a flat vector format for Datascript:
 
 ## Key Witnesses (Main Files)
 
-| File Path | Role | Lines of Interest | Criticality |
-|-----------|------|-------------------|-------------|
-| `src/main/frontend/db/query_custom.cljs` | Rule processing pipeline | 15-67 | 🔴 Critical |
-| `deps/db/src/logseq/db/frontend/rules.cljc` | DB graph rule definitions | 84-293 | 🔴 Critical |
-| `deps/db/src/logseq/db/file_based/rules.cljc` | File-based rule definitions | Various | 🔴 Critical |
-| `src/main/frontend/db/query_react.cljs` | Rule execution | 95-117 | 🟡 Important |
-| `src/main/frontend/db/query_dsl.cljs` | DSL query wrapping | 737-749 | 🟡 Important |
-| `src/test/frontend/db/query_custom_test.cljs` | Usage examples | 16-80 | 🟢 Reference |
-| `deps/db/test/logseq/db/frontend/rules_test.cljs` | Rule tests | Various | 🟢 Reference |
+| File Path                                         | Role                        | Lines of Interest | Criticality  |
+| ------------------------------------------------- | --------------------------- | ----------------- | ------------ |
+| `src/main/frontend/db/query_custom.cljs`          | Rule processing pipeline    | 15-67             | 🔴 Critical  |
+| `deps/db/src/logseq/db/frontend/rules.cljc`       | DB graph rule definitions   | 84-293            | 🔴 Critical  |
+| `deps/db/src/logseq/db/file_based/rules.cljc`     | File-based rule definitions | Various           | 🔴 Critical  |
+| `src/main/frontend/db/query_react.cljs`           | Rule execution              | 95-117            | 🟡 Important |
+| `src/main/frontend/db/query_dsl.cljs`             | DSL query wrapping          | 737-749           | 🟡 Important |
+| `src/test/frontend/db/query_custom_test.cljs`     | Usage examples              | 16-80             | 🟢 Reference |
+| `deps/db/test/logseq/db/frontend/rules_test.cljs` | Rule tests                  | Various           | 🟢 Reference |
 
 ---
 
@@ -992,6 +1013,7 @@ Rules are converted to a flat vector format for Datascript:
 **Impact:** High - Users don't need to manually include dependency rules
 
 **Example:**
+
 ```clojure
 ;; User writes
 (task ?b #{"TODO"})
@@ -1007,12 +1029,14 @@ Rules are converted to a flat vector format for Datascript:
 **Finding:** DB and file-based graphs have completely different rule implementations
 
 **Evidence:**
+
 - DB: `deps/db/src/logseq/db/frontend/rules.cljc` (20+ rules)
 - File: `deps/db/src/logseq/db/file_based/rules.cljc` (13 rules)
 
 **Impact:** Critical - Queries may behave differently between graph types
 
 **Example:**
+
 ```clojure
 ;; File-based
 (task ?b #{"TODO"})
@@ -1084,6 +1108,7 @@ all-rules (if user-rules
 **Evidence:** `rules.cljc:9-14` (parent rule)
 
 **Best Practice:**
+
 ```clojure
 ;; Good recursive rule
 [(parent ?p ?c)
@@ -1104,11 +1129,13 @@ all-rules (if user-rules
 **Evidence:** `query_custom.cljs:15-25` and `query_react.cljs:103`
 
 **Technical Detail:**
+
 - `$` = database
 - `%` = rules vector
 - Additional parameters follow
 
 **Format:**
+
 ```clojure
 :in $ % ?param1 ?param2
 ```
@@ -1122,6 +1149,7 @@ all-rules (if user-rules
 **Issue:** Complex boolean queries with proper binding don't work
 
 **Example:**
+
 ```clojure
 ;; ❌ Doesn't work
 [:find ?b
@@ -1134,6 +1162,7 @@ all-rules (if user-rules
 **Severity:** High
 
 **Workaround:**
+
 - Run separate queries and combine results in code
 - Use multiple rule clauses (limited to OR logic within rules)
 
@@ -1144,6 +1173,7 @@ all-rules (if user-rules
 **Issue:** Variables must be bound before use in negated clauses
 
 **Example:**
+
 ```clojure
 ;; ❌ Error: ?priority not bound
 (not [(contains? #{"A"} ?priority)])
@@ -1181,6 +1211,7 @@ all-rules (if user-rules
 **Issue:** File-based graphs don't have dependency resolution
 
 **Example:**
+
 ```clojure
 ;; File-based: must manually include dependencies
 :rules '[page-ref has-ref ...]  ;; Both needed
@@ -1214,6 +1245,7 @@ all-rules (if user-rules
 **Issue:** Invalid rules only detected at query execution time
 
 **Example:**
+
 ```clojure
 ;; ❌ Typo won't be caught until query runs
 :rules '[[(taks ?b ?markers)  ;; "taks" instead of "task"
@@ -1231,6 +1263,7 @@ all-rules (if user-rules
 **Issue:** User rules can't have same name as built-in rules
 
 **Example:**
+
 ```clojure
 ;; ❌ Overwrites built-in "task" rule
 :rules '[[(task ?b)
@@ -1252,6 +1285,7 @@ all-rules (if user-rules
 **Description:** Defines custom Datalog rules for query execution
 
 **Location in Query Map:**
+
 ```clojure
 {:query [:find (pull ?b [*])
          :in $ %
@@ -1261,6 +1295,7 @@ all-rules (if user-rules
 ```
 
 **Format:**
+
 ```clojure
 :rules '[rule1 rule2 ...]
 ```
@@ -1277,6 +1312,7 @@ all-rules (if user-rules
 **Components:**
 
 1. **Rule Head:** `(rule-name ?param1 ?param2)`
+
    - Rule name (symbol)
    - Parameters (variables starting with `?`)
 
@@ -1318,6 +1354,7 @@ all-rules (if user-rules
 ```
 
 **Reads as:**
+
 - Clause 1: ?p is ancestor of ?c if direct parent
 - Clause 2: ?p is ancestor of ?c if ancestor of intermediate parent
 
@@ -1330,6 +1367,7 @@ all-rules (if user-rules
 ```
 
 **Available functions:**
+
 - String: `clojure.string/starts-with?`, `clojure.string/includes?`, etc.
 - Comparison: `<`, `>`, `<=`, `>=`, `=`, `not=`
 - Collection: `contains?`, `get`, `count`
@@ -1362,37 +1400,37 @@ Built-in rules are automatically included - you only define your custom ones.
 
 Available in DB graphs (auto-dependency resolution):
 
-| Rule | Parameters | Description |
-|------|-----------|-------------|
-| `parent` | `?parent ?child` | Recursive parent-child |
-| `class-extends` | `?class ?parent-class` | Class inheritance |
-| `alias` | `?entity1 ?entity2` | Bidirectional aliases |
-| `self-ref` | `?block ?page` | Block references page |
-| `has-ref` | `?block ?page` | Block or descendants ref page |
-| `between` | `?block ?start ?end` | Journal date range |
-| `task` | `?block ?markers-set` | Filter by task marker |
-| `priority` | `?block ?priorities-set` | Filter by priority |
-| `tags` | `?block ?tags-set` | Filter by tags |
-| `property` | `?block ?key ?value` | Query properties (complex) |
-| `has-property` | `?block ?key` | Check property exists |
+| Rule            | Parameters               | Description                   |
+| --------------- | ------------------------ | ----------------------------- |
+| `parent`        | `?parent ?child`         | Recursive parent-child        |
+| `class-extends` | `?class ?parent-class`   | Class inheritance             |
+| `alias`         | `?entity1 ?entity2`      | Bidirectional aliases         |
+| `self-ref`      | `?block ?page`           | Block references page         |
+| `has-ref`       | `?block ?page`           | Block or descendants ref page |
+| `between`       | `?block ?start ?end`     | Journal date range            |
+| `task`          | `?block ?markers-set`    | Filter by task marker         |
+| `priority`      | `?block ?priorities-set` | Filter by priority            |
+| `tags`          | `?block ?tags-set`       | Filter by tags                |
+| `property`      | `?block ?key ?value`     | Query properties (complex)    |
+| `has-property`  | `?block ?key`            | Check property exists         |
 
 ### Built-in File-Based Rules
 
 Available in file-based graphs:
 
-| Rule | Parameters | Description |
-|------|-----------|-------------|
-| `page-property` | `?page ?key ?value` | Page-level properties |
-| `property` | `?block ?key ?value` | Block properties |
-| `has-property` | `?block ?key` | Property existence |
-| `task` | `?block ?markers-set` | Task markers |
-| `priority` | `?block ?priorities-set` | Priority levels |
-| `page-tags` | `?page ?tags-set` | Page tags |
-| `between` | `?block ?start ?end` | Date range |
-| `block-content` | `?block ?query-string` | Full-text search |
-| `page` | `?block` | Filter to pages only |
-| `namespace` | `?page ?namespace` | Namespace hierarchy |
-| `page-ref` | `?block ?page-name` | Page references |
+| Rule            | Parameters               | Description           |
+| --------------- | ------------------------ | --------------------- |
+| `page-property` | `?page ?key ?value`      | Page-level properties |
+| `property`      | `?block ?key ?value`     | Block properties      |
+| `has-property`  | `?block ?key`            | Property existence    |
+| `task`          | `?block ?markers-set`    | Task markers          |
+| `priority`      | `?block ?priorities-set` | Priority levels       |
+| `page-tags`     | `?page ?tags-set`        | Page tags             |
+| `between`       | `?block ?start ?end`     | Date range            |
+| `block-content` | `?block ?query-string`   | Full-text search      |
+| `page`          | `?block`                 | Filter to pages only  |
+| `namespace`     | `?page ?namespace`       | Namespace hierarchy   |
+| `page-ref`      | `?block ?page-name`      | Page references       |
 
 ### Usage Examples
 
@@ -1545,6 +1583,7 @@ sequenceDiagram
 ### Problem: Rule Not Found
 
 **Symptoms:**
+
 - Query fails with "Unknown predicate" or similar error
 - Rule invocation in WHERE clause not recognized
 
@@ -1585,6 +1624,7 @@ sequenceDiagram
 ### Problem: Insufficient Bindings
 
 **Symptoms:**
+
 - Error: "Insufficient bindings: #{?var} not bound in clause"
 - Query fails during execution
 
@@ -1618,6 +1658,7 @@ sequenceDiagram
 ### Problem: Recursive Rule Causes Performance Issues
 
 **Symptoms:**
+
 - Query takes very long to execute
 - High CPU usage
 - Recursive rule involved
@@ -1656,6 +1697,7 @@ sequenceDiagram
 ### Problem: or-join Query Doesn't Work
 
 **Symptoms:**
+
 - Error when using `or-join`
 - Complex boolean queries fail
 
@@ -1682,6 +1724,7 @@ Use multiple rule clauses instead:
 ### Problem: Custom Rule Not Included
 
 **Symptoms:**
+
 - Defined rule in `:rules` but not used
 - Query behaves as if rule doesn't exist
 
@@ -1720,6 +1763,7 @@ Use multiple rule clauses instead:
 ### Problem: Rule Conflicts with Built-in
 
 **Symptoms:**
+
 - Custom rule doesn't work as expected
 - Built-in rule behavior seems wrong
 
@@ -1831,11 +1875,13 @@ Use multiple rule clauses instead:
 ### 5. Dependency Resolution Overhead
 
 **For DB graphs:**
+
 - Requesting high-level rules (`:task`, `:priority`) includes many dependencies
 - 9+ rules may be included for a single rule invocation
 - This is automatic but has overhead
 
 **Optimization:**
+
 - If you only need simple property checks, use low-level rules
 - Or use direct Datalog clauses instead of rules
 
@@ -1874,6 +1920,7 @@ Look for queries taking >100ms and optimize rule clauses.
 **Proposal:** Implement full Datalog or-join and not-join constructs
 
 **Current Limitation:**
+
 ```clojure
 ;; ❌ Doesn't work
 (or-join [?b]
@@ -1890,6 +1937,7 @@ Look for queries taking >100ms and optimize rule clauses.
 **Proposal:** Validate rules when query is defined, not when executed
 
 **Implementation:**
+
 - Check rule definitions for syntax errors
 - Verify all variables are bound correctly
 - Validate function calls
@@ -1903,11 +1951,13 @@ Look for queries taking >100ms and optimize rule clauses.
 **Proposal:** Built-in query performance profiling
 
 **Features:**
+
 - Show which rules are slowest
 - Suggest clause reorderings
 - Identify cartesian products
 
 **Example Output:**
+
 ```
 Rule performance:
   parent: 15ms (called 1000 times)
@@ -1923,12 +1973,14 @@ Suggestion: Move [?b :block/priority "A"] before (parent ?p ?b)
 **Proposal:** Allow namespaced rules to avoid conflicts
 
 **Current:**
+
 ```clojure
 ;; User rule conflicts with built-in
 :rules '[[(task ?b) ...]]  ;; Overwrites built-in
 ```
 
 **Proposed:**
+
 ```clojure
 ;; Namespaced rules
 :rules '[[(user/task ?b) ...]]  ;; No conflict
@@ -1942,6 +1994,7 @@ Suggestion: Move [?b :block/priority "A"] before (parent ?p ?b)
 **Proposal:** Higher-level rule combinators
 
 **Example:**
+
 ```clojure
 ;; Define reusable rule fragments
 :rule-fragments
@@ -1961,6 +2014,7 @@ Suggestion: Move [?b :block/priority "A"] before (parent ?p ?b)
 **Proposal:** Built-in rule testing utilities
 
 **Example:**
+
 ```clojure
 (test-rule
   '[[(my-rule ?b)
@@ -1978,6 +2032,7 @@ Suggestion: Move [?b :block/priority "A"] before (parent ?p ?b)
 **Proposal:** UI for visualizing rule execution
 
 **Features:**
+
 - Show which rules fired
 - Display intermediate bindings
 - Highlight bottlenecks
@@ -1990,6 +2045,7 @@ Suggestion: Move [?b :block/priority "A"] before (parent ?p ?b)
 **Proposal:** Community-contributed rule library
 
 **Example:**
+
 ```clojure
 ;; Import from library
 :import-rules '[:community/date-helpers
@@ -2028,6 +2084,7 @@ The `:rules` feature is a **powerful and well-architected system** that brings D
 ### Investigation Summary
 
 Through this deep dive, we've uncovered:
+
 - 📁 **6 critical files** involved in the rule system
 - 🔍 **20+ built-in DB rules** with dependency resolution
 - 🔄 **13 file-based rules** with simpler implementations
@@ -2038,6 +2095,7 @@ Through this deep dive, we've uncovered:
 ### Final Recommendation
 
 **For Users:**
+
 - ✅ Use built-in rules when possible (task, priority, parent, etc.)
 - 🎯 Leverage auto-dependency resolution in DB graphs
 - 📝 Define custom rules for repeated query logic
@@ -2045,6 +2103,7 @@ Through this deep dive, we've uncovered:
 - 🔧 Test recursive rules carefully to avoid infinite loops
 
 **For Developers:**
+
 - 📖 Add comprehensive rule documentation to Logseq docs
 - 🛡️ Implement rule validation at parse time
 - 🔍 Add performance profiling for rules
