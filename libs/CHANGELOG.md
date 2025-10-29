@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.4] - 2025-10-26
+
+### Documentation
+
+- Added comprehensive JSDoc documentation for 89 previously undocumented plugin API methods
+- Enhanced TypeDoc output with detailed descriptions, parameter documentation, and practical examples
+- Improved documentation coverage across all plugin interfaces:
+  - **IEditorProxy**: 38 methods documented (property APIs, block/page operations, navigation)
+  - **IAppProxy**: 42 methods documented (commands, state management, UI controls, hooks)
+  - **IUIProxy**: 6 methods documented (notifications, DOM queries, theme utilities)
+  - **IGitProxy**: 3 methods documented (git commands, .gitignore management)
+  - **IUtilsProxy**: 1 method documented (string escaping)
+- All documented methods now include:
+  - Clear functional descriptions
+  - Database vs file-based graph compatibility notes where applicable
+  - Complete `@param` and `@returns` type documentation
+  - Multiple practical code examples
+  - Version tags (`@added 0.0.17`)
+- Updated TypeDoc JSON output (`out.json`) for plugins-doc.logseq.com integration
+
+## [0.0.17]
+
+### Added
+- Support database graph APIs for querying tags and properties:
+  - `logseq.Editor.getAllTags(): Promise<PageEntity[] | null>` - Get all tags (classes) in the current database graph
+  - `logseq.Editor.getAllProperties(): Promise<PageEntity[] | null>` - Get all properties in the current database graph
+  - `logseq.Editor.getTagObjects(tag: PageIdentity): Promise<BlockEntity[] | null>` - Get all blocks tagged with a specific tag/class
+- Added comprehensive JSDoc documentation for the new database graph APIs including usage examples and parameter descriptions
+
 ## [0.0.16]
 ### Added
 - Support api of `logseq.UI.queryElementRect: (selector: string) => Promise<DOMRectReadOnly | null>`
