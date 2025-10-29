@@ -241,7 +241,9 @@ await logseq.Editor.upsertProperty('assignee', {
   type: 'node',
   cardinality: 'one',
   // Classes are specified through opts
-}, {
+}, {// Sometimes ClojureScript exports are under their full namespace
+console.log(typeof logseq$api$get_all_tags)
+console.log(typeof logseq$api$check_current_is_db_graph)
   name: 'Assignee'
 });
 ```
