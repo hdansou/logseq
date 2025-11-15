@@ -1,40 +1,36 @@
 # GitHub Copilot Instructions for Logseq
 
-## Custom Commands
+## Custom Commands (On-Demand Prompts)
 
 ### @workspace /investigate - Code Detective Investigation
 
 Follow the comprehensive investigation framework in `.github/code-detective-investigation.instructions.md`.
 
-**Quick Usage:**
+**Usage:**
+
 - `@workspace /investigate what happens when user presses CMD+R`
 - `@workspace /investigate how auto-save works`
 - `@workspace /investigate file persistence mechanism`
 
-**See:** `.github/code-detective-investigation.instructions.md` for full investigation process and standards.
+**See:** `.github/prompts/code-detective-investigation.prompt.md` for full investigation process and standards.
 
 ---
 
-### @workspace /review - Code Review with Logseq Standards
+---
 
-When reviewing code, follow the guidelines in `prompts/review.md` along with these Logseq-specific checks:
+## Custom Commands (On-Demand Prompts)
 
-**ClojureScript Specific:**
-- Use `clojure-mcp` toolkit for .clj/.cljs/.cljc files (MANDATORY)
-- Never use general file editing tools for Clojure code
-- Run `bb dev:lint-and-test` before submitting
-- Check `defkeywords` definitions for keyword usage
+### @workspace /investigate - Code Detective Investigation
 
-**Common Patterns:**
-- State management: `defonce *atom-name (atom {})`
-- Worker API: `def-thread-api :thread-api/name`
-- IPC calls: `(ipc/ipc :message-name args)`
-- Persistence: `save-db!`, `export-db`, transit files
+Conduct comprehensive code investigation following the framework in `.github/prompts/code-detective-investigation.prompt.md`.
 
-**Testing:**
-- Unit tests: `bb dev:test -i focus` for focused tests
-- E2E basic: `bb dev:e2e-basic-test`
-- E2E RTC: `bb dev:e2e-rtc-extra-test`
+**Usage:**
+
+- `@workspace /investigate what happens when user presses CMD+R`
+- `@workspace /investigate how auto-save works`
+- `@workspace /investigate file persistence mechanism`
+
+**See:** `.github/prompts/code-detective-investigation.prompt.md` for full investigation template.
 
 ---
 
@@ -43,15 +39,18 @@ When reviewing code, follow the guidelines in `prompts/review.md` along with the
 Generate a professional, AI-powered changelog from git commit history.
 
 **Usage:**
+
 ```
 @workspace /new-changelog <start-date> <end-date> [--format=<changelog|release>]
 ```
 
 **Examples:**
+
 - `@workspace /new-changelog 2025-01-05 2025-01-15` - Generate changelog
 - `@workspace /new-changelog 2025-01-01 2025-01-31 --format=release` - Generate release notes
 
 **Process:**
+
 1. Fetch git commits from all remote branches for the date range
 2. Generate raw commit log in markdown format
 3. Apply AI analysis following `prompts/changelog-generation.md`
@@ -62,16 +61,53 @@ Generate a professional, AI-powered changelog from git commit history.
    - Contributor list
 
 **Output Formats:**
+
 - `changelog` (default): Detailed changelog with all commits organized by category and functional area
 - `release`: Condensed release notes focusing on user-facing changes and highlights
 
-**See:** `prompts/changelog-generation.md` for detailed formatting guidelines and examples.
+**See:** `.github/prompts/changelog-generation.prompt.md` for detailed formatting guidelines and examples.
+
+---
+
+## Code Review Standards
+
+When reviewing code, always check for these common issues:
+
+**ClojureScript Specific:**
+
+- Use `clojure-mcp` toolkit for .clj/.cljs/.cljc files (MANDATORY)
+- Never use general file editing tools for Clojure code
+- `empty?` should be used instead of `empty` when a boolean value is expected
+- If a function does not use `d/transact!`, parameters should use `db` not `conn`
+- Avoid using `memoize` for global vars with `entity`, `block`, `conn`, or `db` parameters (memory leak risk)
+- Use `doseq` instead of `dorun` for side effects
+- Use `lambdaisland.glogi` for logging instead of `js/console.*`
+
+**Testing Requirements:**
+
+- Run `bb dev:lint-and-test` before submitting
+- Unit tests: `bb dev:test -i focus` for focused tests
+- E2E basic: `bb dev:e2e-basic-test`
+- E2E RTC: `bb dev:e2e-rtc-extra-test`
+
+**Common Patterns:**
+
+- State management: `defonce *atom-name (atom {})`
+- Worker API: `def-thread-api :thread-api/name`
+- IPC calls: `(ipc/ipc :message-name args)`
+- Persistence: `save-db!`, `export-db`, transit files
+
+**Property & Schema Changes:**
+
+- After adding properties in `logseq.db.frontend.property/built-in-properties`, add migration in `frontend.worker.db.migrate/schema-version->updates`
+- Check `defkeywords` definitions for keyword usage
 
 ---
 
 ## Repository Context
 
 **Structure:**
+
 - `src/main/`: Core application logic
 - `src/electron/`: Electron desktop app
 - `src/main/frontend/worker/`: WebWorker code
@@ -80,6 +116,7 @@ Generate a professional, AI-powered changelog from git commit history.
 - `clj-e2e/`: End-to-end test code
 
 **Key Technologies:**
+
 - ClojureScript/Clojure
 - Electron (desktop)
 - React/Rum (UI)
@@ -88,10 +125,12 @@ Generate a professional, AI-powered changelog from git commit history.
 - Transit (serialization)
 
 **Graph Modes:**
+
 - **File-based:** Stores data in markdown files
 - **Database:** Stores data in SQLite with transit exports
 
 **Common Code Locations:**
+
 - Auto-save: `src/main/frontend/handler/editor.cljs`
 - File writes: `src/main/frontend/worker/file.cljs`
 - DB persistence: `src/main/frontend/persist_db.cljs`
@@ -100,18 +139,20 @@ Generate a professional, AI-powered changelog from git commit history.
 - Transit utils: `deps/db/src/logseq/db/sqlite/util.cljs`
 
 **Important Rules:**
+
 1. Always use `clojure-mcp` toolkit for Clojure code editing
 2. Run `clojure_inspect_project` before code analysis
 3. Check both file-based and database modes
 4. Consider timing/async operations
 5. Look for in-memory vs persisted state
-6. Follow review checklist in `prompts/review.md`
+6. Follow Code Review Standards section above
 
 ---
 
 ## Code Patterns Reference
 
 ### State Management
+
 ```clojure
 ;; In-memory state (lost on reload)
 (defonce *writes (atom {}))
@@ -122,6 +163,7 @@ Generate a professional, AI-powered changelog from git commit history.
 ```
 
 ### Persistence
+
 ```clojure
 ;; File-based graph
 (defn write-file! [path content]
@@ -137,6 +179,7 @@ Generate a professional, AI-powered changelog from git commit history.
 ```
 
 ### Async Operations
+
 ```clojure
 ;; Promise-based
 (p/let [result (async-operation)]
@@ -150,6 +193,7 @@ Generate a professional, AI-powered changelog from git commit history.
 ```
 
 ### Timing
+
 ```clojure
 ;; Auto-save delay
 (js/setTimeout save-fn 450)
@@ -159,6 +203,7 @@ Generate a professional, AI-powered changelog from git commit history.
 ```
 
 ### IPC Communication
+
 ```clojure
 ;; Renderer -> Main
 (ipc/ipc :message-name args)
