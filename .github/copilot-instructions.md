@@ -138,6 +138,25 @@ When reviewing code, always check for these common issues:
 - Electron handlers: `src/electron/electron/handler.cljs`
 - Transit utils: `deps/db/src/logseq/db/sqlite/util.cljs`
 
+**Documentation Locations (Reorganized Nov 2025):**
+
+- Architecture docs: `docs/02-architecture/`
+- Feature documentation: `docs/03-features/`
+- API references: `docs/04-api-reference/`
+- Developer guides: `docs/05-developer-guides/`
+- User guides: `docs/06-user-guides/`
+- Investigation reports: `docs/07-investigations/`
+- Process documentation: `docs/08-processes/`
+- Templates: `docs/09-templates/`
+
+**Key Documentation Files:**
+
+- Database schema: `docs/03-features/database-graphs/schema-guide.md`
+- Plugin development: `docs/05-developer-guides/plugin-development/index.md`
+- Query system: `docs/03-features/query-system/developer-guide.md`
+- CLI guide: `docs/05-developer-guides/cli-development/developer-guide.md`
+- Documentation index: `docs/README.md`
+
 **Important Rules:**
 
 1. Always use `clojure-mcp` toolkit for Clojure code editing
