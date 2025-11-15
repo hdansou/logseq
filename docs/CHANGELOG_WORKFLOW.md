@@ -125,7 +125,7 @@ Using GitHub Copilot:
 @workspace /new-changelog <start-date> <end-date> [--format=<changelog|release>]
 ```
 
-Or manually review the guidelines in `prompts/changelog-generation.md` and process the raw log.
+Or manually review the guidelines in `.github/prompts/changelog-generation.prompt.md` and process the raw log.
 
 ### 4. Review and Edit
 
@@ -283,7 +283,7 @@ git fetch --all
 
 ## Resources
 
-- **Changelog Guidelines:** `prompts/changelog-generation.md`
+- **Changelog Guidelines:** `.github/prompts/changelog-generation.prompt.md`
 - **Copilot Commands:** `.github/copilot-instructions.md`
 - **Conventional Commits:** <https://www.conventionalcommits.org/>
 - **Keep a Changelog:** <https://keepachangelog.com/>
@@ -293,7 +293,7 @@ git fetch --all
 When improving the changelog workflow:
 
 1. Update the script if changing log generation
-2. Update `prompts/changelog-generation.md` for formatting changes
+2. Update `.github/prompts/changelog-generation.prompt.md` for formatting changes
 3. Update `.github/copilot-instructions.md` for new commands
 4. Test with historical date ranges
 5. Document any new categories or patterns
@@ -303,5 +303,5 @@ When improving the changelog workflow:
 For questions or issues:
 
 1. Check existing changelogs for examples
-2. Review `prompts/changelog-generation.md` guidelines
+2. Review `.github/prompts/changelog-generation.prompt.md` guidelines
 3. Ask in the Logseq developer community

@@ -54,7 +54,7 @@ A comprehensive AI-powered changelog generation system for Logseq that transform
 
 ### 3. Changelog Generation Guidelines
 
-**Location:** `prompts/changelog-generation.md`
+**Location:** `.github/prompts/changelog-generation.prompt.md`
 
 **Contents:**
 
@@ -407,7 +407,7 @@ Potential improvements:
 
 When updating changelog standards:
 
-1. Edit `prompts/changelog-generation.md`
+1. Edit `.github/prompts/changelog-generation.prompt.md`
 2. Update examples in documentation
 3. Regenerate past changelogs to verify
 4. Update quick reference if needed
@@ -416,7 +416,7 @@ When updating changelog standards:
 
 To add new categories:
 
-1. Update `prompts/changelog-generation.md`
+1. Update `.github/prompts/changelog-generation.prompt.md`
 2. Add to `CHANGELOG_QUICK_REFERENCE.md`
 3. Update Copilot instructions if needed
 4. Document with examples
@@ -462,7 +462,7 @@ New-LogseqChangeLog 2025-01-05 2025-01-15
 
 - **Full Workflow:** `docs/CHANGELOG_WORKFLOW.md`
 - **Quick Reference:** `docs/CHANGELOG_QUICK_REFERENCE.md`
-- **Generation Guidelines:** `prompts/changelog-generation.md`
+- **Generation Guidelines:** `.github/prompts/changelog-generation.prompt.md`
 - **Copilot Commands:** `.github/copilot-instructions.md`
 
 ## Summary

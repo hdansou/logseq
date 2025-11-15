@@ -192,7 +192,7 @@ git fetch --all
 
 ## Examples
 
-See `prompts/changelog-generation.md` for complete examples of:
+See `.github/prompts/changelog-generation.prompt.md` for complete examples of:
 
 - Spotlight sections
 - Full changelogs

@@ -60,7 +60,7 @@ Highlights major features and user-facing changes only.
 | [CHANGELOG_QUICK_REFERENCE.md](./CHANGELOG_QUICK_REFERENCE.md) | Command cheat sheet and common tasks |
 | [CHANGELOG_WORKFLOW.md](./CHANGELOG_WORKFLOW.md) | Complete end-to-end workflow guide |
 | [CHANGELOG_SYSTEM_SUMMARY.md](./CHANGELOG_SYSTEM_SUMMARY.md) | Technical implementation details |
-| [../prompts/changelog-generation.md](../prompts/changelog-generation.md) | AI processing guidelines and examples |
+| [../.github/prompts/changelog-generation.prompt.md](../.github/prompts/changelog-generation.prompt.md) | AI processing guidelines and examples |
 
 ## Common Commands
 
@@ -123,7 +123,7 @@ Highlights major features and user-facing changes only.
 1. **Quick commands:** See [CHANGELOG_QUICK_REFERENCE.md](./CHANGELOG_QUICK_REFERENCE.md)
 2. **Complete workflow:** See [CHANGELOG_WORKFLOW.md](./CHANGELOG_WORKFLOW.md)
 3. **Technical details:** See [CHANGELOG_SYSTEM_SUMMARY.md](./CHANGELOG_SYSTEM_SUMMARY.md)
-4. **Formatting guidelines:** See [../prompts/changelog-generation.md](../prompts/changelog-generation.md)
+4. **Formatting guidelines:** See [../.github/prompts/changelog-generation.prompt.md](../.github/prompts/changelog-generation.prompt.md)
 
 ## Examples
 
