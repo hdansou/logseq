@@ -2,8 +2,8 @@
 
 > Command-line interface for Logseq database graphs
 
-**Version**: 0.2.0
-**Last Updated**: 2025-10-14
+**Version**: 0.3.0
+**Last Updated**: 2025-11-20
 **For**: Normal Users & Developers
 
 ---
@@ -40,7 +40,9 @@ The Logseq CLI is a command-line tool that lets you interact with your Logseq da
 - 📊 **Query** your knowledge graph with powerful DataScript queries
 - 🔍 **Search** across all your notes
 - 📤 **Export** graphs to Markdown or EDN format
+- 📥 **Import** EDN data into graphs
 - 📋 **List** and inspect graph metadata
+- ✅ **Validate** graph data for errors
 - ✍️ **Append** content to your current page (while Logseq is running)
 - 🤖 **Automate** workflows with scripts and CI/CD pipelines
 
@@ -80,7 +82,7 @@ npm install -g @logseq/cli
 
 ```bash
 logseq --version
-# Output: 0.2.0
+# Output: 0.3.0
 ```
 
 ### Update
@@ -167,6 +169,25 @@ Output:
 | Graph directory           | /Users/you/logseq/graphs/my-notes      |
 | Graph created at          | Jan 15th, 2025                         |
 | Graph schema version      | {:major 65, :minor 7}                  |
+```
+
+### 6. Import Graph Data
+
+Import EDN data into a graph:
+
+```bash
+logseq import-edn -g my-notes -f backup.edn
+# Output: Imported 45 properties, 12 classes and 234 pages!
+```
+
+### 7. Validate Graph
+
+Check graph data integrity:
+
+```bash
+logseq validate my-notes
+# Output: Read graph my-notes with counts: {...}
+#         Valid!
 ```
 
 ## Basic Concepts
@@ -608,12 +629,18 @@ Export your graph structure to EDN (Extensible Data Notation) format.
 **Syntax:**
 
 ```bash
-logseq export-edn GRAPH [options]
+# Local mode
+logseq export-edn -g GRAPH [options]
+
+# API mode
+logseq export-edn -a TOKEN [options]
 ```
 
 **Options:**
 
 ```
+-g, --graph GRAPH                  Graph name (required for local mode)
+-a, --api-server-token TOKEN       Use API mode (exports currently open graph)
 -f, --file PATH                    Output file (default: GRAPH_TIMESTAMP.edn)
 -T, --include-timestamps?          Include created-at and updated-at
 -c, --catch-validation-errors?     Continue on errors (development mode)
@@ -626,27 +653,30 @@ logseq export-edn GRAPH [options]
 **Examples:**
 
 ```bash
-# Basic export
-logseq export-edn my-notes
+# Basic local export
+logseq export-edn -g my-notes
 # Output: my-notes_1704844800.edn
 
+# API mode - export current graph
+logseq export-edn -a YOUR_TOKEN -f backup.edn
+
 # Custom filename
-logseq export-edn my-notes -f backup.edn
+logseq export-edn -g my-notes -f backup.edn
 
 # Include timestamps
-logseq export-edn my-notes -T
+logseq export-edn -g my-notes -T
 
 # Exclude system pages
-logseq export-edn my-notes -b
+logseq export-edn -g my-notes -b
 
 # Exclude namespaces
-logseq export-edn my-notes -e logseq.class -e logseq.property
+logseq export-edn -g my-notes -e logseq.class -e logseq.property
 
 # Exclude files
-logseq export-edn my-notes -F
+logseq export-edn -g my-notes -F
 
 # Full export with all options
-logseq export-edn my-notes -f full-backup.edn -T -b -F
+logseq export-edn -g my-notes -f full-backup.edn -T -b -F
 ```
 
 **Output:**
@@ -669,6 +699,136 @@ Exported 45 properties, 12 classes and 234 pages to my-notes_1704844800.edn
 - Transfer graphs between systems
 - Graph analysis and processing
 - Development and debugging
+
+---
+
+### `import-edn` - Import from EDN
+
+Import EDN data into a graph.
+
+**Syntax:**
+
+```bash
+# Local mode
+logseq import-edn -g GRAPH -f FILE
+
+# API mode
+logseq import-edn -f FILE -a TOKEN
+```
+
+**Options:**
+
+```
+-g, --graph GRAPH                Graph name (required for local mode)
+-f, --file PATH                  Input EDN file (required)
+-a, --api-server-token TOKEN     Use API mode (imports to currently open graph)
+```
+
+**Examples:**
+
+```bash
+# Import to local graph
+logseq import-edn -g my-notes -f backup.edn
+
+# Import via API to current graph
+logseq import-edn -f backup.edn -a YOUR_TOKEN
+
+# Import with environment variable
+export LOGSEQ_API_SERVER_TOKEN=YOUR_TOKEN
+logseq import-edn -f data.edn
+```
+
+**Output:**
+
+```
+Imported 45 properties, 12 classes and 234 pages!
+```
+
+**EDN Structure:**
+
+The import expects EDN files with this structure (typically created by `export-edn`):
+
+```clojure
+{:properties [...]        ; Property definitions
+ :classes [...]           ; Class definitions
+ :pages-and-blocks [...]} ; All pages and blocks
+```
+
+**Use Cases:**
+
+- Restore graph backups
+- Transfer data between graphs
+- Import curated datasets
+- Migrate from other systems
+- Development and testing
+
+**Important Notes:**
+
+- The import is additive - it doesn't delete existing data
+- Conflicting data may cause validation errors
+- Use `validate` command after import to check data integrity
+- For large imports, local mode is faster than API mode
+
+---
+
+### `validate` - Validate Graph Data
+
+Validate one or more graphs for data integrity errors.
+
+**Syntax:**
+
+```bash
+logseq validate GRAPH [GRAPH2 ...]
+```
+
+**Examples:**
+
+```bash
+# Validate single graph
+logseq validate my-notes
+
+# Validate multiple graphs
+logseq validate my-notes work-journal personal
+```
+
+**Output (when valid):**
+
+```
+Read graph my-notes with counts: {:properties 45, :classes 12, :pages 234, :blocks 1523, :datoms 15234}
+Valid!
+```
+
+**Output (when invalid):**
+
+```
+Read graph my-notes with counts: {:properties 45, :classes 12, :pages 234, :blocks 1523, :datoms 15234}
+Found 3 entities with errors:
+[{:db/id 8763
+  :block/order ["invalid dispatch value"]
+  :errors {:dispatch-key nil, :errors {39651 ["invalid dispatch value"]}}}
+ {:db/id 1404
+  :block/uuid ["invalid dispatch value"]
+  :errors {:dispatch-key nil, :errors {40799 ["invalid dispatch value"]}}}
+ {:db/id 734
+  :logseq.property.history/property ["invalid dispatch value"]
+  :errors {:dispatch-key nil, :errors {44181 ["invalid dispatch value"]}}}]
+```
+
+**Use Cases:**
+
+- Check data integrity after import
+- Debug graph corruption issues
+- Validate before backup
+- Quality assurance for automated workflows
+- Development and testing
+
+**Technical Details:**
+
+- Uses Malli schema validation
+- Checks closed-value validation for higher data quality
+- Reports entity IDs with specific error details
+- Exits with code 1 if errors found
+- Useful for CI/CD pipelines
 
 ---
 
@@ -1873,8 +2033,8 @@ See [GitHub Issues](https://github.com/logseq/logseq/issues?q=is%3Aissue+label%3
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-10-14
+**Document Version**: 1.1
+**Last Updated**: 2025-11-20
 **Feedback**: [GitHub Issues](https://github.com/logseq/logseq/issues)
 
 **License**: MIT
