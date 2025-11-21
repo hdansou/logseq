@@ -2,7 +2,7 @@
 
 > Command-line interface for Logseq database graphs
 
-**Version**: 0.3.0
+**Version**: 0.4.0
 **Last Updated**: 2025-11-20
 **For**: Normal Users & Developers
 
@@ -82,7 +82,7 @@ npm install -g @logseq/cli
 
 ```bash
 logseq --version
-# Output: 0.3.0
+# Output: 0.4.0
 ```
 
 ### Update
@@ -208,6 +208,27 @@ logseq search my-graph "todo"
 # NOT this:
 logseq search logseq_db__my-graph "todo"
 ```
+
+**Local Path Support (v0.4.0+):**
+
+You can also use direct paths to graph database files:
+
+```bash
+# Using absolute path
+logseq search /Users/you/Downloads/logseq_db_mydb_1234567890.sqlite "todo"
+
+# Using relative path
+logseq search ./my-backup/graph.sqlite "todo"
+
+# Using home directory shorthand
+logseq search ~/Downloads/exported-graph.sqlite "todo"
+```
+
+This is useful for:
+
+- Querying exported or backed-up graphs
+- Working with graphs outside the standard location
+- Analyzing downloaded graph databases
 
 ### Two Operation Modes
 
@@ -771,6 +792,102 @@ The import expects EDN files with this structure (typically created by `export-e
 
 ---
 
+### `mcp-server` - Run MCP Server
+
+Run a Model Context Protocol (MCP) server to integrate Logseq with MCP-compatible tools and AI assistants.
+
+**Syntax:**
+
+```bash
+# Local graph mode
+logseq mcp-server -g GRAPH [options]
+
+# API mode (current graph)
+logseq mcp-server -a TOKEN [options]
+```
+
+**Options:**
+
+```
+-g, --graph GRAPH                Graph name (for local mode)
+-a, --api-server-token TOKEN     API token (for in-app graph)
+-s, --stdio                      Run via stdio transport (default: HTTP)
+-p, --port NUMBER                Port for HTTP server (default: 12315)
+    --host ADDRESS               Host for HTTP server (default: 127.0.0.1)
+-t, --debug-tool                 Debug MCP tool with direct invocation
+```
+
+**Examples:**
+
+```bash
+# Run MCP server for local graph via stdio
+logseq mcp-server -g my-notes -s
+
+# Run MCP server for current in-app graph
+logseq mcp-server -a YOUR_TOKEN
+
+# Run HTTP MCP server on custom port
+logseq mcp-server -g my-notes -p 8080
+
+# Run with custom host and port
+logseq mcp-server -g my-notes --host 0.0.0.0 -p 9000
+
+# Debug mode
+logseq mcp-server -g my-notes -t
+```
+
+**Output:**
+
+```
+MCP server running on http://127.0.0.1:12315
+```
+
+**Transport Modes:**
+
+1. **HTTP Streamable Server (Default):**
+
+   - Runs as HTTP server
+   - Can be accessed by multiple clients
+   - Use `-p` to customize port
+   - Use `--host` to customize bind address
+
+2. **Stdio Transport (`-s`):**
+   - Communicates via standard input/output
+   - Typically used by MCP-compatible tools
+   - Single-client mode
+
+**Use Cases:**
+
+- **AI Assistant Integration**: Connect Claude, ChatGPT, or other AI tools to your Logseq graph
+- **Custom Tools**: Build MCP clients that interact with your knowledge base
+- **Automation**: Create workflows that query and modify your graph via MCP
+- **Multi-Tool Access**: Run HTTP server to allow multiple MCP clients simultaneously
+
+**MCP Capabilities:**
+
+The MCP server exposes your Logseq graph with the following capabilities:
+
+- Query your graph using DataScript
+- Search across pages and blocks
+- Read page contents
+- Access graph metadata
+- Execute custom queries
+
+**Requirements:**
+
+- For API mode: Logseq app must be running with HTTP API enabled
+- For local mode: Direct access to graph database files
+- MCP-compatible client application
+
+**Important Notes:**
+
+- The server runs continuously until terminated (Ctrl+C)
+- In API mode, changes made in Logseq app are immediately available
+- In local mode, the server has read-only access to the graph
+- For security, bind to localhost (127.0.0.1) unless you need network access
+
+---
+
 ### `validate` - Validate Graph Data
 
 Validate one or more graphs for data integrity errors.
@@ -906,6 +1023,7 @@ logseq help COMMAND
 logseq help query
 logseq help export-edn
 logseq help search
+logseq help mcp-server
 ```
 
 **Also Available:**
@@ -1096,7 +1214,81 @@ echo "Completed tasks:"
 logseq query my-notes '[:find ?title :where [?b :block/marker "DONE"] [?b :block/title ?title]]' | head -10
 ```
 
-### Use Case 8: Export for Publishing
+### Use Case 8: MCP Server for AI Integration
+
+Run an MCP server to integrate your Logseq graph with AI assistants:
+
+**Basic Setup (Local Graph):**
+
+```bash
+#!/bin/bash
+# mcp-server.sh
+
+# Start MCP server for local graph via stdio
+logseq mcp-server -g my-notes -s
+```
+
+**HTTP Server (Multiple Clients):**
+
+```bash
+#!/bin/bash
+# mcp-http-server.sh
+
+# Start HTTP MCP server
+logseq mcp-server -g my-notes -p 8080
+
+echo "MCP server running on http://localhost:8080"
+echo "Press Ctrl+C to stop"
+```
+
+**With API Mode (Current Graph):**
+
+```bash
+#!/bin/bash
+# mcp-api-server.sh
+
+export LOGSEQ_API_SERVER_TOKEN=YOUR_TOKEN
+
+# Start MCP server for current in-app graph
+logseq mcp-server -a $LOGSEQ_API_SERVER_TOKEN -p 9000
+```
+
+**Docker Integration:**
+
+```dockerfile
+FROM node:22-alpine
+
+# Install Logseq CLI
+RUN npm install -g @logseq/cli
+
+# Copy graph data
+COPY ./my-graph /data/graph
+
+# Expose MCP port
+EXPOSE 8080
+
+# Run MCP server
+CMD ["logseq", "mcp-server", "-g", "/data/graph", "-p", "8080", "--host", "0.0.0.0"]
+```
+
+**Systemd Service:**
+
+```ini
+[Unit]
+Description=Logseq MCP Server
+After=network.target
+
+[Service]
+Type=simple
+User=youruser
+ExecStart=/usr/bin/logseq mcp-server -g my-notes -p 8080
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Use Case 9: Export for Publishing
 
 Export and prepare for publishing:
 
@@ -1507,6 +1699,62 @@ logseq query my-notes '[:find ?title :where [?b :block/created-at ?t] [(> ?t 170
 **Q: Can I update data with queries?**
 
 A: No, queries are read-only. Use API mode with `append` command to add data.
+
+---
+
+### MCP Server Questions
+
+**Q: What is MCP and why would I use it?**
+
+A: MCP (Model Context Protocol) is a standard protocol for connecting AI assistants to external data sources. Use the `mcp-server` command to:
+
+- Connect Claude, ChatGPT, or other AI tools directly to your Logseq graph
+- Enable AI assistants to query and understand your knowledge base
+- Build custom integrations with MCP-compatible tools
+- Allow multiple tools to access your graph simultaneously
+
+**Q: Which transport mode should I use - stdio or HTTP?**
+
+A:
+
+- **Stdio (`-s`)**: Use when integrating with a single MCP client tool (like Claude Desktop). This is the standard mode for MCP tools.
+- **HTTP (default)**: Use when you want multiple clients to connect, or when building custom integrations. Allows concurrent access from multiple tools.
+
+**Q: Can the MCP server modify my graph?**
+
+A:
+
+- In **local mode** (`-g`): Read-only access. The server can query but not modify your graph.
+- In **API mode** (`-a`): The server has the same permissions as the API, which may include write access depending on MCP tool configuration.
+
+**Q: How do I connect Claude Desktop to my Logseq graph?**
+
+A:
+
+1. Start the MCP server in stdio mode: `logseq mcp-server -g my-notes -s`
+2. Configure Claude Desktop to use this MCP server (see MCP documentation)
+3. Claude will be able to query your graph directly
+
+**Q: Can I run multiple MCP servers simultaneously?**
+
+A: Yes, you can run multiple MCP servers for different graphs or on different ports:
+
+```bash
+# Terminal 1: Graph A on port 8080
+logseq mcp-server -g graph-a -p 8080
+
+# Terminal 2: Graph B on port 9000
+logseq mcp-server -g graph-b -p 9000
+```
+
+**Q: Is the MCP server secure?**
+
+A:
+
+- By default, it binds to localhost (127.0.0.1) for security
+- Only expose to network (`--host 0.0.0.0`) if needed and behind a firewall
+- In API mode, uses the same authentication as Logseq HTTP API
+- Consider using a reverse proxy with authentication for production use
 
 ---
 
@@ -2033,8 +2281,16 @@ See [GitHub Issues](https://github.com/logseq/logseq/issues?q=is%3Aissue+label%3
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2025-11-20
+**CLI Version**: 0.4.0
 **Feedback**: [GitHub Issues](https://github.com/logseq/logseq/issues)
 
 **License**: MIT
+
+**Changes in v1.2:**
+
+- Updated for @logseq/cli version 0.4.0
+- Added documentation for `mcp-server` command
+- Added local path support for graph arguments
+- Added MCP server use cases and FAQ entries
