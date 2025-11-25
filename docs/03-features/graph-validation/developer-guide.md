@@ -475,6 +475,58 @@ Check for existing tests in:
 
 4. **Re-run Validation**: Verify auto-fixes worked
 
+## Programmatic Access
+
+### From Developer Console
+
+The validation function is exported and can be called directly:
+
+```javascript
+// Direct call to the exported function
+window.frontend.handler.common.developer.validate_db()
+```
+
+This is the most reliable method from the browser console.
+
+### From Plugins
+
+Plugins can trigger validation using the external command API:
+
+```javascript
+// Trigger validation from a plugin
+await logseq.App.invokeExternalCommand('logseq.dev/validate-db')
+```
+
+**Important Notes:**
+
+- The `validate-db` function is **not** exposed in `logseq.api` (the plugin SDK)
+- It's marked with `^:export` but not registered in `src/main/logseq/api.cljs`
+- Plugins must use `invokeExternalCommand` to trigger it indirectly
+- The command ID requires the `logseq.` namespace prefix: `'logseq.dev/validate-db'`
+
+### Alternative: Query-Based Cleanup
+
+For specific validation issues (e.g., clearing `:block/warning` properties), you can query and manually clean up:
+
+```clojure
+;; Query to find blocks with warnings
+{:query [:find (pull ?b [*])
+         :where
+         [?b :block/warning :multiple-blocks]]}
+```
+
+After fixing the underlying issue (e.g., removing multiple block markers from titles), run validation to auto-retract the warning:
+
+```javascript
+// Console
+window.frontend.handler.common.developer.validate_db()
+
+// Plugin
+await logseq.App.invokeExternalCommand('logseq.dev/validate-db')
+```
+
+The validation auto-fix will retract `:block/warning` attributes for blocks that have been corrected (see `validate.cljs:43`).
+
 ## Future Improvements
 
 Potential enhancements:
@@ -483,11 +535,13 @@ Potential enhancements:
 2. **Selective Fix**: Let users choose which fixes to apply
 3. **Validation History**: Track validation runs over time
 4. **Performance Profiling**: Report which entity types are slow to validate
-5. **Custom Validators**: Plugin API for custom validation rules
+5. **Plugin API Exposure**: Add `logseq.api.validate_db()` for direct plugin access
+6. **Custom Validators**: Plugin API for custom validation rules
 
 ## See Also
 
 - [Garbage Collection Developer Guide](./garbage-collection-developer-guide.md)
+- [Plugin API Overview](../../04-api-reference/plugin-api/overview.md)
 - [DB Schema Documentation](../deps/db/src/logseq/db/frontend/malli_schema.cljs)
 - [Outliner Validation](../deps/outliner/src/logseq/outliner/validate.cljs)
 - [Worker Thread Architecture](../src/main/frontend/worker/README.md)

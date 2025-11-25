@@ -58,56 +58,108 @@ The way you write queries **fundamentally differs** between DB-based and file-ba
 
 ### ⚠️ NO `{{query}}` Wrapper!
 
-In DB graphs, queries are **properties**, not macros.
+In DB graphs, queries are **properties**, not macros. The `{{query}}` macro is **deprecated** and will show a warning.
 
 ### Simple (DSL) Queries - DB Version
 
-**Syntax**: Use `query::` property
+**Syntax**: Use `/Query` command to create query property
 
-```markdown
-- query:: (and [[page-name]] (task "Todo"))
+**How to create**:
+
+1. Type `/Query` in any block
+2. Logseq creates the `:logseq.property/query` property
+3. Enter your query in the property value
+
+**Query value example**:
+
+```clojure
+(and [[page-name]] (task Todo))
 ```
 
 **Example with Template Variables**:
 
-```markdown
-- query:: (and <% today %> (task "Todo"))
+```clojure
+(and <% today %> (task Todo))
 ```
 
-**Important**: DB-based graphs use **quoted, title-case task statuses**:
+**Important**: DB-based graphs use **title-case task statuses** (NOT quoted):
 
-- Use: `"Todo"`, `"Doing"`, `"Done"`, `"Now"`, `"Later"`
+- Use: `Todo`, `Doing`, `Done`, `Now`, `Later`
 - NOT: `TODO`, `DOING`, `DONE`, `NOW`, `LATER` (file-based syntax)
+- NOT: `"Todo"`, `"Doing"`, `"Done"` (quoted strings)
 
-**How It Works**:
+---
 
-1. Add `query::` property to any block
-2. Property value contains the query code
-3. Logseq automatically renders results below
+### Scheduled and Deadline Syntax
+
+**File-Based Graphs**: Use org-mode style timestamp syntax
+
+```markdown
+- TODO Task description
+  SCHEDULED: <2024-03-15 Fri>
+- TODO Another task
+  DEADLINE: <2024-03-20 Wed>
+- TODO Combined
+  SCHEDULED: <2024-03-15 Fri> DEADLINE: <2024-03-20 Wed>
+```
+
+**DB-Based Graphs**: Use properties (`:logseq.property/scheduled` and `:logseq.property/deadline`)
+
+Properties are set via UI or shortcuts:
+
+- `Cmd/Ctrl + P` then `D` for Deadline
+- `Cmd/Ctrl + P` then `S` for Scheduled
+
+Values are stored as datetime timestamps (milliseconds since epoch).
+
+**Query Syntax Differences**:
+
+| Aspect             | File-Based                                           | DB-Based                                                                       |
+| ------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Property Names** | `scheduled`, `deadline` (lowercase)                  | `scheduled`, `deadline` (lowercase in queries)                                 |
+| **Storage**        | `:block/scheduled`, `:block/deadline` (integer date) | `:logseq.property/scheduled`, `:logseq.property/deadline` (datetime timestamp) |
+| **Display**        | `SCHEDULED: <date>`, `DEADLINE: <date>`              | Property UI with date picker                                                   |
+
+**Query Examples**:
+
+File-Based:
+
+```clojure
+{{query (and (task TODO) (property scheduled today))}}
+{{query (and (task TODO) (between deadline today +7d))}}
+```
+
+DB-Based (using `/Query`):
+
+```clojure
+(and (task Todo) (property scheduled today))
+(and (task Todo) (between deadline today +7d))
+```
 
 ---
 
 ### Advanced Queries - DB Version
 
-**Syntax**: Use `query::` property with code block
+**Syntax**: Use `/Query` command
 
-````markdown
-- query::
-  ```clojure
-  {:title "My Query"
-   :query [:find (pull ?b [*])
-           :in $ ?today
-           :where [?b :block/journal-day ?today]]
-   :inputs [:today]}
-  ```
-````
+1. Type `/Query` in any block
+2. Logseq automatically:
+   - Sets `:block/tags` to `:logseq.class/Query`
+   - Creates `:logseq.property/query` property with empty value
+   - Sets property metadata:
+     - `:logseq.property.node/display-type` to `:code`
+     - `:logseq.property.code/lang` to `"clojure"`
+3. Fill in the query value:
 
-`````
+```clojure
+{:title "My Query"
+ :query [:find (pull ?b [*])
+         :in $ ?today
+         :where [?b :block/journal-day ?today]]
+ :inputs [:today]}
+```
 
-**Alternative**: Use query builder UI
-- Type `/query` command
-- Logseq creates the property automatically
-- Edit the property value
+**Note**: The property value is stored as a plain string containing the Clojure map
 
 ---
 
@@ -115,15 +167,32 @@ In DB graphs, queries are **properties**, not macros.
 
 ### Example: Today's Tasks
 
-| File-Based | DB-Based |
-|------------|----------|
-| `{{query (and <% today %> (task TODO))}}` | `query:: (and <% today %> (task "Todo"))` |
+| File-Based                                | DB-Based                                   |
+| ----------------------------------------- | ------------------------------------------ |
+| `{{query (and <% today %> (task TODO))}}` | `/Query` → `(and <% today %> (task Todo))` |
 
-**Key Difference**: Task statuses in DB-based graphs must be quoted and title-cased (`"Todo"`), while file-based graphs use uppercase keywords (`TODO`).
+**Key Difference**: Task statuses in DB-based graphs use title-case (`Todo`, `Doing`, `Done`), while file-based graphs use uppercase keywords (`TODO`, `DOING`, `DONE`). DB graphs do NOT use quoted strings.
+
+### Example: Scheduled Tasks
+
+**File-Based**:
+
+```clojure
+{{query (and (task TODO) (property scheduled today))}}
+```
+
+**DB-Based** (using `/Query` command):
+
+```clojure
+(and (task Todo) (property scheduled today))
+```
+
+**Key Difference**: Query logic is the same, but task status format and wrapper syntax differ.
 
 ### Example: Advanced Query
 
 **File-Based**:
+
 ````markdown
 ```query
 {:title "Last Week"
@@ -131,21 +200,21 @@ In DB graphs, queries are **properties**, not macros.
          :in $ ?start ?end %
          :where (between ?b ?start ?end)]
  :inputs [:-7d :today]}
-`````
-
-`````
-
-**DB-Based**:
-```markdown
-- query::
-  ```clojure
-  {:title "Last Week"
-   :query [:find (pull ?b [*])
-           :in $ ?start ?end %
-           :where (between ?b ?start ?end)]
-   :inputs [:-7d :today]}
-  ```
 ```
+````
+
+`````
+
+**DB-Based** (using `/Query` command):
+```clojure
+{:title "Last Week"
+ :query [:find (pull ?b [*])
+         :in $ ?start ?end %
+         :where (between ?b ?start ?end)]
+ :inputs [:-7d :today]}
+```
+
+(This is the value you enter in the `:logseq.property/query` property created by `/Query`)
 
 ---
 
@@ -153,12 +222,15 @@ In DB graphs, queries are **properties**, not macros.
 
 | Aspect | File-Based | DB-Based |
 |--------|------------|----------|
-| **Simple Query Syntax** | `{{query (and ...)}}` | `query:: (and ...)` |
-| **Task Statuses** | Uppercase keywords: `TODO`, `DOING`, `DONE` | Quoted, title-case: `"Todo"`, `"Doing"`, `"Done"` |
-| **Advanced Query Syntax** | Code block with query map | Property with code block value |
-| **Creation Method** | Type macro manually | Use `/query` command or property |
-| **Storage** | Inline in markdown | As property on block |
+| **Simple Query Syntax** | `{{query (and ...)}}` | `/Query` command creates property |
+| **Task Statuses** | Uppercase keywords: `TODO`, `DOING`, `DONE` | Title-case: `Todo`, `Doing`, `Done` |
+| **Scheduled/Deadline Display** | `SCHEDULED: <date>`, `DEADLINE: <date>` | Property UI with date picker |
+| **Scheduled/Deadline Storage** | `:block/scheduled`, `:block/deadline` (integer) | `:logseq.property/scheduled`, `:logseq.property/deadline` (datetime) |
+| **Advanced Query Syntax** | Code block with query map | Property value with query map |
+| **Creation Method** | Type `{{query}}` macro manually | Use `/Query` command (creates `:logseq.property/query`) |
+| **Storage** | Inline in markdown | As `:logseq.property/query` property value |
 | **Display** | Inline macro expansion | Property-based rendering |
+| **{{query}} Macro** | ✅ Supported | ⚠️ Deprecated (shows warning) |
 
 ---
 
@@ -171,9 +243,9 @@ In DB graphs, queries are **properties**, not macros.
 {{query (and <% today %>)}}
 ```
 
-**DB-Based**:
-```markdown
-query:: (and <% today %>)
+**DB-Based** (using `/Query` command):
+```clojure
+(and <% today %>)
 ```
 
 **Resolution**: Template variables resolve **before** query execution in both
@@ -192,17 +264,14 @@ query:: (and <% today %>)
 ```
 `````
 
-**DB-Based**:
+**DB-Based** (using `/Query` command):
 
-````markdown
-- query::
-  ```clojure
-  {:query [:find ...]
-   :inputs [:today :current-page]}
-  ```
-````
+```clojure
+{:query [:find ...]
+ :inputs [:today :current-page]}
+```
 
-````
+`````
 
 **Resolution**: Query inputs resolve **during** query execution in both
 
@@ -210,35 +279,31 @@ query:: (and <% today %>)
 
 ## How to Create Queries in DB Graphs
 
-### Method 1: Using `/query` Command
+### Using `/Query` Command (Recommended)
 
-1. Type `/query` in any block
-2. Logseq automatically creates:
-   ```markdown
-   - query::
-     ```clojure
+1. Type `/Query` in any block (note: capital Q)
+2. Logseq automatically:
+   - Adds `:logseq.class/Query` tag to the block
+   - Creates `:logseq.property/query` property
+   - Sets property to display as code with Clojure syntax highlighting
+3. Enter your query in the property value field
 
-     ```
-````
+**For Simple Queries**:
 
-3. Fill in your query
+```clojure
+(and [[page-name]] (task Todo))
+```
 
-### Method 2: Manual Property
+**For Advanced Queries**:
 
-1. Add property: `query::`
-2. Type your query as the value
-3. For multi-line, press Shift+Enter
+```clojure
+{:title "My Query"
+ :query [:find (pull ?b [*])
+         :where [?b :block/marker "Todo"]]
+ :inputs [:today]}
+```
 
-### Method 3: Code Block (Advanced)
-
-1. Create block with `query::` property
-2. Add code block:
-   ````markdown
-   - query::
-     ```clojure
-     {:query [...] :inputs [...]}
-     ```
-   ````
+**Note**: The old `{{query}}` macro is deprecated in DB graphs and will show a warning message
 
 ---
 
@@ -246,31 +311,31 @@ query:: (and <% today %>)
 
 ### Query Display Type
 
-In DB graphs, queries have additional metadata:
+In DB graphs, the `/Query` command automatically sets:
 
 ```clojure
-;; Auto-set by Logseq when you use /query
+:block/tags [:logseq.class/Query]
+:logseq.property/query ""
 :logseq.property.node/display-type :code
 :logseq.property.code/lang "clojure"
 ```
 
 This means:
 
-- Query property displays as code
-- Syntax highlighting for clojure
+- Block is tagged as a Query
+- Query property displays as code editor
+- Syntax highlighting for Clojure
 - Better editing experience
 
 ### Query Block Structure
 
-````markdown
-- Some parent block
-  - query::
-    ```clojure
-    {:query [:find ...]
-     :inputs [...]}
-    ```
-  - Results render here (auto-generated)
-````
+When you use `/Query`, the block structure is:
+
+```
+- [Query tag]
+  query: (and [[page-name]] (task Todo))
+  → Query results render below automatically
+```
 
 ---
 
@@ -286,28 +351,29 @@ This means:
 
 **New (DB-based)**:
 
-```markdown
-query:: (and [[project]])
-```
+1. Type `/Query` command
+2. Enter query value: `(and [[project]])`
+
+(Note: `{{query}}` macro is deprecated in DB graphs)
 
 **Advanced Query Migration**:
 
-**Old**:
+**Old** (File-based):
 
 ````markdown
 ```query
 {:title "My Query" ...}
 ```
-````
+`````
 
-**New**:
+**New** (DB-based):
 
-````markdown
-- query::
-  ```clojure
-  {:title "My Query" ...}
-  ```
-````
+1. Type `/Query` command
+2. Enter in the property value field:
+
+```clojure
+{:title "My Query" ...}
+```
 
 ````
 
@@ -363,11 +429,9 @@ Should render immediately if `test-page` exists.
 
 ### DB-Based Testing
 
-```markdown
-- query:: (and [[test-page]])
-```
-
-Should render results below the property.
+1. Type `/Query` in a block
+2. Enter: `(and [[test-page]])`
+3. Results should render below the block
 
 ---
 
@@ -381,10 +445,12 @@ Should render results below the property.
 
 ### DB-Based Debugging
 
-1. Check property exists: `query::`
-2. Verify property value is valid
-3. Use query builder UI to validate syntax
-4. Check block property metadata
+1. Verify you used `/Query` command (capital Q)
+2. Check block has `:logseq.class/Query` tag
+3. Check `:logseq.property/query` property exists
+4. Verify query value syntax is correct
+5. For task queries, use title-case: `Todo`, `Doing`, `Done` (not quoted)
+6. Check browser console for error messages
 
 ---
 
@@ -399,10 +465,11 @@ Should render results below the property.
 
 ### DB-Based Best Practices
 
-✅ Use `/query` command for creation
-✅ Use `query::` property consistently
+✅ Use `/Query` command for creation (capital Q)
+✅ Don't use deprecated `{{query}}` macro
+✅ Use title-case for task statuses: `Todo`, `Doing`, `Done`
+✅ Don't quote task status values in DSL queries
 ✅ Leverage property-based organization
-✅ Use query builder for validation
 ✅ Take advantage of code syntax highlighting
 
 ---
@@ -428,20 +495,24 @@ Should render results below the property.
 
 ### DB-Based Cheat Sheet
 
-```markdown
+```clojure
 # Simple Query
-query:: (and [[page]])
+# Type: /Query
+# Enter: (and [[page]])
 
 # With Template Variables
-query:: (and <% today %>)
+# Type: /Query
+# Enter: (and <% today %>)
+
+# With Task Statuses
+# Type: /Query
+# Enter: (and (task Todo Doing) [[project]])
 
 # Advanced Query
-- query::
-  ```clojure
-  {:query [:find ...]
-   :inputs [:today]}
-````
-
+# Type: /Query
+# Enter:
+{:query [:find ...]
+ :inputs [:today]}
 ```
 
 ---
@@ -468,9 +539,11 @@ query:: (and <% today %>)
 - Macro-based rendering
 
 **DB-Based Query Handling**:
-- `src/main/frontend/components/query.cljs:63-67`
-- Property-based rendering
-- Uses `:logseq.property/query` attribute
+- `/Query` command: `src/main/frontend/commands.cljs:195-203`
+- Creates `:logseq.property/query` property with metadata
+- Property-based rendering: `src/main/frontend/components/query/view.cljs`
+- Query DSL parsing: `src/main/frontend/db/query_dsl.cljs:376-389` (`build-task` function)
+- Task statuses: Title-cased via `common-util/capitalize-all`
 
 ---
 
@@ -478,10 +551,10 @@ query:: (and <% today %>)
 
 **Key Takeaway**:
 
-| If you're using... | Write queries as... |
-|-------------------|---------------------|
-| **File-based graph** | `{{query ...}}` macro |
-| **DB-based graph** | `query::` property |
+| If you're using... | Create queries with... | Task status format |
+|-------------------|---------------------|-------------------|
+| **File-based graph** | `{{query ...}}` macro | `TODO`, `DOING`, `DONE` |
+| **DB-based graph** | `/Query` command | `Todo`, `Doing`, `Done` |
 
 Both syntaxes support:
 - ✅ Template variables `<% %>`
@@ -492,10 +565,12 @@ The **resolution logic** is the same, only the **syntax wrapper** differs!
 
 ---
 
-**Last Updated**: 2025-10-16
-**Version**: 1.0.0
-
----
+**Last Updated**: 2025-11-22
+**Version**: 2.1.0
+**Changes**:
+- v2.1.0 (2025-11-22): Added scheduled/deadline syntax differences between file-based and DB-based graphs
+- v2.0.0 (2025-11-21): Updated to reflect actual DB graph query syntax using `/Query` command instead of incorrect `query::` property syntax. Corrected task status format (title-case without quotes)---
 
 *Always check which graph type you're using before writing queries!*
 ```
+````
