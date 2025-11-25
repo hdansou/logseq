@@ -1541,6 +1541,46 @@ unlisten()
 
 ---
 
+### 8. ⚠️ **Limited Access to Internal Developer Functions**
+
+**Severity**: Low
+**Evidence**: Functions marked `^:export` but not registered in `logseq.api`
+
+**Impact**: Some developer tools are not directly accessible from plugin API
+**Example**: Graph validation (`validate-db`) is exported but not in plugin SDK
+
+**Workarounds**:
+
+1. **Use `invokeExternalCommand` for registered commands:**
+
+   ```javascript
+   // Trigger internal commands via command palette API
+   await logseq.App.invokeExternalCommand('logseq.dev/validate-db')
+   ```
+
+   Note: Command IDs require the `logseq.` namespace prefix for built-in commands.
+
+2. **From developer console only (not from plugins):**
+
+   ```javascript
+   // Direct access to exported namespace functions
+   window.frontend.handler.common.developer.validate_db()
+   ```
+
+**Common Use Cases:**
+
+- Graph validation: `logseq.dev/validate-db`
+- RTC operations: `logseq.dev/rtc-start`, `logseq.dev/rtc-stop`
+- Developer tools: Block/page data inspection commands
+
+**Related Files:**
+
+- Command registration: `src/main/frontend/modules/shortcut/config.cljs`
+- Exported functions: `src/main/frontend/handler/common/developer.cljs`
+- Plugin API surface: `src/main/logseq/api.cljs`
+
+---
+
 ## API Reference
 
 ### Complete Plugin API Surface
@@ -1598,6 +1638,7 @@ logseq.App.setCurrentGraphConfigs(configs: {}): Promise<void>
 logseq.App.registerCommand(type: string, opts: CommandOpts, action: SimpleCommandCallback)
 logseq.App.registerCommandPalette(opts: PaletteOpts, action: SimpleCommandCallback)
 logseq.App.registerCommandShortcut(keybinding: Keybinding, action: SimpleCommandCallback, opts?)
+logseq.App.invokeExternalCommand(commandId: string): Promise<void>
 logseq.App.invokeExternalCommand(type: ExternalCommandType, ...args): Promise<void>
 logseq.App.invokeExternalPlugin(type: string, ...args): Promise<unknown>
 
