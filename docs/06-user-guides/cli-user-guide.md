@@ -555,12 +555,73 @@ logseq query '(task DOING)' -a TOKEN
 logseq query '[:find (pull ?b [*]) :where [?b :block/marker "TODO"]]' -a TOKEN
 ```
 
+**Query Format: CLI vs In-App**
+
+The CLI query command supports a different format than queries in the Logseq application:
+
+**✅ CLI Supported Formats:**
+
+1. **Entity queries** - Simple ID, UUID, or keyword lookups:
+
+   ```bash
+   # By ID
+   logseq query my-notes 123
+
+   # By UUID (bare string)
+   logseq query my-notes "68c012ca-2aee-46a8-a589-8bf67a1d4e92"
+
+   # By keyword
+   logseq query my-notes :logseq.class/Tag
+   ```
+
+2. **DataLog queries** - Pure DataScript query format:
+   ```bash
+   logseq query my-notes '[:find (pull ?b [*]) :where [?b :block/uuid #uuid "68c012ca-2aee-46a8-a589-8bf67a1d4e92"]]'
+   ```
+
+**❌ CLI Does NOT Support:**
+
+- **`:view` clause** - Custom view functions are ignored by the CLI
+- **Advanced query map format** - The `{:query [...] :view [...]}` structure used in-app
+
+**Example - Converting In-App Query to CLI:**
+
+In-App Format (not supported):
+
+```clojure
+{:query [:find (pull ?b [*])
+         :where [?b :block/uuid #uuid "68c012ca-2aee-46a8-a589-8bf67a1d4e92"]]
+ :view (fn [r] [:pre.code (pprint r)])}
+```
+
+CLI Format (supported):
+
+```bash
+# Entity query (simplest)
+logseq query my-notes "68c012ca-2aee-46a8-a589-8bf67a1d4e92"
+
+# Or DataLog query (more flexible)
+logseq query my-notes '[:find (pull ?b [*]) :where [?b :block/uuid #uuid "68c012ca-2aee-46a8-a589-8bf67a1d4e92"]]'
+```
+
+**Key Differences:**
+
+| Feature        | In-App                 | CLI                                |
+| -------------- | ---------------------- | ---------------------------------- |
+| Query wrapper  | `{:query [...]}`       | Direct query `[:find ...]`         |
+| `:view` clause | ✅ Supported           | ❌ Not supported                   |
+| Entity queries | Limited                | ✅ Full support                    |
+| Output format  | Custom views           | Raw EDN only                       |
+| UUID format    | `#uuid "..."` in query | Both `#uuid "..."` and bare string |
+
 **Query Tips:**
 
 - DataLog queries must start with `[:find ...]`
 - Use single quotes to prevent shell interpretation
 - Built-in DSL rules are automatically included
 - Results are pretty-printed by default
+- CLI returns raw EDN data (no custom formatting)
+- For custom formatting, pipe CLI output to other tools (jq, awk, etc.)
 
 **Common Queries:**
 
@@ -668,13 +729,31 @@ logseq export-edn -a TOKEN [options]
 -e, --exclude-namespaces NS...     Exclude property/class namespaces
 -b, --exclude-built-in-pages?      Exclude system pages
 -F, --exclude-files?               Exclude file path information
--t, --export-type TYPE             Export type (default: :graph)
+-t, --export-type TYPE             Export type: :graph (default), :graph-ontology
+                                   Note: :page, :block, :selected-nodes, :view-nodes
+                                   are API-only types requiring internal entity IDs
 ```
+
+**Export Types:**
+
+The `-t/--export-type` option controls what gets exported:
+
+- **`:graph`** (default) - Complete graph backup
+
+  - All pages and blocks
+  - All properties and classes
+  - Graph metadata and schema version
+  - Perfect for full backups and migrations
+
+- **`:graph-ontology`** - Schema only
+  - User-defined properties
+  - User-defined classes/tags
+  - Useful for sharing graph structure without content
 
 **Examples:**
 
 ```bash
-# Basic local export
+# Basic local export (full graph)
 logseq export-edn -g my-notes
 # Output: my-notes_1704844800.edn
 
@@ -684,14 +763,20 @@ logseq export-edn -a YOUR_TOKEN -f backup.edn
 # Custom filename
 logseq export-edn -g my-notes -f backup.edn
 
+# Export schema only (properties and classes)
+logseq export-edn -g my-notes -t :graph-ontology
+
 # Include timestamps
 logseq export-edn -g my-notes -T
 
 # Exclude system pages
 logseq export-edn -g my-notes -b
 
-# Exclude namespaces
+# Exclude namespaces (useful for large ontologies)
 logseq export-edn -g my-notes -e logseq.class -e logseq.property
+
+# Schema export excluding specific namespaces
+logseq export-edn -g my-notes -t :graph-ontology -e schema.org
 
 # Exclude files
 logseq export-edn -g my-notes -F
@@ -708,18 +793,34 @@ Exported 45 properties, 12 classes and 234 pages to my-notes_1704844800.edn
 
 **EDN Structure:**
 
+Full graph export (`:graph`):
+
 ```clojure
 {:properties [...]        ; Property definitions
  :classes [...]           ; Class definitions
- :pages-and-blocks [...]} ; All pages and blocks
+ :pages-and-blocks [...]  ; All pages and blocks
+ :logseq.db.sqlite.export/export-type :graph
+ :logseq.db.sqlite.export/schema-version [1 2]
+ :logseq.db.sqlite.export/graph-files [...]
+ :logseq.db.sqlite.export/kv-values {...}}
+```
+
+Schema-only export (`:graph-ontology`):
+
+```clojure
+{:properties [...]        ; User properties only
+ :classes [...]           ; User classes/tags only
+ :logseq.db.sqlite.export/export-type :graph-ontology}
 ```
 
 **Use Cases:**
 
-- Create importable graph backups
-- Transfer graphs between systems
-- Graph analysis and processing
-- Development and debugging
+- **Full backups**: Use `:graph` type with `-T` for complete snapshots
+- **Graph migration**: Transfer entire graph between systems
+- **Schema sharing**: Use `:graph-ontology` to share structure without content
+- **Development**: Create test graphs with realistic structure
+- **Ontology seeding**: Bootstrap new graphs with existing schema
+- **Graph analysis**: Export for external processing and analysis
 
 ---
 
