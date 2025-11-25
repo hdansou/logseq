@@ -1,6 +1,6 @@
 # Logseq Dependencies: End of Life & Deprecation Report
 
-**Report Generated:** 2025-10-21
+**Report Generated:** 2025-11-20
 
 ## Executive Summary
 
@@ -8,9 +8,10 @@ This report provides a comprehensive overview of all major dependencies used in 
 
 ### Critical Findings
 
-- **Electron 37.2.6** reaches EOL on January 13, 2026 (~3 months)
+- **Electron 38.4.0** - Recently upgraded, reaches EOL on March 4, 2026 (~3-4 months)
 - **TypeScript 4.4.3** is 3+ years outdated with no security support
 - **CodeMirror 5** is in legacy/maintenance mode
+- **Node.js 22.20.0** - Recently upgraded to LTS version
 
 ## Dependencies Overview
 
@@ -18,9 +19,9 @@ This report provides a comprehensive overview of all major dependencies used in 
 
 | Dependency     | Current Version | Latest Version | EOL/Deprecation Date | Status                | Priority | Notes                                                                       |
 | -------------- | --------------- | -------------- | -------------------- | --------------------- | -------- | --------------------------------------------------------------------------- |
-| **Node.js**    | ≥20.19.1        | 22.x LTS       | **April 30, 2026**   | 🟢 Active Maintenance | LOW      | In Maintenance LTS. Node 22 LTS supported until April 2027.                 |
-| **Electron**   | 37.2.6          | 39.x           | **January 13, 2026** | 🔴 EOL in ~3 months   | URGENT   | Only supports latest 3 stable versions. Includes GPU fix for macOS Tahoe.   |
-| **TypeScript** | 4.4.3           | 5.7+           | No official EOL      | 🔴 Very outdated      | HIGH     | Released Sep 2021. Security fixes backported ~1 year only. 3+ years behind. |
+| **Node.js**    | ≥22.20.0        | 23.x           | **April 30, 2027**   | 🟢 Active LTS         | -        | Node 22 LTS (upgraded). Node 23 is current release.                         |
+| **Electron**   | 38.4.0          | 39.x           | **March 4, 2026**    | 🟡 Monitor EOL        | MEDIUM   | Upgraded from 37.2.6. Only supports latest 3 stable versions.               |
+| **TypeScript** | 4.4.3           | 5.9+           | No official EOL      | 🔴 Very outdated      | HIGH     | Released Sep 2021. Security fixes backported ~1 year only. 3+ years behind. |
 | **Webpack**    | 5.98.0          | 5.x            | No official EOL      | 🟢 Current            | -        | Webpack 5 is current major version. No v6 announced.                        |
 | **Gulp**       | 4.0.2           | 4.x            | No official EOL      | 🟢 Current            | -        | Gulp 4 is current major version.                                            |
 | **PostCSS**    | 8.4.47          | 8.x            | No official EOL      | 🟢 Current            | -        | PostCSS 8 is current major version.                                         |
@@ -44,9 +45,9 @@ This report provides a comprehensive overview of all major dependencies used in 
 
 | Dependency      | Current Version | Latest Version | EOL/Deprecation Date | Status       | Priority | Notes                                                                                           |
 | --------------- | --------------- | -------------- | -------------------- | ------------ | -------- | ----------------------------------------------------------------------------------------------- |
-| **React**       | 18.3.1          | 19.x           | No official EOL      | 🟢 Supported | -        | React 18 receives critical security fixes. No formal EOL. React 19 released Dec 2024.           |
-| **React DOM**   | 18.3.1          | 19.x           | No official EOL      | 🟢 Supported | -        | Follows React versioning.                                                                       |
-| **TailwindCSS** | 3.3.5           | 4.x            | No official EOL      | 🟡 Outdated  | LOW      | Only latest version supported. No security patches for 3.x. TailwindCSS 4 has breaking changes. |
+| **React**       | 18.3.1          | 19.2.0         | No official EOL      | 🟢 Supported | -        | React 18 receives critical security fixes. No formal EOL. React 19 released Dec 2024.           |
+| **React DOM**   | 18.3.1          | 19.2.0         | No official EOL      | 🟢 Supported | -        | Follows React versioning.                                                                       |
+| **TailwindCSS** | 3.3.5           | 4.1.17         | No official EOL      | 🟡 Outdated  | LOW      | Only latest version supported. No security patches for 3.x. TailwindCSS 4 has breaking changes. |
 
 ### Code Editor & Content
 
@@ -86,40 +87,33 @@ This report provides a comprehensive overview of all major dependencies used in 
 
 ## Detailed Priority Action Items
 
-### 1. URGENT - Electron Upgrade (EOL: January 13, 2026)
+### 1. ✅ COMPLETED - Electron Upgrade
 
-**Current:** 37.2.6
-**Target:** 38.x or 39.x
-**Timeline:** ~3 months until EOL
+**Previous:** 37.2.6
+**Current:** 38.4.0
+**Status:** Upgraded successfully
 
-**Reason:**
+**Completed Actions:**
 
-- Electron only supports the latest 3 stable major versions
-- Version 37 will be unsupported when Electron 40 is released
-- Includes important GPU resource usage fix for macOS Tahoe (PR #48376)
+- [x] Upgraded to Electron 38.4.0
+- [x] Updated `static/package.json:60`
+- [x] Updated electron-rebuild to version 38.4.0 in `static/package.json:18`
 
-**Action Items:**
+**Next Steps:**
 
-- [ ] Review Electron 38/39 breaking changes
-- [ ] Test application with newer Electron version
-- [ ] Update `static/package.json` and `resources/package.json`
-- [ ] Run full QA testing on all platforms (macOS, Windows, Linux)
-- [ ] Verify electron-rebuild compatibility
-
-**Files to Update:**
-
-- `static/package.json:58`
-- `resources/package.json:58`
+- Monitor for Electron 39.x release
+- Plan upgrade before Electron 38 EOL (March 4, 2026)
+- Continue monitoring Electron 40 release timeline
 
 ### 2. HIGH - TypeScript Upgrade
 
 **Current:** 4.4.3
-**Target:** 5.x (latest is 5.7+)
+**Target:** 5.x (latest is 5.9+)
 **Timeline:** As soon as feasible
 
 **Reason:**
 
-- Released September 2021 (3+ years old)
+- Released September 2021 (4+ years old)
 - Security fixes only backported ~1 year
 - Missing many improvements and features from 5.x
 - Potential security vulnerabilities
@@ -167,7 +161,7 @@ This report provides a comprehensive overview of all major dependencies used in 
 ### 4. LOW - TailwindCSS 4 Evaluation
 
 **Current:** 3.3.5
-**Target:** 4.x
+**Target:** 4.1.17
 **Timeline:** Evaluate for future release
 
 **Reason:**
@@ -214,17 +208,23 @@ This report provides a comprehensive overview of all major dependencies used in 
 - `deps.edn:28`
 - `package.json:42`
 
-## Node.js Upgrade Consideration
+## ✅ Node.js Upgrade Completed
 
-**Current:** ≥20.19.1 (EOL: April 30, 2026)
-**Recommended:** Consider Node.js 22 LTS (EOL: April 2027)
+**Previous:** ≥20.19.1
+**Current:** ≥22.20.0 (EOL: April 30, 2027)
+**Status:** Upgraded successfully to Node.js 22 LTS
 
-While Node.js 20 is still in active maintenance, planning an upgrade to Node.js 22 LTS would provide:
+**Benefits Achieved:**
 
-- Extended support timeline
+- Extended support timeline (1 additional year)
 - Better performance
 - Newer JavaScript features
-- Alignment with Electron's Node.js version
+- Better alignment with Electron's Node.js version
+
+**Next Steps:**
+
+- Monitor Node.js 24 LTS release (expected April 2025)
+- Continue tracking Node.js 22 security updates
 
 ## Dependencies Without Formal EOL Policies
 
@@ -297,7 +297,7 @@ The following dependencies don't publish formal EOL dates but follow a "latest v
 
 ## Next Review Date
 
-**Recommended:** January 2026 (before Electron 37 EOL)
+**Recommended:** February 2026 (before Electron 38 EOL on March 4, 2026)
 
 ---
 
