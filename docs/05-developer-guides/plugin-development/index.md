@@ -303,7 +303,13 @@ async function initPlugin() {
 - 🗄️ `Editor.removeProperty()` - Remove property schemas
 - 🗄️ `Editor.getAllProperties()` - List all property definitions
 - 🗄️ `Editor.getAllTags()` - List all tags/classes
+- 🗄️ `Editor.createTag()` - Create new tags/classes (Added November 2025)
+- 🗄️ `Editor.getTag()` - Get tag by name or identifier (Added November 2025)
 - 🗄️ `Editor.getTagObjects()` - Get all blocks tagged with a specific class
+- 🗄️ `Editor.addBlockTag()` - Add tag to block programmatically (Added November 2025)
+- 🗄️ `Editor.removeBlockTag()` - Remove tag from block (Added November 2025)
+- 🗄️ `Editor.addTagProperty()` - Add property to tag/class (Added November 2025)
+- 🗄️ `Editor.removeTagProperty()` - Remove property from tag/class (Added November 2025)
 - 🗄️ `Editor.upsertBlockProperty()` - Set typed property values (with optional schema)
 - 🗄️ `Editor.getBlockProperty()` - Get typed property values
 - 🗄️ `Editor.getPageProperties()` - Get all properties of a page

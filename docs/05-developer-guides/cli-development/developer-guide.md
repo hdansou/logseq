@@ -681,6 +681,100 @@ Exports graph structure as EDN (Extensible Data Notation).
 - `-F` / `--exclude-files?` - Skip `:file/path` data
 - `-t` / `--export-type` - Export type (default: `:graph`)
 
+#### Export Types Deep Dive
+
+The `-t/--export-type` parameter controls **what portion of the graph** gets exported. It supports 6 different types, but only 2 are usable from the CLI.
+
+**CLI-Compatible Export Types:**
+
+| Type              | Description                                   | Use Case                                |
+| ----------------- | --------------------------------------------- | --------------------------------------- |
+| `:graph`          | Full graph export (all pages, blocks, schema) | Complete backups, graph migration       |
+| `:graph-ontology` | Properties and classes only (schema)          | Share graph structure, ontology seeding |
+
+**API-Only Export Types** (require internal entity IDs):
+
+| Type              | Description                    | Required Params |
+| ----------------- | ------------------------------ | --------------- |
+| `:page`           | Single page with all blocks    | `:page-id`      |
+| `:block`          | Single block                   | `:block-id`     |
+| `:selected-nodes` | Multiple selected blocks/pages | `:node-ids`     |
+| `:view-nodes`     | Query result nodes             | `:rows`         |
+
+**Implementation**: `deps/db/src/logseq/db/sqlite/export.cljs:865-890`
+
+```clojure
+(defn build-export [db {:keys [export-type] :as options}]
+  (case export-type
+    :graph (build-graph-export db (:graph-options options))
+    :graph-ontology (build-graph-ontology-export db {})
+    :page (build-page-export db (:page-id options))
+    :block (build-block-export db (:block-id options))
+    :selected-nodes (build-selected-nodes-export db (:node-ids options))
+    :view-nodes (build-view-nodes-export db (:rows options) ...)
+    (throw (ex-info (str (pr-str export-type) " is an invalid export-type") {}))))
+```
+
+**Export Type Comparison:**
+
+| Feature        | :graph | :graph-ontology | :page | :block | :selected-nodes | :view-nodes |
+| -------------- | ------ | --------------- | ----- | ------ | --------------- | ----------- |
+| All pages      | ✅     | ❌              | ❌    | ❌     | ❌              | ❌          |
+| All blocks     | ✅     | ❌              | ❌    | ❌     | ❌              | ❌          |
+| All properties | ✅     | ✅ User only    | Refs  | Refs   | Refs            | Refs        |
+| All classes    | ✅     | ✅ User only    | Refs  | Refs   | Refs            | Refs        |
+| Schema version | ✅     | ❌              | ❌    | ❌     | ❌              | ❌          |
+| Graph files    | ✅     | ❌              | ❌    | ❌     | ❌              | ❌          |
+| KV values      | ✅     | ❌              | ❌    | ❌     | ❌              | ❌          |
+| CLI usable     | ✅     | ✅              | ❌    | ❌     | ❌              | ❌          |
+
+**Examples:**
+
+```bash
+# Full graph export (default)
+logseq export-edn my-graph
+
+# Explicit graph type with all options
+logseq export-edn my-graph -t :graph -T -b -F
+
+# Schema-only export (properties and classes)
+logseq export-edn my-graph -t :graph-ontology
+
+# Schema export excluding specific namespaces
+logseq export-edn my-graph -t :graph-ontology -e schema.org -e dbpedia
+```
+
+**Output Structure Examples:**
+
+`:graph` export (full):
+
+```clojure
+{:properties {...}
+ :classes {...}
+ :pages-and-blocks [{:page {...} :blocks [...]}]
+ :logseq.db.sqlite.export/export-type :graph
+ :logseq.db.sqlite.export/schema-version [1 2]
+ :logseq.db.sqlite.export/graph-files [...]
+ :logseq.db.sqlite.export/kv-values {...}}
+```
+
+`:graph-ontology` export (schema only):
+
+```clojure
+{:properties {:user.property/priority {...}
+              :user.property/status {...}}
+ :classes {:user.class/Project {...}
+           :user.class/Task {...}}
+ :logseq.db.sqlite.export/export-type :graph-ontology}
+```
+
+**Notes:**
+
+- API-only types are used internally by the Logseq UI for selective exports
+- CLI cannot use `:page`, `:block`, `:selected-nodes`, or `:view-nodes` without entity IDs
+- Future enhancement could add UUID-based page/block export for CLI users
+- Invalid export types throw: `":<type>" is an invalid export-type`
+
 ### append - Modify Current Graph
 
 **Location**: `deps/cli/src/logseq/cli/commands/append.cljs`
@@ -1193,28 +1287,49 @@ logseq export-edn [OPTIONS] GRAPH
 -e, --exclude-namespaces NS...     Exclude property/class namespaces (set)
 -b, --exclude-built-in-pages?      Exclude system pages
 -F, --exclude-files?               Exclude :file/path data
--t, --export-type TYPE             Export type keyword (default: :graph)
+-t, --export-type TYPE             Export type. CLI supports: :graph (default), :graph-ontology
+                                   API-only types: :page, :block, :selected-nodes, :view-nodes
 ```
 
 **Examples:**
 
 ```bash
-# Basic export
+# Basic export (full graph)
 logseq export-edn my-graph
 
 # Custom file with timestamps
 logseq export-edn my-graph -f backup.edn -T
 
-# Exclude namespaces
-logseq export-edn my-graph -e logseq.class -e logseq.property
+# Schema-only export
+logseq export-edn my-graph -t :graph-ontology
+
+# Exclude namespaces from schema export
+logseq export-edn my-graph -t :graph-ontology -e schema.org
+
+# Full export excluding built-in pages and files
+logseq export-edn my-graph -T -b -F
 ```
 
 **Output Structure:**
 
+Full `:graph` export:
+
 ```clojure
-{:properties [...]         ; Property definitions
- :classes [...]            ; Class definitions
- :pages-and-blocks [...]}  ; All pages and blocks
+{:properties [...]                                    ; Property definitions
+ :classes [...]                                       ; Class definitions
+ :pages-and-blocks [...]                              ; All pages and blocks
+ :logseq.db.sqlite.export/export-type :graph
+ :logseq.db.sqlite.export/schema-version [1 2]
+ :logseq.db.sqlite.export/graph-files [...]
+ :logseq.db.sqlite.export/kv-values {...}}
+```
+
+Schema-only `:graph-ontology` export:
+
+```clojure
+{:properties [...]                                    ; User-defined properties only
+ :classes [...]                                       ; User-defined classes only
+ :logseq.db.sqlite.export/export-type :graph-ontology}
 ```
 
 **Exit Codes:**

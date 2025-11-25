@@ -1,6 +1,6 @@
 # Logseq Plugin Developer Guide: Database Graphs
 
-**Last Updated:** October 2025
+**Last Updated:** November 2025
 **Logseq Version:** 0.2.3+
 **Target Audience:** Plugin developers building for Logseq DB-based graphs
 
@@ -406,6 +406,59 @@ tags.forEach((tag) => {
                (println "Tag:" (:original-name tag))))))
 ```
 
+### Creating Tags/Classes
+
+**Added:** November 2025
+
+Create new tags/classes programmatically:
+
+```javascript
+// Create a new tag/class
+const newTag = await logseq.Editor.createTag('ProjectType')
+console.log('Created tag:', newTag)
+
+// Create with custom UUID
+const tagWithUuid = await logseq.Editor.createTag('CustomTag', {
+  uuid: 'custom-uuid-here',
+})
+```
+
+```clojure
+;; ClojureScript
+(-> (editor/create-tag "ProjectType")
+    (.then (fn [tag]
+             (println "Created tag:" (:original-name tag)))))
+```
+
+### Getting Tag Information
+
+**Added:** November 2025
+
+Get tag/class entity by name or identifier:
+
+```javascript
+// Get tag by name
+const projectTag = await logseq.Editor.getTag('Project')
+
+// Get tag by ident
+const taskTag = await logseq.Editor.getTag('logseq.class/Task')
+
+// Check if tag exists
+if (projectTag) {
+  console.log('Tag UUID:', projectTag.uuid)
+  console.log('Tag name:', projectTag.originalName)
+}
+```
+
+```clojure
+;; ClojureScript
+(-> (editor/get-tag "Project")
+    (.then (fn [tag]
+             (when tag
+               (println "Tag UUID:" (:uuid tag))
+               (println "Tag name:" (:original-name tag))))))
+```
+
 ### Getting Objects by Class
 
 Retrieve all blocks/pages that belong to a class:
@@ -430,6 +483,71 @@ console.log(`Found ${projectBlocks.length} project blocks`)
              (println (str "Found " (count blocks) " project blocks")))))
 ```
 
+### Adding and Removing Tags from Blocks
+
+**Added:** November 2025
+
+Programmatically tag and untag blocks:
+
+```javascript
+// Add a tag to a block
+const block = await logseq.Editor.getCurrentBlock()
+if (block) {
+  // Get or create the tag
+  let projectTag = await logseq.Editor.getTag('Project')
+  if (!projectTag) {
+    projectTag = await logseq.Editor.createTag('Project')
+  }
+
+  // Add the tag to the block
+  await logseq.Editor.addBlockTag(block.uuid, projectTag.uuid)
+  logseq.UI.showMsg('Block tagged as Project', 'success')
+}
+
+// Remove a tag from a block
+await logseq.Editor.removeBlockTag(block.uuid, projectTag.uuid)
+```
+
+```clojure
+;; ClojureScript
+(-> (editor/get-current-block)
+    (.then (fn [block]
+             (when block
+               (-> (editor/get-tag "Project")
+                   (.then (fn [tag]
+                            (when tag
+                              (editor/add-block-tag (:uuid block) (:uuid tag))))))))))
+```
+
+### Managing Tag Properties
+
+**Added:** November 2025
+
+Add or remove properties that are associated with specific tags/classes:
+
+```javascript
+// Get the tag
+const taskTag = await logseq.Editor.getTag('Task')
+
+// Add a property to the tag
+// This property will be available for all blocks tagged with 'Task'
+await logseq.Editor.addTagProperty(taskTag.uuid, 'priority')
+await logseq.Editor.addTagProperty(taskTag.uuid, 'status')
+
+// Remove a property from the tag
+await logseq.Editor.removeTagProperty(taskTag.uuid, 'priority')
+```
+
+```clojure
+;; ClojureScript
+(-> (editor/get-tag "Task")
+    (.then (fn [tag]
+             (when tag
+               (-> (editor/add-tag-property (:uuid tag) "priority")
+                   (.then (fn []
+                            (editor/add-tag-property (:uuid tag) "status"))))))))
+```
+
 ### Creating Tagged Blocks
 
 ```javascript
@@ -439,15 +557,19 @@ await logseq.Editor.insertBlock(parentBlock.uuid, 'New project task', {
     class: ['Project', 'Task'], // Multiple classes
   },
 })
-```
 
-### Class-Specific Properties
+// Alternative: Create block then add tags
+const newBlock = await logseq.Editor.insertBlock(
+  parentBlock.uuid,
+  'New project task'
+)
+if (newBlock) {
+  const projectTag = await logseq.Editor.getTag('Project')
+  const taskTag = await logseq.Editor.getTag('Task')
 
-You can create properties that only apply to specific classes:
-
-```javascript
-// This is typically done through UI or advanced setup
-// Property definitions can specify which classes they apply to
+  if (projectTag) await logseq.Editor.addBlockTag(newBlock.uuid, projectTag.uuid)
+  if (taskTag) await logseq.Editor.addBlockTag(newBlock.uuid, taskTag.uuid)
+}
 ```
 
 ---
@@ -1398,6 +1520,44 @@ Get all tags/classes in the graph.
 
 **Returns:** Promise<Array<PageEntity>>
 
+#### `createTag(tagName, opts?)`
+
+**Added:** November 2025
+
+Create a new tag/class.
+
+**Parameters:**
+
+- `tagName` (string) - Name for the new tag/class
+- `opts` (object, optional) - Creation options
+  - `uuid` (string) - Custom UUID for the tag
+
+**Returns:** Promise<PageEntity | null>
+
+**Example:**
+
+```javascript
+const tag = await logseq.Editor.createTag('ProjectType')
+```
+
+#### `getTag(nameOrIdent)`
+
+**Added:** November 2025
+
+Get a tag/class by name or identifier.
+
+**Parameters:**
+
+- `nameOrIdent` (string) - Tag name, db/ident (e.g., "logseq.class/Task"), or page title
+
+**Returns:** Promise<PageEntity | null>
+
+**Example:**
+
+```javascript
+const tag = await logseq.Editor.getTag('Project')
+```
+
 #### `getTagObjects(identifier)`
 
 Get all blocks/pages that belong to a class.
@@ -1407,6 +1567,82 @@ Get all blocks/pages that belong to a class.
 - `identifier` (string) - Class UUID, db/ident, or title
 
 **Returns:** Promise<Array<BlockEntity>>
+
+#### `addBlockTag(blockId, tagId)`
+
+**Added:** November 2025
+
+Add a tag/class to a block.
+
+**Parameters:**
+
+- `blockId` (BlockIdentity) - Block UUID or entity
+- `tagId` (BlockIdentity) - Tag UUID or entity
+
+**Returns:** Promise<void>
+
+**Example:**
+
+```javascript
+await logseq.Editor.addBlockTag(blockUuid, tagUuid)
+```
+
+#### `removeBlockTag(blockId, tagId)`
+
+**Added:** November 2025
+
+Remove a tag/class from a block.
+
+**Parameters:**
+
+- `blockId` (BlockIdentity) - Block UUID or entity
+- `tagId` (BlockIdentity) - Tag UUID or entity
+
+**Returns:** Promise<void>
+
+**Example:**
+
+```javascript
+await logseq.Editor.removeBlockTag(blockUuid, tagUuid)
+```
+
+#### `addTagProperty(tagId, propertyIdOrName)`
+
+**Added:** November 2025
+
+Add a property to a tag/class. The property will be available for all blocks with that tag.
+
+**Parameters:**
+
+- `tagId` (BlockIdentity) - Tag UUID or entity
+- `propertyIdOrName` (BlockIdentity) - Property UUID or name
+
+**Returns:** Promise<void>
+
+**Example:**
+
+```javascript
+await logseq.Editor.addTagProperty(tagUuid, 'priority')
+```
+
+#### `removeTagProperty(tagId, propertyIdOrName)`
+
+**Added:** November 2025
+
+Remove a property from a tag/class.
+
+**Parameters:**
+
+- `tagId` (BlockIdentity) - Tag UUID or entity
+- `propertyIdOrName` (BlockIdentity) - Property UUID or name
+
+**Returns:** Promise<void>
+
+**Example:**
+
+```javascript
+await logseq.Editor.removeTagProperty(tagUuid, 'priority')
+```
 
 ### Database Queries
 
