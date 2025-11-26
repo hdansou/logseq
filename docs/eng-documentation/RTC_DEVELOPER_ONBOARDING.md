@@ -20,6 +20,7 @@ Welcome to the Logseq RTC development team! This comprehensive guide will help y
 Logseq's Real-Time Collaboration (RTC) enables multiple users to edit the same graph simultaneously with real-time synchronization. Unlike traditional CRDT-based systems, Logseq uses an **operation-based approach** with **fractional indexing** and **centralized conflict resolution**.
 
 ### Key Features
+
 - **Real-time synchronization** of block edits, moves, and deletions
 - **Conflict resolution** using transaction ordering
 - **User presence awareness** showing who's online
@@ -31,7 +32,7 @@ Logseq's Real-Time Collaboration (RTC) enables multiple users to edit the same g
 ### High-Level Architecture
 
 ```
-┌─────────────────┐    WebSocket    ┌─────────────────┐    WebSocket    ┌─────────────────┐
+┌─────────────────┐   WebSocket    ┌─────────────────┐   WebSocket    ┌─────────────────┐
 │   Client A      │◄──────────────►│     Server      │◄──────────────►│   Client B      │
 │                 │                │                 │                │                 │
 │ ┌─────────────┐ │                │ ┌─────────────┐ │                │ ┌─────────────┐ │
@@ -144,7 +145,7 @@ Blocks use fractional indexes for ordering:
 {:action "pull-remote-data" :graph-uuid uuid}
 {:action "list-graphs"}
 
-;; Incoming messages  
+;; Incoming messages
 {:req-id "push-updates" :value {...}}          ; Remote operations
 {:req-id "online-users-updated" :value [...]}  ; User presence
 {:req-id "push-asset-block-updates" :value {...}}  ; Asset updates
@@ -162,18 +163,21 @@ Blocks use fractional indexes for ordering:
 ### Local Development
 
 1. **Clone the repository**:
+
    ```bash
    git clone https://github.com/logseq/logseq.git
    cd logseq
    ```
 
 2. **Install dependencies**:
+
    ```bash
    npm install
    yarn install
    ```
 
 3. **Start development server**:
+
    ```bash
    yarn watch  # or npm run watch
    ```
@@ -197,6 +201,7 @@ Blocks use fractional indexes for ordering:
 ### 1. Adding a New Operation Type
 
 1. **Define the operation schema** in `malli_schema.cljs`:
+
    ```clojure
    [:my-new-op
     [:catn
@@ -206,12 +211,14 @@ Blocks use fractional indexes for ordering:
    ```
 
 2. **Add operation generation** in `gen_client_op.cljs`:
+
    ```clojure
    (defn generate-my-new-op [block-uuid my-data]
      [:my-new-op (get-current-t) {:block-uuid block-uuid :my-data my-data}])
    ```
 
 3. **Handle operation in remote updates** in `remote_update.cljs`:
+
    ```clojure
    (defn apply-my-new-op [repo conn op-value]
      ;; Implementation here
@@ -223,16 +230,19 @@ Blocks use fractional indexes for ordering:
 ### 2. Debugging RTC Issues
 
 1. **Enable debug logging**:
+
    ```clojure
    (js/console.log "RTC Debug:" data)
    ```
 
 2. **Inspect operation queues**:
+
    ```clojure
    (client-op/get-all-block-ops repo)
    ```
 
 3. **Check WebSocket state**:
+
    ```clojure
    ;; In browser console
    window.logseq.rtc.debug_state()
@@ -247,13 +257,14 @@ Blocks use fractional indexes for ordering:
 ### 3. Testing RTC Features
 
 1. **Unit tests** for individual functions
-2. **Integration tests** for operation flows  
+2. **Integration tests** for operation flows
 3. **Multi-client tests** for conflict scenarios
 4. **Performance tests** for large graphs
 
 ### 4. Common Patterns
 
 #### Reading Current State
+
 ```clojure
 (let [repo (worker-state/get-current-repo)
       conn (worker-state/get-datascript-conn repo)
@@ -263,12 +274,14 @@ Blocks use fractional indexes for ordering:
 ```
 
 #### Generating Operations
+
 ```clojure
 (let [op [:update (get-current-t) {:block-uuid block-uuid :av-coll av-coll}]]
   (client-op/add-ops! repo [op]))
 ```
 
 #### Handling Remote Updates
+
 ```clojure
 (defn apply-remote-op [repo conn op-value]
   (let [block-uuid (:block-uuid op-value)]
@@ -298,7 +311,7 @@ test/
 # Unit tests
 yarn test:rtc
 
-# Integration tests  
+# Integration tests
 yarn test:rtc-integration
 
 # E2E tests
@@ -331,12 +344,14 @@ yarn test:rtc-e2e
 **Symptoms**: Changes not appearing on other clients
 
 **Debug Steps**:
+
 1. Check WebSocket connection: `ws-state` in debug state
 2. Verify operation generation: Check `client-op` queue
 3. Check server response: Look for error messages
 4. Verify transaction ordering: Compare local-t vs remote-t
 
 **Common Causes**:
+
 - WebSocket disconnection
 - Invalid operation format
 - Schema validation failures
@@ -347,6 +362,7 @@ yarn test:rtc-e2e
 **Symptoms**: Unexpected merge results, lost changes
 
 **Debug Steps**:
+
 1. Check operation timestamps
 2. Verify operation dependencies
 3. Look for circular references
@@ -357,6 +373,7 @@ yarn test:rtc-e2e
 **Symptoms**: Slow synchronization, UI freezing
 
 **Debug Steps**:
+
 1. Profile operation processing
 2. Check for large operation batches
 3. Monitor memory usage
@@ -394,7 +411,7 @@ window.logseq.api.rtc_get_pending_ops()
 
 ```clojure
 ;; Use structured logging
-(log/info :rtc-operation-applied 
+(log/info :rtc-operation-applied
   {:operation-type (first op)
    :block-uuid (:block-uuid (last op))
    :timestamp (get-current-t)})
@@ -415,11 +432,13 @@ window.logseq.api.rtc_get_pending_ops()
 ### Code Style
 
 1. **Follow Clojure conventions**:
+
    - Use kebab-case for names
    - Prefer pure functions
    - Use destructuring appropriately
 
 2. **RTC-specific conventions**:
+
    - Prefix RTC functions with namespace
    - Use consistent operation naming
    - Add comprehensive docstrings
@@ -451,7 +470,7 @@ window.logseq.api.rtc_get_pending_ops()
 ### Documentation
 
 - [Logseq Architecture Overview](../ARCHITECTURE.md)
-- [Database Schema Documentation](../DATABASE_SCHEMA.md)  
+- [Database Schema Documentation](../DATABASE_SCHEMA.md)
 - [WebSocket Protocol Specification](../WEBSOCKET_PROTOCOL.md)
 - [Fractional Indexing Library](https://github.com/logseq/clj-fractional-indexing)
 
@@ -465,7 +484,7 @@ window.logseq.api.rtc_get_pending_ops()
 ### Key Files to Understand
 
 1. **Start here**: `core.cljs` - Main orchestration
-2. **Operation handling**: `client_op.cljs` - Local operation management  
+2. **Operation handling**: `client_op.cljs` - Local operation management
 3. **Remote updates**: `remote_update.cljs` - Applying remote changes
 4. **WebSocket layer**: `ws.cljs` - Communication protocol
 5. **Conflict resolution**: Look at the `update-remote-data-by-local-unpushed-ops` function
