@@ -8,20 +8,24 @@ Scope: Local setup, how it works, how to run/debug/test, how to add a new comman
 
 ## Quick start
 
-1) Prerequisites
+1. Prerequisites
+
 - Node.js >= 22.17.0 and Yarn
 - Babashka (bb) installed
 - The Logseq Desktop “database version” app installed (needed for DB graphs)
 
-2) Install dependencies
+2. Install dependencies
+
 - Open a terminal in `deps/cli`
 - Run: `yarn install`
 
-3) Try the CLI locally
+3. Try the CLI locally
+
 - From `deps/cli`, run: `node cli.mjs -h`
 - Optionally, create a global symlink to run `logseq` directly: `yarn link`
 
-4) Sanity check commands
+4. Sanity check commands
+
 - List graphs (requires the Desktop “database version” app): `logseq list`
 - Show graph info: `logseq show <graph-name>`
 - Export EDN: `logseq export-edn <graph-name> -f out.edn`
@@ -45,6 +49,7 @@ If you didn’t `yarn link`, substitute `node cli.mjs` for `logseq`.
 - `deps/cli/nbb.edn` — nbb test runner deps (during development).
 
 Related code you may interact with:
+
 - `deps/db`, `src/electron/electron/*` — DB and Electron helpers referenced by the CLI.
 
 ---
@@ -58,6 +63,7 @@ Related code you may interact with:
 - HTTP API when needed: Some commands (e.g., `search` with `-a/--api-query-token`) hit the Desktop app’s Local HTTP API if enabled.
 
 Key runtime details:
+
 - Graphs directory: `~/logseq/graphs` (from `logseq.cli.common.graph/get-db-graphs-dir`).
 - Before running most commands, the CLI checks the DB Desktop app is installed (the directory exists).
 - Error reporting: SCI errors use `nbb.error/print-error-report`; other errors are printed to stderr and exit with code 1.
@@ -67,12 +73,14 @@ Key runtime details:
 ## Running and debugging
 
 Run from `deps/cli`:
+
 - Help: `node cli.mjs -h` or `logseq -h`
 - List: `logseq list`
 - Show: `logseq show <graph>`
 - Search via API: `logseq search <term> -a <token>` (requires HTTP API enabled in Desktop app)
 
 Debug tips:
+
 - Use `println` or `js/console.log` inside CLJS.
 - Wrap async flows with `promesa.core` and handle errors using `(p/catch cli-util/command-catch-handler)`.
 - If you see SCI errors, they’ll be formatted by `nbb.error/print-error-report` via the lazy loader.
@@ -82,6 +90,7 @@ Debug tips:
 ## Testing and linting
 
 From `deps/cli`:
+
 - Run tests: `yarn test`
   - Uses `@logseq/nbb-logseq` and `nextjournal/nbb-test-runner`.
   - Options: `yarn test -H` (help), `yarn test -i focus` (run focused tests).
@@ -92,21 +101,25 @@ From `deps/cli`:
   - `bb lint:large-vars` — flag overly large forms
 
 Vendorizing nbb deps (when packaging):
+
 - `bb build:vendor-nbb-deps` — copies cached nbb deps into `vendor/src` and removes `nbb.edn`, making the package self-contained.
 
 ---
 
 ## Adding a new command
 
-1) Create the command namespace
+1. Create the command namespace
+
 - File: `deps/cli/src/logseq/cli/commands/<your_cmd>.cljs`
 - Namespace: `(ns logseq.cli.commands.<your-cmd> (:require [promesa.core :as p] [logseq.cli.util :as cli-util] ...))`
 - Export a function (e.g., `run` or a name matching how you’ll reference it in `lazy-load-fn`). Prefer returning a promise with `promesa` for async flows.
 
-2) Add CLI options (if needed)
+2. Add CLI options (if needed)
+
 - Edit `deps/cli/src/logseq/cli/spec.cljs` to define a spec map for your command’s options (descriptions, coercions, aliases, etc.).
 
-3) Register it in the command table
+3. Register it in the command table
+
 - Edit `deps/cli/src/logseq/cli.cljs` and add an entry in `table`:
   - `:cmds ["your-cmd"]`
   - `:desc` brief description
@@ -114,16 +127,19 @@ Vendorizing nbb deps (when packaging):
   - `:args->opts`, `:coerce`, `:require`, `:no-keyword-opts` as appropriate
   - `:spec` pointing to the spec you added
 
-4) Implement the logic
+4. Implement the logic
+
 - Reuse helpers in `cli.util.cljs` (e.g., graph path resolution, DB open args, API fetch helpers, error handling).
 - For local DB reads, open a connection via `(apply sqlite-cli/open-db! (cli-util/->open-db-args graph))` and ensure you close or scope appropriately.
 - Prefer small, pure helpers and minimal stdout prints for stable outputs.
 
-5) Add tests
+5. Add tests
+
 - Create tests in `deps/cli/test` using `nextjournal/nbb-test-runner`.
 - Keep tests hermetic when possible; for DB reads, use a small sample graph or mock layers where practical.
 
-6) Try it manually
+6. Try it manually
+
 - `logseq your-cmd ...` (or `node cli.mjs your-cmd ...`)
 - `logseq help your-cmd` should show your options if you wired `:spec`.
 
