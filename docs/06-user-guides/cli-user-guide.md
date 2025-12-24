@@ -2,8 +2,8 @@
 
 > Command-line interface for Logseq database graphs
 
-**Version**: 0.4.0
-**Last Updated**: 2025-11-20
+**Version**: 0.4.2
+**Last Updated**: 2025-12-22
 **For**: Normal Users & Developers
 
 ---
@@ -185,9 +185,111 @@ logseq import-edn -g my-notes -f backup.edn
 Check graph data integrity:
 
 ```bash
-logseq validate my-notes
+logseq validate -g my-notes
 # Output: Read graph my-notes with counts: {...}
 #         Valid!
+```
+
+## Migration Guide: v0.3.0 → v0.4.0
+
+**If you're upgrading from CLI v0.3.0 or earlier, be aware of this breaking change:**
+
+### Command Syntax Changes
+
+In v0.4.0, commands that operate on local graphs changed from **positional arguments** to **option flags** (`-g/--graph`).
+
+#### What Changed
+
+**Old Syntax (v0.3.0 and earlier):**
+
+```bash
+# Graph name was a positional argument
+logseq search my-graph "search term"
+logseq query my-graph '[:find ...]'
+logseq export my-graph
+logseq export-edn my-graph -f output.edn
+```
+
+**New Syntax (v0.4.0+):**
+
+```bash
+# Graph name is now a -g/--graph option
+logseq search "search term" -g my-graph
+logseq query '[:find ...]' -g my-graph
+logseq export -g my-graph
+logseq export-edn -g my-graph -f output.edn
+```
+
+#### Migration Table
+
+| Command    | v0.3.0 Syntax                      | v0.4.0+ Syntax                                                                                  |
+| ---------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| search     | `logseq search GRAPH "term"`       | `logseq search "term" -g GRAPH`                                                                 |
+| query      | `logseq query GRAPH '[:find ...]'` | `logseq query '[:find ...]' -g GRAPH`                                                           |
+| export     | `logseq export GRAPH`              | `logseq export -g GRAPH`                                                                        |
+| export-edn | `logseq export-edn GRAPH`          | `logseq export-edn -g GRAPH`                                                                    |
+| show       | `logseq show GRAPH`                | `logseq show -g GRAPH` (v0.4.0)<br>**Note**: v0.4.2+ uses positional again: `logseq show GRAPH` |
+| validate   | N/A (new in v0.4.0)                | `logseq validate -g GRAPH`                                                                      |
+
+#### Why This Changed
+
+1. **Consistency**: All commands now use option flags instead of mixing positional and option arguments
+2. **Flexibility**: Enables better support for local file paths vs graph names
+3. **Clarity**: Makes it explicit which argument is the graph vs other parameters
+
+#### Updating Your Scripts
+
+If you have automation scripts using the old syntax, update them:
+
+**Example Script Update:**
+
+```bash
+# Old script (v0.3.0)
+#!/bin/bash
+GRAPH="my-notes"
+logseq search $GRAPH "TODO"
+logseq export $GRAPH
+logseq export-edn $GRAPH -f backup.edn
+
+# New script (v0.4.0+)
+#!/bin/bash
+GRAPH="my-notes"
+logseq search "TODO" -g $GRAPH
+logseq export -g $GRAPH
+logseq export-edn -g $GRAPH -f backup.edn
+```
+
+#### Backward Compatibility
+
+**None** - v0.4.0 is a breaking change. Old syntax will not work.
+
+To check your CLI version:
+
+```bash
+logseq --version
+```
+
+If you're on v0.3.0 and have scripts, either:
+
+1. **Upgrade** and update scripts (recommended)
+2. **Stay on v0.3.0** if you can't update scripts immediately
+
+#### New Features in v0.4.0
+
+While updating, take advantage of new features:
+
+1. **import-edn** - Restore graph backups
+2. **validate** - Check graph integrity
+3. **Local path support** - Use direct paths to SQLite files
+4. **Enhanced export-edn** - More options for customizing exports
+
+**Example:**
+
+```bash
+# New workflow enabled by v0.4.0
+logseq export-edn -g my-notes -f backup.edn -T -v
+logseq validate -g my-notes
+logseq import-edn -g restored-notes -f backup.edn
 ```
 
 ## Basic Concepts
@@ -343,7 +445,7 @@ logseq show my-notes work-journal personal
 
 **Output:**
 
-```
+```txt
 | Name                         | Value                              |
 |------------------------------+------------------------------------|
 | Graph directory              | /Users/you/logseq/graphs/my-notes  |
@@ -724,11 +826,12 @@ logseq export-edn -a TOKEN [options]
 -g, --graph GRAPH                  Graph name (required for local mode)
 -a, --api-server-token TOKEN       Use API mode (exports currently open graph)
 -f, --file PATH                    Output file (default: GRAPH_TIMESTAMP.edn)
--T, --include-timestamps?          Include created-at and updated-at
--c, --catch-validation-errors?     Continue on errors (development mode)
--e, --exclude-namespaces NS...     Exclude property/class namespaces
--b, --exclude-built-in-pages?      Exclude system pages
--F, --exclude-files?               Exclude file path information
+-T, --include-timestamps           Include created-at and updated-at timestamps
+-c, --catch-validation-errors      Continue on validation errors (dev mode)
+-e, --exclude-namespaces NS...     Exclude property/class namespaces (e.g., schema.org)
+-b, --exclude-built-in-pages       Exclude system/built-in pages
+-F, --exclude-files                Exclude :file/path file information
+-v, --validate                     Validate export by building temp graph (v0.4.2+)
 -t, --export-type TYPE             Export type: :graph (default), :graph-ontology
                                    Note: :page, :block, :selected-nodes, :view-nodes
                                    are API-only types requiring internal entity IDs
@@ -781,15 +884,262 @@ logseq export-edn -g my-notes -t :graph-ontology -e schema.org
 # Exclude files
 logseq export-edn -g my-notes -F
 
+# Validate export by building temp graph (v0.4.2+)
+logseq export-edn -g my-notes -v
+
+# Development mode - catch errors and export anyway
+logseq export-edn -g my-notes -c
+
 # Full export with all options
-logseq export-edn -g my-notes -f full-backup.edn -T -b -F
+logseq export-edn -g my-notes -f full-backup.edn -T -b -F -v
+```
+
+**Option Details:**
+
+**`-T, --include-timestamps`**
+
+Include temporal data (created-at, updated-at) in export.
+
+```bash
+# Without -T: temporal data excluded (smaller export)
+logseq export-edn -g my-notes -f clean.edn
+
+# With -T: includes all timestamps
+logseq export-edn -g my-notes -f timestamped.edn -T
+```
+
+**Use When:**
+
+- Creating full backups with complete history
+- Need to preserve creation/modification times
+- Migrating graphs with temporal data intact
+
+**Skip When:**
+
+- Creating template/seed graphs
+- Reducing export file size
+- Temporal data not needed
+
+---
+
+**`-e, --exclude-namespaces NAMESPACE...`**
+
+Exclude properties and classes from specified namespaces.
+
+```bash
+# Exclude single namespace
+logseq export-edn -g my-notes -e logseq.class
+
+# Exclude multiple namespaces
+logseq export-edn -g my-notes -e logseq.class -e logseq.property -e schema.org
+
+# Common use: export only user-defined ontology
+logseq export-edn -g my-notes -t :graph-ontology -e logseq.class -e logseq.property
+```
+
+**Common Namespaces to Exclude:**
+
+- `logseq.class` - Built-in Logseq classes
+- `logseq.property` - Built-in Logseq properties
+- `schema.org` - Schema.org vocabulary imports
+- `dbpedia` - DBpedia ontology imports
+
+**Use When:**
+
+- Exporting only custom/user-defined schema
+- Reducing export size by removing standard ontologies
+- Creating shareable ontology without built-ins
+
+---
+
+**`-b, --exclude-built-in-pages`**
+
+Exclude system/built-in pages from export.
+
+```bash
+# Standard export (includes built-in pages)
+logseq export-edn -g my-notes -f with-builtins.edn
+
+# Exclude built-in pages
+logseq export-edn -g my-notes -f user-only.edn -b
+```
+
+**Built-in Pages Excluded:**
+
+- System configuration pages
+- Default templates
+- Help/documentation pages
+- Internal Logseq pages
+
+**Use When:**
+
+- Exporting only user-created content
+- Creating cleaner backups
+- Sharing graphs without system clutter
+
+**Note:** Most users want `-b` for cleaner exports.
+
+---
+
+**`-F, --exclude-files`**
+
+Exclude `:file/path` file information from export.
+
+```bash
+# With file paths (default)
+logseq export-edn -g my-notes -f with-files.edn
+
+# Without file paths
+logseq export-edn -g my-notes -f no-files.edn -F
+```
+
+**What's Excluded:**
+
+- `:file/path` attributes
+- File system mappings
+- Markdown file references
+
+**Use When:**
+
+- Exporting for non-file-based graph import
+- Graph will be reimported with different file structure
+- Reducing export size
+
+**Note:** Database graphs don't need file paths in most cases.
+
+---
+
+**`-v, --validate` (v0.4.2+)**
+
+Validate export by building a temporary graph and importing the EDN.
+
+```bash
+# Export with validation
+logseq export-edn -g my-notes -f backup.edn -v
+
+# Validation creates temp graph, imports EDN, then validates
+# If successful, export is guaranteed importable
+```
+
+**Process:**
+
+1. Export graph to EDN
+2. Create temporary in-memory graph
+3. Import EDN into temp graph
+4. Validate imported graph
+5. Delete temp graph
+6. Report success or failure
+
+**Use When:**
+
+- Creating critical backups
+- Ensuring export integrity before archiving
+- Debugging export issues
+- Production export workflows
+
+**Note:** Adds 30-60 seconds for validation but guarantees export quality.
+
+---
+
+**`-c, --catch-validation-errors`**
+
+Continue export even if validation errors occur (development mode).
+
+```bash
+# Standard export (stops on errors)
+logseq export-edn -g my-notes -f strict.edn
+
+# Development mode (continues despite errors)
+logseq export-edn -g my-notes -f permissive.edn -c
+```
+
+**Use When:**
+
+- Debugging graph issues
+- Experimental graphs with known errors
+- Development/testing scenarios
+- Investigating data corruption
+
+**Warning:**
+
+- ⚠️ Exported EDN may not be importable
+- ⚠️ May contain invalid data
+- ⚠️ Not recommended for production backups
+
+---
+
+**`-t, --export-type TYPE`**
+
+See full export types section above. Most common:
+
+- `:graph` (default) - Full graph export
+- `:graph-ontology` - Schema-only export
+
+---
+
+**Combining Options Examples:**
+
+**Production Backup:**
+
+```bash
+# Complete backup with validation
+logseq export-edn -g production \
+  -f "backup-$(date +%Y%m%d).edn" \
+  -T \
+  -v
+```
+
+**Clean User Content Export:**
+
+```bash
+# User content only, no built-ins, no files
+logseq export-edn -g my-notes \
+  -f user-content.edn \
+  -b \
+  -F
+```
+
+**Schema Template Export:**
+
+```bash
+# Export only custom ontology (no built-in classes/properties)
+logseq export-edn -g template \
+  -t :graph-ontology \
+  -e logseq.class \
+  -e logseq.property \
+  -f schema-template.edn
+```
+
+**Development/Debug Export:**
+
+```bash
+# Export with errors, useful for debugging
+logseq export-edn -g broken-graph \
+  -f debug-export.edn \
+  -c
+```
+
+**Minimal Export:**
+
+```bash
+# Smallest possible export
+logseq export-edn -g my-notes \
+  -f minimal.edn \
+  -b \
+  -F \
+  -e logseq.class \
+  -e logseq.property
+```
+
 ```
 
 **Output:**
 
 ```
+
 Exported 45 properties, 12 classes and 234 pages to my-notes_1704844800.edn
-```
+
+````
 
 **EDN Structure:**
 
@@ -803,7 +1153,7 @@ Full graph export (`:graph`):
  :logseq.db.sqlite.export/schema-version [1 2]
  :logseq.db.sqlite.export/graph-files [...]
  :logseq.db.sqlite.export/kv-values {...}}
-```
+````
 
 Schema-only export (`:graph-ontology`):
 
@@ -876,20 +1226,138 @@ The import expects EDN files with this structure (typically created by `export-e
  :pages-and-blocks [...]} ; All pages and blocks
 ```
 
+**Full Export Structure** (from `:graph` type):
+
+```clojure
+{:properties [{:db/ident :my.property/name
+               :property/schema.type :number
+               :property/schema.cardinality :one
+               ...}]
+
+ :classes [{:db/ident :my.class/Tag
+            :class/extends [:logseq.class/Root]
+            :class/properties [:my.property/name]
+            ...}]
+
+ :pages-and-blocks [{:block/uuid #uuid "..."
+                     :block/title "Page Title"
+                     :block/tags #{:my.class/Tag}
+                     ...}]
+
+ :logseq.db.sqlite.export/files [{:file/path "pages/file.md"
+                                  :file/content "..."}]
+
+ :logseq.db.sqlite.export/kv-values {:logseq.kv/graph-created-at 1234567890
+                                     :logseq.kv/schema-version {:major 65 :minor 7}}}
+```
+
+**Schema-Only Structure** (from `:graph-ontology` type):
+
+```clojure
+{:properties [{:db/ident :user.property/priority
+               :property/schema.type :number
+               ...}]
+
+ :classes [{:db/ident :user.class/Project
+            :class/extends [:logseq.class/Root]
+            ...}]
+
+ :logseq.db.sqlite.export/export-type :graph-ontology}
+```
+
 **Use Cases:**
 
-- Restore graph backups
-- Transfer data between graphs
-- Import curated datasets
-- Migrate from other systems
-- Development and testing
+**1. Backup & Restore Workflow:**
+
+```bash
+# Create backup
+logseq export-edn -g my-notes -f backup-2025-12.edn
+
+# Restore to new graph (requires graph creation in Logseq app first)
+logseq import-edn -g restored-notes -f backup-2025-12.edn
+
+# Verify integrity
+logseq validate -g restored-notes
+```
+
+**2. Ontology Seeding (Bootstrap New Graphs):**
+
+```bash
+# Export schema from template graph
+logseq export-edn -g template -t :graph-ontology -f schema.edn
+
+# Import schema into new project graph
+logseq import-edn -g new-project -f schema.edn
+
+# Graph now has your custom properties and classes!
+```
+
+**3. Data Migration Between Instances:**
+
+```bash
+# Export from desktop
+logseq export-edn -g work-notes -f work-export.edn
+
+# Import via API to running Logseq on different machine
+logseq import-edn -f work-export.edn -a YOUR_TOKEN
+```
+
+**4. Development & Testing:**
+
+```bash
+# Create test data fixture
+logseq export-edn -g test-fixture -f test-data.edn
+
+# Import for automated testing
+logseq import-edn -g ci-test-graph -f test-data.edn
+```
+
+**Import Process:**
+
+1. **Validation** - EDN structure is validated before import
+2. **Reference Building** - Internal entity references are resolved
+3. **Transaction** - All data is imported atomically (all or nothing)
+4. **Summary** - Reports counts of imported properties, classes, pages, blocks
 
 **Important Notes:**
 
-- The import is additive - it doesn't delete existing data
-- Conflicting data may cause validation errors
-- Use `validate` command after import to check data integrity
-- For large imports, local mode is faster than API mode
+- ✅ Import is **additive** - doesn't delete existing data
+- ✅ Creates new entities for data not in graph
+- ✅ Updates existing entities if UUIDs match
+- ⚠️ Conflicting data may cause validation errors
+- ⚠️ Large imports (>10k blocks) may take several minutes
+- ⚠️ Always run `validate` command after import
+- 💡 Local mode is 3-5x faster than API mode for large imports
+- 💡 Back up graph before importing untrusted EDN data
+
+**Troubleshooting:**
+
+**Error: "Graph does not exist"**
+
+```bash
+# Graph must be created first in Logseq app
+# Then import data into it
+```
+
+**Validation Errors After Import:**
+
+```bash
+# Check what went wrong
+logseq validate -g my-graph
+
+# Review the EDN file structure
+# Ensure it matches expected format
+```
+
+**Import Taking Too Long:**
+
+```bash
+# Use local mode instead of API mode
+logseq import-edn -g my-graph -f large-file.edn  # Fast
+
+# Instead of:
+# logseq import-edn -f large-file.edn -a TOKEN  # Slower
+```
 
 ---
 
@@ -934,7 +1402,7 @@ logseq mcp-server -g my-notes -p 8080
 logseq mcp-server -g my-notes --host 0.0.0.0 -p 9000
 
 # Debug mode
-logseq mcp-server -g my-notes -t
+logseq mcp-server -g my-notes -t getPage
 ```
 
 **Output:**
@@ -948,44 +1416,400 @@ MCP server running on http://127.0.0.1:12315
 1. **HTTP Streamable Server (Default):**
 
    - Runs as HTTP server
-   - Can be accessed by multiple clients
+   - Can be accessed by multiple clients simultaneously
    - Use `-p` to customize port
    - Use `--host` to customize bind address
+   - Best for development and multi-client scenarios
 
 2. **Stdio Transport (`-s`):**
    - Communicates via standard input/output
-   - Typically used by MCP-compatible tools
+   - Typically used by MCP-compatible tools like Claude Desktop
    - Single-client mode
+   - Best for production AI assistant integration
+
+**MCP Tools Reference:**
+
+The MCP server exposes 5 powerful tools for interacting with your Logseq graph:
+
+#### 1. **getPage** - Retrieve Page Data
+
+Get a page entity including all its blocks by name or UUID.
+
+**Parameters:**
+
+- `pageName` (required): Page name or UUID string
+
+**Examples:**
+
+```json
+{"pageName": "My Project"}
+{"pageName": "68c012ca-2aee-46a8-a589-8bf67a1d4e92"}
+```
+
+**Returns:**
+
+```clojure
+{:block/uuid #uuid "68c012ca-2aee-46a8-a589-8bf67a1d4e92"
+ :block/title "My Project"
+ :block/tags #{:logseq.class/Project}
+ ;; ... all page properties and nested blocks
+ }
+```
 
 **Use Cases:**
 
-- **AI Assistant Integration**: Connect Claude, ChatGPT, or other AI tools to your Logseq graph
-- **Custom Tools**: Build MCP clients that interact with your knowledge base
-- **Automation**: Create workflows that query and modify your graph via MCP
-- **Multi-Tool Access**: Run HTTP server to allow multiple MCP clients simultaneously
+- Retrieve specific page for AI analysis
+- Get page structure for summarization
+- Extract page metadata
 
-**MCP Capabilities:**
+---
 
-The MCP server exposes your Logseq graph with the following capabilities:
+#### 2. **listPages** - List All Pages
 
-- Query your graph using DataScript
-- Search across pages and blocks
-- Read page contents
-- Access graph metadata
-- Execute custom queries
+List all pages in the graph with optional detailed expansion.
+
+**Parameters:**
+
+- `expand` (optional, boolean): Include detailed metadata (default: false)
+
+**Examples:**
+
+```json
+{}
+{"expand": true}
+```
+
+**Returns (compact):**
+
+```clojure
+["Page 1" "Page 2" "Page 3" ...]
+```
+
+**Returns (expanded):**
+
+```clojure
+[{:block/title "Page 1"
+  :block/uuid #uuid "..."
+  :block/created-at 1704844800000
+  :block/tags #{:logseq.class/Project}}
+ ...]
+```
+
+**Use Cases:**
+
+- Browse available pages
+- Generate page index
+- Find pages by pattern
+
+---
+
+#### 3. **listProperties** - List All Properties
+
+List all property definitions in the graph.
+
+**Parameters:**
+
+- `expand` (optional, boolean): Include property details (default: false)
+
+**Examples:**
+
+```json
+{}
+{"expand": true}
+```
+
+**Returns (compact):**
+
+```clojure
+[:my.property/priority :my.property/status ...]
+```
+
+**Returns (expanded):**
+
+```clojure
+[{:db/ident :my.property/priority
+  :property/schema.type :number
+  :property/schema.cardinality :one
+  :block/title "priority"}
+ ...]
+```
+
+**Use Cases:**
+
+- Discover available properties
+- Document graph schema
+- Build property-aware tools
+
+---
+
+#### 4. **listTags** - List All Tags/Classes
+
+List all tag/class definitions in the graph.
+
+**Parameters:**
+
+- `expand` (optional, boolean): Include tag details (default: false)
+
+**Examples:**
+
+```json
+{}
+{"expand": true}
+```
+
+**Returns (compact):**
+
+```clojure
+[:logseq.class/Tag :user.class/Project ...]
+```
+
+**Returns (expanded):**
+
+```clojure
+[{:db/ident :user.class/Project
+  :class/extends [:logseq.class/Root]
+  :class/properties [:my.property/status :my.property/priority]
+  :block/title "Project"}
+ ...]
+```
+
+**Use Cases:**
+
+- Discover available tags/classes
+- Understand class hierarchy
+- Build ontology-aware tools
+
+---
+
+#### 5. **upsertNodes** - Create/Edit Graph Data
+
+Create or edit pages, blocks, tags, and properties. This is the **most powerful** MCP tool for modifying your graph.
+
+**Parameters:**
+
+- `operations` (required, array): List of operation objects
+- `dry-run` (optional, boolean): Validate without committing (default: false)
+
+**Operation Object Structure:**
+
+```json
+{
+  "operation": "add" or "edit",
+  "entityType": "page" | "block" | "tag" | "property",
+  "id": "uuid-or-temp-id",
+  "data": {
+    "title": "Content or name",
+    "page-id": "parent-page-uuid",  // For blocks
+    "tags": ["tag-uuid"],
+    "property-type": ":number",     // For properties
+    // ... see full schema below
+  }
+}
+```
+
+**Data Field Options:**
+
+For **pages** and **blocks**:
+
+- `title` - Content (required for add)
+- `tags` - Array of tag UUIDs or names
+- `page-id` - Parent page UUID (required for blocks)
+
+For **properties**:
+
+- `title` - Property name
+- `property-type` - `:number`, `:string`, `:date`, `:checkbox`, `:url`, etc.
+- `property-cardinality` - `:one` or `:many`
+- `property-classes` - Array of allowed tag UUIDs/names
+
+For **tags/classes**:
+
+- `title` - Tag name
+- `class-extends` - Array of parent tag UUIDs/names
+- `class-properties` - Array of property UUIDs/names
+
+**Examples:**
+
+**Add a new page:**
+
+```json
+{
+  "operations": [
+    {
+      "operation": "add",
+      "entityType": "page",
+      "id": "temp-inbox",
+      "data": { "title": "Inbox" }
+    }
+  ]
+}
+```
+
+**Add block to page:**
+
+```json
+{
+  "operations": [
+    {
+      "operation": "add",
+      "entityType": "block",
+      "id": null,
+      "data": {
+        "page-id": "68c012ca-2aee-46a8-a589-8bf67a1d4e92",
+        "title": "New task item",
+        "tags": ["00000002-1282-1814-5700-000000000000"]
+      }
+    }
+  ]
+}
+```
+
+**Edit existing page:**
+
+```json
+{
+  "operations": [
+    {
+      "operation": "edit",
+      "entityType": "page",
+      "id": "68c012ca-2aee-46a8-a589-8bf67a1d4e92",
+      "data": { "title": "Updated Project Name" }
+    }
+  ]
+}
+```
+
+**Create page with block (multi-op):**
+
+```json
+{
+  "operations": [
+    {
+      "operation": "add",
+      "entityType": "page",
+      "id": "temp-project",
+      "data": { "title": "New Project" }
+    },
+    {
+      "operation": "add",
+      "entityType": "block",
+      "data": {
+        "page-id": "temp-project",
+        "title": "First task",
+        "tags": ["00000002-1282-1814-5700-000000000000"]
+      }
+    }
+  ]
+}
+```
+
+**Returns:**
+
+```
+Imported 0 properties, 0 classes and 1 pages!
+```
+
+**Important Notes:**
+
+- ✅ Operations are **atomic** - all succeed or all fail
+- ✅ Use temporary IDs (e.g., "temp-xyz") for new entities referenced by later operations
+- ✅ Dry-run mode validates without committing changes
+- ⚠️ Always validate page/tag UUIDs exist before referencing
+- ⚠️ Use `getPage` to get UUIDs for existing entities
+
+**Use Cases:**
+
+- AI assistants creating tasks/notes
+- Bulk data import via MCP
+- Automated page creation workflows
+- Tag and property management
+
+---
+
+**Debug Mode:**
+
+Test individual tools without running the full MCP server:
+
+```bash
+logseq mcp-server -g my-notes -t getPage
+# Prompts for tool input, shows raw output
+```
+
+**Integration Examples:**
+
+**Claude Desktop Configuration** (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "logseq": {
+      "command": "logseq",
+      "args": ["mcp-server", "-g", "my-notes", "-s"]
+    }
+  }
+}
+```
+
+**Custom MCP Client:**
+
+```javascript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+
+const transport = new StdioClientTransport({
+  command: 'logseq',
+  args: ['mcp-server', '-g', 'my-notes', '-s'],
+})
+
+const client = new Client(
+  { name: 'my-client', version: '1.0.0' },
+  {
+    capabilities: {},
+  }
+)
+
+await client.connect(transport)
+
+// List available tools
+const tools = await client.listTools()
+
+// Call getPage tool
+const result = await client.callTool({
+  name: 'getPage',
+  arguments: { pageName: 'My Project' },
+})
+```
+
+**Use Cases:**
+
+- 🤖 **AI Assistant Integration**: Connect Claude, ChatGPT, or other AI tools to your Logseq graph
+- 🛠️ **Custom Tools**: Build MCP clients that interact with your knowledge base
+- ⚡ **Automation**: Create workflows that query and modify your graph via MCP
+- 🌐 **Multi-Tool Access**: Run HTTP server to allow multiple MCP clients simultaneously
+- 📊 **Knowledge Base APIs**: Expose your graph as a structured data source
+- 🔄 **Real-time Sync**: Build tools that react to graph changes (API mode)
 
 **Requirements:**
 
 - For API mode: Logseq app must be running with HTTP API enabled
 - For local mode: Direct access to graph database files
-- MCP-compatible client application
+- MCP-compatible client application (Claude Desktop, custom client, etc.)
+
+**Security Considerations:**
+
+- 🔒 **Localhost Only**: Default binding (127.0.0.1) restricts to local machine
+- ⚠️ **Network Binding**: Using `--host 0.0.0.0` exposes to network - use with caution
+- 🔑 **No Authentication**: MCP server has no built-in auth - secure at network level
+- 💡 **Recommendation**: Use stdio transport for production AI assistants
+- 💡 **Recommendation**: Use HTTP server only for development/debugging
 
 **Important Notes:**
 
 - The server runs continuously until terminated (Ctrl+C)
-- In API mode, changes made in Logseq app are immediately available
-- In local mode, the server has read-only access to the graph
+- In API mode, changes made in Logseq app are immediately available to MCP tools
+- In local mode, the server has read-only access (except via upsertNodes tool)
 - For security, bind to localhost (127.0.0.1) unless you need network access
+- stdio transport is single-client; HTTP server supports multiple concurrent clients
 
 ---
 
@@ -996,17 +1820,27 @@ Validate one or more graphs for data integrity errors.
 **Syntax:**
 
 ```bash
-logseq validate GRAPH [GRAPH2 ...]
+logseq validate -g GRAPH [GRAPH2 ...] [options]
+```
+
+**Options:**
+
+```
+-g, --graphs GRAPH...        Graph name(s) to validate (required, can specify multiple)
+-o, --open-schema            Validate with open schema (allows extra keys/attributes)
 ```
 
 **Examples:**
 
 ```bash
 # Validate single graph
-logseq validate my-notes
+logseq validate -g my-notes
 
 # Validate multiple graphs
-logseq validate my-notes work-journal personal
+logseq validate -g my-notes -g work-journal -g personal
+
+# Validate with open schema (more permissive)
+logseq validate -g my-notes --open-schema
 ```
 
 **Output (when valid):**
@@ -1032,21 +1866,151 @@ Found 3 entities with errors:
   :errors {:dispatch-key nil, :errors {44181 ["invalid dispatch value"]}}}]
 ```
 
+**Validation Modes:**
+
+**1. Strict Validation (Default):**
+
+- Enforces closed schema - only known attributes allowed
+- Strict type checking for all properties
+- Best for production graphs
+- Use for quality assurance
+
+```bash
+logseq validate -g my-notes
+```
+
+**2. Open Schema Validation (`--open-schema`):**
+
+- Allows extra keys/attributes in entity maps
+- More permissive for experimental/development graphs
+- Useful during migration or ontology evolution
+- Still validates core data integrity
+
+```bash
+logseq validate -g my-notes --open-schema
+```
+
+**Understanding Validation Errors:**
+
+**Error Structure:**
+
+```clojure
+{:db/id 8763                    ; Entity database ID
+ :block/order ["invalid..."]    ; Attribute with error
+ :errors {                       ; Detailed error info
+   :dispatch-key nil
+   :errors {39651 ["invalid dispatch value"]}}}
+```
+
+**Common Error Types:**
+
+1. **Invalid Dispatch Value**
+   - Attribute value doesn't match expected type
+   - Fix: Check property schema type in graph
+2. **Missing Required Attribute**
+   - Entity missing a required field
+   - Fix: Add missing attribute or remove entity
+3. **Invalid Reference**
+   - Reference to non-existent entity
+   - Fix: Remove reference or create target entity
+4. **Schema Violation**
+   - Value violates property constraints
+   - Fix: Correct value to match schema
+
 **Use Cases:**
 
-- Check data integrity after import
-- Debug graph corruption issues
-- Validate before backup
-- Quality assurance for automated workflows
-- Development and testing
+**1. Post-Import Validation:**
+
+```bash
+# After importing data
+logseq import-edn -g my-notes -f backup.edn
+
+# Validate integrity
+logseq validate -g my-notes
+```
+
+**2. CI/CD Pipeline:**
+
+```bash
+#!/bin/bash
+# validate-graphs.sh
+
+GRAPHS="main-graph test-graph dev-graph"
+
+for graph in $GRAPHS; do
+  if logseq validate -g "$graph"; then
+    echo "✓ $graph is valid"
+  else
+    echo "✗ $graph has errors"
+    exit 1
+  fi
+done
+```
+
+**3. Development Workflow:**
+
+```bash
+# Validate experimental graph with open schema
+logseq validate -g experimental --open-schema
+
+# Once stable, validate strictly
+logseq validate -g experimental
+```
+
+**4. Batch Validation:**
+
+```bash
+# Validate all graphs at once
+logseq validate -g graph1 -g graph2 -g graph3 -g graph4
+```
+
+**5. Pre-Backup Check:**
+
+```bash
+# Ensure graph is valid before backup
+logseq validate -g production && \
+logseq export-edn -g production -f backup.edn
+```
 
 **Technical Details:**
 
-- Uses Malli schema validation
-- Checks closed-value validation for higher data quality
-- Reports entity IDs with specific error details
-- Exits with code 1 if errors found
-- Useful for CI/CD pipelines
+- ✅ Uses **Malli schema validation** for type checking
+- ✅ Performs **closed-value validation** for data quality
+- ✅ Reports entity IDs with specific error details
+- ✅ **Exits with code 1** if errors found (CI/CD friendly)
+- ✅ Validates all datoms against schema
+- ⚠️ Large graphs (>100k datoms) may take 10-30 seconds
+
+**Troubleshooting:**
+
+**Validation Taking Too Long:**
+
+```bash
+# For very large graphs, validation is CPU-intensive
+# Consider running on a subset or during off-hours
+```
+
+**Too Many Errors:**
+
+```bash
+# If overwhelmed by errors, try open schema first
+logseq validate -g my-notes --open-schema
+
+# Then fix critical issues and validate strictly
+```
+
+**False Positives:**
+
+```bash
+# If errors seem incorrect, check your Logseq version
+# Older graphs may need migration
+# Use --open-schema as a temporary workaround
+```
+
+**Exit Codes:**
+
+- `0` - All graphs valid
+- `1` - Validation errors found or command failed
 
 ---
 
@@ -1417,6 +2381,486 @@ rm -rf /tmp/export /tmp/export.zip
 
 echo "Published to $OUTPUT_DIR"
 ```
+
+---
+
+## Common Use Cases
+
+This section provides practical, ready-to-use workflows for common CLI scenarios.
+
+### 1. Daily Backup Workflow
+
+Automate daily backups of your graphs.
+
+**Script:** `backup-logseq.sh`
+
+```bash
+#!/bin/bash
+# Daily Logseq graph backup
+
+BACKUP_DIR=~/Backups/logseq
+DATE=$(date +%Y-%m-%d)
+GRAPHS="work personal research"
+
+mkdir -p "$BACKUP_DIR"
+
+for graph in $GRAPHS; do
+  echo "Backing up $graph..."
+  logseq export-edn -g "$graph" \
+    -f "$BACKUP_DIR/${graph}_${DATE}.edn" \
+    -T -v
+
+  if [ $? -eq 0 ]; then
+    echo "✓ $graph backed up successfully"
+  else
+    echo "✗ $graph backup failed"
+  fi
+done
+
+# Keep only last 30 days of backups
+find "$BACKUP_DIR" -name "*.edn" -mtime +30 -delete
+
+echo "Backup complete!"
+```
+
+**Cron job** (run daily at 2 AM):
+
+```bash
+# Add to crontab: crontab -e
+0 2 * * * /path/to/backup-logseq.sh >> ~/logseq-backup.log 2>&1
+```
+
+---
+
+### 2. Graph Migration Between Machines
+
+Move your entire graph to another computer.
+
+**On source machine:**
+
+```bash
+# Export graph with all data
+logseq export-edn -g my-graph -f transfer.edn -T -v
+
+# Copy to destination (via USB, network, cloud)
+cp transfer.edn /path/to/destination/
+```
+
+**On destination machine:**
+
+```bash
+# Create new graph in Logseq app first, then:
+logseq import-edn -g my-graph -f transfer.edn
+
+# Validate integrity
+logseq validate -g my-graph
+```
+
+---
+
+### 3. Template/Ontology Seeding
+
+Create new projects with pre-defined schema.
+
+**Step 1: Export schema template**
+
+```bash
+# From your template graph
+logseq export-edn -g project-template \
+  -t :graph-ontology \
+  -e logseq.class \
+  -e logseq.property \
+  -f project-schema.edn
+```
+
+**Step 2: Apply to new projects**
+
+```bash
+# Create new graph in Logseq app, then:
+logseq import-edn -g client-project-a -f project-schema.edn
+logseq import-edn -g client-project-b -f project-schema.edn
+logseq import-edn -g client-project-c -f project-schema.edn
+
+# Each graph now has your custom properties and classes!
+```
+
+---
+
+### 4. Bulk Query and Export
+
+Query multiple graphs and export results.
+
+**Script:** `query-all-todos.sh`
+
+```bash
+#!/bin/bash
+# Find all TODO items across all graphs
+
+OUTPUT_FILE="all-todos-$(date +%Y-%m-%d).txt"
+
+echo "TODO Items Report - $(date)" > "$OUTPUT_FILE"
+echo "================================" >> "$OUTPUT_FILE"
+
+for graph in $(logseq list | grep "^  " | xargs); do
+  echo "" >> "$OUTPUT_FILE"
+  echo "Graph: $graph" >> "$OUTPUT_FILE"
+  echo "---" >> "$OUTPUT_FILE"
+
+  logseq query -g "$graph" \
+    '[:find ?title :where [?b :block/marker "TODO"] [?b :block/title ?title]]' \
+    >> "$OUTPUT_FILE" 2>&1
+done
+
+echo "Report saved to $OUTPUT_FILE"
+cat "$OUTPUT_FILE"
+```
+
+---
+
+### 5. CI/CD Integration
+
+Validate graph data in your CI pipeline.
+
+**GitHub Actions:** `.github/workflows/validate-graphs.yml`
+
+```yaml
+name: Validate Logseq Graphs
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install Logseq CLI
+        run: npm install -g @logseq/cli
+
+      - name: Import test graph
+        run: |
+          # Create graph directory structure
+          mkdir -p ~/logseq/graphs/logseq_db__test-graph
+
+          # Import graph data
+          logseq import-edn -g test-graph -f ./test-data/graph.edn
+
+      - name: Validate graph
+        run: |
+          logseq validate -g test-graph
+
+          if [ $? -eq 0 ]; then
+            echo "✓ Graph validation passed"
+          else
+            echo "✗ Graph validation failed"
+            exit 1
+          fi
+```
+
+---
+
+### 6. AI Assistant Integration (Claude Desktop)
+
+Connect Claude to your Logseq graph.
+
+**Claude Desktop Config:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "logseq-work": {
+      "command": "logseq",
+      "args": ["mcp-server", "-g", "work-notes", "-s"]
+    },
+    "logseq-personal": {
+      "command": "logseq",
+      "args": ["mcp-server", "-g", "personal", "-s"]
+    }
+  }
+}
+```
+
+**Usage in Claude:**
+
+```
+You: "List all my project pages"
+Claude: [Uses listPages tool] "Here are your projects: ..."
+
+You: "Create a new task in my Inbox page"
+Claude: [Uses upsertNodes tool] "Task created!"
+```
+
+---
+
+### 7. Voice-to-Text Note Capture
+
+Capture voice notes directly to Logseq.
+
+**macOS Script** (using `say` and `osascript`):
+
+```bash
+#!/bin/bash
+# voice-to-logseq.sh
+
+# Record and transcribe (pseudo-code - use actual transcription service)
+TRANSCRIPT=$(record_and_transcribe)
+
+# Append to Logseq
+export LOGSEQ_API_SERVER_TOKEN="your-token"
+logseq append "🎤 Voice note: $TRANSCRIPT"
+
+echo "Voice note captured!"
+```
+
+**iOS Shortcut:**
+
+1. Record voice note
+2. Transcribe with Siri
+3. HTTP POST to Logseq API via `logseq append`
+
+---
+
+### 8. Weekly Review Automation
+
+Generate weekly review data.
+
+**Script:** `weekly-review.sh`
+
+```bash
+#!/bin/bash
+# Generate weekly review report
+
+GRAPH="work"
+WEEK_START=$(date -v-7d +%s)000  # 7 days ago in ms
+
+OUTPUT="weekly-review-$(date +%Y-%m-%d).md"
+
+{
+  echo "# Weekly Review - $(date +%Y-%m-%d)"
+  echo ""
+
+  echo "## Completed Tasks"
+  logseq query -g "$GRAPH" \
+    "[:find ?title :where
+      [?b :block/marker \"DONE\"]
+      [?b :block/updated-at ?t]
+      [(> ?t $WEEK_START)]
+      [?b :block/title ?title]]"
+
+  echo ""
+  echo "## Open TODOs"
+  logseq query -g "$GRAPH" \
+    '[:find ?title :where [?b :block/marker "TODO"] [?b :block/title ?title]]'
+
+  echo ""
+  echo "## New Pages This Week"
+  logseq query -g "$GRAPH" \
+    "[:find ?title :where
+      [?b :block/created-at ?t]
+      [(> ?t $WEEK_START)]
+      [?b :block/title ?title]]"
+} > "$OUTPUT"
+
+echo "Weekly review saved to $OUTPUT"
+open "$OUTPUT"
+```
+
+---
+
+### 9. Graph Health Monitoring
+
+Monitor graph integrity over time.
+
+**Script:** `health-check.sh`
+
+```bash
+#!/bin/bash
+# Graph health monitoring
+
+GRAPHS="work personal"
+LOG_FILE=~/logseq-health.log
+
+{
+  echo "=== Graph Health Check - $(date) ==="
+
+  for graph in $GRAPHS; do
+    echo ""
+    echo "Checking $graph..."
+
+    if logseq validate -g "$graph" 2>&1 | grep -q "Valid!"; then
+      echo "✓ $graph: HEALTHY"
+    else
+      echo "✗ $graph: ISSUES DETECTED"
+      logseq validate -g "$graph" 2>&1
+    fi
+
+    # Show stats
+    logseq show -g "$graph" | grep "Graph created at"
+  done
+} | tee -a "$LOG_FILE"
+```
+
+**Monitoring service** (systemd):
+
+```ini
+# /etc/systemd/system/logseq-health.service
+[Unit]
+Description=Logseq Graph Health Check
+
+[Service]
+Type=oneshot
+ExecStart=/path/to/health-check.sh
+User=your-username
+```
+
+**Timer** (run every 6 hours):
+
+```ini
+# /etc/systemd/system/logseq-health.timer
+[Unit]
+Description=Run Logseq health check every 6 hours
+
+[Timer]
+OnBootSec=15min
+OnUnitActiveSec=6h
+
+[Install]
+WantedBy=timers.target
+```
+
+---
+
+### 10. Collaborative Graph Sync
+
+Share graph updates with team members.
+
+**Setup:**
+
+```bash
+# Shared drive location
+SHARED_DIR="/mnt/team-drive/logseq-graphs"
+
+# Export with timestamp
+DATE=$(date +%Y%m%d-%H%M%S)
+logseq export-edn -g team-project \
+  -f "$SHARED_DIR/team-project-$DATE.edn" \
+  -T -v
+
+# Keep only last 5 snapshots
+ls -t "$SHARED_DIR"/team-project-*.edn | tail -n +6 | xargs rm -f
+```
+
+**Team members import:**
+
+```bash
+# Find latest snapshot
+LATEST=$(ls -t /mnt/team-drive/logseq-graphs/team-project-*.edn | head -1)
+
+# Import updates
+logseq import-edn -g team-project -f "$LATEST"
+
+echo "Synced with team snapshot: $LATEST"
+```
+
+---
+
+### 11. Search and Report Generation
+
+Create custom reports from graph data.
+
+**Script:** `generate-project-report.sh`
+
+```bash
+#!/bin/bash
+# Generate project status report
+
+GRAPH="projects"
+PROJECT_TAG=":my.class/Project"
+
+REPORT="project-report-$(date +%Y-%m-%d).md"
+
+{
+  echo "# Project Status Report"
+  echo "Generated: $(date)"
+  echo ""
+
+  # Get all projects
+  echo "## Active Projects"
+  logseq query -g "$GRAPH" \
+    "[:find ?title :where
+      [?b :block/tags ?tag]
+      [?tag :db/ident $PROJECT_TAG]
+      [?b :my.property/status \"active\"]
+      [?b :block/title ?title]]"
+
+  echo ""
+  echo "## Completed Projects"
+  logseq query -g "$GRAPH" \
+    "[:find ?title :where
+      [?b :block/tags ?tag]
+      [?tag :db/ident $PROJECT_TAG]
+      [?b :my.property/status \"completed\"]
+      [?b :block/title ?title]]"
+} > "$REPORT"
+
+echo "Report generated: $REPORT"
+```
+
+---
+
+### 12. Data Quality Enforcement
+
+Enforce data quality rules across your graphs.
+
+**Script:** `enforce-quality.sh`
+
+```bash
+#!/bin/bash
+# Data quality enforcement
+
+GRAPH="$1"
+
+if [ -z "$GRAPH" ]; then
+  echo "Usage: $0 <graph-name>"
+  exit 1
+fi
+
+echo "Enforcing data quality for $GRAPH..."
+
+# Validate graph
+if ! logseq validate -g "$GRAPH"; then
+  echo "✗ Validation failed - fixing required"
+  exit 1
+fi
+
+# Check for orphaned blocks (custom query)
+echo "Checking for orphaned blocks..."
+ORPHANS=$(logseq query -g "$GRAPH" \
+  '[:find (count ?b) :where [?b :block/uuid] (not [?b :block/page])]')
+
+if [ "$ORPHANS" != "0" ]; then
+  echo "⚠️  Found $ORPHANS orphaned blocks"
+fi
+
+# Check for missing properties
+echo "Checking required properties..."
+# ... custom checks ...
+
+echo "✓ Quality check complete"
+```
+
+---
 
 ## Troubleshooting
 
