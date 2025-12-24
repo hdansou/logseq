@@ -28,8 +28,11 @@ Scope: Local setup, how it works, how to run/debug/test, how to add a new comman
 
 - List graphs (requires the Desktop “database version” app): `logseq list`
 - Show graph info: `logseq show <graph-name>`
-- Export EDN: `logseq export-edn <graph-name> -f out.edn`
-- Search current graph through HTTP API: start Desktop app with Local HTTP API enabled, then: `logseq search <term> -a <api-query-token>`
+- Export EDN: `logseq export-edn -g <graph-name> -f out.edn`
+- Import EDN: `logseq import-edn -g <graph-name> -f out.edn`
+- Validate graph: `logseq validate -g <graph-name>`
+- MCP server: `logseq mcp-server -g <graph-name>`
+- Search current graph through HTTP API: start Desktop app with Local HTTP API enabled, then: `logseq search <term> -a <api-server-token>`
 
 If you didn’t `yarn link`, substitute `node cli.mjs` for `logseq`.
 
@@ -39,18 +42,34 @@ If you didn’t `yarn link`, substitute `node cli.mjs` for `logseq`.
 
 - `deps/cli/cli.mjs` — Node entrypoint that boots an nbb runtime and loads ClojureScript.
 - `deps/cli/src/logseq/cli.cljs` — Main namespace. Defines the command table, help, and dispatch via `babashka.cli`.
-- `deps/cli/src/logseq/cli/commands/` — Individual CLI commands (e.g., `graph.cljs`, `search.cljs`, `query.cljs`, `export_edn.cljs`).
+- `deps/cli/src/logseq/cli/commands/` — Individual CLI commands:
+  - `graph.cljs` — list, show commands
+  - `search.cljs` — search command
+  - `query.cljs` — query command
+  - `export.cljs` — export (markdown) command
+  - `export_edn.cljs` — export-edn command
+  - `import_edn.cljs` — import-edn command (v0.4.0+)
+  - `validate.cljs` — validate command (v0.4.0+)
+  - `mcp_server.cljs` — mcp-server command (v0.3.0+)
+  - `append.cljs` — append command
 - `deps/cli/src/logseq/cli/spec.cljs` — Command option specifications for `babashka.cli`.
 - `deps/cli/src/logseq/cli/util.cljs` — Shared helpers (paths, API calls, error handling).
-- `deps/cli/src/logseq/cli/common/graph.cljs` — DB graphs directory logic shared with Electron code.
+- `deps/cli/src/logseq/cli/common/` — Shared infrastructure:
+  - `graph.cljs` — DB graphs directory logic
+  - `file.cljs` — File operations
+  - `util.cljs` — Common utilities
+  - `export/` — Export utilities (text, common)
+  - `mcp/` — MCP server and tools (v0.3.0+)
 - `deps/cli/README.md` — User-facing CLI usage docs.
+- `deps/cli/CHANGELOG.md` — Version history and changes.
 - `deps/cli/package.json` — Package metadata, test script, Node engine.
 - `deps/cli/bb.edn` — Babashka tasks for linting and vendorizing.
 - `deps/cli/nbb.edn` — nbb test runner deps (during development).
 
 Related code you may interact with:
 
-- `deps/db`, `src/electron/electron/*` — DB and Electron helpers referenced by the CLI.
+- `deps/db` — Database utilities and export/import logic
+- `src/electron/electron/*` — DB and Electron helpers referenced by the CLI
 
 ---
 
@@ -179,7 +198,7 @@ Vendorizing nbb deps (when packaging):
 - Missing Desktop “database version”: local DB commands fail if `~/logseq/graphs` is absent.
 - Not using `lazy-load-fn`: register commands through the lazy loader to prevent slow startup.
 - Unhandled async errors: always add `(p/catch ...)` in command pipelines.
-- CLI vs. API: API-based features require the Desktop app running with HTTP API enabled and a token.
+- CLI vs. API: API-based features require the Desktop app running with HTTP API enabled and a token.- **Command syntax change (v0.4.0)**: Graph name moved from positional arg to `-g` option for most commands.
 
 ---
 
@@ -189,7 +208,7 @@ Vendorizing nbb deps (when packaging):
 - Linted with bb tasks where applicable.
 - Updated `spec.cljs` and help text for any new options.
 - Verified manual runs for key scenarios.
-- Updated docs (`deps/cli/README.md`) if user-facing behavior changed.
+- Updated docs (`docs/06-user-guides/cli-user-guide.md`) if user-facing behavior changed.
 
 ---
 
@@ -200,8 +219,11 @@ Vendorizing nbb deps (when packaging):
 - List graphs: `logseq list`
 - Show graph details: `logseq show <graph>`
 - Search current graph via API: `logseq search <term> -a <token>`
-- Query local graph: `logseq query <graph> '[:find (pull ?b [*]) :where [?b :kv/value]]'`
-- Export EDN: `logseq export-edn <graph> -f out.edn`
+- Query local graph: `logseq query '[:find (pull ?b [*]) :where [?b :kv/value]]' -g <graph>`
+- Export EDN: `logseq export-edn -g <graph> -f out.edn`
+- Import EDN: `logseq import-edn -g <graph> -f in.edn`
+- Validate graph: `logseq validate -g <graph>`
+- MCP server: `logseq mcp-server -g <graph>`
 
 If you get stuck, start by reading `deps/cli/src/logseq/cli.cljs` and the relevant command in `deps/cli/src/logseq/cli/commands/`, then check `deps/cli/README.md`.
 
