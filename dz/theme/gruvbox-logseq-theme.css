@@ -1,0 +1,252 @@
+/**
+ * Gruvbox Theme for Logseq
+ * 
+ * A comprehensive theme integration using Logseq's theming architecture
+ * with the Gruvbox color palette for a warm, retro aesthetic.
+ * 
+ * Based on Gruvbox by morhetz: https://github.com/morhetz/gruvbox
+ * MIT License
+ * 
+ * Installation:
+ * Add this to your custom.css or theme file
+ */
+
+html {
+  &[data-color=gruvbox] {
+    /* Gruvbox Accent Colors (Orange theme) */
+    body, .dark-theme, .light-theme {
+      /* Define Gruvbox color scales */
+      
+      /* Light mode accent scale (Orange) */
+      --gruvbox-light-accent-01: #fbf1c7;
+      --gruvbox-light-accent-02: #f2e6bd;
+      --gruvbox-light-accent-03: #ebd9b3;
+      --gruvbox-light-accent-04: #e5d4a8;
+      --gruvbox-light-accent-05: #d8c093;
+      --gruvbox-light-accent-06: #c9a876;
+      --gruvbox-light-accent-07: #b88b4a;
+      --gruvbox-light-accent-08: #a8762e;
+      --gruvbox-light-accent-09: #d65d0e;
+      --gruvbox-light-accent-10: #af5100;
+      --gruvbox-light-accent-11: #8a3f00;
+      --gruvbox-light-accent-12: #502400;
+      
+      /* Dark mode accent scale (Orange) */
+      --gruvbox-dark-accent-01: #1d2021;
+      --gruvbox-dark-accent-02: #282828;
+      --gruvbox-dark-accent-03: #3c3836;
+      --gruvbox-dark-accent-04: #504945;
+      --gruvbox-dark-accent-05: #665c54;
+      --gruvbox-dark-accent-06: #7c6f64;
+      --gruvbox-dark-accent-07: #928374;
+      --gruvbox-dark-accent-08: #d65d0e;
+      --gruvbox-dark-accent-09: #fe8019;
+      --gruvbox-dark-accent-10: #fb8c32;
+      --gruvbox-dark-accent-11: #ffa44a;
+      --gruvbox-dark-accent-12: #ffd8b8;
+      
+      /* Light mode gray scale */
+      --gruvbox-light-gray-01: #fbf1c7;
+      --gruvbox-light-gray-02: #f2e6bd;
+      --gruvbox-light-gray-03: #ebdbb2;
+      --gruvbox-light-gray-04: #d5c4a1;
+      --gruvbox-light-gray-05: #bdae93;
+      --gruvbox-light-gray-06: #a89984;
+      --gruvbox-light-gray-07: #928374;
+      --gruvbox-light-gray-08: #7c6f64;
+      --gruvbox-light-gray-09: #665c54;
+      --gruvbox-light-gray-10: #504945;
+      --gruvbox-light-gray-11: #3c3836;
+      --gruvbox-light-gray-12: #282828;
+      
+      /* Dark mode gray scale */
+      --gruvbox-dark-gray-01: #1d2021;
+      --gruvbox-dark-gray-02: #282828;
+      --gruvbox-dark-gray-03: #3c3836;
+      --gruvbox-dark-gray-04: #504945;
+      --gruvbox-dark-gray-05: #665c54;
+      --gruvbox-dark-gray-06: #7c6f64;
+      --gruvbox-dark-gray-07: #928374;
+      --gruvbox-dark-gray-08: #a89984;
+      --gruvbox-dark-gray-09: #bdae93;
+      --gruvbox-dark-gray-10: #d5c4a1;
+      --gruvbox-dark-gray-11: #ebdbb2;
+      --gruvbox-dark-gray-12: #fbf1c7;
+    }
+    
+    /* Light mode */
+    &[data-theme=light] {
+      --accent: 24 88% 45%;
+      --primary: 24 88% 45%;
+      --primary-foreground: 32 57% 95%;
+      --ring: 24 71.6% 71.0%;
+      --accent-foreground: 32 57% 95%;
+      
+      --lx-accent-01: var(--gruvbox-light-accent-01);
+      --lx-accent-02: var(--gruvbox-light-accent-02);
+      --lx-accent-03: var(--gruvbox-light-accent-03);
+      --lx-accent-04: var(--gruvbox-light-accent-04);
+      --lx-accent-05: var(--gruvbox-light-accent-05);
+      --lx-accent-06: var(--gruvbox-light-accent-06);
+      --lx-accent-07: var(--gruvbox-light-accent-07);
+      --lx-accent-08: var(--gruvbox-light-accent-08);
+      --lx-accent-09: var(--gruvbox-light-accent-09);
+      --lx-accent-10: var(--gruvbox-light-accent-10);
+      --lx-accent-11: var(--gruvbox-light-accent-11);
+      --lx-accent-12: var(--gruvbox-light-accent-12);
+      
+      --lx-gray-01: var(--gruvbox-light-gray-01);
+      --lx-gray-02: var(--gruvbox-light-gray-02);
+      --lx-gray-03: var(--gruvbox-light-gray-03);
+      --lx-gray-04: var(--gruvbox-light-gray-04);
+      --lx-gray-05: var(--gruvbox-light-gray-05);
+      --lx-gray-06: var(--gruvbox-light-gray-06);
+      --lx-gray-07: var(--gruvbox-light-gray-07);
+      --lx-gray-08: var(--gruvbox-light-gray-08);
+      --lx-gray-09: var(--gruvbox-light-gray-09);
+      --lx-gray-10: var(--gruvbox-light-gray-10);
+      --lx-gray-11: var(--gruvbox-light-gray-11);
+      --lx-gray-12: var(--gruvbox-light-gray-12);
+      
+      --ls-primary-background-color: var(--gruvbox-light-gray-01);
+      --ls-secondary-background-color: var(--gruvbox-light-gray-02);
+      --ls-tertiary-background-color: var(--gruvbox-light-gray-03);
+      --ls-quaternary-background-color: var(--gruvbox-light-gray-04);
+      --ls-link-text-color: #458588;  /* Gruvbox blue */
+      --ls-link-text-hover-color: #076678;  /* Gruvbox blue dark */
+      --ls-block-ref-link-text-color: var(--gruvbox-light-accent-09);
+      --ls-secondary-text-color: var(--gruvbox-light-gray-11);
+      --ls-primary-text-color: var(--gruvbox-light-gray-12);
+      --ls-border-color: var(--gruvbox-light-gray-05);
+      --ls-secondary-border-color: var(--gruvbox-light-accent-05);
+      --ls-page-checkbox-color: #98971a;  /* Gruvbox green */
+      --ls-selection-background-color: rgba(215,153,33,0.3);
+      --ls-block-highlight-color: var(--gruvbox-light-gray-04);
+      --ls-focus-ring-color: var(--gruvbox-light-accent-09);
+      --ls-table-tr-even-background-color: var(--gruvbox-light-gray-02);
+      --ls-page-properties-background-color: var(--gruvbox-light-gray-02);
+      --ls-block-properties-background-color: var(--gruvbox-light-gray-03);
+      --ls-page-inline-code-bg-color: var(--gruvbox-light-gray-03);
+      --ls-cloze-text-color: var(--gruvbox-light-accent-08);
+      --ls-wb-stroke-color-default: var(--gruvbox-light-accent-07);
+      --ls-wb-background-color-default: var(--gruvbox-light-accent-04);
+      --ls-wb-text-color-default: var(--gruvbox-light-gray-12);
+      --ls-a-chosen-bg: var(--gruvbox-light-gray-03);
+    }
+    
+    /* Dark mode */
+    &[data-theme=dark] {
+      --background: 32 9% 13%;
+      --foreground: 32 57% 95%;
+      --accent: 24 88% 45%;
+      --accent-foreground: 32 57% 95%;
+      --primary: 25 95% 53%;
+      --primary-foreground: 32 57% 95%;
+      --ring: 25 95% 53%;
+      --secondary: 32 20% 20%;
+      --secondary-foreground: 0 0% 98%;
+      --muted: 32 9% 15%;
+      --border: 32 9% 16%;
+      --card: 32 9% 12%;
+      --card-foreground: 32 57% 95%;
+      --popover: 32 9% 13%;
+      --input: 32 20% 25%;
+      
+      --lx-accent-01: var(--gruvbox-dark-accent-01);
+      --lx-accent-02: var(--gruvbox-dark-accent-02);
+      --lx-accent-03: var(--gruvbox-dark-accent-03);
+      --lx-accent-04: var(--gruvbox-dark-accent-04);
+      --lx-accent-05: var(--gruvbox-dark-accent-05);
+      --lx-accent-06: var(--gruvbox-dark-accent-06);
+      --lx-accent-07: var(--gruvbox-dark-accent-07);
+      --lx-accent-08: var(--gruvbox-dark-accent-08);
+      --lx-accent-09: var(--gruvbox-dark-accent-09);
+      --lx-accent-10: var(--gruvbox-dark-accent-10);
+      --lx-accent-11: var(--gruvbox-dark-accent-11);
+      --lx-accent-12: var(--gruvbox-dark-accent-12);
+      
+      --lx-gray-01: var(--gruvbox-dark-gray-01);
+      --lx-gray-02: var(--gruvbox-dark-gray-02);
+      --lx-gray-03: var(--gruvbox-dark-gray-03);
+      --lx-gray-04: var(--gruvbox-dark-gray-04);
+      --lx-gray-05: var(--gruvbox-dark-gray-05);
+      --lx-gray-06: var(--gruvbox-dark-gray-06);
+      --lx-gray-07: var(--gruvbox-dark-gray-07);
+      --lx-gray-08: var(--gruvbox-dark-gray-08);
+      --lx-gray-09: var(--gruvbox-dark-gray-09);
+      --lx-gray-10: var(--gruvbox-dark-gray-10);
+      --lx-gray-11: var(--gruvbox-dark-gray-11);
+      --lx-gray-12: var(--gruvbox-dark-gray-12);
+      
+      --ls-primary-background-color: var(--gruvbox-dark-gray-01);
+      --ls-secondary-background-color: var(--gruvbox-dark-gray-02);
+      --ls-tertiary-background-color: var(--gruvbox-dark-gray-03);
+      --ls-quaternary-background-color: var(--gruvbox-dark-gray-04);
+      --ls-link-text-color: #83a598;  /* Gruvbox blue bright */
+      --ls-link-text-hover-color: #8ec07c;  /* Gruvbox aqua */
+      --ls-block-ref-link-text-color: var(--gruvbox-dark-accent-09);
+      --ls-secondary-text-color: var(--gruvbox-dark-gray-09);
+      --ls-primary-text-color: var(--gruvbox-dark-gray-12);
+      --ls-border-color: var(--gruvbox-dark-gray-05);
+      --ls-secondary-border-color: var(--gruvbox-dark-accent-05);
+      --ls-page-checkbox-color: #b8bb26;  /* Gruvbox green bright */
+      --ls-selection-background-color: rgba(215,153,33,0.3);
+      --ls-block-highlight-color: var(--gruvbox-dark-gray-04);
+      --ls-focus-ring-color: var(--gruvbox-dark-accent-09);
+      --ls-table-tr-even-background-color: var(--gruvbox-dark-gray-02);
+      --ls-page-properties-background-color: var(--gruvbox-dark-gray-02);
+      --ls-block-properties-background-color: var(--gruvbox-dark-gray-03);
+      --ls-page-inline-code-bg-color: var(--gruvbox-dark-gray-03);
+      --ls-cloze-text-color: var(--gruvbox-dark-accent-08);
+      --ls-wb-stroke-color-default: var(--gruvbox-dark-accent-07);
+      --ls-wb-background-color-default: var(--gruvbox-dark-accent-04);
+      --ls-wb-text-color-default: var(--gruvbox-dark-gray-12);
+      --ls-a-chosen-bg: var(--gruvbox-dark-gray-02);
+    }
+  }
+}
+
+/* Enhanced tag styling for Gruvbox */
+html[data-color=gruvbox] {
+  .block-tag {
+    border-radius: 12px;
+    padding: 3px 10px;
+    margin: 0 2px;
+    transition: all 0.15s ease;
+  }
+  
+  &[data-theme=light] .block-tag {
+    background-color: #f2e6bd;
+    border: 1px solid #d5c4a1;
+  }
+  
+  &[data-theme=light] .block-tag:hover {
+    background-color: #ebdbb2;
+    border-color: #bdae93;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(192,165,125,0.3);
+  }
+  
+  &[data-theme=dark] .block-tag {
+    background-color: #3c3836;
+    border: 1px solid #504945;
+  }
+  
+  &[data-theme=dark] .block-tag:hover {
+    background-color: #504945;
+    border-color: #665c54;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(251,241,199,0.1);
+  }
+  
+  .block-tag a.tag,
+  .block-tag a.hash-symbol {
+    font-weight: 500;
+    opacity: 0.9;
+  }
+  
+  .block-tag:hover a.tag,
+  .block-tag:hover a.hash-symbol {
+    opacity: 1;
+  }
+}

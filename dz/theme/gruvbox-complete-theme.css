@@ -1,0 +1,470 @@
+/**
+ * Complete Gruvbox Theme for Logseq
+ * 
+ * A comprehensive theme that styles the entire Logseq application
+ * using the Gruvbox color palette for a warm, retro aesthetic.
+ * 
+ * Based on Gruvbox by morhetz: https://github.com/morhetz/gruvbox
+ * 
+ * Installation:
+ * 1. Go to Settings > General > Custom theme
+ * 2. Select "Custom" and paste this file's content, or
+ * 3. Go to Settings > General > Custom CSS and use:
+ *    @import url("path/to/gruvbox-complete-theme.css");
+ * 
+ * Features:
+ * - Complete light and dark mode support
+ * - Styled tags with backgrounds and borders
+ * - Gruvbox color palette integration
+ * - Consistent UI elements throughout
+ */
+
+/*
+ * Gruvbox Color Reference
+ * MIT License
+ * https://github.com/morhetz/gruvbox
+ */
+
+/* ============================================
+   LIGHT MODE THEME VARIABLES
+   ============================================ */
+
+html[data-theme='light'],
+.light-theme,
+.white-theme {
+  /* Gruvbox Light Color Palette */
+  --bg1: #fbf1c7;
+  --bg2: #f2e6bd;
+  --bg3: #ebd9b3;
+  
+  --ui1: #ebdbb2;
+  --ui2: #d5c4a1;
+  --ui3: #bdae93;
+  
+  --tx1: #282828;
+  --tx2: #7c7065;
+  --tx3: #a89a85;
+  
+  --hl1: rgba(192,165,125,.3);
+  --hl2: rgba(215,153,33,.4);
+  
+  /* Accent Colors */
+  --color-red: #cc241d;
+  --color-orange: #d65d0e;
+  --color-yellow: #d79921;
+  --color-green: #98971a;
+  --color-cyan: #689d6a;
+  --color-blue: #458588;
+  --color-purple: #b16286;
+  
+  /* Primary Colors */
+  --ls-primary-background-color: var(--bg1);
+  --ls-secondary-background-color: var(--bg2);
+  --ls-tertiary-background-color: var(--bg3);
+  --ls-quaternary-background-color: var(--ui2);
+  
+  /* Text Colors */
+  --ls-primary-text-color: var(--tx1);
+  --ls-secondary-text-color: var(--tx2);
+  --ls-title-text-color: var(--tx1);
+  
+  /* Link Colors */
+  --ls-link-text-color: var(--color-blue);
+  --ls-link-text-hover-color: var(--color-cyan);
+  --ls-link-ref-text-color: var(--color-blue);
+  --ls-link-ref-text-hover-color: var(--color-cyan);
+  
+  /* Active/Selection Colors */
+  --ls-active-primary-color: var(--color-orange);
+  --ls-active-secondary-color: var(--color-yellow);
+  --ls-selection-background-color: var(--hl2);
+  
+  /* Block Colors */
+  --ls-block-bullet-border-color: var(--ui2);
+  --ls-block-bullet-color: var(--ui3);
+  --ls-block-highlight-color: var(--hl1);
+  --ls-block-properties-background-color: var(--bg2);
+  
+  /* Page Colors */
+  --ls-page-properties-background-color: var(--bg2);
+  --ls-page-checkbox-color: var(--color-green);
+  --ls-page-checkbox-border-color: var(--ui2);
+  --ls-page-blockquote-bg-color: var(--bg2);
+  --ls-page-blockquote-color: var(--tx2);
+  --ls-page-blockquote-border-color: var(--ui3);
+  --ls-page-inline-code-bg-color: var(--bg3);
+  --ls-page-inline-code-color: var(--tx1);
+  
+  /* Border Colors */
+  --ls-border-color: var(--ui2);
+  --ls-secondary-border-color: var(--ui3);
+  --ls-tertiary-border-color: rgba(189, 174, 147, 0.3);
+  
+  /* Scrollbar */
+  --ls-scrollbar-foreground-color: var(--ui3);
+  --ls-scrollbar-background-color: rgba(213, 196, 161, 0.1);
+  --ls-scrollbar-thumb-hover-color: var(--tx2);
+  
+  /* Table Colors */
+  --ls-table-tr-even-background-color: var(--bg2);
+  
+  /* Search & Menu */
+  --ls-search-background-color: var(--bg1);
+  --ls-menu-hover-color: var(--bg3);
+  
+  /* Header */
+  --ls-head-text-color: var(--tx1);
+  --ls-header-button-background: var(--bg3);
+  
+  /* Icon Color */
+  --ls-icon-color: var(--tx2);
+  --ls-search-icon-color: var(--tx3);
+  
+  /* Tag colors (for styled tags) */
+  --ls-tag-text-color: var(--tx2);
+  --ls-tag-text-hover-color: var(--tx1);
+  
+  /* Right sidebar */
+  --ls-right-sidebar-code-bg-color: var(--bg3);
+  
+  /* LX Gray Scale (new design system) */
+  --lx-gray-01: var(--bg1);
+  --lx-gray-02: var(--bg2);
+  --lx-gray-03: var(--bg3);
+  --lx-gray-04: var(--ui1);
+  --lx-gray-05: var(--ui2);
+  --lx-gray-06: var(--ui3);
+  --lx-gray-07: var(--tx3);
+  --lx-gray-08: var(--tx2);
+  --lx-gray-09: #665c54;
+  --lx-gray-10: #504945;
+  --lx-gray-11: #3c3836;
+  --lx-gray-12: var(--tx1);
+  
+  /* Accent Colors */
+  --lx-accent-09: #af7517;
+  --lx-accent-10: #d65d0e;
+  --lx-accent-11: var(--color-orange);
+  --lx-accent-12: #a0420d;
+}
+
+/* ============================================
+   DARK MODE THEME VARIABLES
+   ============================================ */
+
+html[data-theme='dark'],
+.dark-theme {
+  /* Gruvbox Dark Color Palette */
+  --bg1: #282828;
+  --bg2: #1e2021;
+  --bg3: #3d3836;
+  
+  --ui1: #3c3836;
+  --ui2: #504945;
+  --ui3: #665c54;
+  
+  --tx1: #fbf1c7;
+  --tx2: #bdae93;
+  --tx3: #7c6f64;
+  
+  --hl1: rgba(173,149,139,0.3);
+  --hl2: rgba(215,153,33,.4);
+  
+  /* Accent Colors */
+  --color-red: #fb4934;
+  --color-orange: #fe8019;
+  --color-yellow: #fabd2f;
+  --color-green: #b8bb26;
+  --color-cyan: #8ec07c;
+  --color-blue: #83a598;
+  --color-purple: #d3869b;
+  
+  /* Primary Colors */
+  --ls-primary-background-color: var(--bg1);
+  --ls-secondary-background-color: var(--bg2);
+  --ls-tertiary-background-color: var(--ui1);
+  --ls-quaternary-background-color: var(--ui2);
+  
+  /* Text Colors */
+  --ls-primary-text-color: var(--tx1);
+  --ls-secondary-text-color: var(--tx2);
+  --ls-title-text-color: var(--tx1);
+  
+  /* Link Colors */
+  --ls-link-text-color: var(--color-blue);
+  --ls-link-text-hover-color: var(--color-cyan);
+  --ls-link-ref-text-color: var(--color-blue);
+  --ls-link-ref-text-hover-color: var(--color-cyan);
+  
+  /* Active/Selection Colors */
+  --ls-active-primary-color: var(--color-orange);
+  --ls-active-secondary-color: var(--color-yellow);
+  --ls-selection-background-color: var(--hl2);
+  
+  /* Block Colors */
+  --ls-block-bullet-border-color: var(--ui2);
+  --ls-block-bullet-color: var(--tx3);
+  --ls-block-highlight-color: var(--hl1);
+  --ls-block-properties-background-color: var(--bg2);
+  
+  /* Page Colors */
+  --ls-page-properties-background-color: var(--bg2);
+  --ls-page-checkbox-color: var(--color-green);
+  --ls-page-checkbox-border-color: var(--ui2);
+  --ls-page-blockquote-bg-color: var(--ui1);
+  --ls-page-blockquote-color: var(--tx2);
+  --ls-page-blockquote-border-color: var(--ui3);
+  --ls-page-inline-code-bg-color: var(--ui1);
+  --ls-page-inline-code-color: var(--tx1);
+  
+  /* Border Colors */
+  --ls-border-color: var(--ui2);
+  --ls-secondary-border-color: var(--ui3);
+  --ls-tertiary-border-color: rgba(80, 73, 69, 0.5);
+  
+  /* Scrollbar */
+  --ls-scrollbar-foreground-color: var(--ui3);
+  --ls-scrollbar-background-color: rgba(60, 56, 54, 0.2);
+  --ls-scrollbar-thumb-hover-color: var(--tx2);
+  
+  /* Table Colors */
+  --ls-table-tr-even-background-color: var(--bg2);
+  
+  /* Search & Menu */
+  --ls-search-background-color: var(--bg1);
+  --ls-menu-hover-color: var(--ui1);
+  
+  /* Header */
+  --ls-head-text-color: var(--tx1);
+  --ls-header-button-background: var(--ui1);
+  
+  /* Icon Color */
+  --ls-icon-color: var(--tx2);
+  --ls-search-icon-color: var(--tx3);
+  
+  /* Tag colors */
+  --ls-tag-text-color: var(--tx2);
+  --ls-tag-text-hover-color: var(--tx1);
+  
+  /* Right sidebar */
+  --ls-right-sidebar-code-bg-color: var(--ui1);
+  
+  /* LX Gray Scale (new design system) */
+  --lx-gray-01: var(--bg1);
+  --lx-gray-02: var(--bg2);
+  --lx-gray-03: var(--ui1);
+  --lx-gray-04: var(--ui2);
+  --lx-gray-05: var(--ui3);
+  --lx-gray-06: #7c6f64;
+  --lx-gray-07: #928374;
+  --lx-gray-08: #a89984;
+  --lx-gray-09: var(--tx2);
+  --lx-gray-10: #d5c4a1;
+  --lx-gray-11: #ebdbb2;
+  --lx-gray-12: var(--tx1);
+  
+  /* Accent Colors */
+  --lx-accent-09: #d65d0e;
+  --lx-accent-10: #fe8019;
+  --lx-accent-11: var(--color-orange);
+  --lx-accent-12: #ffa057;
+}
+
+/* ============================================
+   ENHANCED TAG STYLING
+   ============================================ */
+
+.block-tag {
+  border-radius: 12px;
+  background-color: var(--bg2);
+  border: 1px solid var(--ui2);
+  padding: 3px 10px;
+  margin: 0 2px;
+  transition: all 0.15s ease;
+}
+
+.block-tag:hover {
+  background-color: var(--bg3);
+  border-color: var(--ui3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px var(--hl1);
+}
+
+.block-tag a.tag,
+.block-tag a.hash-symbol {
+  color: var(--ls-tag-text-color) !important;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.block-tag:hover a.tag,
+.block-tag:hover a.hash-symbol {
+  color: var(--ls-tag-text-hover-color) !important;
+  opacity: 1;
+}
+
+/* Private tags with orange accent */
+.block-tag.private-tag {
+  background-color: rgba(214,93,14,0.15);
+  border: 1px solid var(--color-orange);
+}
+
+.block-tag.private-tag:hover {
+  background-color: rgba(214,93,14,0.2);
+}
+
+/* Page tags (in page titles) */
+.page-tags .block-tag {
+  margin: 2px 4px;
+}
+
+.ls-page-title .block-tags .block-tag {
+  font-size: 0.9em;
+}
+
+/* ============================================
+   COLOR-CODED TAGS (OPTIONAL)
+   ============================================ */
+
+/* Red tags */
+.block-tag[data-color="red"],
+.block-tag.red-tag {
+  background-color: rgba(204, 36, 29, 0.1);
+  border-color: var(--color-red);
+}
+
+html[data-theme='dark'] .block-tag[data-color="red"],
+html[data-theme='dark'] .block-tag.red-tag {
+  background-color: rgba(251, 73, 52, 0.2);
+}
+
+/* Orange tags */
+.block-tag[data-color="orange"],
+.block-tag.orange-tag {
+  background-color: rgba(214,93,14, 0.1);
+  border-color: var(--color-orange);
+}
+
+html[data-theme='dark'] .block-tag[data-color="orange"],
+html[data-theme='dark'] .block-tag.orange-tag {
+  background-color: rgba(254, 128, 25, 0.2);
+}
+
+/* Yellow tags */
+.block-tag[data-color="yellow"],
+.block-tag.yellow-tag {
+  background-color: rgba(215,153,33, 0.1);
+  border-color: var(--color-yellow);
+}
+
+html[data-theme='dark'] .block-tag[data-color="yellow"],
+html[data-theme='dark'] .block-tag.yellow-tag {
+  background-color: rgba(250, 189, 47, 0.2);
+}
+
+/* Green tags */
+.block-tag[data-color="green"],
+.block-tag.green-tag {
+  background-color: rgba(152,151,26, 0.1);
+  border-color: var(--color-green);
+}
+
+html[data-theme='dark'] .block-tag[data-color="green"],
+html[data-theme='dark'] .block-tag.green-tag {
+  background-color: rgba(184, 187, 38, 0.2);
+}
+
+/* Cyan tags */
+.block-tag[data-color="cyan"],
+.block-tag.cyan-tag {
+  background-color: rgba(104,157,106, 0.1);
+  border-color: var(--color-cyan);
+}
+
+html[data-theme='dark'] .block-tag[data-color="cyan"],
+html[data-theme='dark'] .block-tag.cyan-tag {
+  background-color: rgba(142, 192, 124, 0.2);
+}
+
+/* Blue tags */
+.block-tag[data-color="blue"],
+.block-tag.blue-tag {
+  background-color: rgba(69,133,136, 0.1);
+  border-color: var(--color-blue);
+}
+
+html[data-theme='dark'] .block-tag[data-color="blue"],
+html[data-theme='dark'] .block-tag.blue-tag {
+  background-color: rgba(131, 165, 152, 0.2);
+}
+
+/* Purple/Pink tags */
+.block-tag[data-color="purple"],
+.block-tag[data-color="pink"],
+.block-tag.purple-tag,
+.block-tag.pink-tag {
+  background-color: rgba(177,98,134, 0.1);
+  border-color: var(--color-purple);
+}
+
+html[data-theme='dark'] .block-tag[data-color="purple"],
+html[data-theme='dark'] .block-tag[data-color="pink"],
+html[data-theme='dark'] .block-tag.purple-tag,
+html[data-theme='dark'] .block-tag.pink-tag {
+  background-color: rgba(211, 134, 155, 0.2);
+}
+
+/* ============================================
+   ADDITIONAL UI ENHANCEMENTS
+   ============================================ */
+
+/* Improve button styling */
+.ui__button {
+  background-color: var(--bg3);
+  color: var(--tx1);
+  border: 1px solid var(--ui2);
+  transition: all 0.15s ease;
+}
+
+.ui__button:hover {
+  background-color: var(--ui1);
+  border-color: var(--ui3);
+}
+
+/* Code blocks */
+.extensions__code {
+  background-color: var(--bg2) !important;
+}
+
+/* Search highlight */
+.search-highlight {
+  background-color: var(--hl2);
+  color: var(--tx1);
+}
+
+/* Improve modal backgrounds */
+.ui__modal-panel {
+  background-color: var(--ls-primary-background-color);
+  border: 1px solid var(--ls-border-color);
+}
+
+/* Enhance sidebar styling */
+#left-sidebar, .cp__right-sidebar {
+  background-color: var(--ls-secondary-background-color);
+}
+
+/* Improve input fields */
+input[type="text"],
+input[type="search"],
+textarea {
+  background-color: var(--ls-secondary-background-color);
+  border-color: var(--ls-border-color);
+  color: var(--ls-primary-text-color);
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  border-color: var(--color-orange);
+  outline: none;
+}
