@@ -2,15 +2,18 @@
 
 ## 🔍 Case Summary
 
+**Current Version**: 0.4.2 (Last Updated: December 22, 2025)
+
 The Logseq CLI is a command-line interface for interacting with Logseq DB graphs. This investigation reveals a well-architected tool built with ClojureScript and nbb-logseq, providing both **offline** (local SQLite access) and **online** (HTTP API) modes of operation.
 
 **Key Discovery Highlights:**
 
 - 🎯 **Dual-Mode Architecture**: Operates offline for CI/CD workflows or online via HTTP API Server
 - ⚡ **Lazy Loading**: Commands are lazy-loaded to keep startup time under 1 second
-- 🔍 **8 Core Commands**: list, show, search, query, export, export-edn, append, help
+- 🔍 **11 Core Commands**: list, show, search, query, export, export-edn, import-edn, validate, mcp-server, append, help
 - 📦 **nbb-logseq Runtime**: Runs ClojureScript via Node.js using a custom nbb fork
 - 🗃️ **Direct Database Access**: Uses better-sqlite3 for local graph queries
+- 🔌 **MCP Server**: Model Context Protocol support for AI assistant integration
 
 ## 📋 Table of Contents
 
@@ -858,20 +861,201 @@ graph LR
 
 ## Key Witnesses (Main Files)
 
-| File Path                                 | Role            | Lines | Key Responsibilities                           |
-| ----------------------------------------- | --------------- | ----- | ---------------------------------------------- |
-| `cli.mjs`                                 | Entry Point     | 15    | Bootstrap nbb, load ClojureScript, invoke main |
-| `src/logseq/cli.cljs`                     | Core Dispatcher | 137   | Command routing, lazy loading, error handling  |
-| `src/logseq/cli/spec.cljs`                | Command Specs   | 51    | babashka.cli option specifications             |
-| `src/logseq/cli/util.cljs`                | CLI Utilities   | 59    | API fetch, error handling, graph paths         |
-| `src/logseq/cli/common/graph.cljs`        | Graph Discovery | 33    | Graph directory management, name encoding      |
-| `src/logseq/cli/text_util.cljs`           | Text Utilities  | 44    | String wrapping, FTS marker parsing            |
-| `src/logseq/cli/commands/graph.cljs`      | list, show      | 53    | Graph listing and metadata display             |
-| `src/logseq/cli/commands/search.cljs`     | search          | 67    | Local and API search with highlighting         |
-| `src/logseq/cli/commands/query.cljs`      | query           | 106   | Entity, DataLog, and API queries               |
-| `src/logseq/cli/commands/export.cljs`     | export          | 80    | Markdown export with config handling           |
-| `src/logseq/cli/commands/export_edn.cljs` | export-edn      | 23    | EDN export via sqlite-export                   |
-| `src/logseq/cli/commands/append.cljs`     | append          | 14    | Block appending via API                        |
+| File Path                                  | Role                 | Lines | Key Responsibilities                            |
+| ------------------------------------------ | -------------------- | ----- | ----------------------------------------------- |
+| `cli.mjs`                                  | Entry Point          | 15    | Bootstrap nbb, load ClojureScript, invoke main  |
+| `src/logseq/cli.cljs`                      | Core Dispatcher      | 137   | Command routing, lazy loading, error handling   |
+| `src/logseq/cli/spec.cljs`                 | Command Specs        | 51    | babashka.cli option specifications              |
+| `src/logseq/cli/util.cljs`                 | CLI Utilities        | 59    | API fetch, error handling, graph paths          |
+| `src/logseq/cli/common/graph.cljs`         | Graph Discovery      | 33    | Graph directory management, name encoding       |
+| `src/logseq/cli/common/file.cljs`          | File Utilities       | ~50   | File handling, path operations                  |
+| `src/logseq/cli/common/util.cljs`          | Common Utilities     | ~80   | Shared utilities, EDN formatting                |
+| `src/logseq/cli/common/export/text.cljs`   | Text Export Utils    | ~100  | Text/markdown export utilities                  |
+| `src/logseq/cli/common/export/common.cljs` | Common Export Utils  | ~120  | Shared export functionality                     |
+| `src/logseq/cli/common/mcp/server.cljs`    | MCP Server           | ~200  | Model Context Protocol server infrastructure    |
+| `src/logseq/cli/common/mcp/tools.cljs`     | MCP Tools            | ~300  | MCP tool implementations (getPage, upsertNodes) |
+| `src/logseq/cli/text_util.cljs`            | Text Utilities       | 44    | String wrapping, FTS marker parsing             |
+| `src/logseq/cli/commands/graph.cljs`       | list, show           | 53    | Graph listing and metadata display              |
+| `src/logseq/cli/commands/search.cljs`      | search               | 67    | Local and API search with highlighting          |
+| `src/logseq/cli/commands/query.cljs`       | query                | 106   | Entity, DataLog, and API queries                |
+| `src/logseq/cli/commands/export.cljs`      | export               | 80    | Markdown export with config handling            |
+| `src/logseq/cli/commands/export_edn.cljs`  | export-edn           | 23    | EDN export via sqlite-export                    |
+| `src/logseq/cli/commands/import_edn.cljs`  | import-edn (v0.4.0+) | ~60   | EDN import to local or API graphs               |
+| `src/logseq/cli/commands/validate.cljs`    | validate (v0.4.0+)   | ~40   | Graph validation with Malli                     |
+| `src/logseq/cli/commands/mcp_server.cljs`  | mcp-server (v0.3.0+) | ~80   | MCP server command handler                      |
+| `src/logseq/cli/commands/append.cljs`      | append               | 14    | Block appending via API                         |
+
+## Architecture Updates (v0.4.0+)
+
+### New Namespace Organization
+
+The CLI has been restructured with clearer separation of concerns:
+
+```
+deps/cli/src/logseq/cli/
+├── cli.cljs                    # Main dispatcher
+├── spec.cljs                   # Command specifications
+├── util.cljs                   # CLI-specific utilities
+├── text_util.cljs              # Text processing
+├── common/                     # Shared infrastructure
+│   ├── graph.cljs              # Graph discovery
+│   ├── file.cljs               # File operations
+│   ├── util.cljs               # Common utilities
+│   ├── export/                 # Export utilities
+│   │   ├── text.cljs           # Text export
+│   │   └── common.cljs         # Shared export logic
+│   └── mcp/                    # MCP infrastructure (v0.3.0+)
+│       ├── server.cljs         # MCP server implementation
+│       └── tools.cljs          # MCP tool definitions
+└── commands/                   # Command implementations
+    ├── graph.cljs              # list, show
+    ├── search.cljs             # search
+    ├── query.cljs              # query
+    ├── export.cljs             # export (markdown)
+    ├── export_edn.cljs         # export-edn
+    ├── import_edn.cljs         # import-edn (v0.4.0+)
+    ├── validate.cljs           # validate (v0.4.0+)
+    ├── mcp_server.cljs         # mcp-server (v0.3.0+)
+    └── append.cljs             # append
+```
+
+### MCP Server Architecture
+
+**Location**: `src/logseq/cli/common/mcp/`
+
+The Model Context Protocol integration provides a standardized way for AI assistants and tools to interact with Logseq graphs.
+
+**Components:**
+
+1. **Server** (`mcp/server.cljs`):
+
+   - HTTP Streamable transport (default)
+   - Stdio transport (for AI assistants)
+   - Tool registration and dispatch
+   - Request/response handling
+
+2. **Tools** (`mcp/tools.cljs`):
+   - `getPage` - Page retrieval
+   - `listPages` - Page listing
+   - `listProperties` - Property schema
+   - `listTags` - Tag/class schema
+   - `upsertNodes` - Graph modifications
+
+**Tool Registration Pattern:**
+
+```clojure
+(def tools
+  {:getPage {:name "getPage"
+             :description "Get page entity and blocks"
+             :inputSchema {...}
+             :handler (fn [params db] ...)}
+   :listPages {...}
+   ;; ...
+   })
+```
+
+**Architecture Diagram:**
+
+```
+┌──────────────────────────────────────────────────────┐
+│             MCP Client (AI Assistant)                │
+│          (Claude Desktop, Custom Tool)               │
+└────────────────┬─────────────────────────────────────┘
+                 │
+    ┌────────────▼────────────┐
+    │   Transport Layer       │
+    │  (Stdio or HTTP)        │
+    └────────────┬────────────┘
+                 │
+    ┌────────────▼────────────┐
+    │   MCP Server            │
+    │   (server.cljs)         │
+    │   - Tool dispatch       │
+    │   - Schema validation   │
+    └────────────┬────────────┘
+                 │
+    ┌────────────▼────────────┐
+    │   MCP Tools             │
+    │   (tools.cljs)          │
+    │   - getPage             │
+    │   - listPages           │
+    │   - upsertNodes         │
+    └────────────┬────────────┘
+                 │
+    ┌────────────▼────────────┐
+    │   Graph Access Layer    │
+    │   - Local: sqlite-cli   │
+    │   - API: HTTP fetch     │
+    └─────────────────────────┘
+```
+
+### Enhanced Utility Functions (v0.4.0+)
+
+**Location**: `src/logseq/cli/util.cljs`
+
+**New Functions:**
+
+```clojure
+(defn get-graph-path
+  "Resolves graph name or path to actual file path.
+   Supports: graph-name, absolute path, relative path, ~/path"
+  [graph]
+  ...)
+
+(defn api-command?
+  "Determines if command should use API or local mode based on options"
+  [{:keys [api-server-token]}]
+  ...)
+
+(defn ensure-db-graph-for-command
+  "Validates graph is DB-based before running command"
+  [graph]
+  ...)
+
+(defn summarize-build-edn
+  "Formats import/export summaries consistently"
+  [build-edn]
+  ...)
+```
+
+**Local Path Support Pattern:**
+
+```clojure
+(defn ->open-db-args
+  [graph]
+  (cond
+    ;; Direct file path
+    (and (fs/existsSync graph) (.isFile (fs/statSync graph)))
+    [graph]
+
+    ;; Path with directory
+    (string/includes? graph "/")
+    ((juxt node-path/dirname node-path/basename) graph)
+
+    ;; Graph name (default)
+    :else
+    [(get-db-graphs-dir) (sanitize-db-name graph)]))
+```
+
+### Command Evolution
+
+**v0.3.0 → v0.4.0 Breaking Change:**
+
+Commands switched from positional to option-based graph specification:
+
+```clojure
+;; v0.3.0 (old)
+(search [graph search-term] ...)
+
+;; v0.4.0+ (new)
+(search [search-term] {:opts {:graph graph}} ...)
+```
+
+This enables:
+
+- Consistent option parsing across commands
+- Better support for local paths
+- Cleaner API/local mode detection
 
 ## Critical Findings
 
@@ -893,7 +1077,45 @@ The CLI bypasses Logseq's normal transaction pipeline and directly opens SQLite 
 - ✅ CI/CD integration
 - ✅ Faster bulk queries
 - ⚠️ No validation or hooks
-- ⚠️ Read-only safety (no writes in local mode)
+- ⚠️ Read-only safety (no writes in local mode except via import-edn)
+
+### 9. 🔧 MCP Integration Architecture (v0.3.0+)
+
+**Evidence**: `deps/cli/src/logseq/cli/common/mcp/`
+
+The CLI implements a full MCP (Model Context Protocol) server with 5 tools:
+
+- **Read Tools**: getPage, listPages, listProperties, listTags
+- **Write Tool**: upsertNodes (create/edit pages, blocks, tags, properties)
+
+**Architecture Highlights:**
+
+- Dual transport support (stdio for AI assistants, HTTP for development)
+- Malli-based schema validation for all tool inputs
+- Atomic operations (all-or-nothing transactions)
+- Dry-run mode for safe testing
+
+**Impact**: Enables AI assistants (Claude, ChatGPT) to read and modify Logseq graphs in real-time.
+
+### 10. 📦 Import/Export Atomicity (v0.4.0+)
+
+**Evidence**: `deps/cli/src/logseq/cli/commands/import_edn.cljs`
+
+Import operations are fully atomic - either all data imports successfully or nothing changes:
+
+```clojure
+(defn local-import [edn-file graph]
+  ;; Build EDN with refs
+  (let [build-edn (sqlite-export/build-import-edn ...)]
+    ;; Single atomic transaction
+    (sqlite-export/import-edn! db build-edn)))
+```
+
+**Benefits:**
+
+- No partial imports leaving graph in inconsistent state
+- Safe for production use
+- Rollback on validation errors
 
 ### 3. 🎯 Dual API Surface
 
