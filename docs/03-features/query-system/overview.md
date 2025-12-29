@@ -424,6 +424,36 @@ classDiagram
 
 ### Result Transformation
 
+**Post-Processing with :result-transform**
+
+The `:result-transform` option allows you to modify query results after execution. This works for both file-based and DB-based graphs.
+
+Common operations:
+
+```clojure
+;; Limit to 50 results
+:result-transform (fn [result] (take 50 result))
+
+;; Sort by most recently updated (descending)
+:result-transform (fn [result]
+                    (sort-by :block/updated-at > result))
+
+;; Combine: sort by updated date and limit to 50
+:result-transform (fn [result]
+                    (->> result
+                         (sort-by :block/updated-at >)
+                         (take 50)))
+
+;; Filter and sort
+:result-transform (fn [result]
+                    (->> result
+                         (filter #(= "A" (:block/priority %)))
+                         (sort-by :block/updated-at >)
+                         (take 50)))
+```
+
+For detailed documentation and more examples, see [result-transform-user.md](result-transform-user.md).
+
 **Group by Page**:
 
 ```clojure

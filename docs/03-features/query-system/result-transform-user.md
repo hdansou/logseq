@@ -106,7 +106,7 @@ Every `:result-transform` follows this structure:
                     (sort-by :logseq.property/priority result))
 ```
 
-### 2. Show Only First 10 Results
+### 2. Limit to First 10 Results
 
 ```clojure
 :result-transform (fn [result] (take 10 result))
@@ -114,19 +114,21 @@ Every `:result-transform` follows this structure:
 
 ### 3. Sort by Date (Newest First)
 
-**File-Based:**
+**By Created Date:**
 
 ```clojure
 :result-transform (fn [result]
                     (reverse (sort-by :block/created-at result)))
 ```
 
-**DB Graphs:**
+**By Last Updated Date:**
 
 ```clojure
 :result-transform (fn [result]
-                    (reverse (sort-by :block/created-at result)))
+                    (sort-by :block/updated-at > result))
 ```
+
+Note: Using `>` as the comparator sorts in descending order (newest first) directly without needing `reverse`.
 
 ### 4. Filter High Priority Only
 
@@ -141,7 +143,7 @@ Every `:result-transform` follows this structure:
 
 ```clojure
 :result-transform (fn [result]
-                    (filter #(= "A" (:logseq.property/priority %)) result))
+                    (filter #(= "High" (:logseq.property/priority %)) result))
 ```
 
 ### 5. Combine Operations
@@ -203,7 +205,7 @@ First, let's identify if you're using a file-based or DB graph:
          [?b :block/marker ?m]
          [(contains? #{"TODO" "DOING"} ?m)]]
  :result-transform (fn [result]
-                     (filter #(contains? #{"A" "B"} (:logseq.property/priority %))
+                     (filter #(contains? #{"High" "Urgent"} (:logseq.property/priority %))
                              result))}
 ```
 
@@ -233,7 +235,7 @@ First, let's identify if you're using a file-based or DB graph:
          [(contains? #{"TODO" "DOING"} ?m)]]
  :result-transform (fn [result]
                      (->> result
-                          (filter #(contains? #{"A" "B"} (:logseq.property/priority %)))
+                          (filter #(contains? #{"High" "Urgent"} (:logseq.property/priority %)))
                           (sort-by :logseq.property/deadline)))}
 ```
 
@@ -242,7 +244,7 @@ First, let's identify if you're using a file-based or DB graph:
 ```clojure
 :result-transform (fn [result]
                     (->> result
-                         (filter #(contains? #{"A" "B"} (:logseq.property/priority %)))
+                         (filter #(contains? #{"High" "Urgent"} (:logseq.property/priority %)))
                          (sort-by :logseq.property/deadline)
                          (take 10)))
 ```
@@ -286,10 +288,10 @@ Copy-paste these recipes and adapt them to your needs!
 
 ```clojure
 :result-transform (fn [result]
-                    (sort-by #(get % :logseq.property/priority "Z") result))
+                    (sort-by #(get % :logseq.property/priority "zzz") result))
 ```
 
-The `"Z"` is a fallback value for blocks without priority (sorts them last).
+The `"zzz"` is a fallback value for blocks without priority (sorts them last).
 
 ### Recipe 4: Advanced Priority Sort (A=1, B=2, C=3)
 
@@ -310,9 +312,10 @@ The `"Z"` is a fallback value for blocks without priority (sorts them last).
 ```clojure
 :result-transform (fn [result]
                     (sort-by #(case (:logseq.property/priority %)
-                                "A" 1
-                                "B" 2
-                                "C" 3
+                                "Urgent" 1
+                                "High" 2
+                                "Medium" 3
+                                "Low" 4
                                 99)
                              result))
 ```
@@ -379,6 +382,45 @@ Priority first, then deadline:
                          (group-by :block/tags)
                          (sort-by first)
                          (mapcat second)))
+```
+
+### Recipe 11: Most Recently Updated Items (Top 50)
+
+**Use case:** Show the 50 blocks you've edited most recently
+
+```clojure
+:result-transform (fn [result]
+                    (->> result
+                         (sort-by :block/updated-at >)
+                         (take 50)))
+```
+
+This is useful for finding blocks you're actively working on.
+
+### Recipe 12: Recently Updated with Priority Filter
+
+**Use case:** High-priority tasks sorted by recent updates
+
+**DB Graphs:**
+
+```clojure
+:result-transform (fn [result]
+                    (->> result
+                         (filter #(contains? #{"High" "Urgent"}
+                                   (:logseq.property/priority %)))
+                         (sort-by :block/updated-at >)
+                         (take 50)))
+```
+
+**File-Based:**
+
+```clojure
+:result-transform (fn [result]
+                    (->> result
+                         (filter #(contains? #{"A" "B"}
+                                   (:block/priority %)))
+                         (sort-by :block/updated-at >)
+                         (take 50)))
 ```
 
 ---
@@ -809,6 +851,46 @@ Then check the browser console (DevTools).
 1. **Inline** (in the query itself) - good for one-off transforms
 2. **Config file** (`logseq/config.edn`) - good for reusable transforms
 
+### Q: How do I limit the number of results?
+
+**A:** Use `:result-transform` with the `take` function:
+
+```clojure
+{:query [:find (pull ?b [*])
+         :where (task ?b #{"Todo"})]
+ :result-transform (fn [result] (take 50 result))}
+```
+
+You can combine this with sorting and filtering:
+
+```clojure
+;; Get 50 most recently updated items
+:result-transform (fn [result]
+                    (->> result
+                         (sort-by :block/updated-at >)
+                         (take 50)))
+```
+
+### Q: How do I sort by last updated date?
+
+**A:** Use `:block/updated-at` with the `>` comparator for descending order (newest first):
+
+```clojure
+;; Most recently updated first
+:result-transform (fn [result]
+                    (sort-by :block/updated-at > result))
+
+;; Oldest updates first
+:result-transform (fn [result]
+                    (sort-by :block/updated-at result))
+
+;; Most recently updated, limited to 50
+:result-transform (fn [result]
+                    (->> result
+                         (sort-by :block/updated-at >)
+                         (take 50)))
+```
+
 ### Q: Can I use regular expressions?
 
 **A:** Yes! Clojure's `re-find` and `re-matches` work in transforms:
@@ -832,7 +914,7 @@ Sort by priority, then by deadline, then by title:
 ```clojure
 :result-transform (fn [result]
                     (sort-by (fn [block]
-                               [(get block :logseq.property/priority "Z")
+                               [(get block :logseq.property/priority "zzz")
                                 (get block :logseq.property/deadline 99999999)
                                 (get block :block/content "")])
                              result))
@@ -847,9 +929,10 @@ Add emoji prefixes based on priority:
                     (map (fn [block]
                            (let [priority (:logseq.property/priority block)
                                  emoji (case priority
-                                         "A" "🔴 "
-                                         "B" "🟡 "
-                                         "C" "🟢 "
+                                         "Urgent" "🔴 "
+                                         "High" "🟠 "
+                                         "Medium" "🟡 "
+                                         "Low" "🟢 "
                                          "")]
                              (assoc block :block/content
                                     (str emoji (:block/content block)))))
@@ -876,7 +959,7 @@ Count and show only top priority:
 ```clojure
 :result-transform (fn [result]
                     (let [total (count result)
-                          high-pri (filter #(= "A" (:logseq.property/priority %)) result)
+                          high-pri (filter #(= "High" (:logseq.property/priority %)) result)
                           high-count (count high-pri)]
                       ;; Return with custom header block
                       (cons {:block/content (str "Showing " high-count " of " total " tasks")}
@@ -905,12 +988,12 @@ Show first N, but always include high-priority items:
 
 ```clojure
 :result-transform (fn [result]
-                    (let [high-pri (filter #(= "A" (:logseq.property/priority %)) result)
-                          others (remove #(= "A" (:logseq.property/priority %)) result)]
+                    (let [high-pri (filter #(= "High" (:logseq.property/priority %)) result)
+                          others (remove #(= "High" (:logseq.property/priority %)) result)]
                       (concat high-pri (take (- 10 (count high-pri)) others))))
 ```
 
-This always shows all A-priority items, then fills remaining slots with others.
+This always shows all High-priority items, then fills remaining slots with others.
 
 ### Technique 7: Deduplicate by Custom Logic
 
