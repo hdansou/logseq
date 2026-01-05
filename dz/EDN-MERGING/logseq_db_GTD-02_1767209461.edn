@@ -1,0 +1,2404 @@
+{:properties
+ {:user.property/Hi-Priority-j48miGDE
+  {:logseq.property/type :checkbox,
+   :block/updated-at 1753534924125,
+   :build/properties {},
+   :block/created-at 1753141853055,
+   :logseq.property/hide? true,
+   :block/title "Hi-Priority",
+   :db/cardinality :db.cardinality/one},
+  :user.property/Timeline-yi_urhGH
+  {:logseq.property/ui-position :block-left,
+   :logseq.property/type :default,
+   :build/closed-values
+   [{:value "Now",
+     :uuid #uuid "6882fd07-5732-4747-a46e-ed739de2379a",
+     :icon {:id "large_green_square", :type :emoji}}
+    {:value "Next",
+     :uuid #uuid "6882fd12-495f-41b6-9287-bdc01a8ac2bb",
+     :icon {:id "large_yellow_square", :type :emoji}}
+    {:value "Later",
+     :uuid #uuid "6882fd1c-c1c4-4fad-b9f3-05580ac8a755",
+     :icon {:id "large_red_square", :type :emoji}}
+    {:value "Icebox",
+     :uuid #uuid "6882fd30-990e-47bb-8cd3-16ad54532877",
+     :icon {:id "large_blue_square", :type :emoji}}
+    {:value "Archived",
+     :uuid #uuid "6882fd3f-3854-4132-a0ad-68a5cbad56a4",
+     :icon {:id "large_purple_square", :type :emoji}}],
+   :block/updated-at 1753416088541,
+   :build/properties {},
+   :block/created-at 1753414891775,
+   :block/title "Timeline",
+   :db/cardinality :db.cardinality/one},
+  :user.property/Duration-TWXFW8GR
+  {:logseq.property/type :number,
+   :block/updated-at 1753534919668,
+   :build/properties {},
+   :block/created-at 1753142160962,
+   :logseq.property/hide? true,
+   :block/title "Duration",
+   :db/cardinality :db.cardinality/one},
+  :user.property/Flag-bY26AahY
+  {:logseq.property/ui-position :block-left,
+   :logseq.property/type :default,
+   :build/closed-values
+   [{:value "flag",
+     :uuid #uuid "68830361-5c7f-45c9-a78f-05e1a4c48413",
+     :icon
+     {:type :tabler-icon,
+      :id "FlagFilled",
+      :name "FlagFilled",
+      :color "#fb434c"}}],
+   :block/updated-at 1753534141499,
+   :build/properties {},
+   :block/created-at 1753416428637,
+   :block/title "Flag",
+   :db/cardinality :db.cardinality/one},
+  :user.property/Task-e7Mngcfj
+  {:logseq.property/type :default,
+   :block/updated-at 1753142910934,
+   :build/properties {},
+   :block/created-at 1753142529998,
+   :block/title "Task",
+   :db/cardinality :db.cardinality/one,
+   :build/property-classes [:user.class/TT-f_3TQAXW]},
+  :user.property/RelatedProject-DQWhcBJt
+  {:logseq.property/type :node,
+   :block/updated-at 1753556911386,
+   :build/properties {:logseq.property/description ""},
+   :block/created-at 1753142757295,
+   :logseq.property/hide? true,
+   :block/title "Related Project",
+   :db/cardinality :db.cardinality/one,
+   :build/property-classes [:user.class/Project-CNasB_Qa]},
+  :user.property/Done-KDxMrzRd
+  {:logseq.property/ui-position :block-left,
+   :logseq.property/type :checkbox,
+   :block/updated-at 1756559521918,
+   :build/properties {:logseq.property/description ""},
+   :block/created-at 1753141216845,
+   :block/title "TT-Q",
+   :db/cardinality :db.cardinality/one},
+  :user.property/Context-PMs_ruf8
+  {:logseq.property/ui-position :block-right,
+   :logseq.property/type :node,
+   :block/updated-at 1753535811367,
+   :build/properties {},
+   :block/created-at 1753141254220,
+   :block/title "Context",
+   :db/cardinality :db.cardinality/one,
+   :build/property-classes [:user.class/GTDContext-Jf6jxf0W]},
+  :user.property/TT-C-aS1jp7QU
+  {:logseq.property/type :checkbox,
+   :build/closed-values
+   [{:value "Tido", :uuid #uuid "6884d946-b2f7-4014-97ab-3c551a0f11c9"}
+    {:value "Task", :uuid #uuid "6884d951-0684-4bd8-a086-d9ce49d5a76f"}
+    {:value "Project",
+     :uuid #uuid "6884d95c-904d-4d39-b358-b28e03ee1763"}],
+   :block/updated-at 1753537945777,
+   :build/properties {},
+   :block/created-at 1753536791519,
+   :block/title "TT-C",
+   :db/cardinality :db.cardinality/one},
+  :user.property/DueDate-ad1kXJfm
+  {:logseq.property/ui-position :block-right,
+   :logseq.property/type :date,
+   :block/updated-at 1753534829308,
+   :build/properties {},
+   :block/created-at 1753141233170,
+   :block/title "Due Date",
+   :db/cardinality :db.cardinality/one}},
+ :classes
+ {:user.class/f39c12-LO8MbEkQ
+  {:block/title "f39c12",
+   :block/created-at 1761791374460,
+   :block/updated-at 1761791374460,
+   :build/properties {}},
+  :user.class/NUM-4a90e2-Oy_l51Sl
+  {:block/title "4a90e2",
+   :block/created-at 1761791370627,
+   :block/updated-at 1761791370627,
+   :build/properties {}},
+  :user.class/Low-mC-1O0iK
+  {:block/title "Low Energy",
+   :block/created-at 1753141490959,
+   :block/updated-at 1753141510148,
+   :build/properties {}},
+  :user.class/e74c3c-H124U4oi
+  {:block/title "e74c3c",
+   :block/created-at 1761791383345,
+   :block/updated-at 1761791383345,
+   :build/properties {}},
+  :user.class/Wife-AX7XtVzp
+  {:block/title "Wife",
+   :block/created-at 1753141467003,
+   :block/updated-at 1753141467003,
+   :build/properties {}},
+  :user.class/Laptop-ofxUHMB8
+  {:block/title "Laptop",
+   :block/created-at 1753141471390,
+   :block/updated-at 1753141471390,
+   :build/properties {}},
+  :user.class/one-on-one-OpJrUUAA
+  {:block/title "one-on-one",
+   :block/created-at 1761004332081,
+   :block/updated-at 1761004332081,
+   :build/properties {}},
+  :user.class/Project-CNasB_Qa
+  {:block/uuid #uuid "687ed485-9348-4e76-9861-edcf7f63f883",
+   :build/class-properties
+   [:logseq.property/status
+    :user.property/Task-e7Mngcfj
+    :user.property/Timeline-yi_urhGH],
+   :block/updated-at 1753145527515,
+   :build/properties {},
+   :build/keep-uuid? true,
+   :block/created-at 1753142405373,
+   :block/collapsed? false,
+   :build/class-extends [:user.class/GTD-FZw-pS1K],
+   :block/title "Project"},
+  :user.class/Home-NyIXmESb
+  {:block/title "Home",
+   :block/created-at 1753141473731,
+   :block/updated-at 1753141473731,
+   :build/properties {}},
+  :user.class/TT-f_3TQAXW
+  {:block/uuid #uuid "687ecfd6-22ee-473a-9533-acd697895f59",
+   :build/class-properties
+   [:logseq.property/priority
+    :user.property/Done-KDxMrzRd
+    :user.property/Context-PMs_ruf8
+    :user.property/Duration-TWXFW8GR
+    :user.property/RelatedProject-DQWhcBJt
+    :user.property/Timeline-yi_urhGH],
+   :block/updated-at 1753567720842,
+   :build/properties
+   {:logseq.property/icon
+    {:type :tabler-icon, :id "ListCheck", :color "#6e7b8b"}},
+   :build/keep-uuid? true,
+   :block/created-at 1753141206483,
+   :block/collapsed? true,
+   :build/class-extends [:logseq.class/Task :user.class/GTD-FZw-pS1K],
+   :block/title "TT"},
+  :user.class/Office-wgg1aPyG
+  {:block/title "Office",
+   :block/created-at 1753141475094,
+   :block/updated-at 1753141475094,
+   :build/properties {}},
+  :user.class/NUM-1abc9c-GENBjzgL
+  {:block/title "1abc9c",
+   :block/created-at 1761791387338,
+   :block/updated-at 1761791387338,
+   :build/properties {}},
+  :user.class/NUM-9b59b6-nvkyYlYy
+  {:block/title "9b59b6",
+   :block/created-at 1761791378529,
+   :block/updated-at 1761791378529,
+   :build/properties {}},
+  :user.class/High-Y7F4V1go
+  {:block/title "High Energy",
+   :block/created-at 1753141476744,
+   :block/updated-at 1753141501060,
+   :build/properties {}},
+  :user.class/GTD-FZw-pS1K
+  {:block/title "GTD",
+   :block/collapsed? false,
+   :block/uuid #uuid "687ed3e0-6fb3-46a6-b5ef-c61e0d504fd3",
+   :build/keep-uuid? true,
+   :block/created-at 1753142240759,
+   :block/updated-at 1753142240759,
+   :build/properties {}},
+  :user.class/Boss-v8XRTjFI
+  {:block/title "Boss",
+   :block/created-at 1753141468857,
+   :block/updated-at 1753141468857,
+   :build/properties {}},
+  :user.class/GTDContext-Jf6jxf0W
+  {:block/title "GTD Context",
+   :block/uuid #uuid "687ed06b-eb39-4745-b110-911140a0ff80",
+   :build/keep-uuid? true,
+   :block/created-at 1753141355370,
+   :block/updated-at 1753142257207,
+   :build/class-extends [:user.class/GTD-FZw-pS1K],
+   :build/properties {}},
+  :user.class/NUM-34495e-Lspp2Nwu
+  {:block/title "34495e",
+   :block/created-at 1761791390614,
+   :block/updated-at 1761791390614,
+   :build/properties {}}},
+ :pages-and-blocks
+ [{:page
+   {:block/created-at 1753141155219,
+    :block/updated-at 1753141155219,
+    :build/properties
+    {:logseq.property/built-in? true, :logseq.property/hide? true},
+    :block/title "$$$favorites"},
+   :blocks
+   [{:block/title "",
+     :block/link
+     [:block/uuid #uuid "687ecfd6-22ee-473a-9533-acd697895f59"],
+     :block/created-at 1753142440256,
+     :block/updated-at 1753142440256,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "00000004-1906-3437-5800-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1753141155219,
+    :block/updated-at 1757728305846,
+    :build/properties
+    {:logseq.property/built-in? true, :logseq.property/hide? true},
+    :block/title "$$$views"},
+   :blocks
+   [{:block/title "All",
+     :block/created-at 1753141198139,
+     :block/updated-at 1757732356597,
+     :build/properties
+     {:logseq.property.table/sorting
+      [{:id :logseq.property/status, :asc? true}
+       {:id :block/updated-at, :asc? false}],
+      :logseq.property.view/sort-groups-desc? false,
+      :logseq.property.table/sized-columns
+      {:block/tags 78, :logseq.property/status 126},
+      :logseq.property.view/type :logseq.property.view/type.table,
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Task,
+      :logseq.property.table/filters
+      {:or? false,
+       :filters
+       [[:logseq.property/status
+         :is-not
+         #{#uuid "00000002-1827-5820-8200-000000000000"}]]}}}
+    {:block/title "All",
+     :block/created-at 1753141499162,
+     :block/updated-at 1753141499168,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/High-Y7F4V1go}}
+    {:block/title "All",
+     :block/created-at 1753141507856,
+     :block/updated-at 1753141507863,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/Low-mC-1O0iK}}
+    {:block/title "Capture",
+     :block/created-at 1753141549203,
+     :block/updated-at 1753566803751,
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:user.property/Hi-Priority-j48miGDE 89,
+       :user.property/Timeline-yi_urhGH 102,
+       :user.property/Duration-TWXFW8GR 75,
+       :user.property/Flag-bY26AahY 65,
+       :logseq.property/deadline 160,
+       :user.property/RelatedProject-DQWhcBJt 136,
+       :logseq.property/status 97,
+       :logseq.property/scheduled 142,
+       :user.property/Done-KDxMrzRd 55,
+       :block/tags 67,
+       :block/title 212,
+       :user.property/Context-PMs_ruf8 102,
+       :logseq.property/priority 89,
+       :user.property/TT-C-aS1jp7QU 62,
+       :user.property/DueDate-ad1kXJfm 111},
+      :logseq.property.view/type :logseq.property.view/type.table,
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/tags :block/updated-at},
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/TT-f_3TQAXW,
+      :logseq.property.table/ordered-columns
+      [:user.property/Done-KDxMrzRd
+       :logseq.property/status
+       :block/title
+       :user.property/Flag-bY26AahY
+       :user.property/Timeline-yi_urhGH
+       :user.property/Context-PMs_ruf8
+       :user.property/Duration-TWXFW8GR
+       :user.property/RelatedProject-DQWhcBJt
+       :logseq.property/priority
+       :logseq.property/deadline
+       :logseq.property/scheduled
+       :add-new-property],
+      :logseq.property.table/filters
+      {:or? false,
+       :filters
+       [[:user.property/Done-KDxMrzRd :is false]
+        [:logseq.property/status
+         :is-not
+         #{#uuid "00000002-1615-5853-7700-000000000000"
+           #uuid "00000002-1827-5820-8200-000000000000"
+           #uuid "00000002-7526-4326-2000-000000000000"}]]}}}
+    {:block/title "",
+     :block/created-at 1753566644905,
+     :block/updated-at 1753566644905,
+     :build/properties {}}
+    {:block/title "All",
+     :block/created-at 1753141567357,
+     :block/updated-at 1753141567365,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/GTDContext-Jf6jxf0W}}
+    {:block/title "Linked references",
+     :block/created-at 1753141939959,
+     :block/updated-at 1753141939979,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/GTDContext-Jf6jxf0W}}
+    {:block/title "All",
+     :block/created-at 1753142445484,
+     :block/updated-at 1756562077647,
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/tags 96,
+       :user.property/Task-e7Mngcfj 335,
+       :block/title 216,
+       :logseq.property/status 116},
+      :logseq.property.view/type :logseq.property.view/type.table,
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/Project-CNasB_Qa}}
+    {:block/title "Linked references",
+     :block/created-at 1753142650113,
+     :block/updated-at 1753142650129,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references}}
+    {:block/title "Linked references",
+     :block/created-at 1753142655783,
+     :block/updated-at 1753142655802,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/TT-f_3TQAXW}}
+    {:block/title "Linked references",
+     :block/created-at 1753142832742,
+     :block/updated-at 1753142832761,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/Project-CNasB_Qa}}
+    {:block/title "Linked references",
+     :block/created-at 1753142891740,
+     :block/updated-at 1753142891759,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed277-f544-4c01-87e7-7c9e77f8047d"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753143389051,
+     :block/updated-at 1753143389072,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed4b5-082e-43af-be9d-68b7c7991a7d"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753144619809,
+     :block/updated-at 1753144619828,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84"]}}
+    {:block/title "",
+     :block/created-at 1753145255164,
+     :block/updated-at 1753145255185,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84"]}}
+    {:block/title "All",
+     :block/created-at 1753145259992,
+     :block/updated-at 1761782694050,
+     :build/properties
+     {:logseq.property.table/sorting
+      [{:id :block/updated-at, :asc? false}],
+      :logseq.property.view/feature-type :all-pages,
+      :logseq.property/view-for
+      [:block/uuid #uuid "00000004-1906-3437-5800-000000000000"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753145266685,
+     :block/updated-at 1753145266705,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687edd58-7bec-4084-8b16-4387bb6e477f"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1753145548401,
+     :block/updated-at 1753145548421,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687edd58-7bec-4084-8b16-4387bb6e477f"]}}
+    {:block/title "All",
+     :block/created-at 1753145575257,
+     :block/updated-at 1753145575265,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Asset}}
+    {:block/title "Unlinked references",
+     :block/created-at 1753149913507,
+     :block/updated-at 1753149913530,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1753417498035,
+     :block/updated-at 1753417498054,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2ce-135d-4973-9ebd-a9811cf84a86"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753417497992,
+     :block/updated-at 1753417498016,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2ce-135d-4973-9ebd-a9811cf84a86"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753531307921,
+     :block/updated-at 1753531307942,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "00000001-2025-0725-0000-000000000000"]}}
+    {:block/title "All",
+     :block/created-at 1753534127254,
+     :block/updated-at 1753534127266,
+     :build/properties
+     {:logseq.property.view/feature-type :property-objects,
+      :logseq.property/view-for :user.property/Flag-bY26AahY}}
+    {:block/title "Linked references",
+     :block/created-at 1753534885157,
+     :block/updated-at 1753534885184,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.property/Flag-bY26AahY}}
+    {:block/title "Linked references",
+     :block/created-at 1753535013416,
+     :block/updated-at 1753535013432,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "00000001-2025-0726-0000-000000000000"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753535908632,
+     :block/updated-at 1753535908654,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6884ce64-9db0-4e8e-84f8-e67a96326923"]}}
+    {:block/title "All",
+     :block/created-at 1753537716584,
+     :block/updated-at 1753537716594,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/GTD-FZw-pS1K}}
+    {:block/title "Linked references",
+     :block/created-at 1753537716663,
+     :block/updated-at 1753537716679,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/GTD-FZw-pS1K}}
+    {:block/title "Unlinked references",
+     :block/created-at 1753558424472,
+     :block/updated-at 1753558424492,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2c1-1ba5-4045-b043-31ff71727ebc"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753558424439,
+     :block/updated-at 1753558424456,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2c1-1ba5-4045-b043-31ff71727ebc"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753558433436,
+     :block/updated-at 1753558433452,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "68852d62-3601-41e3-ae95-89ebfa826ade"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1753558452280,
+     :block/updated-at 1753558452299,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2c7-f3bb-409a-8c9f-18a25fcfe527"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753558452246,
+     :block/updated-at 1753558452262,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2c7-f3bb-409a-8c9f-18a25fcfe527"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1753558481852,
+     :block/updated-at 1753558481871,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2d1-9e6c-4ec3-9433-59b38f8a9a85"]}}
+    {:block/title "Linked references",
+     :block/created-at 1753558481817,
+     :block/updated-at 1753558481835,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "687ed2d1-9e6c-4ec3-9433-59b38f8a9a85"]}}
+    {:block/title "Linked references",
+     :block/created-at 1754171299235,
+     :block/updated-at 1754171299257,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "00000001-2025-0731-0000-000000000000"]}}
+    {:block/title "All",
+     :block/created-at 1754393336042,
+     :block/updated-at 1754393336057,
+     :build/properties
+     {:logseq.property.view/feature-type :property-objects,
+      :logseq.property/view-for :logseq.property/deadline}}
+    {:block/title "Linked references",
+     :block/created-at 1754400835916,
+     :block/updated-at 1754400835935,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "00000001-2025-0805-0000-000000000000"]}}
+    {:block/title "Linked references",
+     :block/created-at 1755143552481,
+     :block/updated-at 1755143552502,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :logseq.class/Task}}
+    {:block/title "Linked references",
+     :block/created-at 1757727885446,
+     :block/updated-at 1757727885482,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6884dc8b-3268-4009-a126-9ce0115ae0d2"]}}
+    {:block/title "Inbox",
+     :block/created-at 1757728289587,
+     :block/updated-at 1757728358443,
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/tags 73,
+       :logseq.property/status 93,
+       :logseq.property/priority 117,
+       :block/title 370},
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Task,
+      :logseq.property.table/filters
+      {:or? false,
+       :filters
+       [[:logseq.property/status
+         :is
+         #{#uuid "00000002-7233-3491-0000-000000000000"}]]}}}
+    {:block/title "",
+     :block/created-at 1757728306626,
+     :block/updated-at 1757728306626,
+     :build/properties {}}
+    {:block/title "ox",
+     :block/created-at 1757728302333,
+     :block/updated-at 1757728302333,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1757728296830,
+     :block/updated-at 1757728296830,
+     :build/properties {}}
+    {:block/title "Unlinked references",
+     :block/created-at 1757732369150,
+     :block/updated-at 1757732369175,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "68b2f628-ff89-4e5f-ac9a-c2068a14580d"]}}
+    {:block/title "All",
+     :block/created-at 1761004373047,
+     :block/updated-at 1761004373068,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/one-on-one-OpJrUUAA}}
+    {:block/title "Linked references",
+     :block/created-at 1766423967687,
+     :block/updated-at 1766423967687,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "68f6cb50-0882-47f9-9bd0-63e5061a859f"]}}
+    {:block/title "Linked references",
+     :block/created-at 1761004483489,
+     :block/updated-at 1761004483517,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "68f6cb42-8266-45fa-a179-93ab2aa1d106"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1761004483547,
+     :block/updated-at 1761004483572,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "68f6cb42-8266-45fa-a179-93ab2aa1d106"]}}
+    {:block/title "Linked references",
+     :block/created-at 1761790896410,
+     :block/updated-at 1761790896443,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6902c995-1081-4067-ad55-be389964cea5"]}}
+    {:block/title "Linked references",
+     :block/created-at 1761790898211,
+     :block/updated-at 1761790898234,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6902c995-86fa-4a56-996d-78fcb0de9358"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1761790898266,
+     :block/updated-at 1761790898284,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6902c995-86fa-4a56-996d-78fcb0de9358"]}}
+    {:block/title "Linked references",
+     :block/created-at 1761790900498,
+     :block/updated-at 1761790900518,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6902c995-04ce-4156-b57c-19ffd728b01b"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1761790900548,
+     :block/updated-at 1761790900572,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6902c995-04ce-4156-b57c-19ffd728b01b"]}}
+    {:block/title "Linked references",
+     :block/created-at 1761792456597,
+     :block/updated-at 1761792456627,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c"]}}]}
+  {:page
+   {:block/uuid #uuid "6884dc8b-3268-4009-a126-9ce0115ae0d2",
+    :build/keep-uuid? true,
+    :block/created-at 1753537675886,
+    :block/updated-at 1753537682254,
+    :build/tags [:user.class/Project-CNasB_Qa],
+    :build/properties
+    {:user.property/Timeline-yi_urhGH
+     [:block/uuid #uuid "6882fd3f-3854-4132-a0ad-68a5cbad56a4"]},
+    :block/title "2024 Vacation"},
+   :blocks []}
+  {:page
+   {:block/created-at 1753141155474,
+    :block/updated-at 1753141519110,
+    :build/properties {},
+    :build/journal 20250721},
+   :blocks []}
+  {:page
+   {:block/created-at 1753414760191,
+    :block/updated-at 1753552864635,
+    :build/properties {},
+    :build/journal 20250724},
+   :blocks
+   [{:block/title "Demo the GTD Setup",
+     :block/collapsed? false,
+     :block/created-at 1753415957274,
+     :block/updated-at 1753567841399,
+     :build/tags [:user.class/TT-f_3TQAXW],
+     :build/properties
+     {:user.property/Duration-TWXFW8GR
+      :logseq.property/empty-placeholder,
+      :logseq.property/deadline 1753506000000,
+      :user.property/RelatedProject-DQWhcBJt
+      [:block/uuid #uuid "6884dbdb-a53b-4f63-8fd7-269c7e1e62ca"],
+      :user.property/Done-KDxMrzRd false,
+      :user.property/Context-PMs_ruf8
+      [:block/uuid #uuid "687ed2d1-9e6c-4ec3-9433-59b38f8a9a85"],
+      :logseq.property/priority :logseq.property/priority.medium}}
+    {:block/title "",
+     :block/created-at 1753416009211,
+     :block/updated-at 1753416009211,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0725-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1753142100082,
+    :block/updated-at 1753142100082,
+    :build/properties {},
+    :build/journal 20250725},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0726-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1753531307819,
+    :block/updated-at 1753536262160,
+    :build/properties {},
+    :build/journal 20250726},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1753535896740,
+     :block/updated-at 1753535896740,
+     :build/properties {}}
+    {:block/title
+     "logseq://graph/GTD-02?block-id=6884ce64-9db0-4e8e-84f8-e67a96326923",
+     :block/created-at 1753535968136,
+     :block/updated-at 1753535968983,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1753535969515,
+     :block/updated-at 1753535969515,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1753536002271,
+     :block/updated-at 1753536002271,
+     :build/properties {}}
+    {:block/title "",
+     :block/link
+     [:block/uuid #uuid "6884ce64-9db0-4e8e-84f8-e67a96326923"],
+     :block/created-at 1753536009786,
+     :block/updated-at 1753536009786,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1753762766449,
+    :block/updated-at 1753762766449,
+    :build/properties {},
+    :build/journal 20250728},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0731-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1753556860289,
+    :block/updated-at 1753556860289,
+    :build/properties {},
+    :build/journal 20250731},
+   :blocks []}
+  {:page
+   {:block/created-at 1754171299136,
+    :block/updated-at 1754171299136,
+    :build/properties {},
+    :build/journal 20250802},
+   :blocks
+   [{:block/title "Top-rated seafood restaurants in Miami.",
+     :block/created-at 1754401084108,
+     :block/updated-at 1754401084108,
+     :build/properties {}}
+    {:block/title "Best pizza places nearby.",
+     :block/created-at 1754401084108,
+     :block/updated-at 1754401084108,
+     :build/properties {}}
+    {:block/title "Popular breakfast spots in New York.",
+     :block/created-at 1754401084108,
+     :block/updated-at 1754401084108,
+     :build/properties {}}
+    {:block/title "Recipes for quick pasta dishes.",
+     :block/created-at 1754401084108,
+     :block/updated-at 1754401084108,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1754230086848,
+    :block/updated-at 1754400830401,
+    :build/properties {},
+    :build/journal 20250803},
+   :blocks
+   [{:block/title
+     "Finish the recording of the Book framework video for Logseq DB",
+     :block/created-at 1754400790245,
+     :block/updated-at 1754401249614,
+     :build/tags [:logseq.class/Task],
+     :build/properties
+     {:logseq.property/status :logseq.property/status.done}}
+    {:block/title "Learn to use tinkercad",
+     :block/created-at 1754400817057,
+     :block/updated-at 1754400830400,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0805-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754393328895,
+    :block/updated-at 1754393328895,
+    :build/properties {},
+    :build/journal 20250805},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1754401093659,
+     :block/updated-at 1754401093659,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1754401209273,
+     :block/updated-at 1754401209273,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1754863235986,
+    :block/updated-at 1754863235986,
+    :build/properties {},
+    :build/journal 20250810},
+   :blocks []}
+  {:page
+   {:block/created-at 1754968537792,
+    :block/updated-at 1754968537792,
+    :build/properties {},
+    :build/journal 20250811},
+   :blocks []}
+  {:page
+   {:block/created-at 1755143540384,
+    :block/updated-at 1755143540384,
+    :build/properties {},
+    :build/journal 20250813},
+   :blocks []}
+  {:page
+   {:block/created-at 1755148132379,
+    :block/updated-at 1755148132379,
+    :build/properties {},
+    :build/journal 20250814},
+   :blocks []}
+  {:page
+   {:block/created-at 1755957965995,
+    :block/updated-at 1755957965995,
+    :build/properties {},
+    :build/journal 20250823},
+   :blocks []}
+  {:page
+   {:block/created-at 1756512872608,
+    :block/updated-at 1756512872608,
+    :build/properties {},
+    :build/journal 20250829},
+   :blocks []}
+  {:page
+   {:block/created-at 1756557249948,
+    :block/updated-at 1756559333751,
+    :build/properties {},
+    :build/journal 20250830},
+   :blocks
+   [{:block/title "Simple Query.....",
+     :block/created-at 1756557948762,
+     :block/updated-at 1756559333751,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property/query
+      "(tags [[687ecfd6-22ee-473a-9533-acd697895f59]])"}}
+    {:block/title "",
+     :block/created-at 1756557975629,
+     :block/updated-at 1756557975629,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1756558411920,
+     :block/updated-at 1756558411920,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1756558416293,
+     :block/updated-at 1756558416293,
+     :build/properties {}}
+    {:block/title "demo",
+     :block/uuid #uuid "68b2f628-ff89-4e5f-ac9a-c2068a14580d",
+     :build/keep-uuid? true,
+     :block/created-at 1756558888161,
+     :block/updated-at 1757732385360,
+     :build/tags [:logseq.class/Task],
+     :build/properties
+     {:logseq.property/status :logseq.property/status.todo}}]}
+  {:page
+   {:block/created-at 1756619459638,
+    :block/updated-at 1756619459638,
+    :build/properties {},
+    :build/journal 20250831},
+   :blocks []}
+  {:page
+   {:block/created-at 1756734688819,
+    :block/updated-at 1756734688819,
+    :build/properties {},
+    :build/journal 20250901},
+   :blocks []}
+  {:page
+   {:block/created-at 1756859271654,
+    :block/updated-at 1756859271654,
+    :build/properties {},
+    :build/journal 20250902},
+   :blocks []}
+  {:page
+   {:block/created-at 1757681786095,
+    :block/updated-at 1757728152177,
+    :build/properties {},
+    :build/journal 20250912},
+   :blocks
+   [{:block/title
+     "Test a new GTD workflow with just Task Status customization",
+     :block/created-at 1757728070830,
+     :block/updated-at 1757732483643,
+     :build/tags [:logseq.class/Task],
+     :build/properties {:logseq.property/status "This Week"}}
+    {:block/title
+     "Draft the requirement for creating Logseq Task notification",
+     :block/created-at 1757728131772,
+     :block/updated-at 1757732294999,
+     :build/tags [:logseq.class/Task],
+     :build/properties {:logseq.property/status "This Week"}}
+    {:block/title "",
+     :block/created-at 1757728158022,
+     :block/updated-at 1757728158022,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1758199636326,
+    :block/updated-at 1758199636326,
+    :build/properties {},
+    :build/journal 20250918},
+   :blocks []}
+  {:page
+   {:block/created-at 1759029015404,
+    :block/updated-at 1759029015404,
+    :build/properties {},
+    :build/journal 20250927},
+   :blocks []}
+  {:page
+   {:block/created-at 1760905434394,
+    :block/updated-at 1760905434394,
+    :build/properties {},
+    :build/journal 20251019},
+   :blocks []}
+  {:page
+   {:block/created-at 1760936935183,
+    :block/updated-at 1761004368806,
+    :build/properties {},
+    :build/journal 20251020},
+   :blocks
+   [{:block/title
+     "[[68f6cb42-8266-45fa-a179-93ab2aa1d106]] and [[68f6cb50-0882-47f9-9bd0-63e5061a859f]]",
+     :block/created-at 1761004325426,
+     :block/updated-at 1761004368805,
+     :build/tags [:user.class/one-on-one-OpJrUUAA],
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1761004368816,
+     :block/updated-at 1761004368816,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1761004479976,
+     :block/updated-at 1761004479976,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761022825611,
+    :block/updated-at 1761022825611,
+    :build/properties {},
+    :build/journal 20251021},
+   :blocks []}
+  {:page
+   {:block/created-at 1761565239901,
+    :block/updated-at 1761565239901,
+    :build/properties {},
+    :build/journal 20251027},
+   :blocks []}
+  {:page
+   {:block/created-at 1761782568105,
+    :block/updated-at 1761782568105,
+    :build/properties {},
+    :build/journal 20251029},
+   :blocks []}
+  {:page
+   {:block/created-at 1761800427336,
+    :block/updated-at 1761868649964,
+    :build/properties {},
+    :build/journal 20251030},
+   :blocks
+   [{:block/title "qYjsabsebmof1nucry1!",
+     :block/created-at 1761868512974,
+     :block/updated-at 1761868649964,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1761868650160,
+     :block/updated-at 1761868650160,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1762179107119,
+    :block/updated-at 1762179107119,
+    :build/properties {},
+    :build/journal 20251103},
+   :blocks []}
+  {:page
+   {:block/created-at 1762236028777,
+    :block/updated-at 1762236028777,
+    :build/properties {},
+    :build/journal 20251104},
+   :blocks []}
+  {:page
+   {:block/created-at 1762453115014,
+    :block/updated-at 1762453115014,
+    :build/properties {},
+    :build/journal 20251106},
+   :blocks []}
+  {:page
+   {:block/created-at 1763154602156,
+    :block/updated-at 1763158917031,
+    :build/properties {},
+    :build/journal 20251114},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1763158884654,
+     :block/updated-at 1763158956771,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property/query
+      "(property :user.property/RelatedProject-DQWhcBJt)",
+      :logseq.property.table/filters
+      {:or? false,
+       :filters
+       [[:user.property/RelatedProject-DQWhcBJt
+         :is
+         #{#uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84"}]]}}}]}
+  {:page
+   {:block/created-at 1763188723916,
+    :block/updated-at 1763188723916,
+    :build/properties {},
+    :build/journal 20251115},
+   :blocks []}
+  {:page
+   {:block/created-at 1763912601200,
+    :block/updated-at 1763912601200,
+    :build/properties {},
+    :build/journal 20251123},
+   :blocks []}
+  {:page
+   {:block/created-at 1764435411775,
+    :block/updated-at 1764435411775,
+    :build/properties {},
+    :build/journal 20251129},
+   :blocks []}
+  {:page
+   {:block/created-at 1765599141157,
+    :block/updated-at 1765599141157,
+    :build/properties {},
+    :build/journal 20251212},
+   :blocks []}
+  {:page
+   {:block/created-at 1765605858625,
+    :block/updated-at 1765605858625,
+    :build/properties {},
+    :build/journal 20251213},
+   :blocks []}
+  {:page
+   {:block/created-at 1765692027272,
+    :block/updated-at 1765692027272,
+    :build/properties {},
+    :build/journal 20251214},
+   :blocks []}
+  {:page
+   {:block/created-at 1766007136787,
+    :block/updated-at 1766007136787,
+    :build/properties {},
+    :build/journal 20251217},
+   :blocks []}
+  {:page
+   {:block/created-at 1766423954704,
+    :block/updated-at 1766423954704,
+    :build/properties {},
+    :build/journal 20251222},
+   :blocks []}
+  {:page
+   {:block/created-at 1766935517908,
+    :block/updated-at 1766935517908,
+    :build/properties {},
+    :build/journal 20251228},
+   :blocks []}
+  {:page
+   {:block/created-at 1767201839914,
+    :block/updated-at 1767201839914,
+    :build/properties {},
+    :build/journal 20251231},
+   :blocks []}
+  {:page {:block/uuid #uuid "687ecfd6-22ee-473a-9533-acd697895f59"},
+   :blocks
+   [{:block/title "Cancel game subscription",
+     :block/created-at 1753141861619,
+     :block/updated-at 1753566981893,
+     :build/tags [:user.class/TT-f_3TQAXW],
+     :build/properties
+     {:user.property/Timeline-yi_urhGH
+      [:block/uuid #uuid "6882fd30-990e-47bb-8cd3-16ad54532877"],
+      :logseq.property/deadline 1753938000000,
+      :user.property/RelatedProject-DQWhcBJt
+      [:block/uuid #uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84"],
+      :logseq.property/status :logseq.property/status.done,
+      :user.property/Done-KDxMrzRd true,
+      :logseq.property/priority :logseq.property/priority.low}}
+    {:block/title "Learn to drive a race car",
+     :block/uuid #uuid "687ed277-f544-4c01-87e7-7c9e77f8047d",
+     :build/keep-uuid? true,
+     :block/created-at 1753141879449,
+     :block/updated-at 1757728200978,
+     :build/tags [:user.class/TT-f_3TQAXW],
+     :build/properties
+     {:user.property/Timeline-yi_urhGH
+      [:block/uuid #uuid "6882fd1c-c1c4-4fad-b9f3-05580ac8a755"],
+      :user.property/Flag-bY26AahY
+      [:block/uuid #uuid "68830361-5c7f-45c9-a78f-05e1a4c48413"],
+      :user.property/RelatedProject-DQWhcBJt
+      [:block/uuid #uuid "687ed4b5-082e-43af-be9d-68b7c7991a7d"],
+      :logseq.property/status :logseq.property/status.done,
+      :user.property/Done-KDxMrzRd false}}
+    {:block/title "Pay water bill",
+     :block/created-at 1753141900021,
+     :block/updated-at 1756562218745,
+     :build/tags [:user.class/TT-f_3TQAXW],
+     :build/properties
+     {:user.property/Timeline-yi_urhGH
+      [:block/uuid #uuid "6882fd3f-3854-4132-a0ad-68a5cbad56a4"],
+      :user.property/Duration-TWXFW8GR
+      :logseq.property/empty-placeholder,
+      :user.property/Flag-bY26AahY
+      [:block/uuid #uuid "68830361-5c7f-45c9-a78f-05e1a4c48413"],
+      :user.property/RelatedProject-DQWhcBJt
+      [:block/uuid #uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84"],
+      :logseq.property/status :logseq.property/status.doing,
+      :user.property/Done-KDxMrzRd true}}
+    {:block/title "Trip to Costa Rica",
+     :block/created-at 1753142043559,
+     :block/updated-at 1753567847593,
+     :build/tags [:user.class/TT-f_3TQAXW],
+     :build/properties
+     {:user.property/Duration-TWXFW8GR
+      :logseq.property/empty-placeholder,
+      :user.property/RelatedProject-DQWhcBJt
+      [:block/uuid #uuid "6884dc8b-3268-4009-a126-9ce0115ae0d2"],
+      :user.property/Done-KDxMrzRd false,
+      :logseq.property/priority :logseq.property/priority.high}}
+    {:block/title "My Checklist",
+     :block/collapsed? false,
+     :block/uuid #uuid "6884ce64-9db0-4e8e-84f8-e67a96326923",
+     :build/keep-uuid? true,
+     :block/created-at 1753534052307,
+     :block/updated-at 1753567729235,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property.table/sorting
+      [{:id :block/updated-at, :asc? true}],
+      :logseq.property.table/sized-columns
+      {:block/title 245,
+       :block/tags 66,
+       :user.property/Done-KDxMrzRd 62,
+       :user.property/Flag-bY26AahY 77,
+       :user.property/Timeline-yi_urhGH 107,
+       :user.property/RelatedProject-DQWhcBJt 137,
+       :logseq.property/priority 125,
+       :user.property/Context-PMs_ruf8 111},
+      :logseq.property.view/type :logseq.property.view/type.table,
+      :logseq.property/heading 2,
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/tags :block/updated-at
+        :user.property/Done-KDxMrzRd
+        :user.property/Timeline-yi_urhGH},
+      :logseq.property/query
+      "(and (tags [[687ecfd6-22ee-473a-9533-acd697895f59]]) (property :user.property/Done-KDxMrzRd true) (not (private-property :logseq.property/status \"Done\")))"}}
+    {:block/title "My Tasks",
+     :block/created-at 1753566908741,
+     :block/updated-at 1753567704887,
+     :build/properties {:logseq.property/heading 2}}
+    {:block/title "",
+     :block/created-at 1753566918101,
+     :block/updated-at 1756734703218,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/title 316,
+       :block/tags 82,
+       :logseq.property/priority 107,
+       :logseq.property/status 110,
+       :logseq.property/deadline 153,
+       :user.property/Timeline-yi_urhGH 104,
+       :user.property/Context-PMs_ruf8 79},
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/updated-at
+        :user.property/Done-KDxMrzRd
+        :user.property/Flag-bY26AahY},
+      :logseq.property/query
+      "(and (task \"In Review\" \"Doing\" \"Todo\" \"Backlog\") (property :user.property/Done-KDxMrzRd false))"}}
+    {:block/title "",
+     :block/created-at 1753566918274,
+     :block/updated-at 1753566918274,
+     :build/properties {}}
+    {:block/title "My Projects",
+     :block/collapsed? false,
+     :block/created-at 1753536379121,
+     :block/updated-at 1756738739205,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property.table/sorting
+      [{:id :user.property/Timeline-yi_urhGH, :asc? true}],
+      :logseq.property.view/sort-groups-desc? true,
+      :logseq.property.table/sized-columns
+      {:block/title 179, :user.property/Task-e7Mngcfj 337},
+      :logseq.property/heading 2,
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/updated-at},
+      :logseq.property.view/group-by-property
+      :user.property/Timeline-yi_urhGH,
+      :logseq.property/query
+      "(and (tags [[687ed485-9348-4e76-9861-edcf7f63f883]]) (not (property :user.property/Timeline-yi_urhGH \"5-ARCHIVED\")))"}}
+    {:block/title "",
+     :block/created-at 1753536380598,
+     :block/updated-at 1753536380598,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1753536380990,
+     :block/updated-at 1753536380990,
+     :build/properties {}}
+    {:block/title "Learn to Drive a Car",
+     :block/created-at 1753535749591,
+     :block/updated-at 1757732424980,
+     :build/tags [:user.class/TT-f_3TQAXW],
+     :build/properties
+     {:user.property/Duration-TWXFW8GR
+      :logseq.property/empty-placeholder,
+      :user.property/RelatedProject-DQWhcBJt
+      [:block/uuid #uuid "687ed4b5-082e-43af-be9d-68b7c7991a7d"],
+      :logseq.property/status "Icebox"}}
+    {:block/title "Prepare Tax form",
+     :block/created-at 1753535769956,
+     :block/updated-at 1753566737196,
+     :build/tags [:user.class/TT-f_3TQAXW],
+     :build/properties
+     {:user.property/RelatedProject-DQWhcBJt
+      [:block/uuid #uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84"],
+      :logseq.property/status :logseq.property/status.done,
+      :user.property/Done-KDxMrzRd false}}]}
+  {:page {:block/uuid #uuid "687ed06b-eb39-4745-b110-911140a0ff80"},
+   :blocks
+   [{:block/title "Wife",
+     :block/uuid #uuid "687ed2c1-1ba5-4045-b043-31ff71727ebc",
+     :build/keep-uuid? true,
+     :block/created-at 1753141953191,
+     :block/updated-at 1753141956934,
+     :build/tags [:user.class/GTDContext-Jf6jxf0W],
+     :build/properties {}}
+    {:block/title "Home",
+     :block/uuid #uuid "687ed2c7-f3bb-409a-8c9f-18a25fcfe527",
+     :build/keep-uuid? true,
+     :block/created-at 1753141959224,
+     :block/updated-at 1753141962879,
+     :build/tags [:user.class/GTDContext-Jf6jxf0W],
+     :build/properties {}}
+    {:block/title "Boss",
+     :block/uuid #uuid "687ed2ce-135d-4973-9ebd-a9811cf84a86",
+     :build/keep-uuid? true,
+     :block/created-at 1753141966525,
+     :block/updated-at 1753141968333,
+     :build/tags [:user.class/GTDContext-Jf6jxf0W],
+     :build/properties {}}
+    {:block/title "Laptop",
+     :block/uuid #uuid "687ed2d1-9e6c-4ec3-9433-59b38f8a9a85",
+     :build/keep-uuid? true,
+     :block/created-at 1753141969758,
+     :block/updated-at 1753141975852,
+     :build/tags [:user.class/GTDContext-Jf6jxf0W],
+     :build/properties {}}]}
+  {:page {:block/uuid #uuid "687ed485-9348-4e76-9861-edcf7f63f883"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1753142405620,
+     :block/updated-at 1753142405620,
+     :build/properties {}}
+    {:block/uuid #uuid "687ed4ae-b3b7-4122-aec6-0cc08bb1df84",
+     :block/updated-at 1753537415519,
+     :build/properties
+     {:user.property/Timeline-yi_urhGH
+      [:block/uuid #uuid "6882fd12-495f-41b6-9287-bdc01a8ac2bb"],
+      :user.property/Task-e7Mngcfj
+      {:build/property-value :block,
+       :block/title "",
+       :build/tags [:logseq.class/Query],
+       :build/properties
+       {:logseq.property.table/sized-columns
+        {:block/title 213, :block/tags 77}},
+       :block/created-at 1753143588286,
+       :block/updated-at 1756562728585},
+      :logseq.property/status :logseq.property/status.doing},
+     :build/keep-uuid? true,
+     :block/created-at 1753142446939,
+     :block/collapsed? true,
+     :build/children
+     [{:block/title "",
+       :block/created-at 1756558017921,
+       :block/updated-at 1756558017921,
+       :build/properties {}}],
+     :build/tags [:user.class/Project-CNasB_Qa],
+     :block/title "Personal Finance"}
+    {:block/title "",
+     :block/created-at 1753537331223,
+     :block/updated-at 1753537331223,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "6902c995-86fa-4a56-996d-78fcb0de9358",
+    :build/keep-uuid? true,
+    :block/created-at 1761790357667,
+    :block/updated-at 1761790357667,
+    :build/properties {},
+    :block/title "AI"},
+   :blocks []}
+  {:page
+   {:block/collapsed? true,
+    :block/uuid #uuid "687ed4b5-082e-43af-be9d-68b7c7991a7d",
+    :build/keep-uuid? true,
+    :block/created-at 1753142453132,
+    :block/updated-at 1756560681157,
+    :build/tags [:user.class/Project-CNasB_Qa],
+    :build/properties
+    {:user.property/Timeline-yi_urhGH
+     [:block/uuid #uuid "6882fd07-5732-4747-a46e-ed739de2379a"],
+     :user.property/Task-e7Mngcfj
+     {:build/property-value :block,
+      :block/title "",
+      :build/tags [:logseq.class/Query],
+      :build/properties {},
+      :block/created-at 1753143352276,
+      :block/updated-at 1753143394217},
+     :logseq.property/status :logseq.property/status.in-review},
+    :block/title "Bucket List"},
+   :blocks []}
+  {:page
+   {:block/created-at 1753141155220,
+    :block/updated-at 1757732643522,
+    :build/properties {:logseq.property/built-in? true},
+    :block/title "Contents"},
+   :blocks
+   [{:block/title "Tasks",
+     :block/created-at 1757732529605,
+     :block/updated-at 1757732668349,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property.table/sized-columns {:block/tags 98},
+      :logseq.property/query
+      "(task \"Inbox\" \"Todo\" \"Doing\" \"In Review\" \"This Week\")"}}]}
+  {:page
+   {:block/uuid #uuid "68f6cb42-8266-45fa-a179-93ab2aa1d106",
+    :build/keep-uuid? true,
+    :block/created-at 1761004354630,
+    :block/updated-at 1761782584961,
+    :build/properties {},
+    :block/title "Danzu"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1761004485999,
+     :block/updated-at 1761004485999,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761791370586,
+    :block/updated-at 1761791370586,
+    :build/properties {},
+    :block/title "Horizon 0 - Ground"},
+   :blocks
+   [{:block/title
+     "type:: [[6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c]]\nextends:: [[687ed3e0-6fb3-46a6-b5ef-c61e0d504fd3]]\ndescription:: Current actions and commitments - the immediate next actions you need to take\nicon:: {\"type\":\"tabler-icon\",\"id\":\"CheckSquare\",\"color\":\"#4a90e2\"}",
+     :block/created-at 1761791370627,
+     :block/updated-at 1761791370627,
+     :build/tags [:user.class/NUM-4a90e2-Oy_l51Sl],
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761791374416,
+    :block/updated-at 1761791374416,
+    :build/properties {},
+    :block/title "Horizon 1 - Projects"},
+   :blocks
+   [{:block/title
+     "type:: [[6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c]]\nextends:: [[687ed3e0-6fb3-46a6-b5ef-c61e0d504fd3]]\ndescription:: Current projects - outcomes you're committed to achieving within the next year\nicon:: {\"type\":\"tabler-icon\",\"id\":\"Briefcase\",\"color\":\"#f39c12\"}",
+     :block/created-at 1761791374461,
+     :block/updated-at 1761791374461,
+     :build/tags [:user.class/f39c12-LO8MbEkQ],
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761791378487,
+    :block/updated-at 1761791378487,
+    :build/properties {},
+    :block/title "Horizon 2 - Areas of Focus"},
+   :blocks
+   [{:block/title
+     "type:: [[6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c]]\nextends:: [[687ed3e0-6fb3-46a6-b5ef-c61e0d504fd3]]\ndescription:: Areas of focus and responsibility - the key roles and areas you need to maintain\nicon:: {\"type\":\"tabler-icon\",\"id\":\"Users\",\"color\":\"#9b59b6\"}",
+     :block/created-at 1761791378530,
+     :block/updated-at 1761791378530,
+     :build/tags [:user.class/NUM-9b59b6-nvkyYlYy],
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761791383310,
+    :block/updated-at 1761791383310,
+    :build/properties {},
+    :block/title "Horizon 3 - Goals"},
+   :blocks
+   [{:block/title
+     "type:: [[6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c]]\nextends:: [[687ed3e0-6fb3-46a6-b5ef-c61e0d504fd3]]\ndescription:: Goals and objectives - what you want to achieve in 1-2 years\nicon:: {\"type\":\"tabler-icon\",\"id\":\"Target\",\"color\":\"#e74c3c\"}",
+     :block/created-at 1761791383345,
+     :block/updated-at 1761791383345,
+     :build/tags [:user.class/e74c3c-H124U4oi],
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761791387304,
+    :block/updated-at 1761791387304,
+    :build/properties {},
+    :block/title "Horizon 4 - Vision"},
+   :blocks
+   [{:block/title
+     "type:: [[6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c]]\nextends:: [[687ed3e0-6fb3-46a6-b5ef-c61e0d504fd3]]\ndescription:: Vision - your 3-5 year vision for your life and work\nicon:: {\"type\":\"tabler-icon\",\"id\":\"Telescope\",\"color\":\"#1abc9c\"}",
+     :block/created-at 1761791387339,
+     :block/updated-at 1761791387339,
+     :build/tags [:user.class/NUM-1abc9c-GENBjzgL],
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761791390573,
+    :block/updated-at 1761791390573,
+    :build/properties {},
+    :block/title "Horizon 5 - Purpose"},
+   :blocks
+   [{:block/title
+     "type:: [[6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c]]\nextends:: [[687ed3e0-6fb3-46a6-b5ef-c61e0d504fd3]]\ndescription:: Purpose and principles - your core values and life purpose\nicon:: {\"type\":\"tabler-icon\",\"id\":\"Compass\",\"color\":\"#34495e\"}",
+     :block/created-at 1761791390614,
+     :block/updated-at 1761791390614,
+     :build/tags [:user.class/NUM-34495e-Lspp2Nwu],
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1761004354650,
+    :block/updated-at 1761004354650,
+    :build/properties {},
+    :block/title "Hounsou Dansou"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "6902c995-ea00-4d51-af47-750956211616",
+    :build/keep-uuid? true,
+    :block/created-at 1761790357667,
+    :block/updated-at 1761790357667,
+    :build/properties {},
+    :block/title "LLM"},
+   :blocks []}
+  {:page
+   {:block/created-at 1753141155220,
+    :block/updated-at 1753141155220,
+    :build/properties {:logseq.property/built-in? true},
+    :block/title "Library"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "6884dbdb-a53b-4f63-8fd7-269c7e1e62ca",
+    :build/keep-uuid? true,
+    :block/created-at 1753537499795,
+    :block/updated-at 1753537549020,
+    :build/tags [:user.class/Project-CNasB_Qa],
+    :build/properties
+    {:user.property/Timeline-yi_urhGH
+     [:block/uuid #uuid "6882fd1c-c1c4-4fad-b9f3-05580ac8a755"]},
+    :block/title "Logseq  db Launch"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1756558021572,
+     :block/updated-at 1756558021572,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "6902c995-04ce-4156-b57c-19ffd728b01b",
+    :build/keep-uuid? true,
+    :block/created-at 1761790357667,
+    :block/updated-at 1761790357667,
+    :build/properties {},
+    :block/title "MCP"},
+   :blocks []}
+  {:page
+   {:block/created-at 1761790293226,
+    :block/updated-at 1761790872990,
+    :build/properties {},
+    :block/title "Model Context Protocol (MCP) Study Guide"},
+   :blocks
+   [{:block/title "Overview of MCP",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790365850,
+     :build/properties {:logseq.property/heading 2},
+     :build/children
+     [{:block/title
+       "Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to Large Language Models (LLMs). It creates a universal connection layer between AI systems and external data sources, tools, and services.",
+       :block/created-at 1761790365859,
+       :block/updated-at 1761790365859,
+       :build/properties {}}]}
+    {:block/title "### Key Benefits",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title
+       "**Standardization**: One protocol for connecting LLMs to multiple data sources",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title
+       "**Modularity**: Build once, use with any MCP-compatible client",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title
+       "**Security**: Controlled access to resources through well-defined interfaces",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title
+       "**Flexibility**: Works with local files, databases, APIs, and more",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790377063,
+       :build/properties {}}
+      {:block/title "---",
+       :block/created-at 1761790377076,
+       :block/updated-at 1761790377076,
+       :build/properties {}}]}
+    {:block/title "## Architecture Components",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 2}}
+    {:block/title "1. MCP Hosts (Clients)",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790383960,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title
+       "Applications that want to access context through MCP (e.g., Claude Desktop, IDEs)",
+       :block/created-at 1761790383970,
+       :block/updated-at 1761790383970,
+       :build/properties {}}]}
+    {:block/title "2. MCP Servers",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790386122,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title
+       "Lightweight programs that expose specific capabilities:",
+       :block/created-at 1761790386131,
+       :block/updated-at 1761790386131,
+       :build/properties {}}
+      {:block/title
+       "**Resources**: File contents, database records, API responses",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title "**Tools**: Functions the LLM can invoke",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title "**Prompts**: Reusable prompt templates",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}]}
+    {:block/title "### 3. Protocol Communication",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title "Uses JSON-RPC 2.0 over stdio or HTTP with SSE",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title "Stateful sessions with capability negotiation",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title "Async request/response pattern",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790396687,
+       :build/properties {}}
+      {:block/title "---",
+       :block/created-at 1761790396701,
+       :block/updated-at 1761790396701,
+       :build/properties {}}]}
+    {:block/title "## How to Create an MCP Server",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 2},
+     :build/children
+     [{:block/title "Basic Server Structure (Node.js/TypeScript)",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790596571,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title
+         "```typescript\nimport { Server } from \"@modelcontextprotocol/sdk/server/index.js\";\nimport { StdioServerTransport } from \"@modelcontextprotocol/sdk/server/stdio.js\";\n\n// 1. Create server instance\nconst server = new Server(\n{\n  name: \"my-mcp-server\",\n  version: \"1.0.0\",\n},\n{\n  capabilities: {\n    resources: {},\n    tools: {},\n  },\n}\n);\n\n// 2. Define tools\nserver.setRequestHandler(ListToolsRequestSchema, async () => {\nreturn {\n  tools: [\n    {\n      name: \"get_weather\",\n      description: \"Get weather for a location\",\n      inputSchema: {\n        type: \"object\",\n        properties: {\n          location: { type: \"string\" }\n        },\n        required: [\"location\"]\n      }\n    }\n  ]\n};\n});\n\n// 3. Implement tool execution\nserver.setRequestHandler(CallToolRequestSchema, async (request) => {\nif (request.params.name === \"get_weather\") {\n  const location = request.params.arguments.location;\n  // Your implementation here\n  return {\n    content: [\n      { type: \"text\", text: `Weather for ${location}: Sunny, 72°F` }\n    ]\n  };\n}\nthrow new Error(\"Tool not found\");\n});\n\n// 4. Start server\nconst transport = new StdioServerTransport();\nawait server.connect(transport);\n```",
+         :block/created-at 1761790596584,
+         :block/updated-at 1761790596584,
+         :build/properties {}}]}]}
+    {:block/title "Step-by-Step Creation Process",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790608321,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title
+       "1. **Install SDK**: `npm install @modelcontextprotocol/sdk`",
+       :block/created-at 1761790608329,
+       :block/updated-at 1761790610071,
+       :build/properties {}}
+      {:block/title
+       "2. **Define capabilities**: Choose what your server will expose (tools, resources, prompts)",
+       :block/created-at 1761790610078,
+       :block/updated-at 1761790610772,
+       :build/properties {}}
+      {:block/title
+       "3. **Implement handlers**: Add logic for each capability",
+       :block/created-at 1761790610779,
+       :block/updated-at 1761790611333,
+       :build/properties {}}
+      {:block/title
+       "4. **Configure transport**: Use stdio for local, SSE for remote",
+       :block/created-at 1761790611340,
+       :block/updated-at 1761790611940,
+       :build/properties {}}
+      {:block/title "5. **Test locally**: Use MCP Inspector tool",
+       :block/created-at 1761790611947,
+       :block/updated-at 1761790613712,
+       :build/properties {}}
+      {:block/title
+       "6. **Package**: Create executable or deploy as service",
+       :block/created-at 1761790613718,
+       :block/updated-at 1761790614911,
+       :build/properties {}}
+      {:block/title "---",
+       :block/created-at 1761790614917,
+       :block/updated-at 1761790614917,
+       :build/properties {}}]}
+    {:block/title "## Managing Context with Tool Calling",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 2},
+     :build/children
+     [{:block/title "### Best Practices for Tool Design",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title "1. Single Responsibility",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790625729,
+         :build/properties {:logseq.property/heading 4},
+         :build/children
+         [{:block/title "Each tool should do one thing well",
+           :block/created-at 1761790625737,
+           :block/updated-at 1761790626473,
+           :build/properties {},
+           :build/children
+           [{:block/title
+             "```typescript\n// Good: Specific, focused tool\n{ name: \"search_documents\", description: \"Search through documents\" }\n\n// Avoid: Overly broad tool\n{ name: \"do_everything\", description: \"Handle all operations\" }\n```",
+             :block/created-at 1761790626481,
+             :block/updated-at 1761790626481,
+             :build/properties {}}]}]}]}]}
+    {:block/title "2. Clear Input Schemas",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790635363,
+     :build/properties {:logseq.property/heading 4},
+     :build/children
+     [{:block/title "Use JSON Schema to define precise parameters",
+       :block/created-at 1761790635373,
+       :block/updated-at 1761790636898,
+       :build/properties {},
+       :build/children
+       [{:block/title
+         "```typescript\ninputSchema: {\ntype: \"object\",\nproperties: {\n  query: { \n    type: \"string\", \n    description: \"Search query terms\" \n  },\n  limit: { \n    type: \"number\", \n    default: 10,\n    description: \"Maximum results to return\"\n  }\n},\nrequired: [\"query\"]\n}\n```",
+         :block/created-at 1761790636906,
+         :block/updated-at 1761790636906,
+         :build/properties {}}]}]}
+    {:block/title "3. Rich Output Formats",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790643047,
+     :build/properties {:logseq.property/heading 4},
+     :build/children
+     [{:block/title "Return structured data the LLM can understand",
+       :block/created-at 1761790643055,
+       :block/updated-at 1761790645133,
+       :build/properties {},
+       :build/children
+       [{:block/title
+         "```typescript\nreturn {\ncontent: [\n  {\n    type: \"text\",\n    text: JSON.stringify(results, null, 2)\n  },\n  {\n    type: \"resource\",\n    resource: {\n      uri: \"file:///path/to/result.json\",\n      mimeType: \"application/json\"\n    }\n  }\n]\n};\n```",
+         :block/created-at 1761790645142,
+         :block/updated-at 1761790645142,
+         :build/properties {}}]}]}
+    {:block/title "### Context Management Strategies",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title "#### Stateful Sessions",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {:logseq.property/heading 4},
+       :build/children
+       [{:block/title "Track conversation state within server",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Store user preferences, previous queries",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Maintain database connections across calls",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}]}]}
+    {:block/title "#### Progressive Disclosure",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 4},
+     :build/children
+     [{:block/title "Return summaries first, details on request",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title "Use pagination for large datasets",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title "Provide metadata about available context",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}]}
+    {:block/title "Error Handling",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790687623,
+     :build/properties {:logseq.property/heading 4},
+     :build/children
+     [{:block/title
+       "```typescript\ntry {\nconst result = await performOperation();\nreturn { content: [{ type: \"text\", text: result }] };\n} catch (error) {\nreturn {\n  content: [{\n    type: \"text\",\n    text: `Error: ${error.message}`\n  }],\n  isError: true\n};\n}\n```",
+       :block/created-at 1761790687633,
+       :block/updated-at 1761790687633,
+       :build/properties {}}
+      {:block/title "---",
+       :block/created-at 1761790679398,
+       :block/updated-at 1761790679398,
+       :build/properties {}}]}
+    {:block/title "## How to Use an MCP Server",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 2},
+     :build/children
+     [{:block/title "Configuring Claude Desktop",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790711693,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title "1. **Locate config file**:",
+         :block/created-at 1761790711706,
+         :block/updated-at 1761790711706,
+         :build/properties {},
+         :build/children
+         [{:block/title
+           "macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title
+           "Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790718210,
+           :build/properties {}}]}
+        {:block/title "2. **Add server configuration**:",
+         :block/created-at 1761790718219,
+         :block/updated-at 1761790719938,
+         :build/properties {},
+         :build/children
+         [{:block/title
+           "```json\n{\n\"mcpServers\": {\n\"my-server\": {\n \"command\": \"node\",\n \"args\": [\"/path/to/server/index.js\"],\n \"env\": {\n   \"API_KEY\": \"your-key-here\"\n }\n}\n}\n}\n```",
+           :block/created-at 1761790719947,
+           :block/updated-at 1761790727277,
+           :build/properties {}}]}
+        {:block/title "3. **Restart Claude Desktop**",
+         :block/created-at 1761790727287,
+         :block/updated-at 1761790727287,
+         :build/properties {}}]}]}
+    {:block/title "Using MCP Servers Programmatically",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790737295,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title
+       "```typescript\nimport { Client } from \"@modelcontextprotocol/sdk/client/index.js\";\nimport { StdioClientTransport } from \"@modelcontextprotocol/sdk/client/stdio.js\";\n\nconst transport = new StdioClientTransport({\ncommand: \"node\",\nargs: [\"/path/to/server/index.js\"]\n});\n\nconst client = new Client({\nname: \"my-client\",\nversion: \"1.0.0\"\n}, {\ncapabilities: {}\n});\n\nawait client.connect(transport);\n\n// List available tools\nconst tools = await client.listTools();\n\n// Call a tool\nconst result = await client.callTool({\nname: \"get_weather\",\narguments: { location: \"San Francisco\" }\n});\n```",
+       :block/created-at 1761790737308,
+       :block/updated-at 1761790746105,
+       :build/properties {}}
+      {:block/title "---",
+       :block/created-at 1761790746113,
+       :block/updated-at 1761790746113,
+       :build/properties {}}]}
+    {:block/title "## Practical Tips for Better MCP Usage",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 2},
+     :build/children
+     [{:block/title "For Server Developers",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790758764,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title "1. **Provide Clear Descriptions**",
+         :block/created-at 1761790758775,
+         :block/updated-at 1761790758775,
+         :build/properties {},
+         :build/children
+         [{:block/title
+           "Tool names should be verb-phrases: `search_files`, `create_task`",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title
+           "Descriptions should explain what, when, and why to use the tool",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title
+           "Include examples in descriptions when helpful",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790762558,
+           :build/properties {}}]}
+        {:block/title "2. **Implement Proper Error Messages**",
+         :block/created-at 1761790762566,
+         :block/updated-at 1761790762566,
+         :build/properties {},
+         :build/children
+         [{:block/title "Return user-friendly error messages",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title "Include suggestions for fixing issues",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title
+           "Log detailed errors server-side for debugging",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790764150,
+           :build/properties {}}]}
+        {:block/title "3. **Optimize Performance**",
+         :block/created-at 1761790764164,
+         :block/updated-at 1761790764164,
+         :build/properties {},
+         :build/children
+         [{:block/title "Cache expensive operations",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title
+           "Implement timeouts for long-running operations",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title
+           "Use streaming for large responses when possible",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790766039,
+           :build/properties {}}]}
+        {:block/title "4. **Security Considerations**",
+         :block/created-at 1761790766047,
+         :block/updated-at 1761790766047,
+         :build/properties {},
+         :build/children
+         [{:block/title "Validate all inputs rigorously",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title "Implement rate limiting",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title "Use environment variables for secrets",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title "Follow principle of least privilege",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790768223,
+           :build/properties {}}]}
+        {:block/title "5. **Testing Strategy**",
+         :block/created-at 1761790768232,
+         :block/updated-at 1761790768232,
+         :build/properties {},
+         :build/children
+         [{:block/title "Use MCP Inspector for interactive testing",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title "Write unit tests for tool handlers",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title "Test with various input edge cases",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}
+          {:block/title "Validate against schema",
+           :block/created-at 1761790357675,
+           :block/updated-at 1761790357675,
+           :build/properties {}}]}]}]}
+    {:block/title "For MCP Users",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790795311,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title "1. **Understand Tool Capabilities**",
+       :block/created-at 1761790795320,
+       :block/updated-at 1761790795320,
+       :build/properties {},
+       :build/children
+       [{:block/title "Ask the LLM what tools are available",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Review tool descriptions before using",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Understand limitations of each tool",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790798881,
+         :build/properties {}}]}
+      {:block/title "2. **Provide Clear Context**",
+       :block/created-at 1761790798892,
+       :block/updated-at 1761790798892,
+       :build/properties {},
+       :build/children
+       [{:block/title "Be specific in requests that trigger tools",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Provide necessary parameters upfront",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Follow up if results are incomplete",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790803051,
+         :build/properties {}}]}
+      {:block/title "3. **Leverage Multiple Servers**",
+       :block/created-at 1761790803065,
+       :block/updated-at 1761790803065,
+       :build/properties {},
+       :build/children
+       [{:block/title
+         "Combine different MCP servers for complex workflows",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title
+         "Use filesystem + database + API servers together",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title
+         "Create specialized servers for different domains",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790806110,
+         :build/properties {}}]}
+      {:block/title "4. **Monitor Resource Usage**",
+       :block/created-at 1761790806118,
+       :block/updated-at 1761790806118,
+       :build/properties {},
+       :build/children
+       [{:block/title "Be aware of rate limits on external APIs",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Watch for slow-performing tools",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Disable unused servers to reduce overhead",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}]}]}
+    {:block/title "### Common Patterns",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 3},
+     :build/children
+     [{:block/title "1. File System Access Pattern",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790814944,
+       :build/properties {:logseq.property/heading 4},
+       :build/children
+       [{:block/title
+         "```typescript\n// Expose project files with read/search capabilities\nserver.setRequestHandler(ListResourcesRequestSchema, async () => {\nreturn {\n  resources: [\n    {\n      uri: \"file:///project/docs/\",\n      name: \"Project Documentation\",\n      mimeType: \"text/plain\"\n    }\n  ]\n};\n});\n```",
+         :block/created-at 1761790814958,
+         :block/updated-at 1761790814958,
+         :build/properties {}}]}
+      {:block/title "2. Database Query Pattern",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790823827,
+       :build/properties {:logseq.property/heading 4},
+       :build/children
+       [{:block/title
+         "```typescript\n// Provide safe database access with query tools\n{\nname: \"query_database\",\ndescription: \"Execute read-only SQL queries\",\ninputSchema: {\n  type: \"object\",\n  properties: {\n    query: { type: \"string\" },\n    maxRows: { type: \"number\", default: 100 }\n  }\n}\n}\n```",
+         :block/created-at 1761790823836,
+         :block/updated-at 1761790823836,
+         :build/properties {}}]}
+      {:block/title "3. API Integration Pattern",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790834081,
+       :build/properties {:logseq.property/heading 4},
+       :build/children
+       [{:block/title
+         "```typescript\n// Wrap external APIs with MCP tools\n{\nname: \"github_create_issue\",\ndescription: \"Create a GitHub issue\",\ninputSchema: {\n  type: \"object\",\n  properties: {\n    title: { type: \"string\" },\n    body: { type: \"string\" },\n    labels: { type: \"array\", items: { type: \"string\" } }\n  }\n}\n}\n```",
+         :block/created-at 1761790834090,
+         :block/updated-at 1761790843278,
+         :build/properties {}}
+        {:block/title "---",
+         :block/created-at 1761790843285,
+         :block/updated-at 1761790843285,
+         :build/properties {}}]}]}
+    {:block/title "## Resources for Learning",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 2},
+     :build/children
+     [{:block/title
+       "**Official Documentation**: https://modelcontextprotocol.io",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title
+       "**SDK Repository**: https://github.com/modelcontextprotocol/sdk",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title
+       "**Example Servers**: https://github.com/modelcontextprotocol/servers",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title
+       "**MCP Inspector**: Tool for testing and debugging servers",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {}}
+      {:block/title "**Community**: GitHub Discussions and Discord",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790860170,
+       :build/properties {}}
+      {:block/title "---",
+       :block/created-at 1761790860181,
+       :block/updated-at 1761790860181,
+       :build/properties {}}]}
+    {:block/title "## Quick Reference Commands",
+     :block/created-at 1761790357675,
+     :block/updated-at 1761790357675,
+     :build/properties {:logseq.property/heading 2},
+     :build/children
+     [{:block/title "### Development",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title
+         "`npm install @modelcontextprotocol/sdk` - Install SDK",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title
+         "`npx @modelcontextprotocol/inspector node server.js` - Test server",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "`npm run build` - Build TypeScript server",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}]}
+      {:block/title "### Configuration",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title "Check Claude Desktop config location",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Validate JSON configuration syntax",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Restart Claude Desktop after config changes",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}]}
+      {:block/title "### Debugging",
+       :block/created-at 1761790357675,
+       :block/updated-at 1761790357675,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title "Check server logs (stdout/stderr)",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Use MCP Inspector for interactive testing",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790357675,
+         :build/properties {}}
+        {:block/title "Verify tool schemas with JSON Schema validator",
+         :block/created-at 1761790357675,
+         :block/updated-at 1761790872989,
+         :build/properties {}}]}
+      {:block/title "---",
+       :block/created-at 1761790873000,
+       :block/updated-at 1761790873000,
+       :build/properties {}}]}
+    {:block/title
+     "[[6902c995-04ce-4156-b57c-19ffd728b01b]] [[6902c995-ea00-4d51-af47-750956211616]] [[6902c995-86fa-4a56-996d-78fcb0de9358]] [[6902c995-8ddb-42a2-a687-a478f1d231de]] [[6902c995-1081-4067-ad55-be389964cea5]]",
+     :block/created-at 1761790577424,
+     :block/updated-at 1761790577424,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "687edd58-7bec-4084-8b16-4387bb6e477f",
+    :build/keep-uuid? true,
+    :block/created-at 1753144664325,
+    :block/updated-at 1753144664325,
+    :build/properties {},
+    :block/title "Personal Finance"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "6902c995-1081-4067-ad55-be389964cea5",
+    :build/keep-uuid? true,
+    :block/created-at 1761790357666,
+    :block/updated-at 1761790357666,
+    :build/properties {},
+    :block/title "Programming"},
+   :blocks []}
+  {:page
+   {:block/created-at 1753141155220,
+    :block/updated-at 1753141155220,
+    :build/properties
+    {:logseq.property/built-in? true, :logseq.property/hide? true},
+    :block/title "Quick add"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1759029039218,
+     :block/updated-at 1759029039218,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1753537524596,
+    :block/updated-at 1753537551533,
+    :build/tags [:user.class/Project-CNasB_Qa],
+    :build/properties
+    {:user.property/Timeline-yi_urhGH
+     [:block/uuid #uuid "6882fd30-990e-47bb-8cd3-16ad54532877"]},
+    :block/title "Race Driver"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "68852d62-3601-41e3-ae95-89ebfa826ade",
+    :build/keep-uuid? true,
+    :block/created-at 1753558370375,
+    :block/updated-at 1753558370375,
+    :build/tags [:user.class/GTDContext-Jf6jxf0W],
+    :build/properties {},
+    :block/title "Social"},
+   :blocks []}
+  {:page
+   {:block/created-at 1761790544018,
+    :block/updated-at 1761790544018,
+    :build/properties {},
+    :block/title "Spain Trip November 2025"},
+   :blocks
+   [{:block/title
+     "## 7-Day Spain Itinerary - November 2025\n\n### Trip Overview\n- **Duration:** 7 days\n- **Month:** November\n- **Cities:** Barcelona (3 days) → Madrid (3 days) → Toledo (day trip)\n- **Weather:** Mild temperatures (50-65°F / 10-18°C), less crowded than summer",
+     :block/created-at 1761790544061,
+     :block/updated-at 1761790544061,
+     :build/properties {:logseq.property/heading 2}}
+    {:block/title
+     "### Day 1-3: Barcelona\n#### Day 1: Gothic Quarter & Las Ramblas\n- Morning: Arrive in Barcelona, check into hotel\n- Afternoon: Explore Gothic Quarter (Barri Gòtic)\n\t- Cathedral of Barcelona\n\t- Plaça Reial\n\t- Walk down Las Ramblas\n- Evening: Dinner in El Born neighborhood\n- **Tip:** Book Sagrada Familia tickets online in advance",
+     :block/created-at 1761790549110,
+     :block/updated-at 1761790549110,
+     :build/properties {:logseq.property/heading 3}}
+    {:block/title
+     "#### Day 2: Gaudí's Masterpieces\n- Morning: Sagrada Familia (book 9-10am slot)\n- Late Morning: Park Güell (pre-book tickets)\n- Afternoon: Casa Batlló or Casa Milà (La Pedrera)\n- Evening: Passeig de Gràcia shopping and tapas\n- **Note:** November has shorter daylight hours (sunset around 5:30pm)",
+     :block/created-at 1761790554292,
+     :block/updated-at 1761790554292,
+     :build/properties {:logseq.property/heading 4}}
+    {:block/title
+     "#### Day 3: Montjuïc & Beaches\n- Morning: Montjuïc Castle (cable car or funicular)\n- Midday: Magic Fountain area (show times vary, check schedule)\n- Afternoon: Barceloneta Beach walk (cooler but pleasant)\n- Evening: Seafood dinner in Barceloneta\n- **Travel:** Take evening high-speed train (AVE) to Madrid (2.5-3 hours)",
+     :block/created-at 1761790558887,
+     :block/updated-at 1761790558887,
+     :build/properties {:logseq.property/heading 4}}
+    {:block/title
+     "### Day 4-6: Madrid\n#### Day 4: Art Triangle\n- Morning: Prado Museum (world-class art collection)\n\t- Velázquez, Goya, El Greco\n- Afternoon: Retiro Park stroll\n- Late Afternoon: Reina Sofía Museum (includes Picasso's Guernica)\n- Evening: Tapas in La Latina neighborhood\n- **Tip:** Museums are less crowded in November",
+     :block/created-at 1761790563194,
+     :block/updated-at 1761790563194,
+     :build/properties {:logseq.property/heading 3}}
+    {:block/title
+     "#### Day 5: Royal Madrid\n- Morning: Royal Palace of Madrid (largest in Western Europe)\n- Midday: Almudena Cathedral next door\n- Afternoon: Plaza Mayor and Mercado de San Miguel (food market)\n- Late Afternoon: Gran Vía shopping\n- Evening: Flamenco show (book in advance)\n\t- Tablao venues: Corral de la Morería or Casa Patas",
+     :block/created-at 1761790568218,
+     :block/updated-at 1761790568218,
+     :build/properties {:logseq.property/heading 4}}
+    {:block/title
+     "#### Day 6: Toledo Day Trip\n- Morning: Train to Toledo (30 minutes from Madrid)\n- Full day exploring medieval city:\n\t- Toledo Cathedral\n\t- Alcázar fortress\n\t- El Greco Museum\n\t- Jewish Quarter synagogues\n\t- Winding medieval streets\n- Evening: Return to Madrid for farewell dinner\n- **UNESCO World Heritage Site**",
+     :block/created-at 1761790572667,
+     :block/updated-at 1761790572667,
+     :build/properties {:logseq.property/heading 4}}
+    {:block/title
+     "### Day 7: Departure\n- Morning: Last-minute souvenir shopping or museum visit\n- Depart from Madrid-Barajas Airport\n\n---\n\n### Essential Travel Tips for Americans\n- **Passport:** Must be valid for at least 3 months beyond departure\n- **Visa:** Not needed for stays under 90 days\n- **Currency:** Euro (€) - credit cards widely accepted\n- **Tipping:** Not mandatory but 5-10% appreciated for good service\n- **Language:** Learn basic Spanish phrases, English spoken in tourist areas\n- **Meal Times:** Lunch 2-4pm, Dinner 9-11pm (later than US!)\n- **Siesta:** Many shops close 2-5pm",
+     :block/created-at 1761790578876,
+     :block/updated-at 1761790578876,
+     :build/properties {:logseq.property/heading 3}}
+    {:block/title
+     "### What to Pack for November\n- **Layers:** Light jacket, sweaters, long pants\n- **Rain gear:** November can be rainy\n- **Comfortable walking shoes:** Essential!\n- **Power adapter:** European Type C/F plugs (220V)\n- **Day bag:** For carrying water, camera, etc.",
+     :block/created-at 1761790583292,
+     :block/updated-at 1761790583292,
+     :build/properties {:logseq.property/heading 3}}
+    {:block/title
+     "### Transportation\n- **Between cities:** High-speed AVE trains (book via Renfe.com)\n- **Within cities:** Metro systems excellent in both Barcelona and Madrid\n- **Airport transfers:** \n\t- Barcelona: Aerobus or Metro L9\n\t- Madrid: Metro Line 8 or Airport Express bus",
+     :block/created-at 1761790587619,
+     :block/updated-at 1761790587619,
+     :build/properties {:logseq.property/heading 3}}
+    {:block/title
+     "### Must-Try Foods\n- **Barcelona:** Paella, pan con tomate, crema catalana\n- **Madrid:** Cocido madrileño, bocadillo de calamares, churros con chocolate\n- **Everywhere:** Jamón ibérico, patatas bravas, tortilla española\n- **Wine:** Rioja, Ribera del Duero, Cava (Spanish sparkling)\n- **Tapas culture:** Small plates meant for sharing",
+     :block/created-at 1761790591984,
+     :block/updated-at 1761790591984,
+     :build/properties {:logseq.property/heading 3}}
+    {:block/title
+     "### November Advantages\n- ✅ Fewer tourists, shorter lines\n- ✅ Lower hotel prices\n- ✅ Mild, comfortable weather\n- ✅ Authentic local experience\n- ⚠️ Some beach clubs closed\n- ⚠️ Shorter daylight hours\n- ⚠️ Occasional rain (bring umbrella)",
+     :block/created-at 1761790598495,
+     :block/updated-at 1761790598495,
+     :build/properties {:logseq.property/heading 3}}
+    {:block/title
+     "### Budget Estimate (per person)\n- **Flights:** $500-900 roundtrip\n- **Hotels:** $80-150/night (mid-range)\n- **Food:** $40-60/day\n- **Attractions:** $150-200 total\n- **Transport:** $100-150 (trains, metro)\n- **Total:** ~$1,500-2,500 depending on choices\n\n---\n\n### Booking Checklist\n- [ ] Book flights\n- [ ] Reserve hotels in Barcelona and Madrid\n- [ ] Purchase Sagrada Familia tickets online\n- [ ] Book Park Güell time slot\n- [ ] Reserve flamenco show\n- [ ] Book AVE train Barcelona→Madrid\n- [ ] Get travel insurance\n- [ ] Notify bank of travel dates",
+     :block/created-at 1761790604641,
+     :block/updated-at 1761790604641,
+     :build/properties {:logseq.property/heading 3}}]}
+  {:page
+   {:block/uuid #uuid "68f6cb50-0882-47f9-9bd0-63e5061a859f",
+    :build/keep-uuid? true,
+    :block/created-at 1761004368293,
+    :block/updated-at 1766423984199,
+    :build/properties {},
+    :block/title "Tony Lin"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1766423986262,
+     :block/updated-at 1766423986262,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "6902c995-8ddb-42a2-a687-a478f1d231de",
+    :build/keep-uuid? true,
+    :block/created-at 1761790357667,
+    :block/updated-at 1761790357667,
+    :build/properties {},
+    :block/title "Tutorial"},
+   :blocks []}
+  {:page
+   {:block/created-at 1753141155487,
+    :block/updated-at 1753141155487,
+    :build/properties
+    {:logseq.property.user/name "hdansou",
+     :logseq.property.user/email "hdansou@gmail.com"},
+    :block/title "hdansou"},
+   :blocks []}
+  {:page
+   {:block/created-at 1761791370625,
+    :block/updated-at 1761791370625,
+    :build/properties {},
+    :block/title "type"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "6902cd8a-4e1e-4d64-aaa0-944bd0f1c77c",
+    :build/keep-uuid? true,
+    :block/created-at 1761791370625,
+    :block/updated-at 1761791370625,
+    :build/properties {},
+    :block/title "type/table"},
+   :blocks []}],
+ :logseq.db.sqlite.export/schema-version {:major 65, :minor 16},
+ :logseq.db.sqlite.export/graph-files
+ [{:file/path "logseq/config.edn",
+   :file/content
+   "{:meta/version 1\n ;; Hide empty block properties\n ;; This is _only_ for DB graphs.\n ;; Default value: false\n ;; :ui/hide-empty-properties? false\n\n ;; Enable tooltip preview on hover.\n ;; Default value: true\n :ui/enable-tooltip? true\n\n ;; Display brackets [[]] around page references.\n ;; Default value: true\n ;; :ui/show-brackets? true\n\n ;; Display all lines of a block when referencing ((block)).\n ;; Default value: false\n :ui/show-full-blocks? false\n\n ;; Automatically expand block references when zooming in.\n ;; Default value: true\n :ui/auto-expand-block-refs? true\n\n ;; Disable accent marks when searching.\n ;; After changing this setting, rebuild the search index by pressing (^C ^S).\n ;; Default value: true\n :feature/enable-search-remove-accents? true\n\n ;; Enable journals.\n ;; Default value: true\n ;; :feature/enable-journals? true\n\n ;; Enable flashcards.\n ;; Default value: true\n ;; :feature/enable-flashcards? true\n\n ;; Enable whiteboards.\n ;; Default value: true\n ;; :feature/enable-whiteboards? true\n\n ;; Disable the journal's built-in 'Scheduled tasks and deadlines' query.\n ;; Default value: false\n ;; :feature/disable-scheduled-and-deadline-query? false\n\n ;; Specify the number of days displayed in the future for\n ;; the 'scheduled tasks and deadlines' query.\n ;; Example usage:\n ;; Display all scheduled and deadline blocks for the next 14 days:\n ;; :scheduled/future-days 14\n ;; Default value: 7\n ;; :scheduled/future-days 7\n\n ;; Specify the first day of the week.\n ;; Available options:\n ;;  - integer from 0 to 6 (Monday to Sunday)\n ;; Default value: 6 (Sunday)\n :start-of-week 6\n\n ;; Specify a custom CSS import.\n ;; This option takes precedence over the local `logseq/custom.css` file.\n ;; Example usage:\n ;; :custom-css-url \"@import url('https://cdn.jsdelivr.net/gh/dracula/logseq@master/custom.css');\"\n\n ;; Specify a custom JS import.\n ;; This option takes precedence over the local `logseq/custom.js` file.\n ;; Example usage:\n ;; :custom-js-url \"https://cdn.logseq.com/custom.js\"\n\n ;; Set bullet indentation when exporting\n ;; Available options:\n ;;  - `:eight-spaces` as eight spaces\n ;;  - `:four-spaces` as four spaces\n ;;  - `:two-spaces` as two spaces\n ;;  - `:tab` as a tab character (default)\n ;; :export/bullet-indentation :tab\n\n ;; Publish all pages within the Graph\n ;; Regardless of whether individual pages have been marked as public.\n ;; Default value: false\n ;; :publishing/all-pages-public? false\n\n ;; Define the default home page and sidebar status.\n ;; If unspecified, the journal page will be loaded on startup and the right sidebar will stay hidden.\n ;; The `:page` value represents the name of the page displayed at startup.\n ;; Available options for `:sidebar` are:\n ;; - \"Contents\" to display the Contents page in the right sidebar.\n ;; - A specific page name to display in the right sidebar.\n ;; - An array of multiple pages, e.g., [\"Contents\" \"Page A\" \"Page B\"].\n ;; If `:sidebar` remains unset, the right sidebar will stay hidden.\n ;; Examples:\n ;; 1. Set \"Changelog\" as the home page and display \"Contents\" in the right sidebar:\n ;; :default-home {:page \"Changelog\", :sidebar \"Contents\"}\n ;; 2. Set \"Jun 3rd, 2021\" as the home page without the right sidebar:\n ;; :default-home {:page \"Jun 3rd, 2021\"}\n ;; 3. Set \"home\" as the home page and display multiple pages in the right sidebar:\n ;; :default-home {:page \"home\", :sidebar [\"Page A\" \"Page B\"]}\n\n ;; Configure custom shortcuts.\n ;; Syntax:\n ;; 1. + indicates simultaneous key presses, e.g., `Ctrl+Shift+a`.\n ;; 2. A space between keys represents key chords, e.g., `t s` means\n ;;    pressing `t` followed by `s`.\n ;; 3. mod refers to `Ctrl` for Windows/Linux and `Command` for Mac.\n ;; 4. Use false to disable a specific shortcut.\n ;; 5. You can define multiple bindings for a single action, e.g., [\"ctrl+j\" \"down\"].\n ;; The full list of configurable shortcuts is available at:\n ;; https://github.com/logseq/logseq/blob/master/src/main/frontend/modules/shortcut/config.cljs\n ;; Example:\n ;; :shortcuts\n ;; {:editor/new-block       \"enter\"\n ;;  :editor/new-line        \"shift+enter\"\n ;;  :editor/insert-link     \"mod+shift+k\"\n ;;  :editor/highlight       false\n ;;  :ui/toggle-settings     \"t s\"\n ;;  :editor/up              [\"ctrl+k\" \"up\"]\n ;;  :editor/down            [\"ctrl+j\" \"down\"]\n ;;  :editor/left            [\"ctrl+h\" \"left\"]\n ;;  :editor/right           [\"ctrl+l\" \"right\"]}\n :shortcuts {}\n\n ;; Configure the behavior of pressing Enter in document mode.\n ;; if set to true, pressing Enter will create a new block.\n ;; Default value: false\n :shortcut/doc-mode-enter-for-new-block? false\n\n ;; Block content larger than `block/title-max-length` will not be searchable\n ;; or editable for performance.\n ;; Default value: 10000\n :block/title-max-length 10000\n\n ;; Display command documentation on hover.\n ;; Default value: true\n :ui/show-command-doc? true\n\n ;; Display empty bullet points.\n ;; Default value: false\n :ui/show-empty-bullets? false\n\n ;; Pre-defined :view function to use with advanced queries.\n :query/views\n {:pprint\n  (fn [r] [:pre.code (pprint r)])}\n\n ;; Advanced queries `:result-transform` function.\n ;; Transform the query result before displaying it.\n ;; Example usage for DB graphs:\n;;  :query/result-transforms\n;;  {:sort-by-priority\n;;   (fn [result] (sort-by (fn [h] (get h :logseq.property/priority \"Z\")) result))}\n\n;; Queries will be displayed at the bottom of today's journal page.\n;; Example usage:\n;; :default-queries\n;; {:journals []}\n\n ;; Add custom commands to the command palette\n ;; Example usage:\n ;; :commands\n ;; [\n ;;  [\"js\" \"Javascript\"]\n ;;  [\"md\" \"Markdown\"]\n ;;  ]\n :commands []\n\n ;; Enable collapsing blocks with titles but no children.\n ;; By default, only blocks with children can be collapsed.\n ;; Setting `:outliner/block-title-collapse-enabled?` to true allows collapsing\n ;; blocks with titles (multiple lines) and content. For example:\n ;; - block title\n ;;   block content\n ;; Default value: false\n :outliner/block-title-collapse-enabled? false\n\n ;; Macros replace texts and will make you more productive.\n ;; Example usage:\n ;; Change the :macros value below to:\n ;; {\"poem\" \"Rose is $1, violet's $2. Life's ordered: Org assists you.\"}\n ;; input \"{{poem red,blue}}\"\n ;; becomes\n ;; Rose is red, violet's blue. Life's ordered: Org assists you.\n :macros {}\n\n ;; Configure the default expansion level for linked references.\n ;; For example, consider the following block hierarchy:\n ;; - a [[page]] (level 1)\n ;;   - b        (level 2)\n ;;     - c      (level 3)\n ;;       - d    (level 4)\n ;;\n ;; With the default value of level 2, block b will be collapsed.\n ;; If the level's value is set to 3, block c will be collapsed.\n ;; Default value: 2\n :ref/default-open-blocks-level 2\n :graph/settings {:created-at-filter nil}\n\n ;; Graph view configuration.\n ;; Example usage:\n ;; :graph/settings\n ;; {:orphan-pages?   true   ; Default value: true\n ;;  :builtin-pages?  false  ; Default value: false\n ;;  :excluded-pages? false  ; Default value: false\n ;;  :journal?        false} ; Default value: false\n\n ;; Graph view configuration.\n ;; Example usage:\n ;; :graph/forcesettings\n ;; {:link-dist       180    ; Default value: 180\n ;;  :charge-strength -600   ; Default value: -600\n ;;  :charge-range    600}   ; Default value: 600\n\n ;; Mobile photo upload configuration.\n ;; :mobile/photo\n ;; {:allow-editing? true\n ;;  :quality        80}\n\n ;; Mobile features options\n ;; Gestures\n ;; Example usage:\n ;; :mobile\n ;; {:gestures/disabled-in-block-with-tags [\"kanban\"]}\n\n ;; Extra CodeMirror options\n ;; See https://codemirror.net/5/doc/manual.html#config for possible options\n ;; Example usage:\n ;; :editor/extra-codemirror-options\n ;; {:lineWrapping  false  ; Default value: false\n ;;  :lineNumbers   true   ; Default value: true\n ;;  :readOnly      false} ; Default value: false\n\n ;; Enable logical outdenting\n ;; Default value: false\n ;; :editor/logical-outdenting? false\n\n ;; Prefer pasting the file when text and a file are in the clipboard.\n ;; Default value: false\n ;; :editor/preferred-pasting-file? false\n\n ;; Quick capture templates for receiving content from other apps.\n ;; Each template contains three elements {time}, {text} and {url}, which can be auto-expanded\n ;; by receiving content from other apps. Note: the {} cannot be omitted.\n ;; - {time}: capture time\n ;; - {date}: capture date using current date format, use `[[{date}]]` to get a page reference\n ;; - {text}: text that users selected before sharing.\n ;; - {url}: URL or assets path for media files stored in Logseq.\n ;; You can also reorder them or use only one or two of them in the template.\n ;; You can also insert or format any text in the template, as shown in the following examples.\n ;; :quick-capture-templates\n ;; {:text \"[[quick capture]] **{time}**: {text} from {url}\"\n ;;  :media \"[[quick capture]] **{time}**: {url}\"}\n\n ;; Quick capture options.\n ;; - insert-today?   Insert the capture at the end of today's journal page (boolean).\n ;; - redirect-page?  Redirect to the quick capture page after capturing (boolean).\n ;; - default-page    The default page to capture to if insert-today? is false (string).\n ;; :quick-capture-options\n ;; {:insert-today? false           ;; Default value: true\n ;;  :redirect-page? false          ;; Default value: false\n ;;  :default-page \"quick capture\"} ;; Default page: \"quick capture\"\n\n ;; Configure the Enter key behavior for\n ;; context-aware editing with DWIM (Do What I Mean).\n ;; context-aware Enter key behavior implies that pressing Enter will\n ;; have different outcomes based on the context.\n ;; For instance, pressing Enter within a list generates a new list item,\n ;; whereas pressing Enter in a block reference opens the referenced block.\n ;; :dwim/settings\n ;; {:admonition&src?  true        ;; Default value: true\n ;;  :markup?          false       ;; Default value: false\n ;;  :block-ref?       true        ;; Default value: true\n ;;  :page-ref?        true        ;; Default value: true\n ;;  :properties?      true        ;; Default value: true\n ;;  :list?            false}      ;; Default value: false\n }\n",
+   :file/created-at #inst "2025-08-05T14:18:42.928-00:00",
+   :file/last-modified-at #inst "2025-08-05T14:18:42.928-00:00"}
+  {:file/path "logseq/custom.css",
+   :file/content "",
+   :file/created-at #inst "2025-07-21T23:39:15.213-00:00",
+   :file/last-modified-at #inst "2025-07-21T23:39:15.213-00:00"}
+  {:file/path "logseq/custom.js",
+   :file/content "",
+   :file/created-at #inst "2025-07-21T23:39:15.213-00:00",
+   :file/last-modified-at #inst "2025-07-21T23:39:15.213-00:00"}],
+ :logseq.db.sqlite.export/kv-values
+ [{:db/ident :logseq.kv/db-type, :kv/value "db"}
+  {:db/ident :logseq.kv/graph-initial-schema-version,
+   :kv/value {:major 65, :minor 7}}
+  {:db/ident :logseq.kv/graph-created-at, :kv/value 1753141155212}
+  {:db/ident :logseq.kv/graph-git-sha, :kv/value "65640ed88"}
+  {:db/ident :logseq.kv/graph-last-gc-at, :kv/value 1767201839870}
+  {:db/ident :logseq.kv/graph-text-embedding-model-name,
+   :kv/value "Xenova/all-MiniLM-L6-v2"}],
+ :logseq.db.sqlite.export/export-type :graph}

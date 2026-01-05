@@ -1,0 +1,1170 @@
+{:properties
+ {:user.property/website-AYUfNLXV
+  {:db/cardinality :db.cardinality/one,
+   :logseq.property/type :url,
+   :block/title "website",
+   :block/created-at 1754176578813,
+   :block/updated-at 1754176578813,
+   :build/properties {}},
+  :user.property/Estimate-FmIhUvfn
+  {:db/cardinality :db.cardinality/one,
+   :logseq.property/type :number,
+   :block/title "Estimate",
+   :block/created-at 1754174946802,
+   :block/updated-at 1754179996326,
+   :build/properties
+   {:logseq.property/icon
+    {:type :tabler-icon,
+     :id "ClockDollar",
+     :name "ClockDollar",
+     :color "#6e7b8b"}}},
+  :user.property/crm-status-npjl7hLV
+  {:logseq.property/type :default,
+   :build/closed-values
+   [{:value "initial",
+     :uuid #uuid "688e9666-f513-4c0c-a2ec-5c7139fbf868"}
+    {:value "details",
+     :uuid #uuid "688e9671-8b1b-418c-b257-fc94ed2e7f31"}
+    {:value "follow up",
+     :uuid #uuid "688e967e-55e4-4aeb-b3bd-23bce2e05c99"}
+    {:value "meeting",
+     :uuid #uuid "688e968a-3c6a-4957-9234-dd4c8494573d"}
+    {:value "signed contract",
+     :uuid #uuid "688e9695-d738-4392-92e5-69ffbd9d323c"}
+    {:value "declined",
+     :uuid #uuid "688e96a3-270f-4ef1-ba18-d6eed39324db"}],
+   :block/updated-at 1754180058152,
+   :build/properties
+   {:logseq.property/default-value "initial",
+    :logseq.property/icon
+    {:type :tabler-icon,
+     :id "ProgressBolt",
+     :name "ProgressBolt",
+     :color "#6e7b8b"}},
+   :block/created-at 1754175048537,
+   :block/title "crm-status",
+   :db/cardinality :db.cardinality/one},
+  :user.property/FirstContact-O7-y7gRL
+  {:db/cardinality :db.cardinality/one,
+   :logseq.property/type :date,
+   :block/title "First Contact",
+   :block/created-at 1754175249282,
+   :block/updated-at 1754175249282,
+   :build/properties {}},
+  :user.property/ContactPerson-aFPYNxn0
+  {:logseq.property/type :node,
+   :block/updated-at 1754180031286,
+   :build/properties
+   {:logseq.property/icon
+    {:type :tabler-icon,
+     :id "UserShield",
+     :name "UserShield",
+     :color "#6e7b8b"}},
+   :block/created-at 1754174080500,
+   :block/title "Contact Person",
+   :db/cardinality :db.cardinality/one,
+   :build/property-classes [:user.class/contact-Nyi5TJHt]},
+  :user.property/company-pBN6DdE9
+  {:logseq.property/type :node,
+   :block/updated-at 1754175642127,
+   :build/properties {},
+   :block/created-at 1754175642127,
+   :block/title "company",
+   :db/cardinality :db.cardinality/one,
+   :build/property-classes [:user.class/company-rirb8SSZ]},
+  :user.property/phone-obTzB2Xo
+  {:db/cardinality :db.cardinality/one,
+   :logseq.property/type :default,
+   :block/title "phone",
+   :block/created-at 1754175628119,
+   :block/updated-at 1754175628119,
+   :build/properties {}},
+  :user.property/email-nJA7VXXM
+  {:db/cardinality :db.cardinality/one,
+   :logseq.property/type :default,
+   :block/title "email",
+   :block/created-at 1754175615690,
+   :block/updated-at 1754175615690,
+   :build/properties {}},
+  :user.property/Amount-E61hlAvV
+  {:db/cardinality :db.cardinality/one,
+   :logseq.property/type :number,
+   :block/title "Amount",
+   :block/uuid #uuid "00000002-5104-1314-0000-000000000000",
+   :build/keep-uuid? true,
+   :block/created-at 1754175326189,
+   :block/updated-at 1754179922241,
+   :build/properties
+   {:logseq.property/icon
+    {:id "HeartDollar", :type :tabler-icon, :color "#6e7b8b"}}},
+  :user.property/business-EiucgyBt
+  {:logseq.property/type :node,
+   :block/updated-at 1754173982689,
+   :build/properties {},
+   :block/created-at 1754173982689,
+   :block/title "business",
+   :db/cardinality :db.cardinality/one,
+   :build/property-classes [:user.class/company-rirb8SSZ]},
+  :user.property/LastContact-JnRNY89A
+  {:db/cardinality :db.cardinality/one,
+   :logseq.property/type :date,
+   :block/title "Last Contact",
+   :block/created-at 1754175232454,
+   :block/updated-at 1754175232454,
+   :build/properties {}}},
+ :classes
+ {:user.class/company-rirb8SSZ
+  {:block/title "company",
+   :block/created-at 1754173989666,
+   :block/updated-at 1754179878820,
+   :build/class-properties [:user.property/website-AYUfNLXV],
+   :build/properties
+   {:logseq.property/icon
+    {:id "BuildingSkyscraper", :type :tabler-icon, :color "#6e7b8b"}}},
+  :user.class/projec-P0hrBkvp
+  {:block/title "project",
+   :block/created-at 1754174516542,
+   :block/updated-at 1754174524519,
+   :build/properties {}},
+  :user.class/DZ-f3hx0-a6
+  {:block/title "DZ",
+   :block/uuid #uuid "688e948c-0175-46df-9756-084292f2e536",
+   :build/keep-uuid? true,
+   :block/created-at 1754174604551,
+   :block/updated-at 1754174609814,
+   :build/properties {}},
+  :user.class/CRM-ctr-E62E
+  {:block/uuid #uuid "688e949e-a027-49b6-8990-6a3e13991059",
+   :build/class-properties
+   [:user.property/business-EiucgyBt
+    :user.property/ContactPerson-aFPYNxn0
+    :user.property/Estimate-FmIhUvfn
+    :user.property/crm-status-npjl7hLV
+    :user.property/LastContact-JnRNY89A
+    :user.property/FirstContact-O7-y7gRL
+    :user.property/Amount-E61hlAvV],
+   :block/updated-at 1767140879240,
+   :build/properties
+   {:logseq.property/icon {:id "apple", :type :emoji}},
+   :build/keep-uuid? true,
+   :block/created-at 1754174622235,
+   :block/collapsed? false,
+   :build/class-extends [:user.class/DZ-f3hx0-a6],
+   :block/title "CRM"},
+  :user.class/Person-X57FxTyA
+  {:block/title "person",
+   :block/created-at 1754175839362,
+   :block/updated-at 1754179959156,
+   :build/class-properties
+   [:user.property/email-nJA7VXXM
+    :user.property/phone-obTzB2Xo
+    :user.property/company-pBN6DdE9],
+   :build/properties
+   {:logseq.property/icon
+    {:id "User", :type :tabler-icon, :color "#6e7b8b"}}},
+  :user.class/contact-Nyi5TJHt
+  {:block/title "contact",
+   :block/created-at 1754175683661,
+   :block/updated-at 1754179944809,
+   :build/class-extends [:user.class/Person-X57FxTyA],
+   :build/properties
+   {:logseq.property/icon
+    {:id "UserDollar", :type :tabler-icon, :color "#6e7b8b"}}}},
+ :pages-and-blocks
+ [{:page
+   {:block/created-at 1754170300699,
+    :block/updated-at 1754170300699,
+    :build/properties
+    {:logseq.property/built-in? true, :logseq.property/hide? true},
+    :block/title "$$$favorites"},
+   :blocks
+   [{:block/title "",
+     :block/link
+     [:block/uuid #uuid "688e9d9f-dd59-448a-8c9e-e2d228ab08e2"],
+     :block/created-at 1754176930852,
+     :block/updated-at 1754176930852,
+     :build/properties {}}
+    {:block/title "",
+     :block/link
+     [:block/uuid #uuid "688e949e-a027-49b6-8990-6a3e13991059"],
+     :block/created-at 1754176650281,
+     :block/updated-at 1754176650281,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1754173877678,
+     :block/updated-at 1754173877678,
+     :build/properties {}}
+    {:block/title "",
+     :block/link
+     [:block/uuid #uuid "00000002-5389-0208-3000-000000000000"],
+     :block/created-at 1754173871180,
+     :block/updated-at 1754173871180,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "00000004-1906-3437-5800-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754170300699,
+    :block/updated-at 1754176833145,
+    :build/properties
+    {:logseq.property/built-in? true, :logseq.property/hide? true},
+    :block/title "$$$views"},
+   :blocks
+   [{:block/title "All",
+     :block/created-at 1754170546251,
+     :block/updated-at 1754170546272,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Journal}}
+    {:block/title "All",
+     :block/created-at 1754170630259,
+     :block/updated-at 1754170630261,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Task}}
+    {:block/title "All",
+     :block/created-at 1754170634245,
+     :block/updated-at 1754170634246,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Tag}}
+    {:block/title "All",
+     :block/created-at 1754173875607,
+     :block/updated-at 1754174035560,
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/title 216, :block/tags 90},
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/updated-at},
+      :logseq.property.view/feature-type :class-objects}}
+    {:block/title "All",
+     :block/created-at 1754173886045,
+     :block/updated-at 1754173886051,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects}}
+    {:block/title "Linked references",
+     :block/created-at 1754173886090,
+     :block/updated-at 1754173886109,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references}}
+    {:block/title "Linked references",
+     :block/created-at 1754174017346,
+     :block/updated-at 1754174017368,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references}}
+    {:block/title "All",
+     :block/created-at 1754174279782,
+     :block/updated-at 1754174295035,
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/tags 83, :block/title 408},
+      :logseq.property.view/feature-type :class-objects}}
+    {:block/title "All",
+     :block/created-at 1754174522261,
+     :block/updated-at 1754174522268,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/projec-P0hrBkvp}}
+    {:block/title "All",
+     :block/created-at 1754174643808,
+     :block/updated-at 1754179423237,
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/title 162,
+       :user.property/ContactPerson-aFPYNxn0 116,
+       :user.property/Estimate-FmIhUvfn 77,
+       :user.property/crm-status-npjl7hLV 120,
+       :user.property/FirstContact-O7-y7gRL 122,
+       :user.property/Amount-E61hlAvV 74,
+       :user.property/business-EiucgyBt 137,
+       :user.property/LastContact-JnRNY89A 134},
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/tags :block/updated-at},
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/CRM-ctr-E62E,
+      :logseq.property.table/ordered-columns
+      [:block/title
+       :user.property/business-EiucgyBt
+       :user.property/ContactPerson-aFPYNxn0
+       :user.property/Estimate-FmIhUvfn
+       :user.property/Amount-E61hlAvV
+       :user.property/crm-status-npjl7hLV
+       :user.property/FirstContact-O7-y7gRL
+       :user.property/LastContact-JnRNY89A
+       :add-new-property]}}
+    {:block/title "All",
+     :block/created-at 1754174652641,
+     :block/updated-at 1754174652648,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/DZ-f3hx0-a6}}
+    {:block/title "Linked references",
+     :block/created-at 1754174652693,
+     :block/updated-at 1754174652709,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/DZ-f3hx0-a6}}
+    {:block/title "Linked references",
+     :block/created-at 1754174876362,
+     :block/updated-at 1754174876381,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references}}
+    {:block/title "Linked references",
+     :block/created-at 1754174886717,
+     :block/updated-at 1754174886744,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "688e9549-9ad9-463d-ace6-32078f694610"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1754175576817,
+     :block/updated-at 1754175576838,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references}}
+    {:block/title "Linked references",
+     :block/created-at 1754175576778,
+     :block/updated-at 1754175576798,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references}}
+    {:block/title "All",
+     :block/created-at 1754175601345,
+     :block/updated-at 1754175601353,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/Person-X57FxTyA}}
+    {:block/title "Linked references",
+     :block/created-at 1754175601406,
+     :block/updated-at 1754175601422,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/Person-X57FxTyA}}
+    {:block/title "All",
+     :block/created-at 1754175751902,
+     :block/updated-at 1754175751910,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/contact-Nyi5TJHt}}
+    {:block/title "Linked references",
+     :block/created-at 1754175751968,
+     :block/updated-at 1754175751988,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/contact-Nyi5TJHt}}
+    {:block/title "Linked references",
+     :block/created-at 1754175817716,
+     :block/updated-at 1754175817738,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "00000001-2025-0801-0000-000000000000"]}}
+    {:block/title "Linked references",
+     :block/created-at 1754175884041,
+     :block/updated-at 1754175884059,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/CRM-ctr-E62E}}
+    {:block/title "All",
+     :block/created-at 1754176213506,
+     :block/updated-at 1754176213515,
+     :build/properties
+     {:logseq.property.view/feature-type :all-pages,
+      :logseq.property/view-for
+      [:block/uuid #uuid "00000004-1906-3437-5800-000000000000"]}}
+    {:block/title "Unlinked references",
+     :block/created-at 1754176309805,
+     :block/updated-at 1754176309825,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "688e9b29-aa56-46b5-8ab9-74afc9685f15"]}}
+    {:block/title "Linked references",
+     :block/created-at 1754176309771,
+     :block/updated-at 1754176309788,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "688e9b29-aa56-46b5-8ab9-74afc9685f15"]}}
+    {:block/title "Linked references",
+     :block/created-at 1754176470876,
+     :block/updated-at 1754176470917,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "688e9b32-485f-4152-b220-a8159f0296e3"]}}
+    {:block/title "Linked references",
+     :block/created-at 1754176549585,
+     :block/updated-at 1754176549606,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "688e9b22-0245-4d22-9845-6a79f5aaa36c"]}}
+    {:block/title "Linked references",
+     :block/created-at 1754176557159,
+     :block/updated-at 1754176557178,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "688e97cd-6d96-4c0d-86cd-c505e1f3acd8"]}}
+    {:block/title "All",
+     :block/created-at 1754176560728,
+     :block/updated-at 1754176619231,
+     :build/properties
+     {:logseq.property.table/sorting
+      [{:id :block/title, :asc? true}
+       {:id :block/updated-at, :asc? false}],
+      :logseq.property.table/sized-columns
+      {:block/title 208, :block/tags 112},
+      :logseq.property.table/hidden-columns
+      #{:logseq.property/empty-placeholder},
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/company-rirb8SSZ}}
+    {:block/title "Linked references",
+     :block/created-at 1754176560785,
+     :block/updated-at 1754176560803,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.class/company-rirb8SSZ}}
+    {:block/title "Clients",
+     :block/created-at 1754176677005,
+     :block/updated-at 1754176736780,
+     :build/properties
+     {:logseq.property.table/sized-columns {:block/tags 78},
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/tags :block/updated-at
+        :user.property/Amount-E61hlAvV
+        :user.property/Estimate-FmIhUvfn},
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/CRM-ctr-E62E,
+      :logseq.property.table/filters
+      {:or? false,
+       :filters
+       [[:user.property/crm-status-npjl7hLV
+         :is
+         #{#uuid "688e9695-d738-4392-92e5-69ffbd9d323c"}]]}}}
+    {:block/title "",
+     :block/created-at 1754176683296,
+     :block/updated-at 1754176683296,
+     :build/properties {}}
+    {:block/title "Leads",
+     :block/created-at 1754176772718,
+     :block/updated-at 1754176876770,
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:user.property/ContactPerson-aFPYNxn0 119,
+       :block/title 238,
+       :user.property/crm-status-npjl7hLV 105,
+       :user.property/LastContact-JnRNY89A 117,
+       :user.property/FirstContact-O7-y7gRL 120,
+       :user.property/Amount-E61hlAvV 76,
+       :user.property/Estimate-FmIhUvfn 83},
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/tags :block/updated-at},
+      :logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :user.class/CRM-ctr-E62E,
+      :logseq.property.table/filters
+      {:or? false,
+       :filters
+       [[:user.property/crm-status-npjl7hLV
+         :is-not
+         #{#uuid "688e9695-d738-4392-92e5-69ffbd9d323c"}]]}}}
+    {:block/title "",
+     :block/created-at 1754176833147,
+     :block/updated-at 1754176833147,
+     :build/properties {}}
+    {:block/title "",
+     :block/created-at 1754176788680,
+     :block/updated-at 1754176788680,
+     :build/properties {}}
+    {:block/title "All",
+     :block/created-at 1754177342093,
+     :block/updated-at 1754177342104,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Template}}
+    {:block/title "All",
+     :block/created-at 1754177633858,
+     :block/updated-at 1754177633868,
+     :build/properties
+     {:logseq.property.view/feature-type :property-objects,
+      :logseq.property/view-for :user.property/Amount-E61hlAvV}}
+    {:block/title "Linked references",
+     :block/created-at 1754177633915,
+     :block/updated-at 1754177633930,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :linked-references,
+      :logseq.property/view-for :user.property/Amount-E61hlAvV}}
+    {:block/title "Unlinked references",
+     :block/created-at 1754179442473,
+     :block/updated-at 1754179442491,
+     :build/properties
+     {:logseq.property.view/type :logseq.property.view/type.list,
+      :logseq.property.view/group-by-property :block/page,
+      :logseq.property.view/feature-type :unlinked-references,
+      :logseq.property/view-for
+      [:block/uuid #uuid "688e9d9f-dd59-448a-8c9e-e2d228ab08e2"]}}
+    {:block/title "All",
+     :block/created-at 1754349003896,
+     :block/updated-at 1754349003912,
+     :build/properties
+     {:logseq.property.view/feature-type :class-objects,
+      :logseq.property/view-for :logseq.class/Asset}}]}
+  {:page {:block/uuid #uuid "00000002-1720-8548-4600-000000000000"},
+   :blocks
+   [{:block/title "template: crm template",
+     :block/uuid #uuid "688e9f3f-0267-4f23-a18b-9077074f48cb",
+     :build/keep-uuid? true,
+     :block/created-at 1754177343874,
+     :block/updated-at 1754177365151,
+     :build/tags [:logseq.class/Template],
+     :build/properties
+     {:logseq.property/template-applied-to
+      #{:user.class/CRM-ctr-E62E}},
+     :build/children
+     [{:block/title "Scoping",
+       :block/created-at 1754177368818,
+       :block/updated-at 1754177399539,
+       :build/properties {:logseq.property/order-list-type "number"},
+       :build/children
+       [{:block/title "",
+         :block/created-at 1754177391767,
+         :block/updated-at 1754177391767,
+         :build/properties {}}]}
+      {:block/title "Legal",
+       :block/created-at 1754177375525,
+       :block/updated-at 1754177399540,
+       :build/properties {:logseq.property/order-list-type "number"}}
+      {:block/title "Pricing Discussion",
+       :block/created-at 1754177377889,
+       :block/updated-at 1754177399540,
+       :build/properties {:logseq.property/order-list-type "number"}}
+      {:block/title "Notes",
+       :block/created-at 1754177385375,
+       :block/updated-at 1754177399541,
+       :build/properties
+       {:logseq.property/order-list-type "number"}}]}]}
+  {:page {:block/uuid #uuid "00000002-5104-1314-0000-000000000000"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1754177651249,
+     :block/updated-at 1754177651249,
+     :build/properties {}}]}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0205-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754175548202,
+    :block/updated-at 1754175548202,
+    :build/properties {},
+    :build/journal 20250205},
+   :blocks []}
+  {:page
+   {:block/created-at 1754175264008,
+    :block/updated-at 1754175264008,
+    :build/properties {},
+    :build/journal 20250317},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0512-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754175280123,
+    :block/updated-at 1754175280123,
+    :build/properties {},
+    :build/journal 20250512},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0605-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754175542576,
+    :block/updated-at 1754175542576,
+    :build/properties {},
+    :build/journal 20250605},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0621-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754175289996,
+    :block/updated-at 1754175289996,
+    :build/properties {},
+    :build/journal 20250621},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0716-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754175457421,
+    :block/updated-at 1754175457421,
+    :build/properties {},
+    :build/journal 20250716},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "00000001-2025-0801-0000-000000000000",
+    :build/keep-uuid? true,
+    :block/created-at 1754175451797,
+    :block/updated-at 1754175451797,
+    :build/properties {},
+    :build/journal 20250801},
+   :blocks []}
+  {:page
+   {:block/created-at 1754170300950,
+    :block/updated-at 1754189473299,
+    :build/properties {},
+    :build/journal 20250802},
+   :blocks
+   [{:block/title "Logseq DB  - Unfiltered and Unedited",
+     :block/created-at 1754171481985,
+     :block/updated-at 1754171722063,
+     :build/properties
+     {:logseq.property/heading 2,
+      :logseq.property/icon
+      {:type :tabler-icon, :id "VideoPlus", :color "#6e7b8b"}},
+     :build/children
+     [{:block/title "Objective",
+       :block/created-at 1754171515567,
+       :block/updated-at 1754171732322,
+       :build/properties {:logseq.property/heading 3},
+       :build/children
+       [{:block/title
+         "Build A simple Customer Relationship Management - CRM",
+         :block/created-at 1754171685243,
+         :block/updated-at 1754171737399,
+         :build/tags [:user.class/projec-P0hrBkvp],
+         :build/properties {},
+         :build/children
+         [{:block/title "What will we set up?",
+           :block/created-at 1754171666188,
+           :block/updated-at 1754171756750,
+           :build/properties {},
+           :build/children
+           [{:block/title "we will build it live, naturally.",
+             :block/created-at 1754171756750,
+             :block/updated-at 1754173177125,
+             :build/properties {}}
+            {:block/title "The CRM will have the following pillars",
+             :block/created-at 1754173167574,
+             :block/updated-at 1754173793007,
+             :build/properties
+             {:logseq.property/icon
+              {:type :tabler-icon,
+               :id "TargetArrow",
+               :color "#6e7b8b"}},
+             :build/children
+             [{:block/title "Ability to capture people",
+               :block/created-at 1754173206532,
+               :block/updated-at 1754177477110,
+               :build/tags [:logseq.class/Task],
+               :build/properties
+               {:logseq.property/status :logseq.property/status.done,
+                :logseq.property/order-list-type "number"}}
+              {:block/title "Ability to capture Companies",
+               :block/created-at 1754173227227,
+               :block/updated-at 1754177490351,
+               :build/tags [:logseq.class/Task],
+               :build/properties
+               {:logseq.property/status :logseq.property/status.done,
+                :logseq.property/order-list-type "number"}}
+              {:block/title "Ability to capture Customer relationship",
+               :block/created-at 1754173234477,
+               :block/updated-at 1754177497866,
+               :build/tags [:logseq.class/Task],
+               :build/properties
+               {:logseq.property/status :logseq.property/status.done,
+                :logseq.property/order-list-type "number"}}
+              {:block/title
+               "Ability to track active and prospect customers",
+               :block/created-at 1754173254832,
+               :block/updated-at 1754177505257,
+               :build/tags [:logseq.class/Task],
+               :build/properties
+               {:logseq.property/status :logseq.property/status.done,
+                :logseq.property/order-list-type "number"}}
+              {:block/title
+               "Create a CRM Dashboard for combined views via query",
+               :block/created-at 1754178694984,
+               :block/updated-at 1754189438457,
+               :build/tags [:logseq.class/Task],
+               :build/properties
+               {:logseq.property/status :logseq.property/status.done,
+                :logseq.property/order-list-type "number"},
+               :build/children
+               [{:block/title "Clients Dashboard",
+                 :block/created-at 1754178719912,
+                 :block/updated-at 1754179121383,
+                 :build/properties
+                 {:logseq.property/order-list-type "number"}}
+                {:block/title "Leads Dashboard",
+                 :block/created-at 1754178738506,
+                 :block/updated-at 1754179122953,
+                 :build/properties
+                 {:logseq.property/order-list-type "number"}}
+                {:block/title
+                 "Calculated values using Logseq Query function",
+                 :block/created-at 1754178752043,
+                 :block/updated-at 1754189408739,
+                 :build/properties
+                 {:logseq.property/order-list-type "number"}}]}
+              {:block/title "Insert from the CRM Tag Table",
+               :block/created-at 1754179080320,
+               :block/updated-at 1754189449722,
+               :build/tags [:logseq.class/Task],
+               :build/properties
+               {:logseq.property/status :logseq.property/status.done,
+                :logseq.property/order-list-type "number"},
+               :build/children
+               [{:block/title "Clients View",
+                 :block/created-at 1754179102826,
+                 :block/updated-at 1754179107365,
+                 :build/properties
+                 {:logseq.property/order-list-type "number"}}
+                {:block/title "Leads View",
+                 :block/created-at 1754179102826,
+                 :block/updated-at 1754179110719,
+                 :build/properties
+                 {:logseq.property/order-list-type "number"}}]}
+              {:block/title "Create CRM Template",
+               :block/created-at 1754179319896,
+               :block/updated-at 1754189473298,
+               :build/properties
+               {:logseq.property/order-list-type "number"},
+               :build/children
+               [{:block/title
+                 "Leverage the template feature to speed up the definition of the",
+                 :block/created-at 1754179325050,
+                 :block/updated-at 1754179347380,
+                 :build/properties
+                 {:logseq.property/order-list-type "number"}}]}]}]}
+          {:block/title "What principles will we strive for?",
+           :block/created-at 1754171806235,
+           :block/updated-at 1754171832629,
+           :build/properties {},
+           :build/children
+           [{:block/title "Simplicity over overengineering",
+             :block/created-at 1754171832631,
+             :block/updated-at 1754172399833,
+             :build/properties {},
+             :build/children
+             [{:block/title
+               "Start small and expect the system or workflow to be enhanced over time",
+               :block/created-at 1754171837261,
+               :block/updated-at 1754172415199,
+               :build/properties {}}]}]}
+          {:block/title "",
+           :block/created-at 1754175819286,
+           :block/updated-at 1754175819286,
+           :build/properties {}}]}]}]}]}
+  {:page
+   {:block/created-at 1754197398639,
+    :block/updated-at 1754197398639,
+    :build/properties {},
+    :build/journal 20250803},
+   :blocks []}
+  {:page
+   {:block/created-at 1754348993111,
+    :block/updated-at 1754348993111,
+    :build/properties {},
+    :build/journal 20250804},
+   :blocks []}
+  {:page
+   {:block/created-at 1756513919679,
+    :block/updated-at 1756513919679,
+    :build/properties {},
+    :build/journal 20250829},
+   :blocks []}
+  {:page
+   {:block/created-at 1756693815469,
+    :block/updated-at 1756693815469,
+    :build/properties {},
+    :build/journal 20250831},
+   :blocks []}
+  {:page
+   {:block/created-at 1756859081770,
+    :block/updated-at 1756859081770,
+    :build/properties {},
+    :build/journal 20250902},
+   :blocks []}
+  {:page
+   {:block/created-at 1757870128922,
+    :block/updated-at 1757870128922,
+    :build/properties {},
+    :build/journal 20250914},
+   :blocks []}
+  {:page
+   {:block/created-at 1760445232291,
+    :block/updated-at 1760445232291,
+    :build/properties {},
+    :build/journal 20251014},
+   :blocks []}
+  {:page
+   {:block/created-at 1764021705913,
+    :block/updated-at 1764021705913,
+    :build/properties {},
+    :build/journal 20251124},
+   :blocks []}
+  {:page
+   {:block/created-at 1764435273124,
+    :block/updated-at 1764435273124,
+    :build/properties {},
+    :build/journal 20251129},
+   :blocks []}
+  {:page
+   {:block/created-at 1765599087550,
+    :block/updated-at 1765599087550,
+    :build/properties {},
+    :build/journal 20251212},
+   :blocks []}
+  {:page
+   {:block/created-at 1766186568939,
+    :block/updated-at 1766186568939,
+    :build/properties {},
+    :build/journal 20251219},
+   :blocks []}
+  {:page
+   {:block/created-at 1766424018758,
+    :block/updated-at 1766424018758,
+    :build/properties {},
+    :build/journal 20251222},
+   :blocks []}
+  {:page
+   {:block/created-at 1767140318087,
+    :block/updated-at 1767154585407,
+    :build/properties {},
+    :build/journal 20251230},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1767154527958,
+     :block/updated-at 1767154527958,
+     :build/properties {},
+     :build/children
+     [{:block/title
+       "```mermaid\nerDiagram\n    CUSTOMER ||--o{ ORDER : places\n    CUSTOMER {\n        string name\n        string custNumber\n        string sector\n    }\n    ORDER ||--|{ LINE-ITEM : contains\n    ORDER {\n        int orderNumber\n        string deliveryAddress\n    }\n    LINE-ITEM {\n        string productCode\n        int quantity\n        float pricePerUnit\n    }\n\n```",
+       :block/created-at 1767154581391,
+       :block/updated-at 1767154585406,
+       :build/properties {}}]}]}
+  {:page
+   {:block/created-at 1767201823560,
+    :block/updated-at 1767201823560,
+    :build/properties {},
+    :build/journal 20251231},
+   :blocks []}
+  {:page {:block/uuid #uuid "688e948c-0175-46df-9756-084292f2e536"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1754174604790,
+     :block/updated-at 1754174604790,
+     :build/properties {}}]}
+  {:page {:block/uuid #uuid "688e949e-a027-49b6-8990-6a3e13991059"},
+   :blocks
+   [{:block/title "AI Agent for Sales",
+     :block/created-at 1754174679508,
+     :block/updated-at 1754176290865,
+     :build/tags [:user.class/CRM-ctr-E62E],
+     :build/properties
+     {:user.property/Estimate-FmIhUvfn 12000,
+      :user.property/crm-status-npjl7hLV
+      [:block/uuid #uuid "688e967e-55e4-4aeb-b3bd-23bce2e05c99"],
+      :user.property/FirstContact-O7-y7gRL
+      [:block/uuid #uuid "00000001-2025-0512-0000-000000000000"],
+      :user.property/ContactPerson-aFPYNxn0
+      [:block/uuid #uuid "688e9b22-0245-4d22-9845-6a79f5aaa36c"],
+      :user.property/Amount-E61hlAvV 12000,
+      :user.property/business-EiucgyBt
+      [:block/uuid #uuid "688e9549-9ad9-463d-ace6-32078f694610"],
+      :user.property/LastContact-JnRNY89A
+      [:block/uuid #uuid "00000001-2025-0621-0000-000000000000"]}}
+    {:block/title "Specification requirement",
+     :block/collapsed? false,
+     :block/created-at 1754177260415,
+     :block/updated-at 1754177299328,
+     :build/properties {},
+     :build/children
+     [{:block/title
+       "the customer wants nice colors with a lot of emojis",
+       :block/created-at 1754177293647,
+       :block/updated-at 1767140879239,
+       :build/properties {}}]}
+    {:block/title "Database migration to the cloud",
+     :block/created-at 1754175491104,
+     :block/updated-at 1754176297315,
+     :build/tags [:user.class/CRM-ctr-E62E],
+     :build/properties
+     {:user.property/Estimate-FmIhUvfn 4500,
+      :user.property/FirstContact-O7-y7gRL
+      [:block/uuid #uuid "00000001-2025-0205-0000-000000000000"],
+      :user.property/ContactPerson-aFPYNxn0
+      [:block/uuid #uuid "688e9b29-aa56-46b5-8ab9-74afc9685f15"],
+      :user.property/Amount-E61hlAvV 0,
+      :user.property/business-EiucgyBt
+      [:block/uuid #uuid "688e9827-aa6a-4073-b1b8-2e4e1b7c807d"],
+      :user.property/LastContact-JnRNY89A
+      [:block/uuid #uuid "00000001-2025-0605-0000-000000000000"]}}
+    {:block/title "",
+     :block/created-at 1754176822599,
+     :block/updated-at 1754176822599,
+     :build/properties {}}
+    {:block/title "Create a new Demo Search Engine",
+     :block/created-at 1754177404470,
+     :block/updated-at 1754179559860,
+     :build/tags [:user.class/CRM-ctr-E62E],
+     :build/properties
+     {:user.property/Estimate-FmIhUvfn 0,
+      :user.property/crm-status-npjl7hLV
+      [:block/uuid #uuid "688e9695-d738-4392-92e5-69ffbd9d323c"],
+      :user.property/Amount-E61hlAvV 4500},
+     :build/children
+     [{:block/title "Scoping",
+       :block/created-at 1754177404493,
+       :block/updated-at 1754177404493,
+       :build/properties
+       {:logseq.property/used-template
+        [:block/uuid #uuid "688e9f3f-0267-4f23-a18b-9077074f48cb"],
+        :logseq.property/order-list-type "number"},
+       :build/children
+       [{:block/title "",
+         :block/created-at 1754177404493,
+         :block/updated-at 1754177404493,
+         :build/properties {}}]}
+      {:block/title "Legal",
+       :block/created-at 1754177404493,
+       :block/updated-at 1754177404493,
+       :build/properties {:logseq.property/order-list-type "number"}}
+      {:block/title "Pricing Discussion",
+       :block/created-at 1754177404493,
+       :block/updated-at 1754177404493,
+       :build/properties {:logseq.property/order-list-type "number"}}
+      {:block/title "Notes",
+       :block/created-at 1754177404493,
+       :block/updated-at 1754177404493,
+       :build/properties
+       {:logseq.property/order-list-type "number"}}]}]}
+  {:page
+   {:block/uuid #uuid "688e97cd-6d96-4c0d-86cd-c505e1f3acd8",
+    :build/keep-uuid? true,
+    :block/created-at 1754175437302,
+    :block/updated-at 1754175437302,
+    :build/tags [:user.class/company-rirb8SSZ],
+    :build/properties {},
+    :block/title "Brando Dealership"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "688e9b32-485f-4152-b220-a8159f0296e3",
+    :build/keep-uuid? true,
+    :block/created-at 1754176306527,
+    :block/updated-at 1754176538322,
+    :build/tags [:user.class/contact-Nyi5TJHt],
+    :build/properties
+    {:user.property/company-pBN6DdE9
+     [:block/uuid #uuid "688e97cd-6d96-4c0d-86cd-c505e1f3acd8"],
+     :user.property/phone-obTzB2Xo "",
+     :user.property/email-nJA7VXXM ""},
+    :block/title "Brando Steve"},
+   :blocks []}
+  {:page
+   {:block/collapsed? false,
+    :block/created-at 1754174970783,
+    :block/updated-at 1754176306559,
+    :build/tags [:user.class/CRM-ctr-E62E],
+    :build/properties
+    {:user.property/Estimate-FmIhUvfn 800,
+     :user.property/crm-status-npjl7hLV
+     [:block/uuid #uuid "688e9695-d738-4392-92e5-69ffbd9d323c"],
+     :user.property/FirstContact-O7-y7gRL
+     [:block/uuid #uuid "00000001-2025-0716-0000-000000000000"],
+     :user.property/ContactPerson-aFPYNxn0
+     [:block/uuid #uuid "688e9b32-485f-4152-b220-a8159f0296e3"],
+     :user.property/Amount-E61hlAvV 2500,
+     :user.property/business-EiucgyBt
+     [:block/uuid #uuid "688e97cd-6d96-4c0d-86cd-c505e1f3acd8"],
+     :user.property/LastContact-JnRNY89A
+     [:block/uuid #uuid "00000001-2025-0801-0000-000000000000"]},
+    :block/title "Build a new website for brando dealership"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "688e9d9f-dd59-448a-8c9e-e2d228ab08e2",
+    :build/keep-uuid? true,
+    :block/created-at 1754176927864,
+    :block/updated-at 1754179721268,
+    :build/properties
+    {:logseq.property/icon
+     {:type :tabler-icon, :id "LayoutDashboard", :color "#6e7b8b"}},
+    :block/title "CRM Dashboard"},
+   :blocks
+   [{:block/title "Clients",
+     :block/created-at 1754176928094,
+     :block/updated-at 1754177533768,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/title 297,
+       :user.property/ContactPerson-aFPYNxn0 127,
+       :user.property/business-EiucgyBt 86,
+       :user.property/crm-status-npjl7hLV 131},
+      :logseq.property/heading 2,
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/tags :block/updated-at
+        :user.property/Estimate-FmIhUvfn
+        :user.property/FirstContact-O7-y7gRL
+        :user.property/LastContact-JnRNY89A},
+      :logseq.property/query
+      "(and (tags [[688e949e-a027-49b6-8990-6a3e13991059]]) (property :user.property/crm-status-npjl7hLV \"signed contract\"))"},
+     :build/children
+     [{:block/title
+       "|Calculation| Value|\n|Total Amount| ${{function (sum :user.property/Amount-E61hlAvV)}}|\n|Average Amount| ${{function (average :user.property/Amount-E61hlAvV)}}|",
+       :block/created-at 1754177712221,
+       :block/updated-at 1754177801345,
+       :build/properties {}}
+      {:block/title "",
+       :block/created-at 1754177675096,
+       :block/updated-at 1754177675096,
+       :build/properties {}}]}
+    {:block/title "Leads",
+     :block/created-at 1754177065347,
+     :block/updated-at 1754179547370,
+     :build/tags [:logseq.class/Query],
+     :build/properties
+     {:logseq.property.table/sized-columns
+      {:block/title 227,
+       :user.property/business-EiucgyBt 156,
+       :user.property/ContactPerson-aFPYNxn0 119,
+       :user.property/crm-status-npjl7hLV 93,
+       :user.property/LastContact-JnRNY89A 108,
+       :user.property/FirstContact-O7-y7gRL 121,
+       :user.property/Amount-E61hlAvV 75,
+       :user.property/Estimate-FmIhUvfn 78},
+      :logseq.property/heading 2,
+      :logseq.property.table/hidden-columns
+      #{:id :block/created-at :block/tags :block/updated-at},
+      :logseq.property/query
+      "(and (tags [[688e949e-a027-49b6-8990-6a3e13991059]]) (not (property :user.property/crm-status-npjl7hLV \"signed contract\")))"}}]}
+  {:page
+   {:block/created-at 1754170300699,
+    :block/updated-at 1754170300699,
+    :build/properties {:logseq.property/built-in? true},
+    :block/title "Contents"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "688e9b29-aa56-46b5-8ab9-74afc9685f15",
+    :build/keep-uuid? true,
+    :block/created-at 1754176297281,
+    :block/updated-at 1754176547647,
+    :build/tags [:user.class/contact-Nyi5TJHt],
+    :build/properties
+    {:user.property/company-pBN6DdE9
+     [:block/uuid #uuid "688e9827-aa6a-4073-b1b8-2e4e1b7c807d"]},
+    :block/title "Don Davis"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "688e9827-aa6a-4073-b1b8-2e4e1b7c807d",
+    :build/keep-uuid? true,
+    :block/created-at 1754175527189,
+    :block/updated-at 1754175527189,
+    :build/tags [:user.class/company-rirb8SSZ],
+    :build/properties {},
+    :block/title "Don Davis Investment"},
+   :blocks []}
+  {:page
+   {:block/created-at 1754170300699,
+    :block/updated-at 1754170300699,
+    :build/properties {:logseq.property/built-in? true},
+    :block/title "Library"},
+   :blocks []}
+  {:page
+   {:block/created-at 1754170300699,
+    :block/updated-at 1754170300699,
+    :build/properties
+    {:logseq.property/built-in? true, :logseq.property/hide? true},
+    :block/title "Quick add"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "688e9b22-0245-4d22-9845-6a79f5aaa36c",
+    :build/keep-uuid? true,
+    :block/created-at 1754176290819,
+    :block/updated-at 1754176551721,
+    :build/tags [:user.class/contact-Nyi5TJHt],
+    :build/properties
+    {:user.property/company-pBN6DdE9
+     [:block/uuid #uuid "688e9549-9ad9-463d-ace6-32078f694610"]},
+    :block/title "Rob Davis"},
+   :blocks []}
+  {:page
+   {:block/uuid #uuid "688e9549-9ad9-463d-ace6-32078f694610",
+    :build/keep-uuid? true,
+    :block/created-at 1754174793125,
+    :block/updated-at 1754174793125,
+    :build/tags [:user.class/company-rirb8SSZ],
+    :build/properties {},
+    :block/title "Rob Sales Factory"},
+   :blocks []}
+  {:page
+   {:block/created-at 1754175839364,
+    :block/updated-at 1754175839364,
+    :build/tags [:user.class/Person-X57FxTyA],
+    :build/properties {},
+    :block/title "Steve Jobs"},
+   :blocks
+   [{:block/title "",
+     :block/created-at 1754175839624,
+     :block/updated-at 1754175839624,
+     :build/properties {}}]}
+  {:page
+   {:block/created-at 1754170300965,
+    :block/updated-at 1754170300965,
+    :build/properties
+    {:logseq.property.user/name "hdansou",
+     :logseq.property.user/email "hdansou@gmail.com"},
+    :block/title "hdansou"},
+   :blocks []}],
+ :logseq.db.sqlite.export/schema-version {:major 65, :minor 16},
+ :logseq.db.sqlite.export/graph-files
+ [{:file/path "logseq/config.edn",
+   :file/content
+   "{:meta/version 1\n ;; Hide empty block properties\n ;; This is _only_ for DB graphs.\n ;; Default value: false\n ;; :ui/hide-empty-properties? false\n\n ;; Enable tooltip preview on hover.\n ;; Default value: true\n :ui/enable-tooltip? true\n\n ;; Display brackets [[]] around page references.\n ;; Default value: true\n ;; :ui/show-brackets? true\n\n ;; Display all lines of a block when referencing ((block)).\n ;; Default value: false\n :ui/show-full-blocks? false\n\n ;; Automatically expand block references when zooming in.\n ;; Default value: true\n :ui/auto-expand-block-refs? true\n\n ;; Disable accent marks when searching.\n ;; After changing this setting, rebuild the search index by pressing (^C ^S).\n ;; Default value: true\n :feature/enable-search-remove-accents? true\n\n ;; Enable journals.\n ;; Default value: true\n ;; :feature/enable-journals? true\n\n ;; Enable flashcards.\n ;; Default value: true\n ;; :feature/enable-flashcards? true\n\n ;; Enable whiteboards.\n ;; Default value: true\n ;; :feature/enable-whiteboards? true\n\n ;; Disable the journal's built-in 'Scheduled tasks and deadlines' query.\n ;; Default value: false\n ;; :feature/disable-scheduled-and-deadline-query? false\n\n ;; Specify the number of days displayed in the future for\n ;; the 'scheduled tasks and deadlines' query.\n ;; Example usage:\n ;; Display all scheduled and deadline blocks for the next 14 days:\n ;; :scheduled/future-days 14\n ;; Default value: 7\n ;; :scheduled/future-days 7\n\n ;; Specify the first day of the week.\n ;; Available options:\n ;;  - integer from 0 to 6 (Monday to Sunday)\n ;; Default value: 6 (Sunday)\n :start-of-week 6\n\n ;; Specify a custom CSS import.\n ;; This option takes precedence over the local `logseq/custom.css` file.\n ;; Example usage:\n ;; :custom-css-url \"@import url('https://cdn.jsdelivr.net/gh/dracula/logseq@master/custom.css');\"\n\n ;; Specify a custom JS import.\n ;; This option takes precedence over the local `logseq/custom.js` file.\n ;; Example usage:\n ;; :custom-js-url \"https://cdn.logseq.com/custom.js\"\n\n ;; Set bullet indentation when exporting\n ;; Available options:\n ;;  - `:eight-spaces` as eight spaces\n ;;  - `:four-spaces` as four spaces\n ;;  - `:two-spaces` as two spaces\n ;;  - `:tab` as a tab character (default)\n ;; :export/bullet-indentation :tab\n\n ;; Publish all pages within the Graph\n ;; Regardless of whether individual pages have been marked as public.\n ;; Default value: false\n ;; :publishing/all-pages-public? false\n\n ;; Define the default home page and sidebar status.\n ;; If unspecified, the journal page will be loaded on startup and the right sidebar will stay hidden.\n ;; The `:page` value represents the name of the page displayed at startup.\n ;; Available options for `:sidebar` are:\n ;; - \"Contents\" to display the Contents page in the right sidebar.\n ;; - A specific page name to display in the right sidebar.\n ;; - An array of multiple pages, e.g., [\"Contents\" \"Page A\" \"Page B\"].\n ;; If `:sidebar` remains unset, the right sidebar will stay hidden.\n ;; Examples:\n ;; 1. Set \"Changelog\" as the home page and display \"Contents\" in the right sidebar:\n ;; :default-home {:page \"Changelog\", :sidebar \"Contents\"}\n ;; 2. Set \"Jun 3rd, 2021\" as the home page without the right sidebar:\n ;; :default-home {:page \"Jun 3rd, 2021\"}\n ;; 3. Set \"home\" as the home page and display multiple pages in the right sidebar:\n ;; :default-home {:page \"home\", :sidebar [\"Page A\" \"Page B\"]}\n\n ;; Configure custom shortcuts.\n ;; Syntax:\n ;; 1. + indicates simultaneous key presses, e.g., `Ctrl+Shift+a`.\n ;; 2. A space between keys represents key chords, e.g., `t s` means\n ;;    pressing `t` followed by `s`.\n ;; 3. mod refers to `Ctrl` for Windows/Linux and `Command` for Mac.\n ;; 4. Use false to disable a specific shortcut.\n ;; 5. You can define multiple bindings for a single action, e.g., [\"ctrl+j\" \"down\"].\n ;; The full list of configurable shortcuts is available at:\n ;; https://github.com/logseq/logseq/blob/master/src/main/frontend/modules/shortcut/config.cljs\n ;; Example:\n ;; :shortcuts\n ;; {:editor/new-block       \"enter\"\n ;;  :editor/new-line        \"shift+enter\"\n ;;  :editor/insert-link     \"mod+shift+k\"\n ;;  :editor/highlight       false\n ;;  :ui/toggle-settings     \"t s\"\n ;;  :editor/up              [\"ctrl+k\" \"up\"]\n ;;  :editor/down            [\"ctrl+j\" \"down\"]\n ;;  :editor/left            [\"ctrl+h\" \"left\"]\n ;;  :editor/right           [\"ctrl+l\" \"right\"]}\n :shortcuts {}\n\n ;; Configure the behavior of pressing Enter in document mode.\n ;; if set to true, pressing Enter will create a new block.\n ;; Default value: false\n :shortcut/doc-mode-enter-for-new-block? false\n\n ;; Block content larger than `block/title-max-length` will not be searchable\n ;; or editable for performance.\n ;; Default value: 10000\n :block/title-max-length 10000\n\n ;; Display command documentation on hover.\n ;; Default value: true\n :ui/show-command-doc? true\n\n ;; Display empty bullet points.\n ;; Default value: false\n :ui/show-empty-bullets? false\n\n ;; Pre-defined :view function to use with advanced queries.\n :query/views\n {:pprint\n  (fn [r] [:pre.code (pprint r)])}\n\n ;; Advanced queries `:result-transform` function.\n ;; Transform the query result before displaying it.\n ;; Example usage for DB graphs:\n;;  :query/result-transforms\n;;  {:sort-by-priority\n;;   (fn [result] (sort-by (fn [h] (get h :logseq.property/priority \"Z\")) result))}\n\n;; Queries will be displayed at the bottom of today's journal page.\n;; Example usage:\n;; :default-queries\n;; {:journals []}\n\n ;; Add custom commands to the command palette\n ;; Example usage:\n ;; :commands\n ;; [\n ;;  [\"js\" \"Javascript\"]\n ;;  [\"md\" \"Markdown\"]\n ;;  ]\n :commands []\n\n ;; Enable collapsing blocks with titles but no children.\n ;; By default, only blocks with children can be collapsed.\n ;; Setting `:outliner/block-title-collapse-enabled?` to true allows collapsing\n ;; blocks with titles (multiple lines) and content. For example:\n ;; - block title\n ;;   block content\n ;; Default value: false\n :outliner/block-title-collapse-enabled? false\n\n ;; Macros replace texts and will make you more productive.\n ;; Example usage:\n ;; Change the :macros value below to:\n ;; {\"poem\" \"Rose is $1, violet's $2. Life's ordered: Org assists you.\"}\n ;; input \"{{poem red,blue}}\"\n ;; becomes\n ;; Rose is red, violet's blue. Life's ordered: Org assists you.\n :macros {}\n\n ;; Configure the default expansion level for linked references.\n ;; For example, consider the following block hierarchy:\n ;; - a [[page]] (level 1)\n ;;   - b        (level 2)\n ;;     - c      (level 3)\n ;;       - d    (level 4)\n ;;\n ;; With the default value of level 2, block b will be collapsed.\n ;; If the level's value is set to 3, block c will be collapsed.\n ;; Default value: 2\n :ref/default-open-blocks-level 2\n\n ;; Graph view configuration.\n ;; Example usage:\n ;; :graph/settings\n ;; {:orphan-pages?   true   ; Default value: true\n ;;  :builtin-pages?  false  ; Default value: false\n ;;  :excluded-pages? false  ; Default value: false\n ;;  :journal?        false} ; Default value: false\n\n ;; Graph view configuration.\n ;; Example usage:\n ;; :graph/forcesettings\n ;; {:link-dist       180    ; Default value: 180\n ;;  :charge-strength -600   ; Default value: -600\n ;;  :charge-range    600}   ; Default value: 600\n\n ;; Mobile photo upload configuration.\n ;; :mobile/photo\n ;; {:allow-editing? true\n ;;  :quality        80}\n\n ;; Mobile features options\n ;; Gestures\n ;; Example usage:\n ;; :mobile\n ;; {:gestures/disabled-in-block-with-tags [\"kanban\"]}\n\n ;; Extra CodeMirror options\n ;; See https://codemirror.net/5/doc/manual.html#config for possible options\n ;; Example usage:\n ;; :editor/extra-codemirror-options\n ;; {:lineWrapping  false  ; Default value: false\n ;;  :lineNumbers   true   ; Default value: true\n ;;  :readOnly      false} ; Default value: false\n\n ;; Enable logical outdenting\n ;; Default value: false\n ;; :editor/logical-outdenting? false\n\n ;; Prefer pasting the file when text and a file are in the clipboard.\n ;; Default value: false\n ;; :editor/preferred-pasting-file? false\n\n ;; Quick capture templates for receiving content from other apps.\n ;; Each template contains three elements {time}, {text} and {url}, which can be auto-expanded\n ;; by receiving content from other apps. Note: the {} cannot be omitted.\n ;; - {time}: capture time\n ;; - {date}: capture date using current date format, use `[[{date}]]` to get a page reference\n ;; - {text}: text that users selected before sharing.\n ;; - {url}: URL or assets path for media files stored in Logseq.\n ;; You can also reorder them or use only one or two of them in the template.\n ;; You can also insert or format any text in the template, as shown in the following examples.\n ;; :quick-capture-templates\n ;; {:text \"[[quick capture]] **{time}**: {text} from {url}\"\n ;;  :media \"[[quick capture]] **{time}**: {url}\"}\n\n ;; Quick capture options.\n ;; - insert-today?   Insert the capture at the end of today's journal page (boolean).\n ;; - redirect-page?  Redirect to the quick capture page after capturing (boolean).\n ;; - default-page    The default page to capture to if insert-today? is false (string).\n ;; :quick-capture-options\n ;; {:insert-today? false           ;; Default value: true\n ;;  :redirect-page? false          ;; Default value: false\n ;;  :default-page \"quick capture\"} ;; Default page: \"quick capture\"\n\n ;; Configure the Enter key behavior for\n ;; context-aware editing with DWIM (Do What I Mean).\n ;; context-aware Enter key behavior implies that pressing Enter will\n ;; have different outcomes based on the context.\n ;; For instance, pressing Enter within a list generates a new list item,\n ;; whereas pressing Enter in a block reference opens the referenced block.\n ;; :dwim/settings\n ;; {:admonition&src?  true        ;; Default value: true\n ;;  :markup?          false       ;; Default value: false\n ;;  :block-ref?       true        ;; Default value: true\n ;;  :page-ref?        true        ;; Default value: true\n ;;  :properties?      true        ;; Default value: true\n ;;  :list?            false}      ;; Default value: false\n }\n",
+   :file/created-at #inst "2025-08-02T21:31:40.694-00:00",
+   :file/last-modified-at #inst "2025-08-02T21:31:40.694-00:00"}
+  {:file/path "logseq/custom.css",
+   :file/content "",
+   :file/created-at #inst "2025-08-02T21:31:40.694-00:00",
+   :file/last-modified-at #inst "2025-08-02T21:31:40.694-00:00"}
+  {:file/path "logseq/custom.js",
+   :file/content "",
+   :file/created-at #inst "2025-08-02T21:31:40.694-00:00",
+   :file/last-modified-at #inst "2025-08-02T21:31:40.694-00:00"}],
+ :logseq.db.sqlite.export/kv-values
+ [{:db/ident :logseq.kv/db-type, :kv/value "db"}
+  {:db/ident :logseq.kv/graph-initial-schema-version,
+   :kv/value {:major 65, :minor 8}}
+  {:db/ident :logseq.kv/graph-created-at, :kv/value 1754170300694}
+  {:db/ident :logseq.kv/graph-git-sha, :kv/value "c9e446fd8"}
+  {:db/ident :logseq.kv/graph-last-gc-at, :kv/value 1767140318020}],
+ :logseq.db.sqlite.export/export-type :graph}
