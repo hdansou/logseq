@@ -1,71 +1,14 @@
 # GitHub Copilot Instructions for Logseq
 
-## Custom Commands (On-Demand Prompts)
+## Custom Skills
 
-### @workspace /investigate - Code Detective Investigation
+This repository has custom GitHub Copilot skills defined in `.github/skills/`:
 
-Follow the comprehensive investigation framework in `.github/code-detective-investigation.instructions.md`.
+- **@workspace /investigate** - Code detective investigation framework
+- **@workspace /new-changelog** - Generate changelogs from git commits
+- **@workspace /extract-config** - Extract and document system configuration
 
-**Usage:**
-
-- `@workspace /investigate what happens when user presses CMD+R`
-- `@workspace /investigate how auto-save works`
-- `@workspace /investigate file persistence mechanism`
-
-**See:** `.github/prompts/code-detective-investigation.prompt.md` for full investigation process and standards.
-
----
-
----
-
-## Custom Commands (On-Demand Prompts)
-
-### @workspace /investigate - Code Detective Investigation
-
-Conduct comprehensive code investigation following the framework in `.github/prompts/code-detective-investigation.prompt.md`.
-
-**Usage:**
-
-- `@workspace /investigate what happens when user presses CMD+R`
-- `@workspace /investigate how auto-save works`
-- `@workspace /investigate file persistence mechanism`
-
-**See:** `.github/prompts/code-detective-investigation.prompt.md` for full investigation template.
-
----
-
-### @workspace /new-changelog - Generate Changelog from Git Commits
-
-Generate a professional, AI-powered changelog from git commit history.
-
-**Usage:**
-
-```
-@workspace /new-changelog <start-date> <end-date> [--format=<changelog|release>]
-```
-
-**Examples:**
-
-- `@workspace /new-changelog 2025-01-05 2025-01-15` - Generate changelog
-- `@workspace /new-changelog 2025-01-01 2025-01-31 --format=release` - Generate release notes
-
-**Process:**
-
-1. Fetch git commits from all remote branches for the date range
-2. Generate raw commit log in markdown format
-3. Apply AI analysis following `prompts/changelog-generation.md`
-4. Create user-facing changelog with:
-   - Spotlight section for major features
-   - Categorized changes (New Feature, Enhancement, Bug Fix, etc.)
-   - Functional area grouping
-   - Contributor list
-
-**Output Formats:**
-
-- `changelog` (default): Detailed changelog with all commits organized by category and functional area
-- `release`: Condensed release notes focusing on user-facing changes and highlights
-
-**See:** `.github/prompts/changelog-generation.prompt.md` for detailed formatting guidelines and examples.
+See individual skill files in `.github/skills/` for detailed usage instructions.
 
 ---
 
