@@ -1,0 +1,1162 @@
+---
+title: 'Plugin API Reference'
+description: "Complete reference for Logseq's Plugin SDK APIs for extension development"
+status: stable
+lastVerified: '2026-01-29'
+logseqVersion: '0.11.x'
+platforms: [desktop]
+graphType: [file, db]
+sinceVersion: '0.4.0'
+relatedDocs:
+  tutorials:
+    - '[Plugin Development Tutorial](../../tutorials/plugins/getting-started.md)'
+  howTo:
+    - '[Publish Plugin](../../how-to/plugins/publish-plugin.md)'
+  reference:
+    - '[HTTP API Reference](http-api.md)'
+---
+
+# Plugin API Reference
+
+> Complete reference for the Logseq Plugin SDK, enabling developers to extend Logseq with custom functionality, commands, and UI elements.
+
+## Overview
+
+The Plugin API provides programmatic access to Logseq through the global `logseq` object. Key capabilities:
+
+- **Content manipulation**: Create, read, update, delete blocks and pages
+- **UI integration**: Commands, toolbars, sidebars, modals
+- **Database queries**: Run Datalog queries on your graph
+- **Event hooks**: React to changes in blocks, pages, themes
+- **Asset management**: Work with files and attachments
+
+---
+
+## Quick Reference
+
+| Namespace       | Purpose              | Key Methods                                       |
+| --------------- | -------------------- | ------------------------------------------------- |
+| `logseq.App`    | App-level operations | `registerCommand`, `pushState`, `getCurrentGraph` |
+| `logseq.Editor` | Content manipulation | `insertBlock`, `getPage`, `createPage`            |
+| `logseq.DB`     | Database queries     | `q`, `datascriptQuery`, `onChanged`               |
+| `logseq.UI`     | User interface       | `showMsg`, `closeMsg`                             |
+| `logseq.Assets` | File management      | `listFilesOfCurrentGraph`                         |
+| `logseq.Git`    | Version control      | `execCommand`                                     |
+
+---
+
+## Getting Started
+
+### Plugin Entry Point
+
+Every plugin starts with `logseq.ready()`:
+
+```javascript
+import '@logseq/libs'
+
+logseq.ready(() => {
+  console.log('Plugin loaded!')
+
+  // Register commands, hooks, etc.
+  logseq.App.registerCommandPalette({ key: 'hello', label: 'Say Hello' }, () =>
+    logseq.UI.showMsg('Hello from plugin!')
+  )
+})
+```
+
+### Plugin Model
+
+Pass a model object for UI callbacks:
+
+```javascript
+logseq.ready(
+  {
+    onSettingsChanged: (newSettings) => {
+      console.log('Settings updated:', newSettings)
+    },
+  },
+  () => {
+    console.log('Plugin ready with model')
+  }
+)
+```
+
+---
+
+## logseq.App
+
+Application-level operations and registrations.
+
+### Command Registration
+
+#### registerCommandPalette
+
+Add command to command palette (`Cmd/Ctrl+Shift+P`).
+
+```typescript
+registerCommandPalette(
+  opts: { key: string; label: string; keybinding?: SimpleCommandKeybinding },
+  action: () => void
+): void
+```
+
+**Example**:
+
+```javascript
+logseq.App.registerCommandPalette(
+  {
+    key: 'my-action',
+    label: 'Do Something',
+    keybinding: { binding: 'mod+shift+d' },
+  },
+  () => console.log('Action triggered!')
+)
+```
+
+#### registerCommand
+
+Register a named command (internal use).
+
+```typescript
+registerCommand(
+  type: string,
+  opts: { key: string; label: string },
+  action: () => void
+): void
+```
+
+#### registerCommandShortcut
+
+Bind keyboard shortcut to action.
+
+```typescript
+registerCommandShortcut(
+  keybinding: { binding: string },
+  action: () => void,
+  opts?: { key?: string }
+): void
+```
+
+**Keybinding format**:
+| Modifier | Meaning |
+|----------|---------|
+| `mod` | Cmd (Mac) / Ctrl (Windows/Linux) |
+| `ctrl` | Control |
+| `shift` | Shift |
+| `alt` | Alt/Option |
+| `meta` | Command (Mac) |
+
+**Examples**: `"mod+shift+a"`, `"ctrl+alt+p"`, `"mod+enter"`
+
+### UI Item Registration
+
+#### registerUIItem
+
+Add items to toolbar or other UI containers.
+
+```typescript
+registerUIItem(
+  type: "toolbar" | "pagebar",
+  opts: {
+    key: string;
+    template: string;
+  }
+): void
+```
+
+**Example**:
+
+```javascript
+logseq.App.registerUIItem('toolbar', {
+  key: 'my-button',
+  template: `<a class="button" data-on-click="onButtonClick">Click Me</a>`,
+})
+```
+
+#### registerPageMenuItem
+
+Add item to page context menu.
+
+```typescript
+registerPageMenuItem(
+  tag: string,
+  action: (pageName: string) => void
+): void
+```
+
+### Navigation
+
+#### pushState
+
+Navigate to a route.
+
+```typescript
+pushState(
+  route: "page" | "home" | "all-pages" | "graph",
+  params?: { name?: string },
+  query?: Record<string, string>
+): void
+```
+
+**Example**:
+
+```javascript
+// Navigate to a page
+logseq.App.pushState('page', { name: 'My Page' })
+
+// Go home
+logseq.App.pushState('home')
+```
+
+#### replaceState
+
+Replace current route without adding to history.
+
+```typescript
+replaceState(
+  route: string,
+  params?: Record<string, any>,
+  query?: Record<string, string>
+): void
+```
+
+### Graph Operations
+
+#### getCurrentGraph
+
+Get information about the current graph.
+
+```typescript
+getCurrentGraph(): Promise<{
+  name: string;
+  url: string;
+  path?: string;
+}>
+```
+
+#### getCurrentGraphConfigs
+
+Get graph configuration values.
+
+```typescript
+getCurrentGraphConfigs(...keys: string[]): Promise<Record<string, any>>
+```
+
+#### setCurrentGraphConfigs
+
+Update graph configuration.
+
+```typescript
+setCurrentGraphConfigs(configs: Record<string, any>): Promise<void>
+```
+
+### User Preferences
+
+#### getUserConfigs
+
+Get user settings.
+
+```typescript
+getUserConfigs(): Promise<{
+  preferredDateFormat: string;
+  preferredFormat: "markdown" | "org";
+  preferredLanguage: string;
+  preferredThemeMode: "dark" | "light";
+  preferredWorkflow: "now" | "todo";
+}>
+```
+
+### Hooks
+
+#### onCurrentGraphChanged
+
+Triggered when user switches graphs.
+
+```javascript
+logseq.App.onCurrentGraphChanged(() => {
+  console.log('Graph changed!')
+})
+```
+
+#### onThemeModeChanged
+
+Triggered when theme mode changes.
+
+```javascript
+logseq.App.onThemeModeChanged(({ mode }) => {
+  console.log('Theme mode:', mode) // "dark" or "light"
+})
+```
+
+#### onBlockRendererSlotted
+
+Register custom block renderer.
+
+```javascript
+logseq.App.onBlockRendererSlotted(({ slot, payload }) => {
+  const { uuid, arguments: args } = payload
+  logseq.provideUI({
+    key: `renderer-${uuid}`,
+    slot,
+    template: `<div>Custom renderer content</div>`,
+  })
+})
+```
+
+#### onMacroRendererSlotted
+
+Register custom macro renderer.
+
+```javascript
+logseq.App.onMacroRendererSlotted(({ slot, payload }) => {
+  const { uuid, arguments: args } = payload
+  // Render custom macro
+})
+```
+
+#### onRouteChanged
+
+Triggered on navigation.
+
+```javascript
+logseq.App.onRouteChanged(({ path, template }) => {
+  console.log('Route:', path)
+})
+```
+
+---
+
+## logseq.Editor
+
+Content manipulation API for blocks and pages.
+
+### Block Operations
+
+#### getCurrentBlock
+
+Get the block currently being edited.
+
+```typescript
+getCurrentBlock(): Promise<BlockEntity | null>
+```
+
+#### getBlock
+
+Get a block by UUID or ID.
+
+```typescript
+getBlock(
+  srcBlock: BlockUUID | BlockId,
+  opts?: { includeChildren?: boolean }
+): Promise<BlockEntity | null>
+```
+
+**BlockEntity structure**:
+
+```typescript
+interface BlockEntity {
+  uuid: string
+  id: number
+  content: string
+  page: PageEntity
+  parent: BlockEntity
+  left: BlockEntity
+  format: 'markdown' | 'org'
+  properties?: Record<string, any>
+  children?: BlockEntity[]
+}
+```
+
+#### insertBlock
+
+Insert a new block.
+
+```typescript
+insertBlock(
+  srcBlock: BlockUUID | BlockId,
+  content: string,
+  opts?: {
+    before?: boolean;      // Insert before target
+    sibling?: boolean;     // Insert as sibling (vs child)
+    isPageBlock?: boolean; // Target is page UUID
+    focus?: boolean;       // Focus after insert
+    customUUID?: string;   // Custom UUID
+    properties?: Record<string, any>;
+  }
+): Promise<BlockEntity>
+```
+
+**Examples**:
+
+```javascript
+// Insert as child of current block
+const newBlock = await logseq.Editor.insertBlock(
+  currentBlock.uuid,
+  'New child block'
+)
+
+// Insert as sibling before
+await logseq.Editor.insertBlock(currentBlock.uuid, 'Before sibling', {
+  sibling: true,
+  before: true,
+})
+
+// Insert to page
+await logseq.Editor.insertBlock(pageUUID, 'First block on page', {
+  isPageBlock: true,
+})
+```
+
+#### updateBlock
+
+Update block content.
+
+```typescript
+updateBlock(
+  srcBlock: BlockUUID | BlockId,
+  content: string,
+  opts?: { properties?: Record<string, any> }
+): Promise<void>
+```
+
+#### removeBlock
+
+Delete a block.
+
+```typescript
+removeBlock(srcBlock: BlockUUID | BlockId): Promise<void>
+```
+
+#### moveBlock
+
+Move a block to new location.
+
+```typescript
+moveBlock(
+  srcBlock: BlockUUID | BlockId,
+  targetBlock: BlockUUID | BlockId,
+  opts?: {
+    before?: boolean;
+    children?: boolean;
+  }
+): Promise<void>
+```
+
+#### insertBatchBlock
+
+Insert multiple blocks at once.
+
+```typescript
+insertBatchBlock(
+  srcBlock: BlockUUID | BlockId,
+  blocks: Array<{
+    content: string;
+    properties?: Record<string, any>;
+    children?: BlockEntity[];
+  }>,
+  opts?: { before?: boolean; sibling?: boolean }
+): Promise<BlockEntity[]>
+```
+
+**Example**:
+
+```javascript
+await logseq.Editor.insertBatchBlock(
+  pageUUID,
+  [
+    { content: 'Block 1' },
+    {
+      content: 'Block 2 with children',
+      children: [{ content: 'Child 1' }, { content: 'Child 2' }],
+    },
+    { content: 'Block 3' },
+  ],
+  { isPageBlock: true }
+)
+```
+
+### Block Properties
+
+#### getBlockProperty
+
+Get a block property value.
+
+```typescript
+getBlockProperty(
+  block: BlockUUID | BlockId,
+  key: string
+): Promise<any>
+```
+
+#### setBlockProperty
+
+Set a block property.
+
+```typescript
+setBlockProperty(
+  block: BlockUUID | BlockId,
+  key: string,
+  value: any
+): Promise<void>
+```
+
+#### removeBlockProperty
+
+Remove a block property.
+
+```typescript
+removeBlockProperty(
+  block: BlockUUID | BlockId,
+  key: string
+): Promise<void>
+```
+
+#### getBlockProperties
+
+Get all properties of a block.
+
+```typescript
+getBlockProperties(
+  block: BlockUUID | BlockId
+): Promise<Record<string, any>>
+```
+
+### Page Operations
+
+#### getCurrentPage
+
+Get the currently focused page.
+
+```typescript
+getCurrentPage(): Promise<PageEntity | null>
+```
+
+**PageEntity structure**:
+
+```typescript
+interface PageEntity {
+  uuid: string
+  id: number
+  name: string
+  originalName: string
+  'journal?': boolean
+  file?: { path: string }
+  properties?: Record<string, any>
+}
+```
+
+#### getPage
+
+Get a page by name or UUID.
+
+```typescript
+getPage(
+  srcPage: string | PageUUID,
+  opts?: { includeChildren?: boolean }
+): Promise<PageEntity | null>
+```
+
+#### getAllPages
+
+Get all pages in the graph.
+
+```typescript
+getAllPages(repo?: string): Promise<PageEntity[]>
+```
+
+#### createPage
+
+Create a new page.
+
+```typescript
+createPage(
+  pageName: string,
+  properties?: Record<string, any>,
+  opts?: {
+    redirect?: boolean;      // Navigate to page
+    createFirstBlock?: boolean;
+    format?: "markdown" | "org";
+    journal?: boolean;
+  }
+): Promise<PageEntity>
+```
+
+**Example**:
+
+```javascript
+const page = await logseq.Editor.createPage(
+  'New Page',
+  { status: 'active', priority: 'high' },
+  { redirect: true }
+)
+```
+
+#### deletePage
+
+Delete a page by name.
+
+```typescript
+deletePage(pageName: string): Promise<void>
+```
+
+#### renamePage
+
+Rename a page.
+
+```typescript
+renamePage(
+  oldName: string,
+  newName: string
+): Promise<void>
+```
+
+#### getPageBlocksTree
+
+Get all blocks of a page as a tree.
+
+```typescript
+getPageBlocksTree(
+  srcPage: string | PageUUID
+): Promise<BlockEntity[]>
+```
+
+### Queries
+
+#### getPageLinkedReferences
+
+Get blocks that link to a page.
+
+```typescript
+getPageLinkedReferences(
+  pageName: string
+): Promise<[PageEntity, BlockEntity[]][]>
+```
+
+#### getPagesFromNamespace
+
+Get pages in a namespace.
+
+```typescript
+getPagesFromNamespace(
+  namespace: string
+): Promise<PageEntity[]>
+```
+
+#### getPagesTreeFromNamespace
+
+Get namespace pages as tree.
+
+```typescript
+getPagesTreeFromNamespace(
+  namespace: string
+): Promise<PageEntity[]>
+```
+
+### Commands
+
+#### registerSlashCommand
+
+Add custom slash command.
+
+```typescript
+registerSlashCommand(
+  tag: string,
+  action: BlockCommandCallback | Array<[string, BlockCommandCallback]>
+): void
+```
+
+**Example**:
+
+```javascript
+logseq.Editor.registerSlashCommand('Insert Date', async () => {
+  const block = await logseq.Editor.getCurrentBlock()
+  const date = new Date().toISOString().split('T')[0]
+  await logseq.Editor.insertBlock(block.uuid, `Date: ${date}`, {
+    sibling: true,
+  })
+})
+```
+
+#### registerBlockContextMenuItem
+
+Add item to block context menu (right-click).
+
+```typescript
+registerBlockContextMenuItem(
+  label: string,
+  action: (blockUUID: string) => void
+): void
+```
+
+**Example**:
+
+```javascript
+logseq.Editor.registerBlockContextMenuItem('Copy Block UUID', async (uuid) => {
+  await navigator.clipboard.writeText(uuid)
+  logseq.UI.showMsg('UUID copied!')
+})
+```
+
+### Editing
+
+#### editBlock
+
+Enter edit mode on a block.
+
+```typescript
+editBlock(
+  srcBlock: BlockUUID | BlockId,
+  opts?: { pos?: number }  // Cursor position
+): Promise<void>
+```
+
+#### exitEditingMode
+
+Exit current edit mode.
+
+```typescript
+exitEditingMode(selectBlock?: boolean): Promise<void>
+```
+
+#### scrollToBlockInPage
+
+Scroll to a block in a page.
+
+```typescript
+scrollToBlockInPage(
+  pageName: string,
+  blockId: BlockUUID | BlockId,
+  opts?: { replaceState?: boolean }
+): void
+```
+
+### Selection
+
+#### getSelectedBlocks
+
+Get currently selected blocks.
+
+```typescript
+getSelectedBlocks(): Promise<BlockEntity[] | null>
+```
+
+---
+
+## logseq.DB
+
+Database query API.
+
+### q (DSL Query)
+
+Run a Datalog query.
+
+```typescript
+q<T = any>(query: string): Promise<T[]>
+```
+
+**Example**:
+
+```javascript
+// Find all TODO blocks
+const todos = await logseq.DB.q(`
+  [:find (pull ?b [*])
+   :where
+   [?b :block/marker ?m]
+   [(contains? #{"TODO" "DOING"} ?m)]]
+`)
+
+// Find pages with specific property
+const projectPages = await logseq.DB.q(`
+  [:find (pull ?p [*])
+   :where
+   [?p :block/properties ?props]
+   [(get ?props :type) ?type]
+   [(= ?type "project")]]
+`)
+```
+
+### datascriptQuery
+
+Run a raw Datascript query with inputs.
+
+```typescript
+datascriptQuery<T = any>(
+  query: string,
+  ...inputs: any[]
+): Promise<T>
+```
+
+**Example**:
+
+```javascript
+const results = await logseq.DB.datascriptQuery(
+  `
+  [:find ?title
+   :in $ ?marker
+   :where
+   [?b :block/marker ?marker]
+   [?b :block/page ?p]
+   [?p :block/name ?title]]
+`,
+  'TODO'
+)
+```
+
+### Hooks
+
+#### onChanged
+
+Listen to any database changes.
+
+```typescript
+onChanged(callback: (event: {
+  blocks: BlockEntity[];
+  txData: IDatom[];
+  txMeta?: { outlinerOp: string };
+}) => void): void
+```
+
+**Example**:
+
+```javascript
+logseq.DB.onChanged(({ blocks, txData, txMeta }) => {
+  console.log('Changed blocks:', blocks.length)
+  console.log('Transaction type:', txMeta?.outlinerOp)
+})
+```
+
+#### onBlockChanged
+
+Listen to specific block changes.
+
+```typescript
+onBlockChanged(
+  uuid: BlockUUID,
+  callback: (block: BlockEntity, txData: IDatom[], txMeta?: any) => void
+): () => void  // Returns unsubscribe function
+```
+
+---
+
+## logseq.UI
+
+User interface operations.
+
+### showMsg
+
+Display a toast notification.
+
+```typescript
+showMsg(
+  content: string,
+  status?: "success" | "warning" | "error" | "info",
+  opts?: {
+    key?: string;
+    timeout?: number;  // ms, 0 = no auto-dismiss
+  }
+): Promise<string>  // Returns message key
+```
+
+**Examples**:
+
+```javascript
+// Simple message
+logseq.UI.showMsg('Hello!')
+
+// Success with timeout
+logseq.UI.showMsg('Saved!', 'success', { timeout: 3000 })
+
+// Persistent error
+const key = await logseq.UI.showMsg('Error!', 'error', { timeout: 0 })
+// Later: logseq.UI.closeMsg(key);
+```
+
+### closeMsg
+
+Close a message by key.
+
+```typescript
+closeMsg(key: string): void
+```
+
+### queryElementRect
+
+Get dimensions of an element.
+
+```typescript
+queryElementRect(selector: string): Promise<DOMRectReadOnly | null>
+```
+
+### resolveThemeCssPropsVals
+
+Get computed CSS variable values.
+
+```typescript
+resolveThemeCssPropsVals(
+  props: string[]
+): Promise<Record<string, string>>
+```
+
+**Example**:
+
+```javascript
+const colors = await logseq.UI.resolveThemeCssPropsVals([
+  '--ls-primary-background-color',
+  '--ls-primary-text-color',
+])
+```
+
+---
+
+## logseq.Assets
+
+Asset and file management.
+
+### listFilesOfCurrentGraph
+
+List all asset files.
+
+```typescript
+listFilesOfCurrentGraph(
+  extensions?: string[]  // e.g., [".pdf", ".png"]
+): Promise<Array<{
+  path: string;
+  size: number;
+  lastModified: number;
+}>>
+```
+
+### builtInOpen
+
+Open an asset with default handler.
+
+```typescript
+builtInOpen(
+  path: string,
+  opts?: { openInRightSidebar?: boolean }
+): Promise<void>
+```
+
+### makeSandboxStorage
+
+Create sandboxed storage for plugin.
+
+```typescript
+makeSandboxStorage(): IAsyncStorage
+```
+
+**Example**:
+
+```javascript
+const storage = logseq.Assets.makeSandboxStorage()
+await storage.setItem('key', 'value')
+const value = await storage.getItem('key')
+```
+
+---
+
+## logseq.Git
+
+Git integration (file-based graphs only).
+
+### execCommand
+
+Execute a git command.
+
+```typescript
+execCommand(args: string[]): Promise<string>
+```
+
+**Example**:
+
+```javascript
+const status = await logseq.Git.execCommand(['status', '--porcelain'])
+```
+
+### loadIgnoreFile
+
+Load `.gitignore` contents.
+
+```typescript
+loadIgnoreFile(): Promise<string>
+```
+
+### saveIgnoreFile
+
+Save `.gitignore` contents.
+
+```typescript
+saveIgnoreFile(content: string): Promise<void>
+```
+
+---
+
+## Plugin Settings
+
+### useSettingsSchema
+
+Define plugin settings schema.
+
+```typescript
+logseq.useSettingsSchema([
+  {
+    key: 'option1',
+    type: 'string',
+    default: 'default value',
+    title: 'Option 1',
+    description: 'Description of option 1',
+  },
+  {
+    key: 'enabled',
+    type: 'boolean',
+    default: true,
+    title: 'Enable Feature',
+  },
+  {
+    key: 'count',
+    type: 'number',
+    default: 10,
+    title: 'Count',
+    description: 'Number of items',
+  },
+  {
+    key: 'choice',
+    type: 'enum',
+    default: 'option1',
+    enumChoices: ['option1', 'option2', 'option3'],
+    title: 'Choose Option',
+  },
+])
+```
+
+### Access Settings
+
+```javascript
+// Get all settings
+const settings = logseq.settings
+
+// Get specific setting
+const enabled = logseq.settings?.enabled
+
+// Update settings
+logseq.updateSettings({ enabled: false })
+```
+
+---
+
+## UI Injection
+
+### provideUI
+
+Inject custom UI into slots.
+
+```typescript
+logseq.provideUI({
+  key: string;
+  slot: string;
+  template: string;
+  style?: Record<string, string>;
+  attrs?: Record<string, string>;
+  reset?: boolean;
+});
+```
+
+### provideStyle
+
+Inject CSS styles.
+
+```typescript
+logseq.provideStyle(`
+  .my-plugin-class {
+    color: var(--ls-primary-text-color);
+  }
+`)
+```
+
+### provideModel
+
+Register callback handlers.
+
+```typescript
+logseq.provideModel({
+  onButtonClick() {
+    console.log('Button clicked!')
+  },
+})
+```
+
+---
+
+## Sandbox Modes
+
+### iframe Mode (Default)
+
+- Strong isolation (separate window context)
+- Cross-origin security
+- Higher IPC overhead
+- Set in `package.json`: `"logseq": { "mode": "iframe" }`
+
+### shadow Mode
+
+- Same window context
+- Faster execution
+- Limited isolation
+- Set in `package.json`: `"logseq": { "mode": "shadow" }`
+
+**package.json configuration**:
+
+```json
+{
+  "logseq": {
+    "id": "my-plugin",
+    "main": "dist/index.js",
+    "mode": "iframe"
+  }
+}
+```
+
+---
+
+## Error Handling
+
+### Try-Catch Pattern
+
+```javascript
+try {
+  const page = await logseq.Editor.getPage('nonexistent')
+  if (!page) {
+    logseq.UI.showMsg('Page not found', 'warning')
+  }
+} catch (error) {
+  logseq.UI.showMsg(`Error: ${error.message}`, 'error')
+  console.error(error)
+}
+```
+
+### Timeout Behavior
+
+- API calls timeout after **10 seconds**
+- Hooks are not rate-limited
+
+---
+
+## Best Practices
+
+1. **Always check return values** - Methods may return `null`
+2. **Use batch operations** when modifying multiple blocks
+3. **Clean up hooks** in `beforeunload`
+4. **Handle async properly** - All API calls are async
+5. **Use settings schema** for user preferences
+6. **Test in both graph types** - File and DB graphs
+
+---
+
+## See Also
+
+- **HTTP API**: [http-api.md](http-api.md) for external integration
+- **MCP Server**: [mcp-server.md](mcp-server.md) for AI integration
+- **Plugin SDK**: [@logseq/libs](https://github.com/logseq/logseq-plugin-samples)
+
+---
+
+_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_

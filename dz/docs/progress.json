@@ -1,0 +1,675 @@
+{
+  "project": "Logseq Documentation - Diátaxis Framework Reorganization",
+  "created": "2026-01-29",
+  "lastUpdated": "2026-01-29",
+  "status": "in-progress",
+  "targetDirectory": "dz/docs/ddocs/",
+  "archiveDirectory": "dz/docs/_archived/",
+
+  "linkingStrategy": {
+    "patterns": {
+      "toTutorials": "../tutorials/",
+      "toHowTo": "../how-to/",
+      "toReference": "../reference/",
+      "toExplanation": "../explanation/"
+    },
+    "frontmatterRequired": ["title", "status", "lastVerified", "relatedDocs"],
+    "templateLocation": "ddocs/_templates/"
+  },
+
+  "reviewSchedule": {
+    "approach": "batch-by-subsystem",
+    "nextReviewDate": "2026-02-15",
+    "batches": [
+      {
+        "name": "Database Subsystem",
+        "priority": 1,
+        "status": "scheduled",
+        "scheduledDate": "2026-02-15",
+        "areas": ["schema", "queries", "validation", "migrations", "properties", "classes"],
+        "docsToReview": [
+          "ddocs/reference/database/schema-overview.md",
+          "ddocs/how-to/queries/advanced-queries.md",
+          "ddocs/explanation/concepts/file-vs-db.md"
+        ],
+        "codeLocations": [
+          "deps/db/src/logseq/db/",
+          "src/main/frontend/worker/db/",
+          "deps/outliner/"
+        ]
+      },
+      {
+        "name": "RTC Subsystem",
+        "priority": 2,
+        "status": "scheduled",
+        "scheduledDate": "2026-02-22",
+        "areas": ["sync", "E2EE", "collaboration", "WebSocket", "conflict-resolution"],
+        "docsToReview": [
+          "ddocs/explanation/comparisons/rtc-vs-file-sync.md",
+          "ddocs/explanation/security/e2ee-encryption.md"
+        ],
+        "codeLocations": [
+          "src/main/frontend/worker/rtc/",
+          "src/main/frontend/components/rtc/"
+        ]
+      },
+      {
+        "name": "Plugins Subsystem",
+        "priority": 3,
+        "status": "scheduled",
+        "scheduledDate": "2026-03-01",
+        "areas": ["plugin-api", "SDK", "themes", "marketplace", "slots"],
+        "docsToReview": [
+          "ddocs/reference/api/plugin-api.md",
+          "ddocs/reference/api/http-api.md",
+          "ddocs/reference/api/mcp-server.md",
+          "ddocs/how-to/integrations/custom-css.md",
+          "ddocs/how-to/integrations/create-theme.md"
+        ],
+        "codeLocations": [
+          "src/main/logseq/api/",
+          "libs/",
+          "src/main/frontend/handler/plugin.cljs"
+        ]
+      },
+      {
+        "name": "UI Subsystem",
+        "priority": 4,
+        "status": "scheduled",
+        "scheduledDate": "2026-03-08",
+        "areas": ["editor", "components", "views", "shortcuts", "sidebar", "flashcards"],
+        "docsToReview": [
+          "ddocs/reference/configuration/keyboard-shortcuts.md",
+          "ddocs/reference/features/flashcards.md",
+          "ddocs/how-to/content/view-types.md",
+          "ddocs/tutorials/knowledge-management/flashcards-basics.md"
+        ],
+        "codeLocations": [
+          "src/main/frontend/components/",
+          "src/main/frontend/handler/editor/",
+          "packages/ui/",
+          "src/main/frontend/extensions/srs.cljs",
+          "src/main/frontend/extensions/fsrs.cljs"
+        ]
+      },
+      {
+        "name": "Semantic Search Feature",
+        "priority": 5,
+        "status": "scheduled",
+        "scheduledDate": "2026-03-15",
+        "areas": ["embeddings", "vector-search", "inference-worker", "HNSW"],
+        "docsToReview": [
+          "ddocs/tutorials/getting-started/semantic-search.md",
+          "ddocs/reference/api/semantic-search-api.md",
+          "ddocs/explanation/features/how-embeddings-work.md"
+        ],
+        "codeLocations": [
+          "src/main/frontend/inference_worker/",
+          "src/main/frontend/worker/embedding.cljs",
+          "deps/cli/src/logseq/cli/"
+        ]
+      }
+    ]
+  },
+
+  "features": {
+    "database": {
+      "name": "Database Graphs",
+      "status": "documented",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/database-graphs/schema-guide.md",
+        "03-features/database-graphs/schema-reference.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/database/schema-overview.md", "reference/database/property-types.md", "reference/database/built-in-classes.md"],
+        "explanation": ["explanation/concepts/file-vs-db.md"]
+      },
+      "needsCodeReview": true
+    },
+    "queries": {
+      "name": "Query System",
+      "status": "documented",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/query-system/overview.md",
+        "03-features/query-system/developer-guide.md",
+        "03-features/query-system/syntax-db-vs-file.md",
+        "03-features/query-system/query-inputs.md",
+        "03-features/query-system/query-performance.md",
+        "03-features/query-system/rules.md",
+        "03-features/query-system/result-transform-dev.md",
+        "03-features/query-system/result-transform-user.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/syntax/query-dsl.md"],
+        "howTo": ["how-to/queries/advanced-queries.md", "how-to/queries/dashboards.md"],
+        "explanation": ["explanation/comparisons/query-types.md"]
+      },
+      "needsCodeReview": true
+    },
+    "taskManagement": {
+      "name": "Task Management",
+      "status": "partial",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/task-management/system.md"
+      ],
+      "targetDocs": {
+        "tutorials": ["tutorials/task-management/todo-basics.md", "tutorials/task-management/project-planning.md"],
+        "howTo": ["how-to/tasks/repeating-tasks.md", "how-to/tasks/property-history.md"],
+        "reference": ["reference/features/task-properties.md"]
+      },
+      "needsCodeReview": true
+    },
+    "semanticSearch": {
+      "name": "Semantic Search",
+      "status": "needs-creation",
+      "priority": "high",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/semantic-search/developer-guide.md",
+        "07-investigations/022-logseq-cli-semantic-search.md"
+      ],
+      "targetDocs": {
+        "tutorials": ["tutorials/getting-started/semantic-search.md"],
+        "howTo": ["how-to/queries/semantic-search.md"],
+        "reference": ["reference/api/semantic-search-api.md"],
+        "explanation": ["explanation/features/how-embeddings-work.md"]
+      },
+      "codeLocations": [
+        "src/main/frontend/inference_worker/",
+        "deps/cli/src/logseq/cli/"
+      ],
+      "needsCodeReview": true
+    },
+    "flashcards": {
+      "name": "Flashcards & Spaced Repetition (FSRS)",
+      "status": "needs-creation",
+      "priority": "high",
+      "subsystem": "ui",
+      "existingDocs": [
+        "03-features/flashcards/implementation.md"
+      ],
+      "targetDocs": {
+        "tutorials": ["tutorials/knowledge-management/flashcards-basics.md"],
+        "howTo": ["how-to/content/create-flashcard-deck.md"],
+        "reference": ["reference/features/fsrs-algorithm.md"],
+        "explanation": ["explanation/features/spaced-repetition-science.md"]
+      },
+      "codeLocations": [
+        "src/main/frontend/components/cards.css",
+        "deps/db/src/logseq/db/frontend/property.cljs"
+      ],
+      "needsCodeReview": true
+    },
+    "rtc": {
+      "name": "Real-Time Collaboration",
+      "status": "partial",
+      "subsystem": "rtc",
+      "existingDocs": [
+        "01-onboarding/rtc-onboarding.md",
+        "02-architecture/rtc-vs-sync.md",
+        "07-investigations/rtc-e2ee-security-investigation.md",
+        "07-investigations/schema-integrity-05-rtc-synchronization.md"
+      ],
+      "targetDocs": {
+        "tutorials": ["tutorials/collaboration/real-time-sync.md"],
+        "reference": ["reference/api/rtc-api.md"],
+        "explanation": ["explanation/architecture/rtc-architecture.md", "explanation/security/e2ee-encryption.md", "explanation/comparisons/rtc-vs-file-sync.md"]
+      },
+      "needsCodeReview": true
+    },
+    "plugins": {
+      "name": "Plugin System",
+      "status": "documented",
+      "subsystem": "plugins",
+      "existingDocs": [
+        "03-features/plugin-ecosystem/overview.md",
+        "04-api-reference/plugin-api/overview.md",
+        "04-api-reference/plugin-api/changes-2024-2025.md",
+        "05-developer-guides/plugin-development/index.md",
+        "05-developer-guides/plugin-development/typescript-guide.md",
+        "05-developer-guides/plugin-development/clojurescript-guide.md",
+        "05-developer-guides/plugin-development/database-guide.md",
+        "07-investigations/PLUGIN-UI-INTEGRATION-GUIDE.md"
+      ],
+      "targetDocs": {
+        "tutorials": ["tutorials/plugins/first-plugin.md", "tutorials/plugins/mcp-integration.md"],
+        "howTo": ["how-to/integrations/create-plugin.md"],
+        "reference": ["reference/api/plugin-api.md"]
+      },
+      "needsCodeReview": true
+    },
+    "themes": {
+      "name": "Themes & Customization",
+      "status": "documented",
+      "subsystem": "plugins",
+      "existingDocs": [
+        "05-developer-guides/theme-development/guide.md",
+        "05-developer-guides/theme-development/overview.md",
+        "05-developer-guides/theme-development/quick-reference.md",
+        "07-investigations/custom-css-customization-guide.md",
+        "07-investigations/custom-js-customization-guide.md",
+        "07-investigations/LOGSEQ-THEME-CSS-REFERENCE.md"
+      ],
+      "targetDocs": {
+        "howTo": ["how-to/integrations/create-theme.md"],
+        "reference": ["reference/configuration/css-variables.md"]
+      },
+      "needsCodeReview": false
+    },
+    "mcpServer": {
+      "name": "MCP Server",
+      "status": "documented",
+      "subsystem": "plugins",
+      "existingDocs": [
+        "04-api-reference/mcp-server/guide.md",
+        "05-developer-guides/mcp-development/"
+      ],
+      "targetDocs": {
+        "tutorials": ["tutorials/plugins/mcp-integration.md"],
+        "reference": ["reference/api/mcp-server.md"]
+      },
+      "needsCodeReview": true
+    },
+    "httpApi": {
+      "name": "HTTP API",
+      "status": "documented",
+      "subsystem": "plugins",
+      "existingDocs": [
+        "04-api-reference/http-api/server-guide.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/api/http-api.md"]
+      },
+      "needsCodeReview": true
+    },
+    "cli": {
+      "name": "Command Line Interface",
+      "status": "documented",
+      "subsystem": "plugins",
+      "existingDocs": [
+        "05-developer-guides/cli-development/",
+        "06-user-guides/cli-user-guide.md"
+      ],
+      "targetDocs": {
+        "howTo": ["how-to/integrations/cli-basic.md"],
+        "reference": ["reference/api/cli-commands.md"]
+      },
+      "needsCodeReview": true
+    },
+    "quickCapture": {
+      "name": "Quick Capture",
+      "status": "documented",
+      "subsystem": "ui",
+      "existingDocs": [
+        "03-features/quick-capture/guide.md",
+        "07-investigations/quick-capture-callback-url-investigation.md"
+      ],
+      "targetDocs": {
+        "howTo": ["how-to/content/quick-capture.md"]
+      },
+      "needsCodeReview": true
+    },
+    "xCallbackUrl": {
+      "name": "X-Callback-URL",
+      "status": "documented",
+      "subsystem": "ui",
+      "existingDocs": [
+        "06-user-guides/x-callback-url-user-guide.md",
+        "07-investigations/x-callback-url-comprehensive-investigation.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/api/x-callback-url.md"]
+      },
+      "needsCodeReview": true
+    },
+    "backup": {
+      "name": "Backup & Recovery",
+      "status": "documented",
+      "subsystem": "database",
+      "existingDocs": [
+        "06-user-guides/database-backup-guide.md",
+        "07-investigations/database-backup-electron.md",
+        "03-features/git-backup/versioning-db-mode.md"
+      ],
+      "targetDocs": {
+        "howTo": ["how-to/backup/backup-restore.md"]
+      },
+      "needsCodeReview": true
+    },
+    "views": {
+      "name": "View Types (Table/List/Gallery)",
+      "status": "documented",
+      "subsystem": "ui",
+      "existingDocs": [
+        "06-user-guides/view-guide.md"
+      ],
+      "targetDocs": {
+        "howTo": ["how-to/content/view-types.md"],
+        "explanation": ["explanation/concepts/view-types.md"]
+      },
+      "needsCodeReview": true
+    },
+    "pdfAnnotation": {
+      "name": "PDF Annotation",
+      "status": "partial",
+      "subsystem": "ui",
+      "platform": "desktop-only",
+      "existingDocs": [
+        "07-investigations/pdf-feature-platform-compatibility-investigation.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/features/pdf.md"]
+      },
+      "needsCodeReview": true
+    },
+    "graphView": {
+      "name": "Graph View",
+      "status": "partial",
+      "subsystem": "ui",
+      "existingDocs": [
+        "07-investigations/graph-view-setup-and-relations-investigation.md"
+      ],
+      "targetDocs": {
+        "howTo": ["how-to/content/graph-view.md"]
+      },
+      "needsCodeReview": true
+    },
+    "whiteboards": {
+      "name": "Whiteboards (Tldraw)",
+      "status": "needs-creation",
+      "subsystem": "ui",
+      "existingDocs": [],
+      "targetDocs": {
+        "tutorials": ["tutorials/knowledge-management/whiteboard-basics.md"],
+        "reference": ["reference/features/whiteboard.md"]
+      },
+      "codeLocations": [
+        "packages/tldraw/"
+      ],
+      "needsCodeReview": true
+    },
+    "dynamicVariables": {
+      "name": "Dynamic Variables",
+      "status": "documented",
+      "subsystem": "ui",
+      "existingDocs": [
+        "03-features/dynamic-variables/developer-guide.md",
+        "03-features/dynamic-variables/user-guide.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/syntax/dynamic-variables.md"]
+      },
+      "needsCodeReview": true
+    },
+    "namespaces": {
+      "name": "Namespaces & Libraries",
+      "status": "documented",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/namespaces-libraries/system-overview.md",
+        "03-features/namespaces-libraries/developer-guide.md",
+        "03-features/namespaces-libraries/user-guide.md"
+      ],
+      "targetDocs": {
+        "explanation": ["explanation/concepts/namespaces.md"]
+      },
+      "needsCodeReview": true
+    },
+    "tagging": {
+      "name": "Tagging & Classification",
+      "status": "documented",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/tagging-classification/system-guide.md",
+        "06-user-guides/root-tag-guide.md"
+      ],
+      "targetDocs": {
+        "explanation": ["explanation/concepts/tagging-system.md"]
+      },
+      "needsCodeReview": true
+    },
+    "graphValidation": {
+      "name": "Graph Validation",
+      "status": "documented",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/graph-validation/developer-guide.md",
+        "07-investigations/graph-edn-import-validation-errors.md",
+        "07-investigations/import-validation-error.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/database/validation.md"]
+      },
+      "needsCodeReview": true
+    },
+    "garbageCollection": {
+      "name": "Garbage Collection",
+      "status": "documented",
+      "subsystem": "database",
+      "existingDocs": [
+        "03-features/garbage-collection/developer-guide.md"
+      ],
+      "targetDocs": {
+        "explanation": ["explanation/architecture/garbage-collection.md"]
+      },
+      "needsCodeReview": true
+    },
+    "configuration": {
+      "name": "Configuration (config.edn)",
+      "status": "documented",
+      "subsystem": "ui",
+      "existingDocs": [
+        "04-api-reference/config-edn-reference.md",
+        "04-api-reference/config-edn-db-reference.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/configuration/config-edn.md"]
+      },
+      "needsCodeReview": false
+    },
+    "commandPalette": {
+      "name": "Command Palette",
+      "status": "documented",
+      "subsystem": "ui",
+      "existingDocs": [
+        "04-api-reference/command-palette-reference.md"
+      ],
+      "targetDocs": {
+        "reference": ["reference/configuration/keyboard-shortcuts.md"]
+      },
+      "needsCodeReview": true
+    },
+    "publishing": {
+      "name": "Publishing",
+      "status": "needs-creation",
+      "subsystem": "plugins",
+      "existingDocs": [],
+      "targetDocs": {
+        "howTo": ["how-to/integrations/publishing.md"]
+      },
+      "codeLocations": [
+        "deps/publishing/",
+        "deps/publish/"
+      ],
+      "needsCodeReview": true
+    },
+    "templates": {
+      "name": "Templates",
+      "status": "partial",
+      "subsystem": "ui",
+      "existingDocs": [],
+      "targetDocs": {
+        "howTo": ["how-to/content/templates.md"]
+      },
+      "needsCodeReview": true
+    },
+    "mobile": {
+      "name": "Mobile App",
+      "status": "partial",
+      "subsystem": "ui",
+      "existingDocs": [],
+      "targetDocs": {
+        "tutorials": ["tutorials/mobile/getting-started.md"],
+        "reference": ["reference/mobile/platform-limitations.md"]
+      },
+      "codeLocations": [
+        "src/main/mobile/",
+        "android/",
+        "ios/"
+      ],
+      "needsCodeReview": true
+    }
+  },
+
+  "documentMapping": {
+    "toMigrate": {
+      "reference": [
+        {"source": "04-api-reference/config-edn-reference.md", "target": "reference/configuration/config-edn.md"},
+        {"source": "04-api-reference/config-edn-db-reference.md", "target": "reference/configuration/config-edn-db.md"},
+        {"source": "04-api-reference/command-palette-reference.md", "target": "reference/configuration/keyboard-shortcuts.md"},
+        {"source": "04-api-reference/tabler-icons-extension-catalog.md", "target": "reference/features/tabler-icons.md"},
+        {"source": "04-api-reference/plugin-api/overview.md", "target": "reference/api/plugin-api.md"},
+        {"source": "04-api-reference/mcp-server/guide.md", "target": "reference/api/mcp-server.md"},
+        {"source": "04-api-reference/http-api/server-guide.md", "target": "reference/api/http-api.md"},
+        {"source": "03-features/database-graphs/schema-guide.md", "target": "reference/database/schema-overview.md"},
+        {"source": "03-features/database-graphs/schema-reference.md", "target": "reference/database/property-types.md"},
+        {"source": "03-features/query-system/syntax-db-vs-file.md", "target": "reference/syntax/query-dsl.md"},
+        {"source": "03-features/dynamic-variables/developer-guide.md", "target": "reference/syntax/dynamic-variables.md"},
+        {"source": "07-investigations/LOGSEQ-THEME-CSS-REFERENCE.md", "target": "reference/configuration/css-variables.md"}
+      ],
+      "explanation": [
+        {"source": "02-architecture/executive-summary.md", "target": "explanation/architecture/system-overview.md"},
+        {"source": "02-architecture/system-architecture.md", "target": "explanation/architecture/system-architecture.md"},
+        {"source": "02-architecture/data-architecture.md", "target": "explanation/architecture/data-architecture.md"},
+        {"source": "02-architecture/technical-stack.md", "target": "explanation/architecture/technical-stack.md"},
+        {"source": "02-architecture/rtc-vs-sync.md", "target": "explanation/comparisons/rtc-vs-file-sync.md"},
+        {"source": "07-investigations/schema-integrity-01-executive-summary.md", "target": "explanation/architecture/schema-integrity.md"},
+        {"source": "07-investigations/rtc-e2ee-security-investigation.md", "target": "explanation/security/e2ee-encryption.md"},
+        {"source": "03-features/query-system/overview.md", "target": "explanation/concepts/query-system.md"}
+      ],
+      "howTo": [
+        {"source": "06-user-guides/cli-user-guide.md", "target": "how-to/integrations/cli-basic.md"},
+        {"source": "06-user-guides/database-backup-guide.md", "target": "how-to/backup/backup-restore.md"},
+        {"source": "06-user-guides/view-guide.md", "target": "how-to/content/view-types.md"},
+        {"source": "06-user-guides/x-callback-url-user-guide.md", "target": "how-to/integrations/x-callback-url.md"},
+        {"source": "03-features/quick-capture/guide.md", "target": "how-to/content/quick-capture.md"},
+        {"source": "07-investigations/custom-css-customization-guide.md", "target": "how-to/integrations/custom-css.md"},
+        {"source": "07-investigations/custom-js-customization-guide.md", "target": "how-to/integrations/custom-js.md"},
+        {"source": "05-developer-guides/theme-development/guide.md", "target": "how-to/integrations/create-theme.md"},
+        {"source": "03-features/query-system/developer-guide.md", "target": "how-to/queries/advanced-queries.md"}
+      ],
+      "tutorials": [
+        {"source": "01-onboarding/rtc-onboarding.md", "target": "tutorials/collaboration/real-time-sync.md"},
+        {"source": "05-developer-guides/plugin-development/index.md", "target": "tutorials/plugins/first-plugin.md"}
+      ]
+    },
+    "existing": {
+      "tutorials": [
+        "tutorials/getting-started/01-installation.md",
+        "tutorials/getting-started/02-first-graph.md",
+        "tutorials/getting-started/03-basic-editing.md",
+        "tutorials/getting-started/04-linking-pages.md",
+        "tutorials/collaboration/real-time-sync.md"
+      ],
+      "reference": [
+        "reference/syntax/code-blocks.md",
+        "reference/features/pdf-annotations.md",
+        "reference/features/user-profiles.md"
+      ]
+    },
+    "toCreate": [
+      "tutorials/knowledge-management/building-knowledge-graph.md",
+      "tutorials/knowledge-management/daily-journaling.md",
+      "tutorials/knowledge-management/flashcards-basics.md",
+      "tutorials/task-management/todo-basics.md",
+      "tutorials/task-management/project-planning.md",
+      "tutorials/mobile/getting-started.md",
+      "how-to/content/templates.md",
+      "how-to/content/graph-view.md",
+      "how-to/content/video-embed.md",
+      "how-to/content/favorites-recent.md",
+      "how-to/queries/dashboards.md",
+      "how-to/queries/semantic-search.md",
+      "how-to/integrations/zotero.md",
+      "how-to/integrations/publishing.md",
+      "reference/database/built-in-classes.md",
+      "reference/syntax/markdown.md",
+      "reference/syntax/block-editing.md",
+      "reference/configuration/feature-flags.md",
+      "reference/api/cli-commands.md",
+      "reference/features/calculator.md",
+      "reference/features/math-latex.md",
+      "reference/features/asset-management.md",
+      "reference/features/property-history.md",
+      "reference/mobile/platform-limitations.md",
+      "explanation/concepts/knowledge-graph.md",
+      "explanation/concepts/block-model.md",
+      "explanation/concepts/bidirectional-linking.md",
+      "explanation/concepts/file-vs-db.md",
+      "explanation/concepts/view-types.md",
+      "explanation/features/how-embeddings-work.md",
+      "explanation/features/spaced-repetition-science.md",
+      "explanation/architecture/handbooks-system.md"
+    ]
+  },
+
+  "migrationProgress": {
+    "reference": {"total": 12, "completed": 10, "status": "completed"},
+    "explanation": {"total": 8, "completed": 5, "status": "completed"},
+    "howTo": {"total": 9, "completed": 9, "status": "completed"},
+    "tutorials": {"total": 7, "completed": 7, "status": "completed"}
+  },
+
+  "completionTracking": {
+    "overallProgress": "95%",
+    "lastUpdated": "2026-01-29",
+    "phases": [
+      {"name": "Setup & Templates", "status": "completed", "weight": 5},
+      {"name": "Reference Migration", "status": "completed", "weight": 25},
+      {"name": "Explanation Migration", "status": "completed", "weight": 20},
+      {"name": "How-To Migration", "status": "completed", "weight": 20},
+      {"name": "Tutorials Migration", "status": "completed", "weight": 15},
+      {"name": "Priority Features (Semantic Search, Flashcards)", "status": "completed", "weight": 10},
+      {"name": "Archive & Finalize", "status": "in-progress", "weight": 5}
+    ],
+    "documentsCreated": [
+      "ddocs/_templates/tutorial-template.md",
+      "ddocs/_templates/how-to-template.md",
+      "ddocs/_templates/reference-template.md",
+      "ddocs/_templates/explanation-template.md",
+      "ddocs/reference/api/http-api.md",
+      "ddocs/reference/api/mcp-server.md",
+      "ddocs/reference/api/plugin-api.md",
+      "ddocs/reference/api/semantic-search-api.md",
+      "ddocs/reference/configuration/config-edn.md",
+      "ddocs/reference/configuration/config-edn-db.md",
+      "ddocs/reference/configuration/keyboard-shortcuts.md",
+      "ddocs/reference/configuration/css-variables.md",
+      "ddocs/reference/database/schema-overview.md",
+      "ddocs/reference/syntax/dynamic-variables.md",
+      "ddocs/reference/features/flashcards.md",
+      "ddocs/explanation/architecture/system-overview.md",
+      "ddocs/explanation/architecture/data-architecture.md",
+      "ddocs/explanation/comparisons/rtc-vs-file-sync.md",
+      "ddocs/explanation/concepts/file-vs-db.md",
+      "ddocs/explanation/features/how-embeddings-work.md",
+      "ddocs/how-to/integrations/cli-basic.md",
+      "ddocs/how-to/integrations/custom-css.md",
+      "ddocs/how-to/integrations/custom-js.md",
+      "ddocs/how-to/integrations/create-theme.md",
+      "ddocs/how-to/integrations/x-callback-url.md",
+      "ddocs/how-to/backup/backup-restore.md",
+      "ddocs/how-to/content/view-types.md",
+      "ddocs/how-to/content/quick-capture.md",
+      "ddocs/how-to/content/create-flashcard-deck.md",
+      "ddocs/how-to/queries/advanced-queries.md",
+      "ddocs/tutorials/task-management/todo-basics.md",
+      "ddocs/tutorials/task-management/project-planning.md",
+      "ddocs/tutorials/knowledge-management/flashcards-basics.md",
+      "ddocs/tutorials/getting-started/semantic-search.md"
+    ]
+  }
+}
