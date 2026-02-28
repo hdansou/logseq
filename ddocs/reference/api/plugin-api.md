@@ -1,9 +1,14 @@
 ---
 title: 'Plugin API Reference'
+description: "Complete reference for Logseq's Plugin SDK APIs for extension development"
 status: 🟢 Stable
 version: 'SDK v0.0.17+'
 quadrant: 'Reference'
 platform: 'Desktop'
+platforms: ['desktop']
+graphType: ['file', 'db']
+sinceVersion: '0.4.0'
+lastVerified: '2026-01-29'
 related-docs:
   - '[First Plugin Tutorial](../../tutorials/plugins/first-plugin.md)'
   - '[Plugin Security](../../explanation/architecture/plugin-security.md)'
@@ -18,7 +23,8 @@ Complete reference for the `@logseq/libs` SDK. This document provides detailed A
 **SDK Package:** `@logseq/libs` ([@npmjs](https://www.npmjs.com/package/@logseq/libs))  
 **Latest Version:** 0.0.17 (as of January 2025)  
 **TypeScript Support:** ✅ Full type definitions included  
-**Platform:** Desktop (Electron) only
+**Platform:** Desktop (Electron)  
+**Graph Types:** File-based and DB graphs
 
 ---
 
