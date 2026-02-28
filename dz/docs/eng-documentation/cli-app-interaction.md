@@ -1,0 +1,486 @@
+# Logseq CLI and App: Database Interaction User Experience
+
+## Executive Summary
+
+When using logseq-cli to interact with a Logseq graph, it modifies the SQLite database file directly through a managed `db-worker-node` server process. Understanding how to safely switch between CLI and app usage is critical to prevent data corruption and lock conflicts.
+
+## Database Architecture
+
+### File Structure
+
+- **Main database**: `~/logseq/graphs/<graph-name>/db.sqlite`
+- **Lock file**: `~/logseq/graphs/<graph-name>/db-worker.lock`
+- **WAL files**: `db.sqlite-wal`, `db.sqlite-shm` (Write-Ahead Logging mode)
+- **Search database**: `search/db.sqlite`
+- **Client ops database**: `client-ops-db.sqlite`
+- **Debug logs**: `db-worker-node-YYYYMMDD.log` (7-day retention)
+
+### SQLite Configuration
+
+From [db_core.cljs](../../src/main/frontend/worker/db_core.cljs#L264-L267):
+
+```clojure
+(defn- enable-sqlite-wal-mode!
+  [db]
+  (.exec db "PRAGMA locking_mode=exclusive")
+  (.exec db "PRAGMA journal_mode=WAL"))
+```
+
+The database uses:
+
+- **WAL mode** (Write-Ahead Logging): Allows concurrent readers but only one writer
+- **Exclusive locking**: The process that opens the database maintains exclusive locks
+
+## Lock File Mechanism
+
+### Purpose
+
+The lock file (`db-worker.lock`) prevents multiple processes from simultaneously writing to the SQLite database, which would cause corruption.
+
+### Lock File Contents
+
+From [db_worker_node_lock.cljs](../../src/main/frontend/worker/db_worker_node_lock.cljs#L85-L91):
+
+```clojure
+{:repo repo
+ :pid (.-pid js/process)
+ :lock-id (str (random-uuid))
+ :host "127.0.0.1"
+ :port <random-port>
+ :startedAt "2026-02-10T..."}
+```
+
+### Lock Validation
+
+The system validates locks by:
+
+1. **Process ID (PID) check**: Verifies the process is still alive
+2. **Lock ID**: Unique UUID to detect lock file staleness
+3. **Repository match**: Ensures lock belongs to the correct graph
+
+From [db_worker_node_lock.cljs](../../src/main/frontend/worker/db_worker_node_lock.cljs#L55-L62):
+
+```clojure
+(defn- pid-status
+  [pid]
+  (when (number? pid)
+    (try
+      (.kill js/process pid 0)  ; Signal 0 checks if process exists
+      :alive
+      (catch :default e
+        (case (.-code e)
+          "ESRCH" :not-found     ; Process doesn't exist
+          "EPERM" :no-permission  ; Process exists but no permission
+          :error)))))
+```
+
+## CLI Workflow
+
+### Starting the CLI
+
+From [cli/server.cljs](../../src/main/logseq/cli/server.cljs#L223-L237):
+
+1. **CLI command executed** (e.g., `logseq add block --content "hello"`)
+2. **ensure-server!** checks for existing lock file
+3. **Stale lock cleanup**: If PID is `:not-found`, removes old lock
+4. **Server spawn**: If no server running, spawns `db-worker-node` process
+5. **Lock creation**: Server creates lock file with exclusive access
+6. **Port discovery**: CLI reads port from lock file
+7. **HTTP connection**: CLI connects to `http://127.0.0.1:<port>`
+8. **Command execution**: CLI sends command via HTTP POST to `/v1/invoke`
+
+### Write Operations
+
+From [db_worker_node.cljs](../../src/main/frontend/worker/db_worker_node.cljs#L212-L214):
+
+Before any write operation, the server validates lock ownership:
+
+```clojure
+(when (contains? write-methods method-kw)
+  (let [{:keys [path lock]} @*lock-info]
+    (db-lock/assert-lock-owner! path lock)))
+```
+
+Write methods include:
+
+- `:thread-api/transact` - Database transactions
+- `:thread-api/import-db` - Import operations
+- `:thread-api/import-edn` - EDN imports
+- `:thread-api/search-upsert-blocks` - Search index updates
+
+## User Experience Scenarios
+
+### Scenario 1: CLI Active, Then Opening App
+
+**What happens:**
+
+1. **CLI running** with `db-worker-node` server holding the lock
+2. **User opens Logseq app**
+3. **App attempts to open graph**
+4. **Lock conflict detected**
+
+From [db_worker_node_lock.cljs](../../src/main/frontend/worker/db_worker_node_lock.cljs#L77-L78):
+
+```clojure
+(when (and existing (contains? #{:alive :no-permission} (pid-status (:pid existing))))
+  (throw (ex-info "graph already locked" {:code :repo-locked :lock existing})))
+```
+
+**User sees:**
+
+- Error: "graph already locked" or "graph is locked"
+- HTTP 409 Conflict response code
+
+**Resolution:**
+
+```bash
+# Stop the CLI server
+logseq server stop --repo <graph-name>
+
+# Or list all running servers
+logseq server list
+
+# Then open the app
+```
+
+### Scenario 2: App Active, Then Using CLI
+
+**What happens:**
+
+1. **Logseq app running** with graph open
+2. **User runs CLI command**: `logseq query --name task-search`
+3. **CLI attempts to start server**
+4. **Lock conflict detected** (app's db-worker holds the lock)
+
+**User sees:**
+
+- CLI error: "graph already locked"
+- Lock details showing the app's PID
+
+**Resolution:**
+
+```bash
+# Close the graph in the app first
+# OR
+# If app is in another graph, CLI can work on its own graph
+```
+
+### Scenario 3: Switching Between CLI and App (Clean)
+
+**Best practice workflow:**
+
+```bash
+# 1. Use CLI
+logseq add block --content "CLI created block"
+logseq query --name task-search
+
+# 2. Stop CLI server
+logseq server stop --repo my-graph
+
+# 3. Wait for clean shutdown (lock file removed)
+# Server waits up to 5 seconds for graceful shutdown
+
+# 4. Open app
+# Now safe to open the graph in the Logseq app
+
+# 5. Close app, work with CLI again
+# App releases lock on graph close
+
+# 6. Use CLI again
+logseq server start --repo my-graph
+logseq show --page "My Page"
+```
+
+### Scenario 4: Stale Lock Recovery
+
+**What happens if process crashes:**
+
+1. **CLI or app crashes** without cleaning up lock file
+2. **Next CLI invocation** detects stale lock
+3. **PID check returns** `:not-found`
+4. **Automatic cleanup** - lock file removed
+5. **Server starts normally**
+
+From [db_worker_node_lock.cljs](../../src/main/frontend/worker/db_worker_node_lock.cljs#L79-L80):
+
+```clojure
+(when (and existing (= :not-found (pid-status (:pid existing))))
+  (remove-lock! path))
+```
+
+**No user action required** - system self-heals
+
+### Scenario 5: Multiple Graphs
+
+**Concurrent usage is safe:**
+
+```bash
+# Terminal 1 - Graph A
+logseq add block --repo graph-a --content "Working on A"
+
+# Terminal 2 - Graph B (SAFE - different lock file)
+logseq add block --repo graph-b --content "Working on B"
+
+# Each graph has its own:
+# - db.sqlite file
+# - db-worker.lock file
+# - db-worker-node process
+```
+
+## Data Consistency Guarantees
+
+### WAL Checkpoint
+
+From [db_core.cljs](../../src/main/frontend/worker/db_core.cljs#L582):
+
+```clojure
+(.exec db "PRAGMA wal_checkpoint(2)")  ; TRUNCATE checkpoint
+```
+
+The system performs WAL checkpoints at:
+
+- **Graph export**: Ensures all changes written to main database file
+- **DB close**: Commits pending WAL entries
+- **Import operations**: Syncs before importing new data
+
+### Transaction Safety
+
+- **Atomic writes**: All database modifications are transactional
+- **Lock validation**: Every write method checks lock ownership first
+- **Error rollback**: Failed transactions don't corrupt database
+
+## Diagnostic Commands
+
+### Check Server Status
+
+```bash
+# Show status of a specific graph's server
+logseq server status --repo my-graph
+
+# List all running servers
+logseq server list
+
+# Sample output:
+# REPO       HOST         PORT   PID     STATUS   STARTED AT
+# my-graph   127.0.0.1    9234   12345   ready    2 minutes ago
+```
+
+### Run Diagnostics
+
+```bash
+# Comprehensive health check
+logseq doctor
+
+# Checks:
+# - db-worker-node.js script exists and is readable
+# - data-dir permissions (read/write)
+# - running servers readiness
+```
+
+From [logseq-cli.md](./logseq-cli.md#L74):
+
+> `doctor` - run runtime diagnostics for `db-worker-node.js`, `data-dir` permissions, and running server readiness
+
+### Manual Server Management
+
+```bash
+# Start server manually (usually automatic)
+logseq server start --repo my-graph
+
+# Stop server before opening app
+logseq server stop --repo my-graph
+
+# Restart server (stops then starts)
+logseq server restart --repo my-graph
+```
+
+## Common Error Codes
+
+| Error Code             | Meaning                          | Resolution                                  |
+| ---------------------- | -------------------------------- | ------------------------------------------- |
+| `:repo-locked`         | Another process holds the lock   | Stop other process or wait for timeout      |
+| `:missing-repo`        | No `--repo` specified            | Add `--repo <graph-name>` flag              |
+| `:repo-mismatch`       | Command targets wrong graph      | Check `--repo` matches server's graph       |
+| `:server-not-found`    | Server not running               | CLI automatically starts it                 |
+| `:server-start-failed` | Server failed to start           | Check logs, ensure db-worker-node.js exists |
+| `:data-dir-permission` | Cannot read/write data directory | Fix permissions on `~/logseq/graphs`        |
+| `:graph-not-opened`    | Database not open in worker      | Restart server                              |
+
+## Logs and Debugging
+
+### Server Logs
+
+Location: `~/logseq/graphs/<graph-name>/db-worker-node-YYYYMMDD.log`
+
+From [db_worker_node.cljs](../../src/main/frontend/worker/db_worker_node.cljs#L284-L295):
+
+- **Rotation**: Daily log files
+- **Retention**: 7 days (older logs deleted)
+- **Format**: Structured log entries with timestamps
+
+### Verbose CLI Logging
+
+```bash
+# Enable debug output to stderr
+logseq --verbose query --name task-search
+
+# Shows:
+# - Option parsing details
+# - db-worker-node API calls
+# - HTTP request/response timing
+```
+
+## Best Practices
+
+### ✅ Safe Patterns
+
+1. **Single access point**: Use either CLI or app at a time for a graph
+2. **Explicit server stop**: Run `server stop` before switching to app
+3. **Check status first**: Use `server status` to verify no conflicts
+4. **Multiple graphs**: Safe to use CLI on one graph while app uses another
+5. **Automation scripts**: CLI is perfect for scripting when app is closed
+
+### ❌ Unsafe Patterns
+
+1. **Concurrent write**: Don't open graph in app while CLI server running
+2. **Force kill**: Avoid `kill -9` on db-worker-node (use `server stop`)
+3. **Manual file edits**: Never edit `db.sqlite` or lock files directly
+4. **Lock file deletion**: Let system handle stale locks automatically
+
+### 🔄 Recommended Workflow
+
+**For humans:**
+
+```bash
+# Morning: CLI for bulk operations
+logseq query --name task-search
+logseq add block --content "Daily standup notes"
+logseq server stop --repo my-graph
+
+# Day: Use app for interactive work
+# (Open Logseq app, work on graph)
+
+# Evening: CLI for reports
+# (App closed)
+logseq query --query '[...]' --output json > report.json
+logseq graph export --type edn --output backup.edn
+```
+
+**For automation:**
+
+```bash
+#!/bin/bash
+# Ensure app is closed before running
+if logseq server status --repo my-graph | grep -q "running"; then
+    echo "Error: Server already running. Close app first."
+    exit 1
+fi
+
+logseq add block --repo my-graph --content "Automated entry"
+logseq server stop --repo my-graph
+```
+
+## Technical Details
+
+### Lock Acquisition Flow
+
+```
+CLI Command
+    ↓
+ensure-server! (cli/server.cljs:239)
+    ↓
+ensure-server-started! (cli/server.cljs:223)
+    ↓
+read-lock (check existing)
+    ↓
+cleanup-stale-lock! (if PID not found)
+    ↓
+spawn-server! (if needed)
+    ↓
+db-worker-node starts
+    ↓
+create-lock! (db_worker_node_lock.cljs:71)
+    ↓
+openSync with "wx" flag (exclusive create)
+    ↓
+Lock acquired ✓
+```
+
+### Server Lifecycle
+
+```
+START
+    ↓
+Install file logger
+    ↓
+Initialize platform
+    ↓
+Create lock file
+    ↓
+Open SQLite connections (db.sqlite, search, client-ops)
+    ↓
+Enable WAL mode
+    ↓
+Start HTTP server
+    ↓
+Update lock with port number
+    ↓
+READY (responds to /readyz)
+    ↓
+(handles /v1/invoke requests)
+    ↓
+SHUTDOWN (/v1/shutdown)
+    ↓
+Close SQLite connections
+    ↓
+WAL checkpoint
+    ↓
+Remove lock file
+    ↓
+EXIT
+```
+
+## Advanced Topics
+
+### Port Assignment
+
+- Server binds to `127.0.0.1:0` (random available port)
+- Port recorded in lock file after binding
+- CLI reads port from lock file to connect
+- Prevents port conflicts with multiple graphs
+
+### Lock File Permissions
+
+- Uses Node.js exclusive file creation (`wx` flag)
+- Atomic lock acquisition
+- No race condition during startup
+
+### Database Pooling (OPFS on Browser)
+
+The browser-based app uses OPFS (Origin Private File System) with pooling:
+
+- Not applicable to CLI (uses Node.js fs)
+- CLI directly accesses `db.sqlite` file
+- Both use same SQLite file format
+
+## Conclusion
+
+The lock file mechanism ensures **mutual exclusion** between CLI and app access to prevent SQLite database corruption. Users must:
+
+1. **Be aware**: Only one process can write to a graph at a time
+2. **Check status**: Use `server list` and `server status` commands
+3. **Clean shutdown**: Stop CLI servers before opening app
+4. **Monitor logs**: Check `db-worker-node-*.log` for issues
+5. **Trust automation**: Stale lock cleanup is automatic
+
+The architecture prioritizes **data integrity** over convenience, which is the correct trade-off for a knowledge management system.
+
+---
+
+**Related Files:**
+
+- [db_worker_node_lock.cljs](../../src/main/frontend/worker/db_worker_node_lock.cljs) - Lock file management
+- [db_worker_node.cljs](../../src/main/frontend/worker/db_worker_node.cljs) - Server process
+- [cli/server.cljs](../../src/main/logseq/cli/server.cljs) - CLI server orchestration
+- [db_core.cljs](../../src/main/frontend/worker/db_core.cljs) - SQLite operations
+- [logseq-cli.md](./logseq-cli.md) - CLI documentation
