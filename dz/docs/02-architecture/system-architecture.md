@@ -1,5 +1,7 @@
 # System Architecture
 
+> **Last revised:** 2026-03-10
+
 ## Architecture Overview
 
 Logseq employs a **local-first, multi-platform architecture** that prioritizes user data ownership while providing seamless cross-platform experiences. The system features a sophisticated dual-mode architecture supporting both traditional file-based storage and modern SQLite database-backed graphs, designed around reactive, event-driven patterns with graph databases at its core.
@@ -40,7 +42,7 @@ C4Container
 
     Container(webapp, "Web Application", "ClojureScript/React", "Main application interface")
     Container(desktop, "Desktop App", "Electron", "Native desktop wrapper")
-    Container(mobile, "Mobile App", "React Native", "Mobile application")
+    Container(mobile, "Mobile App", "Capacitor", "Mobile application")
 
     Container(ds_db, "DataScript Database", "In-memory graph DB", "Query engine and reactive layer")
     Container(sqlite_db, "SQLite Database", "SQLite + WASM/OPFS", "Persistent storage for DB graphs")
@@ -173,21 +175,14 @@ graph TB
 #### Storage Abstraction Layer
 
 ```clojure
-;; Unified storage interface
+;; Storage interface (from datascript.storage)
 (defprotocol IStorage
   (-store [this addr+data-seq delete-addrs])
   (-restore [this addr]))
 
-;; Graph type detection
+;; Graph type detection (logseq.db.sqlite.util / frontend.config)
 (defn db-based-graph? [graph-name]
-  (when graph-name
-    (string/starts-with? graph-name "logseq_db_")))
-
-;; Schema selection
-(defn get-schema [repo]
-  (if (db-based-graph? repo)
-    db-schema/schema      ; Database schema
-    file-schema/schema))  ; File-based schema
+  (sqlite-util/db-based-graph? graph-name))
 ```
 
 ### 2. Frontend Application Layer
@@ -337,11 +332,11 @@ graph LR
 - **IndexedDB**: Browser-based data persistence
 - **File System Access API**: Modern browser file integration
 
-### Mobile (React Native)
+### Mobile (Capacitor)
 
-- **Native Bridge**: Platform-specific functionality
+- **Web View**: ClojureScript application running in a Capacitor web view
+- **Native Plugins**: Platform-specific functionality via Capacitor plugins
 - **Background Sync**: Data synchronization while offline
-- **Native UI**: Platform-consistent user interface
 - **Performance Optimization**: Mobile-specific optimizations
 
 ## Data Flow Architecture
@@ -457,20 +452,23 @@ sequenceDiagram
 
 #### Database-Specific Optimizations
 
-- **Connection Pooling**: OPFS connection pool management (20 connections)
+- **OPFS SAH Pool**: OPFS file handle pool (initialCapacity: 20 handles)
 - **WAL Mode**: Write-Ahead Logging for better concurrency
 - **Vacuum Operations**: Automatic database maintenance and garbage collection
 - **Search Index Management**: Automatic FTS index updates with triggers
 - **Transit Serialization**: Optimized data serialization for storage
 
 ```clojure
-;; Database garbage collection (weekly)
+;; Database garbage collection (every 3 days)
 (defn- gc-sqlite-dbs! [sqlite-db client-ops-db datascript-conn {:keys [full-gc?]}]
   (let [last-gc-at (:kv/value (d/entity @datascript-conn :logseq.kv/graph-last-gc-at))]
     (when (or full-gc?
-              (> (- (time-ms) last-gc-at) (* 3 24 3600 1000))) ; 3 days ago
-      (.exec sqlite-db "VACUUM")
-      (.exec client-ops-db "VACUUM"))))
+              (nil? last-gc-at)
+              (not (number? last-gc-at))
+              (> (- (time-ms) last-gc-at) (* 3 24 3600 1000))) ; 3 days
+      (doseq [db [sqlite-db client-ops-db]]
+        (sqlite-gc/gc-kvs-table! db {:full-gc? full-gc?})
+        (.exec db "VACUUM")))))
 ```
 
 ### Concurrent Operations
@@ -593,7 +591,7 @@ sequenceDiagram
 
 - **Desktop**: Electron with native SQLite bindings
 - **Web**: SQLite WASM with Origin Private File System
-- **Mobile**: React Native with SQLite integration
+- **Mobile**: Capacitor with SQLite integration
 
 #### Development Tools
 

@@ -1,5 +1,7 @@
 # Plugin Documentation Update Process
 
+> **Last revised:** 2026-03-10
+
 > **Purpose**: This guide documents the complete process for updating and publishing Logseq Plugin API documentation to https://plugins-doc.logseq.com
 
 ---
@@ -27,7 +29,7 @@ The Logseq plugin documentation is generated from TypeScript definition files us
 - **Build Tool**: TypeDoc with `typedoc-plugin-lsp-docs` plugin
 - **Output**: Generated documentation site
 - **Package**: `@logseq/libs` npm package
-- **Version**: Currently at v0.2.3 (next: v0.0.17 for new DB APIs)
+- **Version**: Currently at v0.2.12
 
 ---
 

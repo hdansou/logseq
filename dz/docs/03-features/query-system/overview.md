@@ -1,5 +1,7 @@
 # Query System
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq's query system is a powerful and flexible mechanism for retrieving and displaying information from your knowledge graph. It supports multiple query types, from simple text-based searches to complex Datalog queries, enabling users to create dynamic views of their data that update automatically as content changes.
@@ -193,8 +195,8 @@ Advanced queries use DataScript's Datalog syntax, providing direct access to the
 ```clojure
 [:find ?page-name
  :where
- [?page :page/name ?page-name]
- [?page :page/properties ?props]
+ [?page :block/name ?page-name]
+ [?page :block/properties ?props]
  [(get ?props "type") ?type]
  [(= ?type "project")]]
 ```
@@ -256,10 +258,10 @@ sequenceDiagram
 
 ```clojure
 (defn parse-query
-  ([q] (parse-query q {}))
-  ([q options]
+  ([q db] (parse-query q db {}))
+  ([q db options]
    (let [q' (template/resolve-dynamic-template! q)]
-     (parse q' (merge {:db-graph? (config/db-based-graph? (state/get-current-repo))} options)))))
+     (parse q' db options))))
 
 (defn pre-transform-query
   [q]
@@ -273,7 +275,7 @@ sequenceDiagram
 ;; Transform simple query to Datalog
 (defn query-wrapper
   [where {:keys [blocks? block-attrs]}]
-  (let [block-attrs (or block-attrs (butlast file-model/file-graph-block-attrs))
+  (let [block-attrs (or block-attrs '[*])
         q (if blocks?
             `[:find (~'pull ~'?b ~block-attrs)
               :in ~'$ ~'%
@@ -297,16 +299,24 @@ sequenceDiagram
    (query repo query-string {}))
   ([repo query-string query-opts]
    (when (and (string? query-string) (not= "\"\"" query-string))
-     (let [db-graph? (config/db-based-graph? repo)
-           {query* :query :keys [rules sort-by blocks? sample]} (parse-query query-string {:cards? (:cards? query-opts)})
-           blocks? (if db-graph? true blocks?)]
+     (let [db (db-conn/get-db)
+           {query* :query :keys [rules sample]} (parse-query query-string db {:cards? (:cards? query-opts)})
+           blocks? true]
        (when-let [query' (some-> query* (query-wrapper {:blocks? blocks?
-                                                        :block-attrs (when db-graph? db-block-attrs)}))]
-         (last (query-react/react-query repo
-                                        {:query query'
-                                         :query-string query-string
-                                         :rules rules}
-                                        query-opts)))))))
+                                                        :block-attrs db-block-attrs}))]
+         (let [random-samples (if (and sample @sample)
+                                (fn [col]
+                                  (take @sample (shuffle col)))
+                                identity)
+               sort-by' identity
+               transform-fn (comp sort-by' random-samples)]
+           (last (query-react/react-query repo
+                                          {:query query'
+                                           :query-string query-string
+                                           :rules rules}
+                                          (merge
+                                           {:transform-fn transform-fn}
+                                           query-opts)))))))))
 ```
 
 ## Query Components and UI
@@ -528,6 +538,13 @@ now
       (= "tomorrow" input)
       (date-time-util/date->int (t/plus (t/today) (t/days 1)))
 
+      (page-ref/page-ref? input)
+      (let [input (-> (page-ref/get-page-name input)
+                      (string/replace ":" "")
+                      (string/capitalize))]
+        (when (date/valid-journal-title? input)
+          (date/journal-title->int input)))
+
       ;; Handle relative dates like "-7d"
       :else
       (let [duration (parse-long (subs input 0 (dec (count input))))
@@ -553,23 +570,20 @@ now
 ;; Blocks with any value for property
 (property priority)
 
-;; Private properties (starts with _)
-(property _private-note important)
+;; Private properties (use private-property operator)
+(private-property private-note important)
 ```
 
 **Property Implementation**:
 
 ```clojure
-(defn- build-property
-  [k v]
-  (let [k (name k)
-        v' (when v (page-ref/get-page-name v))
-        v' (or v' v)]
-    (if (and v (string/starts-with? k "_"))
-      {:query (list 'private-simple-query-property '?b k v')
-       :rules [:private-simple-query-property]}
-      {:query (list 'simple-query-property '?b k v')
-       :rules [:simple-query-property]})))
+(defn- build-property [e env]
+  (cond
+    (= 3 (count e))
+    (build-property-two-arg e env)
+
+    (= 2 (count e))
+    (build-property-one-arg e env)))
 ```
 
 ### Page Properties
@@ -746,7 +760,7 @@ now
 ;; Good: Uses page name index
 [:find ?page
  :where
- [?page :page/name "Page Name"]]
+ [?page :block/name "page name"]]
 ```
 
 **3. Limit Result Sets**:

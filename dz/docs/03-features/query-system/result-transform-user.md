@@ -1,5 +1,7 @@
 # Getting Started with :result-transform in Logseq
 
+> **Last revised:** 2026-03-10
+
 **Transform your query results like a pro!**
 
 This guide will show you how to use Logseq's `:result-transform` feature to customize your query results by sorting, filtering, and transforming data in powerful ways.
@@ -449,9 +451,9 @@ The biggest difference when using `:result-transform` between graph types is **p
 | Deadline  | `:block/deadline`   | `:logseq.property/deadline`  |
 | Scheduled | `:block/scheduled`  | `:logseq.property/scheduled` |
 | Tags      | `:block/tags`       | `:logseq.property/tags`      |
+| Status    | `:block/marker`     | `:logseq.property/status`    |
 | Created   | `:block/created-at` | `:block/created-at` (same)   |
 | Updated   | `:block/updated-at` | `:block/updated-at` (same)   |
-| Marker    | `:block/marker`     | `:block/marker` (same)       |
 | Content   | `:block/content`    | `:block/content` (same)      |
 
 ### Universal Properties (Same for Both)
@@ -460,9 +462,10 @@ These properties work the same in both graph types:
 
 - `:block/uuid`
 - `:block/content`
-- `:block/marker`
 - `:block/created-at`
 - `:block/updated-at`
+
+**Note:** `:block/marker` is file-based only. In DB graphs, task status is stored as `:logseq.property/status`.
 
 ### Converting Between Graph Types
 
@@ -1040,5 +1043,5 @@ Now that you know how to use `:result-transform`, try:
 
 **Happy querying!**
 
-_Last updated: 2025-10-17_
-_Version: 1.0_
+_Last updated: 2026-03-10_
+_Version: 1.1_

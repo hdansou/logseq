@@ -1,6 +1,8 @@
 # Library and Namespace: A Detective's Investigation Report
 
-## 🔍 Case Summary
+> **Last revised:** 2026-03-10
+
+## Case Summary
 
 **Case File**: Logseq Library and Namespace System
 **Jurisdiction**: DB and File-based Graph Management

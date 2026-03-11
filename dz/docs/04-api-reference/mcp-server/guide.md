@@ -1,5 +1,7 @@
 # Logseq MCP Server Integration Guide
 
+> **Last revised:** 2026-03-10
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -79,11 +81,10 @@ The **Model Context Protocol (MCP)** is an open protocol that standardizes how A
 - 🔧 List all properties and their configurations
 - 🔎 Search blocks by content
 
-**Write Operations:**
+**Write Operations (via `upsertNodes` tool):**
 
-- ✍️ Add new blocks to pages
-- ✏️ Update existing block content
-- 🆕 Create new pages (via force flag)
+- Batch create or edit pages, blocks, tags, and properties in a single call
+- Supports dry-run mode for validation without committing changes
 
 ### 🔧 Advanced Features
 
@@ -230,20 +231,19 @@ The MCP server exposes the following tools to connected clients:
 
 ### Read Tools
 
-| Tool             | Description            | Input                 | Output                                      |
-| ---------------- | ---------------------- | --------------------- | ------------------------------------------- |
-| `listPages`      | Get all pages in graph | None                  | Array of page objects with minimal metadata |
-| `getPage`        | Get full page content  | `pageName` (string)   | Page entity + array of blocks               |
-| `listTags`       | Get all tags           | None                  | Array of tag entities with metadata         |
-| `listProperties` | Get all properties     | None                  | Array of property entities with schemas     |
-| `searchBlocks`   | Search for blocks      | `searchTerm` (string) | Array of matching blocks                    |
+| Tool             | Description            | Input                          | Output                                      |
+| ---------------- | ---------------------- | ------------------------------ | ------------------------------------------- |
+| `listPages`      | List all pages         | `expand` (optional bool)       | Array of page objects with minimal metadata |
+| `getPage`        | Get full page content  | `pageName` (string)            | Page entity + array of blocks               |
+| `listTags`       | List all tags          | `expand` (optional bool)       | Array of tag entities with metadata         |
+| `listProperties` | List all properties    | `expand` (optional bool)       | Array of property entities with schemas     |
+| `searchBlocks`   | Search for blocks      | `searchTerm` (string)          | Array of matching blocks                    |
 
 ### Write Tools
 
-| Tool          | Description          | Input                                     | Output               |
-| ------------- | -------------------- | ----------------------------------------- | -------------------- |
-| `addToPage`   | Add block to page    | `pageName`, `content`, `force` (optional) | Success confirmation |
-| `updateBlock` | Update block content | `blockUUID`, `content`                    | Success confirmation |
+| Tool          | Description                                        | Input                                    | Output                  |
+| ------------- | -------------------------------------------------- | ---------------------------------------- | ----------------------- |
+| `upsertNodes` | Batch create/edit pages, blocks, tags, properties  | `operations` (array), `dry-run` (optional bool) | Summary of changes |
 
 ## Usage Modes
 
@@ -537,20 +537,11 @@ class LogseqMCPClient:
         content = result['result']['content'][0]['text']
         return json.loads(content)
 
-    def add_to_page(self, page_name, content, force=False):
-        """Add block to page"""
-        result = self.call_tool('addToPage', {
-            'pageName': page_name,
-            'content': content,
-            'force': force
-        })
-        return result
-
-    def update_block(self, block_uuid, content):
-        """Update block content"""
-        result = self.call_tool('updateBlock', {
-            'blockUUID': block_uuid,
-            'content': content
+    def upsert_nodes(self, operations, dry_run=False):
+        """Batch create/edit pages, blocks, tags, and properties"""
+        result = self.call_tool('upsertNodes', {
+            'operations': operations,
+            'dry-run': dry_run
         })
         return result
 
@@ -576,8 +567,11 @@ if __name__ == '__main__':
     results = client.search_blocks('TODO')
     print(f"Found {len(results)} blocks with TODO")
 
-    # Add content
-    client.add_to_page('Daily Notes', '- New item from Python', force=True)
+    # Add content via upsert
+    client.upsert_nodes([
+        {'operation': 'add', 'entityType': 'page', 'id': 'temp-daily', 'data': {'title': 'Daily Notes'}},
+        {'operation': 'add', 'entityType': 'block', 'data': {'page-id': 'temp-daily', 'title': 'New item from Python'}}
+    ])
 ```
 
 ### Custom Node.js Client
@@ -659,8 +653,8 @@ class LogseqMCPClient {
     return await this.callTool('searchBlocks', { searchTerm })
   }
 
-  async addToPage(pageName, content, force = false) {
-    return await this.callTool('addToPage', { pageName, content, force })
+  async upsertNodes(operations, dryRun = false) {
+    return await this.callTool('upsertNodes', { operations, 'dry-run': dryRun })
   }
 
   _headers() {
@@ -686,8 +680,11 @@ console.log(`Found ${pages.length} pages`)
 const page = await client.getPage('Projects')
 console.log(`Page has ${page.blocks.length} blocks`)
 
-// Add to page
-await client.addToPage('Daily Notes', '- Meeting notes from client', true)
+// Add content via upsert
+await client.upsertNodes([
+  { operation: 'add', entityType: 'page', id: 'temp-daily', data: { title: 'Daily Notes' } },
+  { operation: 'add', entityType: 'block', data: { 'page-id': 'temp-daily', title: 'Meeting notes from client' } },
+])
 ```
 
 ## Client Setup
@@ -1006,90 +1003,79 @@ results = client.call_tool('searchBlocks', {'searchTerm': 'TODO urgent'})
 
 ---
 
-### addToPage
+### upsertNodes
 
-Add a new block to a page.
-
-**Input:**
-
-```json
-{
-  "pageName": "string",    // Page name or UUID
-  "content": "string",     // Block content in markdown
-  "force": boolean         // Optional: create page if not exists
-}
-```
-
-**Output:**
-
-```json
-{
-  "ok": true
-}
-```
-
-**Example:**
-
-```python
-# Add to existing page
-client.call_tool('addToPage', {
-    'pageName': 'Projects',
-    'content': '- New project idea'
-})
-
-# Create page and add content
-client.call_tool('addToPage', {
-    'pageName': 'New Page',
-    'content': '- First block',
-    'force': True
-})
-```
-
-**Notes:**
-
-- Block is appended to end of page
-- Supports markdown formatting
-- Use `force: true` to create non-existent pages
-- Returns success confirmation
-
----
-
-### updateBlock
-
-Update the content of an existing block.
+Batch create or edit pages, blocks, tags, and properties. This tool should be called at most once per user request.
 
 **Input:**
 
 ```json
 {
-  "blockUUID": "string", // Block UUID to update
-  "content": "string" // New content in markdown
+  "operations": [
+    {
+      "operation": "add" | "edit",
+      "entityType": "block" | "page" | "tag" | "property",
+      "id": "string (optional, required for edit, temp ID for add)",
+      "data": {
+        "title": "string",
+        "page-id": "string (page UUID, required when adding blocks)",
+        "tags": ["uuid-string"],
+        "property-type": "string",
+        "property-cardinality": "one" | "many",
+        "property-classes": ["string"],
+        "class-extends": ["string"],
+        "class-properties": ["string"]
+      }
+    }
+  ],
+  "dry-run": false  // Optional: validate without committing
 }
 ```
 
-**Output:**
-
-```json
-{
-  "ok": true
-}
-```
+**Output:** A summary string describing what was added or edited.
 
 **Example:**
 
 ```python
-client.call_tool('updateBlock', {
-    'blockUUID': 'abc-123-def',
-    'content': 'DONE Updated task description'
+# Add a block to an existing page
+client.call_tool('upsertNodes', {
+    'operations': [
+        {
+            'operation': 'add',
+            'entityType': 'block',
+            'data': {
+                'page-id': '119268a6-704f-4e9e-8c34-36dfc6133729',
+                'title': 'New block text'
+            }
+        }
+    ]
+})
+
+# Create a new page with a block
+client.call_tool('upsertNodes', {
+    'operations': [
+        {
+            'operation': 'add',
+            'entityType': 'page',
+            'id': 'temp-inbox',
+            'data': {'title': 'Inbox'}
+        },
+        {
+            'operation': 'add',
+            'entityType': 'block',
+            'data': {'page-id': 'temp-inbox', 'title': 'First item'}
+        }
+    ]
 })
 ```
 
 **Notes:**
 
-- Completely replaces block content
-- Preserves block position and children
-- UUID must be valid string format
-- Returns success confirmation
+- Supports batch operations in a single call
+- Use temporary string IDs to reference newly created pages in subsequent block operations
+- Use `dry-run: true` to validate without committing changes
+- Before creating a page, tag, or property, check if it already exists with `getPage`
+- Editing pages, tags, or properties is not yet supported (only blocks support `edit`)
 
 ## Best Practices
 
@@ -1185,17 +1171,15 @@ client.call_tool('updateBlock', {
 
 3. **Validate Input**
    ```python
-   def add_to_page_safe(client, page_name, content):
-       if not page_name or not isinstance(page_name, str):
-           raise ValueError("Invalid page_name")
+   def upsert_nodes_safe(client, operations):
+       if not operations or not isinstance(operations, list):
+           raise ValueError("Invalid operations")
 
-       if not content or not isinstance(content, str):
-           raise ValueError("Invalid content")
+       for op in operations:
+           if 'operation' not in op or 'entityType' not in op:
+               raise ValueError("Each operation must have 'operation' and 'entityType'")
 
-       # Sanitize content
-       content = content.strip()
-
-       return client.add_to_page(page_name, content)
+       return client.upsert_nodes(operations)
    ```
 
 ### Integration Patterns
@@ -1403,8 +1387,11 @@ client.call_tool('updateBlock', {
    # ❌ This will fail if page doesn't exist
    client.get_page('Nonexistent Page')
 
-   # ✅ Use force flag when adding
-   client.add_to_page('Nonexistent Page', 'Content', force=True)
+   # ✅ Create the page first via upsertNodes
+   client.upsert_nodes([
+       {'operation': 'add', 'entityType': 'page', 'id': 'temp', 'data': {'title': 'New Page'}},
+       {'operation': 'add', 'entityType': 'block', 'data': {'page-id': 'temp', 'title': 'Content'}}
+   ])
    ```
 
 2. **Invalid UUID**:
@@ -1747,7 +1734,7 @@ Logseq MCP Server implements:
 **Version 0.1.0** (2025-09-25):
 
 - Initial MCP server implementation
-- 7 tools: listPages, getPage, listTags, listProperties, searchBlocks, addToPage, updateBlock
+- 6 tools: listPages, getPage, listTags, listProperties, searchBlocks, upsertNodes
 - HTTP Streamable and stdio transports
 - Desktop app integration
 - CLI support for local graphs
@@ -1766,7 +1753,7 @@ For issues, questions, or feature requests:
 
 ---
 
-_Document Version: 1.0_  
-_Last Updated: 2025-09-30_  
-_Logseq Version: feat/mcp-server branch_  
+_Document Version: 1.1_
+_Last Updated: 2026-03-10_
+_Logseq Version: feat/mcp-server branch_
 _MCP Protocol: 2024-11-05_

@@ -12,6 +12,8 @@ related-docs:
 
 # Asset Management in Logseq
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Assets are files embedded in your Logseq graph — images, PDFs, videos, audio, and other documents. Logseq provides comprehensive asset management features including upload, storage, synchronization, and organization.
@@ -164,14 +166,14 @@ Assets stored as `:logseq.class/Asset` blocks with properties:
 ```clojure
 {:block/uuid "12345678-1234-1234-1234-123456789abc"
  :block/tags [:logseq.class/Asset]
- :logseq.property.asset/type "image/png"
+ :logseq.property.asset/type "png"
  :logseq.property.asset/size 524288  ; bytes
- :logseq.property.asset/checksum "sha256:abcd..."
- :logseq.property.asset/path "../assets/image_1234.png"
- :logseq.property.asset/created-at 1705852800000}
+ :logseq.property.asset/checksum "abcd1234..."  ; SHA-256 hex digest
+ :logseq.property.asset/external-url nil}       ; set for web-linked assets
+;; File stored on disk as: assets/<block-uuid>.png
 ```
 
-**Asset Class Definition**: [`class.cljs:57-63`](../../deps/db/src/logseq/db/frontend/class.cljs#L57-L63)
+**Asset Class Definition**: [`class.cljs:58-64`](../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64)
 
 ```clojure
 :logseq.class/Asset
@@ -188,12 +190,16 @@ Assets stored as `:logseq.class/Asset` blocks with properties:
 
 **Properties**:
 
-- `:logseq.property.asset/type` — MIME type (e.g., `"image/png"`, `"application/pdf"`)
+- `:logseq.property.asset/type` — File extension string (e.g., `"png"`, `"pdf"`, `"mp4"`)
 - `:logseq.property.asset/size` — File size in bytes
-- `:logseq.property.asset/checksum` — SHA-256 hash for integrity verification
-- `:logseq.property.asset/path` — Relative path in graph
-- `:logseq.property.asset/created-at` — Upload timestamp
-- `:logseq.property.asset/external-url` — Original URL for web links
+- `:logseq.property.asset/checksum` — SHA-256 hex digest for integrity verification
+- `:logseq.property.asset/external-url` — Original URL for web-linked assets
+- `:logseq.property.asset/external-file-name` — Original filename for externally sourced assets
+- `:logseq.property.asset/width` — Image width in pixels (set automatically on load)
+- `:logseq.property.asset/height` — Image height in pixels (set automatically on load)
+- `:logseq.property.asset/remote-metadata` — Metadata for assets stored in remote/cloud storage
+- `:logseq.property.asset/last-visit-page` — Last visited page number (for PDFs)
+- `:logseq.property.asset/resize-metadata` — Resize dimensions metadata
 
 ### Remote Graphs (RTC Sync)
 
@@ -224,28 +230,31 @@ Collaborators download on-demand
 Decrypt and save to local assets/
 ```
 
-**Code Reference**: [`assets.cljs:234-262`](../../src/main/frontend/handler/assets.cljs#L234-L262)
+**Code Reference**: [`assets.cljs:301-334`](../../src/main/frontend/handler/assets.cljs#L301-L334)
 
 ```clojure
 (defn new-task--rtc-upload-asset
-  [repo aes-key asset-block-uuid-str asset-type checksum put-url]
+  [repo aes-key asset-block-uuid-str asset-type checksum put-url & {:keys [extra-headers]}]
+  (assert (and asset-type checksum))
   (m/sp
-    (let [r (m/? (http/put put-url
-                   {:body (get-asset-file-arraybuffer)
-                    :with-credentials? false
-                    :progress-chan (c.m/run-task :upload-asset-progress
-                                     (upload-progress-flow asset-block-uuid-str))}))
-          success? (http/success? r)]
-      (if success?
-        {:ok {:asset-block-uuid-str asset-block-uuid-str}}
-        (throw (ex-info "upload-asset failed"
-                        {:type :rtc.exception/upload-asset-failed
-                         :data (dissoc r :body)}))))))
+    (let [asset-file (try (c.m/<? (<read-asset repo asset-block-uuid-str asset-type))
+                          (catch :default e
+                            (log/info :read-asset e)
+                            (throw (ex-info "read-asset failed" {:type :rtc.exception/read-asset-failed} e))))
+          asset-file (if aes-key (->uint8 asset-file) asset-file)
+          asset-file* (if (not aes-key)
+                        asset-file
+                        (ldb/write-transit-str
+                         (c.m/<? (crypt/<encrypt-uint8array aes-key asset-file))))
+          ;; ... progress tracking and HTTP PUT ...
+          ]
+      ;; Throws :rtc.exception/upload-asset-failed on non-2xx status
+      )))
 ```
 
 **Download Flow**: Similar but reversed (GET request, decrypt, write to local assets).
 
-**Size Limit**: 100 MB per asset (see [`assets.cljs:21-24`](../../src/main/frontend/handler/assets.cljs#L21-L24)):
+**Size Limit**: 100 MB per asset (see [`assets.cljs:22-25`](../../src/main/frontend/handler/assets.cljs#L22-L25)):
 
 ```clojure
 (defn exceed-limit-size?
@@ -306,14 +315,16 @@ assets/
 - Keep assets outside graph folder
 - Useful for team templates, branding
 
-**Code Reference**: [`assets.cljs:26-62`](../../src/main/frontend/handler/assets.cljs#L26-L62)
+**Code Reference**: [`assets.cljs:27-58`](../../src/main/frontend/handler/assets.cljs#L27-L58)
 
 ```clojure
-(defn alias-enabled? []
+(defn alias-enabled?
+  []
   (and (util/electron?)
        (:assets/alias-enabled? @state/state)))
 
-(defn get-alias-by-name [name]
+(defn get-alias-by-name
+  [name]
   (when-let [alias-dirs (and (alias-enabled?) (seq (get-alias-dirs)))]
     (medley/find-first #(= name (:name (second %1)))
                        (medley/indexed alias-dirs))))
@@ -457,8 +468,8 @@ assets/
 
 ```clojure
 {:logseq.property.asset/external-url "https://example.com/image.png"
- :logseq.property.asset/type "image/png"
- ;; checksum and size from initial download
+ :logseq.property.asset/type "png"
+ ;; checksum and size computed from initial download
  }
 ```
 
@@ -484,18 +495,10 @@ assets/
 
 ```clojure
 {{query (and [[logseq.class/Asset]]
-             (property :logseq.property.asset/type "image/png"))}}
+             (property :logseq.property.asset/type "png"))}}
 ```
 
 **Result**: All PNG images in graph
-
-**Get Asset Size**:
-
-```clojure
-{{query (property-sum :logseq.property.asset/size)}}
-```
-
-**Result**: Total size of all assets in bytes
 
 ### Batch Asset Operations (🟡 Planned)
 
@@ -611,9 +614,9 @@ Future features:
 
 **Problem**: Same file uploaded multiple times with different names
 
-**Cause**: Logseq appends timestamp to prevent collisions
+**Cause**: In file-based graphs, Logseq appends a timestamp to prevent collisions. In database graphs, Logseq deduplicates by SHA-256 checksum and will warn if an identical asset already exists.
 
-**Solution**:
+**Solution** (file-based graphs):
 
 - Search graph for duplicate references
 - Consolidate to one asset file
@@ -712,17 +715,17 @@ assets/*.zip
 
 **Core Implementation**:
 
-- [`src/main/frontend/handler/assets.cljs`](../../src/main/frontend/handler/assets.cljs) (345 lines) — Asset upload/download logic
-- [`deps/db/src/logseq/db/frontend/class.cljs`](../../deps/db/src/logseq/db/frontend/class.cljs#L57-L63) — Asset class definition
+- [`src/main/frontend/handler/assets.cljs`](../../src/main/frontend/handler/assets.cljs) (~418 lines) — Asset upload/download logic
+- [`deps/db/src/logseq/db/frontend/class.cljs`](../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64) — Asset class definition
 - [`deps/db/src/logseq/db/frontend/asset.cljs`](../../deps/db/src/logseq/db/frontend/asset.cljs) — Database asset utilities
 
 **Key Functions**:
 
-- `new-task--rtc-upload-asset` (line 234-262) — RTC upload with encryption
-- `new-task--rtc-download-asset` (line 264-283) — RTC download and decryption
-- `exceed-limit-size?` (line 21-24) — 100 MB size limit check
-- `normalize-asset-resource-url` (line 92-108) — Path to URL conversion
-- `resolve-asset-real-path-url` (line 64-88) — Resolve asset paths
+- `new-task--rtc-upload-asset` (line 301-334) — RTC upload with encryption
+- `new-task--rtc-download-asset` (line 336-374) — RTC download and decryption
+- `exceed-limit-size?` (line 22-25) — 100 MB size limit check
+- `normalize-asset-resource-url` (line 85-102) — Path to URL conversion
+- `resolve-asset-real-path-url` (line 67-83) — Resolve asset paths
 
 ---
 
@@ -749,6 +752,6 @@ assets/*.zip
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: March 2026
 **Status**: 🟢 Stable (Asset management core feature)  
 **Feedback**: Report asset issues on [GitHub](https://github.com/logseq/logseq/issues) with `assets` label

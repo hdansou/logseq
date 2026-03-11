@@ -3,10 +3,10 @@ title: 'Todo Basics'
 description: "Learn to manage tasks effectively with Logseq's task management system"
 type: tutorial
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
-graphType: [file, db]
+graphType: [db]
 difficulty: beginner
 timeToComplete: '15 minutes'
 prerequisites: ['basic-editing']
@@ -19,13 +19,15 @@ relatedDocs:
 
 # Todo Basics
 
+> **Last revised:** 2026-03-10
+
 > Learn to create, organize, and track tasks in Logseq.
 
 ## What You'll Learn
 
 - ✅ Creating TODO items
-- ✅ Task states (TODO, DOING, DONE)
-- ✅ Setting priorities
+- ✅ Task states (Todo, Doing, Done, and more)
+- ✅ Setting priorities (High, Medium, Low, Urgent)
 - ✅ Scheduling and deadlines
 - ✅ Querying your tasks
 
@@ -37,94 +39,68 @@ relatedDocs:
 
 ### Using the Slash Command
 
-1. On any page, type `/TODO`
-2. Press Enter
+1. On any page, type `/Todo`
+2. Select it from the menu and press Enter
 3. Type your task description
 
-**Result:**
-
-```
-TODO Buy groceries
-```
+This sets the block's **Status** property to "Todo."
 
 ### Using Keyboard Shortcut
 
-1. Type any text
+1. Type any text in a block
 2. Press `Cmd+Enter` (macOS) or `Ctrl+Enter` (Windows/Linux)
-3. This cycles through task states
-
-### Manual Typing
-
-Just type `TODO` at the start of any block:
-
-```
-TODO Finish the report
-```
+3. This cycles through task states: Todo -> Doing -> Done -> (none)
 
 ---
 
 ## Step 2: Cycle Task States
 
-Tasks can be in different states:
+In DB graphs, tasks use the built-in **Status** property with these values:
 
-| State       | Meaning          |
+| Status      | Meaning          |
 | ----------- | ---------------- |
-| `TODO`      | Not started      |
-| `DOING`     | In progress      |
-| `DONE`      | Completed        |
-| `LATER`     | Someday/Maybe    |
-| `NOW`       | Do it now        |
-| `WAITING`   | Blocked          |
-| `CANCELLED` | No longer needed |
+| `Backlog`   | Not yet planned  |
+| `Todo`      | Not started      |
+| `Doing`     | In progress      |
+| `In Review` | Under review     |
+| `Done`      | Completed        |
+| `Canceled`  | No longer needed |
 
 ### Change State
 
-**Option 1: Click the checkbox**
+**Option 1: Click the status indicator**
 
-- Click once → DOING
-- Click again → DONE
+- Click once on a Todo block -> Doing
+- Click again -> Done
 
 **Option 2: Keyboard**
 
-- `Cmd/Ctrl+Enter` cycles: TODO → DOING → DONE → (none)
+- `Cmd/Ctrl+Enter` cycles: Todo -> Doing -> Done -> (none)
 
-**Option 3: Type**
+**Option 3: Slash command**
 
-- Just change the keyword manually
+- Type `/` and select a status (e.g., `/Todo`, `/Doing`, `/Done`)
 
 ### Try It
 
-```
-TODO Pick up dry cleaning
-```
-
-Click the checkbox to mark it DOING, then click again for DONE.
+Create a block, then use `Cmd/Ctrl+Enter` to set it to Todo. Click the status indicator to cycle it to Doing, then click again for Done.
 
 ---
 
 ## Step 3: Set Priorities
 
-Add priority with `/A`, `/B`, or `/C`:
+Add priority using the slash command `/Priority High`, `/Priority Medium`, `/Priority Low`, or `/Priority Urgent`:
 
-```
-TODO [#A] Fix urgent bug
-TODO [#B] Review documentation
-TODO [#C] Organize desk
-```
+**Priority levels:**
 
-**Priority meaning:**
-
-- **[#A]** - High priority, do first
-- **[#B]** - Medium priority
-- **[#C]** - Low priority, nice to have
+- **Urgent** - Critical, handle immediately
+- **High** - Important, do first
+- **Medium** - Standard priority
+- **Low** - Nice to have
 
 ### Keyboard Shortcut
 
-With cursor on task:
-
-- `Cmd/Ctrl+Shift+1` → Priority A
-- `Cmd/Ctrl+Shift+2` → Priority B
-- `Cmd/Ctrl+Shift+3` → Priority C
+With cursor on a block, press `p p` to open the Priority property selector.
 
 ---
 
@@ -132,50 +108,23 @@ With cursor on task:
 
 ### Set a Date
 
-Add `/Scheduled` or `/Deadline`:
-
-```
-TODO Submit proposal
-SCHEDULED: <2026-02-15 Mon>
-```
-
-**Or:**
-
-```
-TODO Submit proposal
-DEADLINE: <2026-02-15 Mon>
-```
-
-### Using Date Picker
+Use the slash command `/Scheduled` or `/Deadline`:
 
 1. Type `/Scheduled` or `/Deadline`
 2. A date picker appears
-3. Click a date
+3. Select a date (and optionally a time)
 
-### Date Formats
-
-```
-<2026-02-15>              Plain date
-<2026-02-15 Mon>          With day
-<2026-02-15 Mon 14:00>    With time
-```
+These set the built-in **Scheduled** or **Deadline** datetime properties on the block.
 
 ---
 
 ## Step 5: Create a Task List
 
-Organize related tasks:
+Organize related tasks by nesting blocks. Set each child block's Status property to track progress:
 
-```
-TODO Project Alpha
-  TODO Research competitors
-  TODO Draft proposal
-  TODO Create mockups
-  DOING Write first draft
-  DONE Initial brainstorm
-```
-
-Indent child tasks with `Tab`.
+1. Create a parent block for your project
+2. Add child blocks (indent with `Tab`)
+3. Set each child block's status using `Cmd/Ctrl+Enter` or the slash command
 
 ### Calculate Progress
 
@@ -188,51 +137,49 @@ Your parent task can show progress of children:
 
 ## Step 6: Find Your Tasks
 
-### Quick Method: Linked References
-
-Every TODO, DONE, etc. is automatically indexed. Check the **Linked References** section at the bottom of any page.
-
 ### Query Method
 
-Create a query to find all your TODOs:
+Create a simple query to find all your tasks with a particular status:
 
 ```clojure
 {{query (task TODO DOING)}}
 ```
 
-This shows all tasks that are TODO or DOING.
+This shows all tasks with status Todo or Doing.
+
+You can also query by priority:
+
+```clojure
+{{query (priority high)}}
+```
 
 ### Advanced Query
 
-Find all high-priority tasks:
+For more complex queries, use the slash command `/Advanced query` which creates a tagged Query block. For example, to find all high-priority Todo tasks, set the query property to:
 
 ```clojure
-#+BEGIN_QUERY
-{:title "🔴 High Priority"
- :query [:find (pull ?b [*])
-         :where [?b :block/marker "TODO"]
-                [?b :block/priority "A"]]}
-#+END_QUERY
+[:find (pull ?b [*])
+ :where
+ (task ?b #{"Todo"})
+ (priority ?b #{"High"})]
 ```
 
 ---
 
-## Step 7: Task Properties (DB Graphs)
+## Step 7: Task Properties
 
-In database graphs, tasks can have properties:
+Tasks in DB graphs use built-in properties for status, priority, scheduled, and deadline. You can also add custom properties to blocks for further organization:
 
-```
-TODO Complete report
-status:: in-progress
-assignee:: [[John]]
-due:: [[2026-02-15]]
-effort:: 2h
-```
+- **Status** - Built-in: Backlog, Todo, Doing, In Review, Done, Canceled
+- **Priority** - Built-in: Low, Medium, High, Urgent
+- **Scheduled** - Built-in: datetime property
+- **Deadline** - Built-in: datetime property
+- Custom properties (e.g., assignee, effort) can be added to any block
 
 ### Query by Properties
 
 ```clojure
-{{query (property assignee [[John]])}}
+{{query (property assignee "John")}}
 ```
 
 ---
@@ -242,18 +189,14 @@ effort:: 2h
 Create a simple project with tasks:
 
 1. Create a new page called "Weekend Project"
-2. Add these tasks:
-   ```
-   TODO [#A] Weekend Project Tasks
-     TODO [#A] Buy supplies from hardware store
-     SCHEDULED: <Saturday>
-     TODO [#B] Prep work area
-     TODO [#B] Main work
-     DEADLINE: <Sunday>
-     TODO [#C] Clean up
-   ```
-3. Mark "Buy supplies" as DONE
-4. Change "Main work" to DOING
+2. Add a parent block "Weekend Project Tasks" and set its priority to High
+3. Add child blocks:
+   - "Buy supplies from hardware store" (set status to Todo, priority to High, add a Scheduled date)
+   - "Prep work area" (set status to Todo, priority to Medium)
+   - "Main work" (set status to Todo, priority to Medium, add a Deadline)
+   - "Clean up" (set status to Todo, priority to Low)
+4. Mark "Buy supplies" as Done using `Cmd/Ctrl+Enter` twice
+5. Change "Main work" to Doing using `Cmd/Ctrl+Enter` once
 
 ---
 
@@ -265,21 +208,18 @@ Check your journal page each morning for scheduled tasks.
 
 ### Use Tags
 
-Combine tasks with tags for better organization:
+Combine tasks with inline tags for better organization:
 
 ```
-TODO Call dentist #health
-TODO Review budget #finance
+Call dentist #health
+Review budget #finance
 ```
+
+Then set each block's status to Todo using `Cmd/Ctrl+Enter`.
 
 ### Time Blocking
 
-Use scheduled times for focused work:
-
-```
-TODO Deep work session
-SCHEDULED: <2026-02-15 Mon 09:00>
-```
+Use the Scheduled property with a specific time for focused work blocks. Type `/Scheduled` and pick a date and time from the date picker.
 
 ---
 
@@ -293,12 +233,12 @@ SCHEDULED: <2026-02-15 Mon 09:00>
 
 ## Summary
 
-✅ Created TODO items with `/TODO`  
-✅ Cycled states with checkbox/keyboard  
-✅ Set priorities with `[#A]`, `[#B]`, `[#C]`  
-✅ Scheduled with dates  
-✅ Queried tasks with `{{query}}`
+- Created tasks using `/Todo` or `Cmd/Ctrl+Enter`
+- Cycled states (Todo, Doing, Done) with `Cmd/Ctrl+Enter`
+- Set priorities (High, Medium, Low, Urgent) with `/Priority` or `p p`
+- Scheduled tasks and set deadlines with `/Scheduled` and `/Deadline`
+- Queried tasks with `{{query (task TODO DOING)}}`
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

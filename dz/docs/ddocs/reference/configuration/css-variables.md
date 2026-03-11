@@ -2,7 +2,7 @@
 title: 'CSS Variables Reference'
 description: "Complete reference for Logseq's CSS custom properties for theme customization"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, mobile, web]
 graphType: [file, db]
@@ -14,6 +14,8 @@ relatedDocs:
 ---
 
 # CSS Variables Reference
+
+> **Last revised:** 2026-03-10
 
 > Complete reference for Logseq's CSS custom properties (variables) used in theming and customization.
 
@@ -164,7 +166,6 @@ html[data-color='none'] {
 --ls-highlight-color-blue: var(--rx-blue-05);
 --ls-highlight-color-purple: var(--rx-purple-05);
 --ls-highlight-color-pink: var(--rx-pink-05);
---ls-highlight-color-default: var(--ls-secondary-background-color);
 ```
 
 ---
@@ -258,20 +259,27 @@ Semantic color levels for consistent theming:
 
 ## Status Colors
 
+Status styling in Logseq primarily uses Tailwind utility classes with Radix color tokens rather than dedicated CSS custom properties. The relevant utility classes are:
+
 ```css
 /* Error */
---ls-error-text-color: var(--color-red-400);
---ls-error-background-color: var(--color-red-900);
+.text-error   → @apply text-red-rx-09;
+.bg-error     → @apply bg-red-rx-04-alpha;
 
 /* Warning */
---ls-warning-text-color: var(--color-yellow-400);
---ls-warning-background-color: var(--color-yellow-900);
+.text-warning → @apply text-yellow-600 dark:text-yellow-500/70;
+.bg-warning   → @apply bg-yellow-300 dark:bg-yellow-500/50;
 
 /* Success */
---ls-success-text-color: var(--color-green-100);
---ls-success-background-color: var(--color-green-900);
+.text-success → @apply text-green-rx-09;
+.bg-success   → @apply bg-green-rx-04-alpha;
+```
 
-/* File Sync */
+### File Sync Status Colors
+
+These are genuine CSS custom properties defined in `src/main/frontend/components/file_sync.css`:
+
+```css
 --ls-color-file-sync-error: var(--color-red-600);
 --ls-color-file-sync-pending: var(--color-yellow-600);
 --ls-color-file-sync-idle: var(--color-green-600);
@@ -365,10 +373,13 @@ html[data-theme='dark'][data-color='myTheme'] {
 
 CSS variables are defined in:
 
-- `resources/css/base.css` - Core variables
-- `resources/css/light.css` - Light theme
-- `resources/css/dark.css` - Dark theme
-- `packages/ui/src/ui.css` - UI component variables
+- `packages/ui/src/vars-classic.css` - Core layout/sizing variables and `data-color=logseq` light/dark theme colors
+- `packages/ui/src/radix.css` - Radix color scale definitions (`--rx-*`)
+- `packages/ui/src/radix-hsl.css` - Radix HSL format variants (`--rx-*-hsl`)
+- `packages/ui/src/colors.css` - Logseq extended Radix mappings (`--lx-*`)
+- `packages/ui/src/index.css` - UI component variables (shadcn/Tailwind tokens)
+- `resources/css/shui.css` - Shadcn UI overrides and `data-color=none` variables
+- `src/main/frontend/components/theme.css` - Z-index levels, scrollbar, and theme selectors
 
 ---
 
@@ -380,4 +391,4 @@ CSS variables are defined in:
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_

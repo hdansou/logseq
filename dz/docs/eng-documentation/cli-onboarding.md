@@ -1,5 +1,7 @@
 # Logseq CLI Developer Onboarding
 
+> **Last revised:** 2026-03-10
+
 Audience: Junior developers contributing to the Logseq CLI (the `deps/cli` package).
 
 Scope: Local setup, how it works, how to run/debug/test, how to add a new command, conventions, and common pitfalls.
@@ -28,8 +30,8 @@ Scope: Local setup, how it works, how to run/debug/test, how to add a new comman
 
 - List graphs (requires the Desktop “database version” app): `logseq list`
 - Show graph info: `logseq show <graph-name>`
-- Export EDN: `logseq export-edn <graph-name> -f out.edn`
-- Search current graph through HTTP API: start Desktop app with Local HTTP API enabled, then: `logseq search <term> -a <api-query-token>`
+- Export EDN: `logseq export-edn -g <graph-name> -f out.edn`
+- Search current graph through HTTP API: start Desktop app with Local HTTP API enabled, then: `logseq search <term> -a <api-server-token>`
 
 If you didn’t `yarn link`, substitute `node cli.mjs` for `logseq`.
 
@@ -60,7 +62,7 @@ Related code you may interact with:
 - Main dispatch: `logseq.cli` builds a `table` of commands and dispatches via `babashka.cli/dispatch`.
 - Lazy loading: Commands are loaded with `lazy-load-fn` to keep startup fast. Your command’s function is resolved on first use.
 - Offline by default: Most commands operate directly on local DB graphs under `~/logseq/graphs`.
-- HTTP API when needed: Some commands (e.g., `search` with `-a/--api-query-token`) hit the Desktop app’s Local HTTP API if enabled.
+- HTTP API when needed: Some commands (e.g., `search` with `-a/--api-server-token`) hit the Desktop app’s Local HTTP API if enabled. The environment variable `$LOGSEQ_API_SERVER_TOKEN` can also be used instead of passing `-a` each time.
 
 Key runtime details:
 
@@ -168,7 +170,7 @@ Vendorizing nbb deps (when packaging):
 ## Using the HTTP API (optional)
 
 - Enable “Local HTTP Server” in the Desktop app settings.
-- Some commands accept an `-a/--api-query-token` option; provide a valid token to run via API.
+- Some commands accept an `-a/--api-server-token` option; provide a valid token to run via API. Alternatively, set `$LOGSEQ_API_SERVER_TOKEN` in your environment.
 - Handle API responses with `cli-util/api-handle-error-response` and error flows via `cli-util/command-catch-handler`.
 
 ---
@@ -200,8 +202,8 @@ Vendorizing nbb deps (when packaging):
 - List graphs: `logseq list`
 - Show graph details: `logseq show <graph>`
 - Search current graph via API: `logseq search <term> -a <token>`
-- Query local graph: `logseq query <graph> '[:find (pull ?b [*]) :where [?b :kv/value]]'`
-- Export EDN: `logseq export-edn <graph> -f out.edn`
+- Query local graph: `logseq query -g <graph> '[:find (pull ?b [*]) :where [?b :kv/value]]'`
+- Export EDN: `logseq export-edn -g <graph> -f out.edn`
 
 If you get stuck, start by reading `deps/cli/src/logseq/cli.cljs` and the relevant command in `deps/cli/src/logseq/cli/commands/`, then check `deps/cli/README.md`.
 

@@ -2,7 +2,7 @@
 title: 'Plugin API Reference'
 description: "Complete reference for Logseq's Plugin SDK APIs for extension development"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
@@ -17,6 +17,8 @@ relatedDocs:
 ---
 
 # Plugin API Reference
+
+> **Last revised:** 2026-03-10
 
 > Complete reference for the Logseq Plugin SDK, enabling developers to extend Logseq with custom functionality, commands, and UI elements.
 
@@ -96,7 +98,7 @@ Add command to command palette (`Cmd/Ctrl+Shift+P`).
 ```typescript
 registerCommandPalette(
   opts: { key: string; label: string; keybinding?: SimpleCommandKeybinding },
-  action: () => void
+  action: SimpleCommandCallback
 ): void
 ```
 
@@ -115,13 +117,19 @@ logseq.App.registerCommandPalette(
 
 #### registerCommand
 
-Register a named command (internal use).
+Register a named command with full options.
 
 ```typescript
 registerCommand(
   type: string,
-  opts: { key: string; label: string },
-  action: () => void
+  opts: {
+    key: string;
+    label: string;
+    desc?: string;
+    palette?: boolean;
+    keybinding?: SimpleCommandKeybinding;
+  },
+  action: SimpleCommandCallback
 ): void
 ```
 
@@ -131,9 +139,9 @@ Bind keyboard shortcut to action.
 
 ```typescript
 registerCommandShortcut(
-  keybinding: { binding: string },
-  action: () => void,
-  opts?: { key?: string }
+  keybinding: SimpleCommandKeybinding | string,
+  action: SimpleCommandCallback,
+  opts?: { key?: string; label?: string; desc?: string; extras?: Record<string, any> }
 ): void
 ```
 
@@ -180,8 +188,17 @@ Add item to page context menu.
 ```typescript
 registerPageMenuItem(
   tag: string,
-  action: (pageName: string) => void
+  action: (e: IHookEvent & { page: string }) => void
 ): void
+```
+
+**Example**:
+
+```javascript
+logseq.App.registerPageMenuItem('Export Page', async (e) => {
+  const page = await logseq.Editor.getPage(e.page)
+  console.log('Exporting page:', page.name)
+})
 ```
 
 ### Navigation
@@ -192,9 +209,9 @@ Navigate to a route.
 
 ```typescript
 pushState(
-  route: "page" | "home" | "all-pages" | "graph",
-  params?: { name?: string },
-  query?: Record<string, string>
+  route: string,  // e.g., "page", "home", "all-pages", "graph"
+  params?: Record<string, any>,
+  query?: Record<string, any>
 ): void
 ```
 
@@ -227,11 +244,14 @@ replaceState(
 Get information about the current graph.
 
 ```typescript
-getCurrentGraph(): Promise<{
-  name: string;
-  url: string;
-  path?: string;
-}>
+getCurrentGraph(): Promise<AppGraphInfo | null>
+
+// AppGraphInfo:
+// {
+//   name: string;
+//   url: string;
+//   path: string;
+// }
 ```
 
 #### getCurrentGraphConfigs
@@ -257,13 +277,21 @@ setCurrentGraphConfigs(configs: Record<string, any>): Promise<void>
 Get user settings.
 
 ```typescript
-getUserConfigs(): Promise<{
-  preferredDateFormat: string;
-  preferredFormat: "markdown" | "org";
-  preferredLanguage: string;
-  preferredThemeMode: "dark" | "light";
-  preferredWorkflow: "now" | "todo";
-}>
+getUserConfigs(): Promise<AppUserConfigs>
+
+// AppUserConfigs includes:
+// {
+//   preferredThemeMode: "dark" | "light";
+//   preferredFormat: "markdown" | "org";
+//   preferredDateFormat: string;
+//   preferredStartOfWeek: string;
+//   preferredLanguage: string;
+//   preferredWorkflow: string;
+//   currentGraph: string;
+//   showBracket: boolean;
+//   enabledFlashcards: boolean;
+//   enabledJournals: boolean;
+// }
 ```
 
 ### Hooks
@@ -290,13 +318,21 @@ logseq.App.onThemeModeChanged(({ mode }) => {
 
 #### onBlockRendererSlotted
 
-Register custom block renderer.
+Provide a UI slot for a specific block by UUID. This is a conditional slot hook: you pass a block UUID and a callback that fires when that block's slot is available.
+
+```typescript
+onBlockRendererSlotted(
+  uuid: BlockUUID,
+  callback: (e: IHookEvent & { slot: string } & BlockEntity) => void
+): IUserOffHook
+```
+
+**Example**:
 
 ```javascript
-logseq.App.onBlockRendererSlotted(({ slot, payload }) => {
-  const { uuid, arguments: args } = payload
+logseq.App.onBlockRendererSlotted(blockUuid, ({ slot }) => {
   logseq.provideUI({
-    key: `renderer-${uuid}`,
+    key: `renderer-${blockUuid}`,
     slot,
     template: `<div>Custom renderer content</div>`,
   })
@@ -305,12 +341,19 @@ logseq.App.onBlockRendererSlotted(({ slot, payload }) => {
 
 #### onMacroRendererSlotted
 
-Register custom macro renderer.
+Register custom macro renderer for `{{renderer arg1, arg2}}` macros.
 
 ```javascript
+// e.g. {{renderer :h1, hello world, green}}
 logseq.App.onMacroRendererSlotted(({ slot, payload }) => {
-  const { uuid, arguments: args } = payload
-  // Render custom macro
+  const { arguments: args, uuid } = payload
+  let [type, text, color] = args
+  if (type !== ':h1') return
+  logseq.provideUI({
+    key: 'h1-playground',
+    slot,
+    template: `<h2 style="color: ${color || 'red'}">${text}</h2>`,
+  })
 })
 ```
 
@@ -355,15 +398,21 @@ getBlock(
 
 ```typescript
 interface BlockEntity {
+  id: number           // database entity id
   uuid: string
-  id: number
-  content: string
-  page: PageEntity
-  parent: BlockEntity
-  left: BlockEntity
+  title: string        // block text content
+  fullTitle: string    // title with block refs resolved
+  content?: string     // @deprecated - use title instead
   format: 'markdown' | 'org'
+  order: string
+  page: IEntityID      // { id: number }
+  parent: IEntityID    // { id: number }
+  createdAt: number
+  updatedAt: number
   properties?: Record<string, any>
-  children?: BlockEntity[]
+  'collapsed?': boolean
+  marker?: string
+  children?: Array<BlockEntity | BlockUUIDTuple>
 }
 ```
 
@@ -535,13 +584,21 @@ getCurrentPage(): Promise<PageEntity | null>
 
 ```typescript
 interface PageEntity {
-  uuid: string
   id: number
+  uuid: string
   name: string
-  originalName: string
+  format: 'markdown' | 'org'
+  type: 'page' | 'journal' | 'whiteboard' | 'class' | 'property' | 'hidden'
+  createdAt: number
+  updatedAt: number
   'journal?': boolean
-  file?: { path: string }
+  title?: string
+  originalName?: string
+  file?: IEntityID          // { id: number }
+  namespace?: IEntityID
   properties?: Record<string, any>
+  journalDay?: number
+  children?: Array<PageEntity>
 }
 ```
 
@@ -684,14 +741,14 @@ Add item to block context menu (right-click).
 ```typescript
 registerBlockContextMenuItem(
   label: string,
-  action: (blockUUID: string) => void
+  action: BlockCommandCallback  // (e: IHookEvent & { uuid: BlockUUID }) => Promise<void>
 ): void
 ```
 
 **Example**:
 
 ```javascript
-logseq.Editor.registerBlockContextMenuItem('Copy Block UUID', async (uuid) => {
+logseq.Editor.registerBlockContextMenuItem('Copy Block UUID', async ({ uuid }) => {
   await navigator.clipboard.writeText(uuid)
   logseq.UI.showMsg('UUID copied!')
 })
@@ -748,10 +805,10 @@ Database query API.
 
 ### q (DSL Query)
 
-Run a Datalog query.
+Run a DSL query (see [Logseq query docs](https://docs.logseq.com/#/page/queries)).
 
 ```typescript
-q<T = any>(query: string): Promise<T[]>
+q<T = any>(dsl: string): Promise<T>
 ```
 
 **Example**:
@@ -849,7 +906,7 @@ Display a toast notification.
 ```typescript
 showMsg(
   content: string,
-  status?: "success" | "warning" | "error" | "info",
+  status?: "success" | "warning" | "error" | string,
   opts?: {
     key?: string;
     timeout?: number;  // ms, 0 = no auto-dismiss
@@ -893,8 +950,8 @@ Get computed CSS variable values.
 
 ```typescript
 resolveThemeCssPropsVals(
-  props: string[]
-): Promise<Record<string, string>>
+  props: string | string[]
+): Promise<Record<string, string | undefined> | null>
 ```
 
 **Example**:
@@ -918,11 +975,14 @@ List all asset files.
 
 ```typescript
 listFilesOfCurrentGraph(
-  extensions?: string[]  // e.g., [".pdf", ".png"]
+  exts?: string | string[]  // e.g., ".pdf" or [".pdf", ".png"]
 ): Promise<Array<{
   path: string;
   size: number;
-  lastModified: number;
+  accessTime: number;
+  modifiedTime: number;
+  changeTime: number;
+  birthTime: number;
 }>>
 ```
 
@@ -931,10 +991,7 @@ listFilesOfCurrentGraph(
 Open an asset with default handler.
 
 ```typescript
-builtInOpen(
-  path: string,
-  opts?: { openInRightSidebar?: boolean }
-): Promise<void>
+builtInOpen(path: string): Promise<boolean | undefined>
 ```
 
 ### makeSandboxStorage
@@ -964,13 +1021,22 @@ Git integration (file-based graphs only).
 Execute a git command.
 
 ```typescript
-execCommand(args: string[]): Promise<string>
+execCommand(args: string[]): Promise<IGitResult>
+
+// IGitResult:
+// {
+//   stdout: string;
+//   stderr: string;
+//   exitCode: number;
+// }
 ```
 
 **Example**:
 
 ```javascript
-const status = await logseq.Git.execCommand(['status', '--porcelain'])
+const result = await logseq.Git.execCommand(['status', '--porcelain'])
+console.log(result.stdout)
+console.log('Exit code:', result.exitCode)
 ```
 
 ### loadIgnoreFile

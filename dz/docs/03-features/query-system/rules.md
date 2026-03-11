@@ -1,5 +1,7 @@
 # Logseq :rules Feature: A Detective's Investigation Report
 
+> **Last revised:** 2026-03-10
+
 ## 🔍 Case Summary
 
 The `:rules` feature enables Datalog rule definitions within Logseq queries, providing a powerful mechanism for encapsulating reusable query logic. Rules are similar to functions—they define custom predicates that can be invoked in the `:where` clause to simplify complex queries, create recursive relationships, and build sophisticated query abstractions.

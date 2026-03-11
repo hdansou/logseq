@@ -2,7 +2,7 @@
 title: 'Database Graph config.edn Reference'
 description: 'Configuration reference specifically for Logseq Database (DB) graphs'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -15,6 +15,8 @@ relatedDocs:
 ---
 
 # Database Graph config.edn Reference
+
+> **Last revised:** 2026-03-10
 
 > Configuration reference for **Database (DB) graphs** in Logseq. Highlights differences from file-based graphs and lists deprecated options.
 
@@ -43,11 +45,11 @@ Windows:      %USERPROFILE%\.logseq\graphs\<graph-name>\logseq\config.edn
 | Properties        | Frontmatter YAML/Org          | Schema-validated database properties      |
 | Tags/Classes      | Implicit (page links)         | Explicit class hierarchy with inheritance |
 | File Organization | User-controlled directories   | Database-managed, no folders              |
-| Config Options    | 50+ options                   | 26 options deprecated                     |
+| Config Options    | 50+ options                   | 23 options deprecated                     |
 
 ---
 
-## Deprecated Options (24 Keys)
+## Deprecated Options (23 Keys)
 
 These options are **file-based only** and should NOT be used in DB graph `config.edn`:
 
@@ -101,19 +103,19 @@ These options are **file-based only** and should NOT be used in DB graph `config
 | `:srs/initial-interval`  | File-based algorithm | Use FSRS properties              |
 | `:logbook/settings`      | File-based format    | DB uses structured time tracking |
 
-### UI/Organization (4 keys)
+### UI/Organization (3 keys)
 
-| Deprecated Key                      | Reason             | Replacement                      |
-| ----------------------------------- | ------------------ | -------------------------------- |
-| `:favorites`                        | Stored as property | Use `:logseq.property/favorites` |
-| `:default-templates`                | Templates as pages | Create pages with `#Template`    |
-| `:ignored-page-references-keywords` | Database-managed   | N/A                              |
+| Deprecated Key                      | Reason                     | Replacement                                            |
+| ----------------------------------- | -------------------------- | ------------------------------------------------------ |
+| `:favorites`                        | Not stored in config       | Managed via UI (internally uses `$$$favorites` page)   |
+| `:default-templates`                | Templates as pages         | Use `#Template` tag and `Apply template to tags` property |
+| `:ignored-page-references-keywords` | Database-managed           | N/A                                                    |
 
 ---
 
 ## Fully Supported Options
 
-All options from [config-edn.md](config-edn.md) work in DB graphs **except** the 24 deprecated options above.
+All options from [config-edn.md](config-edn.md) work in DB graphs **except** the 23 deprecated options above.
 
 ### UI Settings ✅
 
@@ -202,10 +204,33 @@ All options from [config-edn.md](config-edn.md) work in DB graphs **except** the
                        :charge-strength -600}}
 ```
 
+### Export & Publishing ✅
+
+```clojure
+{:export/bullet-indentation :tab        ; :eight-spaces, :four-spaces, :two-spaces, or :tab
+ :publishing/all-pages-public? false}
+```
+
+### Outliner & References ✅
+
+```clojure
+{:outliner/block-title-collapse-enabled? false
+ :ref/default-open-blocks-level 2}
+```
+
+### Commands & Default Queries ✅
+
+```clojure
+{:commands [["js" "Javascript"]
+            ["md" "Markdown"]]
+ :default-queries {:journals []}}
+```
+
 ### Mobile & Quick Capture ✅
 
 ```clojure
 {:mobile/photo {:allow-editing? true :quality 80}
+ :mobile {:gestures/disabled-in-block-with-tags ["kanban"]}
  :quick-capture-templates
  {:text "[[capture]] {time}: {text}"}
  :quick-capture-options
@@ -232,6 +257,8 @@ All options from [config-edn.md](config-edn.md) work in DB graphs **except** the
  ;; Editor
  :block/title-max-length 10000
  :editor/logical-outdenting? false
+ :outliner/block-title-collapse-enabled? false
+ :ref/default-open-blocks-level 2
 
  ;; Navigation
  :default-home {:page "Dashboard" :sidebar ["Contents"]}
@@ -298,7 +325,8 @@ All options from [config-edn.md](config-edn.md) work in DB graphs **except** the
 ;; File-based (in config.edn)
 {:favorites ["Page A" "Page B"]}
 
-;; DB: Use UI or :logseq.property/favorites on pages
+;; DB: Use the UI to favorite pages (right-click page > "Add to favorites")
+;; Favorites are managed internally via a $$$favorites page
 ;; No config.edn entry needed
 ```
 
@@ -347,7 +375,8 @@ DB graphs validate config against Malli schema:
 
 - [Schema Definition](https://github.com/logseq/logseq/blob/master/src/main/frontend/schema/handler/common_config.cljc)
 - [Config Template](https://github.com/logseq/logseq/blob/master/deps/common/resources/templates/config.edn)
+- [Deprecated Keys (`file-only-config`)](https://github.com/logseq/logseq/blob/master/deps/common/src/logseq/common/config.cljs)
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_

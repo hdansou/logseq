@@ -1,7 +1,8 @@
 # Logseq Theme Development Guide
 
-**Version:** 1.0  
-**Last Updated:** October 22, 2025  
+> **Last revised:** 2026-03-10
+
+**Version:** 1.0
 **Target Audience:** Theme Developers
 
 ## Table of Contents
@@ -840,20 +841,12 @@ Use color scales appropriately:
 
 ### 6. Handle Both Graph Modes
 
+> **Note:** The `is-file-graph` CSS class on `<html>` is no longer set in the current codebase. The database version is now the primary mode. Theme styles should target shared selectors that work across modes.
+
 ```css
 /* Styles that work in both file-based and db-based modes */
 .ls-block {
   /* Your styling */
-}
-
-/* File-based specific (if needed) */
-html.is-file-graph .page-title {
-  /* Special styling */
-}
-
-/* DB-based specific (if needed)  */
-html:not(.is-file-graph) .page-title {
-  /* Special styling */
 }
 ```
 

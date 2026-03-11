@@ -1,5 +1,8 @@
 Logseq Plugin Developer Guide: Database Graphs
-Last Updated: October 2025 Logseq Version: 0.2.3+ Target Audience: Plugin developers building for Logseq DB-based graphs
+
+> **Last revised:** 2026-03-10
+
+Last Updated: March 2026 Logseq Version: 0.2.3+ Target Audience: Plugin developers building for Logseq DB-based graphs
 
 Table of Contents
 Introduction
@@ -65,7 +68,7 @@ Getting Started
 Prerequisites
 Logseq 0.2.0 or later with DB graph support
 Basic understanding of the Logseq Plugin API
-For ClojureScript plugins: @logseq/cljs-libs 0.0.10+
+For ClojureScript plugins: @logseq/cljs-libs 0.0.11+
 Installation
 JavaScript/TypeScript:
 

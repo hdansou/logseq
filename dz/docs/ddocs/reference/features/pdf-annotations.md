@@ -10,6 +10,8 @@ related-docs:
   - '../../tutorials/getting-started/basic-editing.md'
 ---
 
+> **Last revised:** 2026-03-10
+
 # PDF Annotations Reference
 
 ## Overview
@@ -77,19 +79,19 @@ Logseq includes a full-featured PDF viewer with annotation capabilities built on
 
 ### Toolbar Controls
 
-| Icon     | Function                    | Shortcut    |
-| -------- | --------------------------- | ----------- |
-| ⬅        | Previous page               | Alt+P       |
-| ➡        | Next page                   | Alt+N       |
-| Page X/Y | Jump to page (type number)  | —           |
-| 🔍-      | Zoom out                    | Cmd+-       |
-| 🔍+      | Zoom in                     | Cmd++       |
-| 🔍Fit    | Fit to page width           | —           |
-| 📑       | Table of contents / Outline | —           |
-| 🖍        | Highlight mode toggle       | —           |
-| 🔲       | Area selection mode         | —           |
-| 🔍       | Find / Search               | Alt+F       |
-| ✕        | Close PDF viewer            | Alt+X / Esc |
+| Icon     | Function                    | Shortcut     |
+| -------- | --------------------------- | ------------ |
+| ⬅        | Previous page               | Alt+P        |
+| ➡        | Next page                   | Alt+N        |
+| Page X/Y | Jump to page (type number)  | —            |
+| 🔍-      | Zoom out                    | —            |
+| 🔍+      | Zoom in                     | —            |
+| 🔍Fit    | Auto fit                    | —            |
+| 📑       | Outline / Highlights panel  | —            |
+| 🖍        | Highlight mode toggle       | —            |
+| 🔲       | Area selection mode         | Cmd or Shift |
+| 🔍       | Find / Search               | Alt+F        |
+| ✕        | Close PDF viewer            | Alt+X        |
 
 ---
 
@@ -117,13 +119,13 @@ Logseq includes a full-featured PDF viewer with annotation capabilities built on
 
 ### Highlight Colors
 
-| Color     | Use Case                   | Property Value                  |
-| --------- | -------------------------- | ------------------------------- |
-| 🟡 Yellow | General highlights         | `:logseq.property/color.yellow` |
-| 🔴 Red    | Important / Critical       | `:logseq.property/color.red`    |
-| 🟢 Green  | Definitions / Key concepts | `:logseq.property/color.green`  |
-| 🔵 Blue   | References / Citations     | `:logseq.property/color.blue`   |
-| 🟣 Purple | Questions / To review      | `:logseq.property/color.purple` |
+| Color     | Use Case                   | DB Ident (closed-value)         | Display Value |
+| --------- | -------------------------- | ------------------------------- | ------------- |
+| 🟡 Yellow | General highlights         | `:logseq.property/color.yellow` | `"yellow"`    |
+| 🔴 Red    | Important / Critical       | `:logseq.property/color.red`    | `"red"`       |
+| 🟢 Green  | Definitions / Key concepts | `:logseq.property/color.green`  | `"green"`     |
+| 🔵 Blue   | References / Citations     | `:logseq.property/color.blue`   | `"blue"`      |
+| 🟣 Purple | Questions / To review      | `:logseq.property/color.purple` | `"purple"`    |
 
 **Tip**: Use color consistently for categorization (e.g., red = action items, blue = quotes).
 
@@ -261,19 +263,18 @@ Once saved, the screenshot is a standard image asset. You can:
 ```txt
 ┌───────────────────────────────────────┐
 │  Search: [machine learning     ]  🔍 │
-│  Match case [✓]  Whole words [ ]     │
-│  Results: 12 matches                  │
+│  Match case [Aa]                      │
+│  3 of 12 matches ("machine learning") │
 │  [ ⬆ Previous ]  [ ⬇ Next ]          │
 └───────────────────────────────────────┘
 ```
 
 **Features**:
 
-- Incremental search (updates as you type)
-- Case-sensitive option
-- Whole word matching
-- Navigate between matches
-- Highlights all occurrences on page
+- Search triggered on Enter (not incremental — type query then press Enter)
+- Case-sensitive toggle
+- Navigate between matches (chevron up/down buttons)
+- Highlights all occurrences across pages
 
 **Keyboard**:
 
@@ -289,35 +290,30 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **Toolbar Buttons**:
 
-- **🔍-** — Zoom out (Cmd+- / Ctrl+-)
-- **🔍+** — Zoom in (Cmd++ / Ctrl++)
-- **🔍Fit** — Fit to page width
-
-**Keyboard**:
-
-- **Cmd+Plus (+)** / **Ctrl+Plus (+)** — Zoom in
-- **Cmd+Minus (-)** / **Ctrl+Minus (-)** — Zoom out
-- **Cmd+0** / **Ctrl+0** — Reset to default zoom
+- **🔍-** — Zoom out
+- **🔍+** — Zoom in
+- **🔍Fit** — Auto fit to container width
 
 **Mouse**:
 
-- **Cmd+Scroll** / **Ctrl+Scroll** — Zoom in/out
+- **Cmd+Scroll** / **Ctrl+Scroll** — Zoom in/out (handled via wheel event in `pdf-highlights`)
 
-**Zoom Levels**: 50%, 75%, 100%, 125%, 150%, 200%, 300%
+**Zoom Range**: Continuous zoom from 25% to 500% (scale factor 1.05x per step)
 
 ### Fit Modes
 
-- **Fit to Width** — Page width matches viewport width
-- **Fit to Page** — Entire page visible (may have whitespace)
-- **Custom Zoom** — Manual zoom level
+- **Auto Fit** — Automatic scaling to fit the container (the "Auto fit" toolbar button sets `currentScaleValue` to `"auto"`)
+- **Custom Zoom** — Manual zoom level via +/- buttons or Ctrl/Cmd+scroll
 
-**Persistence**: Zoom level saved per PDF (localStorage).
+**Persistence**: Zoom level and last-visited page saved per PDF via the `:ls-update-extra-state` event.
 
 ---
 
 ## Annotation Storage
 
-### File-Based Graphs
+### File-Based Graphs (Legacy)
+
+> **Note**: The current codebase has removed file-based graph support for PDF annotations. The `ensure-ref-block!` function now delegates exclusively to `db-based-ensure-ref-block!`. The EDN format below is retained for reference only if working with older Logseq versions.
 
 **Highlights File**: `assets/{filename}.edn`
 
@@ -342,7 +338,7 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **Area Images**: `assets/{filename}/{page}_{id}_{timestamp}.png`
 
-### Database Graphs
+### Database Graphs (Current)
 
 **Asset Block**:
 
@@ -350,8 +346,10 @@ Once saved, the screenshot is a standard image asset. You can:
 {:block/uuid #uuid "pdf-asset-uuid"
  :block/tags [:logseq.class/Asset]
  :logseq.property.asset/type "pdf"
- :logseq.property.asset/path "../assets/document.pdf"
+ :logseq.property.asset/external-url "https://example.com/doc.pdf" ;; only for remote PDFs
  :logseq.property.asset/last-visit-page 5}
+;; For local PDFs, the file is stored at assets/{uuid}.pdf
+;; and referenced via "../assets/{uuid}.pdf"
 ```
 
 **Annotation Block**:
@@ -370,24 +368,17 @@ Once saved, the screenshot is a standard image asset. You can:
  :logseq.property.pdf/hl-image [:block/uuid #uuid "image-asset-uuid"]}
 ```
 
-**Class Definition**: [`class.cljs:91-99`](../../deps/db/src/logseq/db/frontend/class.cljs#L91-L99)
+**Class Definition**: [`class.cljs:81-88`](../../deps/db/src/logseq/db/frontend/class.cljs#L81-L88)
 
 ```clojure
 :logseq.class/Pdf-annotation
 {:title "PDF Annotation"
  :properties {:logseq.property.class/hide-from-node true}
- :schema {:properties [:logseq.property/ls-type
-                       :logseq.property.pdf/hl-color
-                       :logseq.property/asset
-                       :logseq.property.pdf/hl-page
-                       :logseq.property.pdf/hl-value
-                       :logseq.property.pdf/hl-type
-                       :logseq.property.pdf/hl-image]
-          :required-properties [:logseq.property/ls-type
-                                :logseq.property.pdf/hl-color
-                                :logseq.property/asset
-                                :logseq.property.pdf/hl-page
-                                :logseq.property.pdf/hl-value]}}
+ :schema {:properties [:logseq.property/ls-type :logseq.property.pdf/hl-color :logseq.property/asset
+                        :logseq.property.pdf/hl-page :logseq.property.pdf/hl-value
+                        :logseq.property.pdf/hl-type :logseq.property.pdf/hl-image]
+          :required-properties [:logseq.property/ls-type :logseq.property.pdf/hl-color :logseq.property/asset
+                                :logseq.property.pdf/hl-page :logseq.property.pdf/hl-value]}}
 ```
 
 ---
@@ -448,7 +439,7 @@ Once saved, the screenshot is a standard image asset. You can:
 - Keep PDF visible while editing graph
 - Separate zoom/navigation state
 
-**Code Reference**: [`windows.cljs:74-116`](../../src/main/frontend/extensions/pdf/windows.cljs#L74-L116)
+**Code Reference**: [`windows.cljs:74-121`](../../src/main/frontend/extensions/pdf/windows.cljs#L74-L121)
 
 ### Copy Block Reference
 
@@ -562,9 +553,9 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **Possible Causes**:
 
-1. Database write error (DB graphs)
-2. File write permission denied (file-based)
-3. Network error (RTC sync)
+1. Database write error
+2. Network error (RTC sync)
+3. Graph is in read-only state
 
 **Solutions**:
 
@@ -678,20 +669,21 @@ git commit -m "Add PDF annotations for research paper"
 
 **Key Files**:
 
-- `core.cljs` (1090 lines) — PDF viewer, highlight management
-- `assets.cljs` (389 lines) — Asset inflation, annotation persistence
-- `toolbar.cljs` (649 lines) — Toolbar UI, outline view
-- `utils.cljs` (184 lines) — Zoom, scroll, coordinate conversion
-- `utils.js` (180 lines) — PDF.js integration utilities
-- `windows.cljs` (116 lines) — External window management
+- `core.cljs` (~1100 lines) — PDF viewer, highlight management
+- `assets.cljs` (~320 lines) — Asset inflation, annotation persistence
+- `toolbar.cljs` (~650 lines) — Toolbar UI, outline view, search finder
+- `utils.cljs` (~200 lines) — Zoom, scroll, coordinate conversion
+- `utils.js` (~384 lines) — PDF.js integration utilities (rect math, scroll-to-highlight)
+- `finder.js` (~1067 lines) — PDF.js find controller fork (text search engine)
+- `windows.cljs` (~121 lines) — External window management
 
 **Key Functions**:
 
-- `pdf-viewer` (core.cljs:776-825) — Main PDF viewer component
-- `pdf-highlights` (core.cljs:532-611) — Highlight rendering and management
-- `add-hl!` (core.cljs:557-578) — Create new highlight
-- `inflate-asset` (assets.cljs:44-73) — Convert PDF path to asset object
-- `ensure-ref-block!` (assets.cljs:194-217) — Create annotation block
+- `pdf-viewer` (core.cljs:770) — Main PDF viewer component
+- `pdf-highlights` (core.cljs:546) — Highlight rendering and management
+- `add-hl!` (core.cljs:566) — Create new highlight (local fn inside `pdf-highlights`)
+- `inflate-asset` (assets.cljs:35) — Convert PDF path to asset object
+- `ensure-ref-block!` (assets.cljs:99) — Create annotation block in DB graph
 
 ---
 
@@ -712,7 +704,7 @@ git commit -m "Add PDF annotations for research paper"
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: March 2026
 **Status**: 🟠 Desktop Only (Mobile support missing)  
 **Feedback**: Report PDF issues on [GitHub](https://github.com/logseq/logseq/issues) with `pdf` label
 

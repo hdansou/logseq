@@ -1,10 +1,12 @@
 # Logseq ClojureScript Plugin SDK Developer Guide
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 The Logseq ClojureScript Plugin SDK (`@logseq/cljs-libs`) provides idiomatic ClojureScript wrappers for the JavaScript Logseq Plugin API (`@logseq/libs`). This SDK enables ClojureScript developers to build Logseq plugins with full type safety, automatic data conversion between JavaScript and ClojureScript, and functional programming patterns.
 
-**Version:** 0.0.10
+**Version:** 0.0.11
 **Package:** `@logseq/cljs-libs`
 **Merged:** PR #12168 (commit d8809f0b7)
 
@@ -20,7 +22,7 @@ The Logseq ClojureScript Plugin SDK (`@logseq/cljs-libs`) provides idiomatic Clo
 
 ### Prerequisites
 
-- ClojureScript 1.11.60 or higher
+- ClojureScript 1.12.42 or higher
 - Node.js and npm/yarn
 - Logseq desktop application
 
@@ -39,7 +41,7 @@ npm install @logseq/cljs-libs
 Add to your `deps.edn`:
 
 ```clojure
-{:deps {org.clojure/clojurescript {:mvn/version "1.11.60"}
+{:deps {org.clojure/clojurescript {:mvn/version "1.12.42"}
         cljs-bean/cljs-bean {:mvn/version "1.5.0"}}}
 ```
 
@@ -51,7 +53,7 @@ The SDK is organized into 8 main namespaces under `com.logseq`:
 
 | Namespace           | Description                        | Functions     |
 | ------------------- | ---------------------------------- | ------------- |
-| `com.logseq.core`   | Core plugin lifecycle and main UI  | 15 functions  |
+| `com.logseq.core`   | Core plugin lifecycle and main UI  | 15 functions   |
 | `com.logseq.app`    | Application-level operations       | 72+ functions |
 | `com.logseq.editor` | Block and page manipulation        | 70+ functions |
 | `com.logseq.db`     | Database queries and subscriptions | 4 functions   |
@@ -712,7 +714,6 @@ Create or update a property definition.
 Delete a property definition.
 
 **`(upsert-block-property block key value)`**
-**`(upsert-block-property block key value options)`**
 
 Set a property on a block. Properties are auto-created with inferred types if they don't exist.
 
@@ -722,14 +723,12 @@ Set a property on a block. Properties are auto-created with inferred types if th
   "block-uuid"
   "priority"
   5)  ; Auto-inferred as number type
-
-;; With explicit schema
-(editor/upsert-block-property
-  "block-uuid"
-  "priority"
-  5
-  {:schema {:type "number" :cardinality "one"}})
 ```
+
+> **Note:** The ClojureScript SDK's `upsert-block-property` takes exactly three
+> arguments (block, key, value). To define a property schema explicitly, use
+> `(editor/upsert-property "priority" {:type "number" :cardinality "one"})`
+> before setting the value.
 
 **Auto Type Inference:**
 
@@ -787,14 +786,15 @@ Database queries and transaction subscriptions.
 
 **`(q dsl)`**
 
-Run a DSL (simple) query.
+Run a DSL (simple) query. The argument is a DSL query string (not a Datalog map).
 
 ```clojure
-(db/q
-  {:query '[:find ?b
-            :where [?b :block/content ?c]
-            [(clojure.string/includes? ?c "TODO")]]})
+;; DSL query (string-based)
+(db/q "(and (task TODO DOING))")
 ```
+
+> **Note:** `db/q` accepts a DSL query **string**, not a Datalog map.
+> For Datalog/Datascript queries, use `db/datascript-query` instead.
 
 **`(datascript-query query & inputs)`**
 
@@ -1025,13 +1025,8 @@ Save content to the .gitignore file.
     tag))
 
 (defn find-todos []
-  (db/q
-    '{:query [:find (pull ?b [*])
-              :where
-              [?b :block/marker ?marker]
-              [(contains? #{"TODO" "DOING"} ?marker)]]
-      :view (fn [results]
-              (sort-by :block/priority results))}))
+  ;; Use DSL query for simple task searches
+  (db/q "(and (task TODO DOING))"))
 
 (defn watch-block-changes [block-uuid callback]
   (db/on-block-changed
@@ -1383,6 +1378,6 @@ MIT License - see the Logseq repository for full details.
 
 ---
 
-**Last Updated:** October 2025
-**SDK Version:** 0.0.10
+**Last Updated:** March 2026
+**SDK Version:** 0.0.11
 **Generated from:** PR #12168, commit d8809f0b7

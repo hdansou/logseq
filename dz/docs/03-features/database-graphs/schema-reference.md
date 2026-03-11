@@ -1,9 +1,11 @@
 # Logseq Database Graph Schema Reference
 
+> **Last revised:** 2026-03-10
+
 **Complete enumeration of all built-in properties, classes, property types, and entity types**
 
-**Schema Version**: 65.12
-**Last Updated**: 2025-10-15
+**Schema Version**: 65.22
+**Last Updated**: 2026-03-10
 **Source**: `deps/db/src/logseq/db/frontend/`
 
 ---

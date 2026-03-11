@@ -1,6 +1,15 @@
 # Logseq CLI and App: Database Interaction User Experience
 
+> **Last revised:** 2026-03-10
+
 ## Executive Summary
+
+> **Note:** This document describes the internal database architecture and locking
+> mechanism used by the Logseq CLI and app. Several CLI subcommands mentioned below
+> (e.g., `server stop`, `server start`, `server list`, `server status`, `doctor`)
+> are **not currently exposed** as user-facing CLI commands. The source file paths
+> referenced point to compiled build artifacts; the original source has been
+> reorganized. Treat the architectural descriptions as informational.
 
 When using logseq-cli to interact with a Logseq graph, it modifies the SQLite database file directly through a managed `db-worker-node` server process. Understanding how to safely switch between CLI and app usage is critical to prevent data corruption and lock conflicts.
 
@@ -134,12 +143,7 @@ From [db_worker_node_lock.cljs](../../src/main/frontend/worker/db_worker_node_lo
 **Resolution:**
 
 ```bash
-# Stop the CLI server
-logseq server stop --repo <graph-name>
-
-# Or list all running servers
-logseq server list
-
+# Terminate the CLI process that holds the lock (e.g., Ctrl+C)
 # Then open the app
 ```
 
@@ -170,25 +174,18 @@ logseq server list
 **Best practice workflow:**
 
 ```bash
-# 1. Use CLI
-logseq add block --content "CLI created block"
-logseq query --name task-search
+# 1. Use CLI (commands that open a local graph hold a lock)
+logseq query -g my-graph '[:find ?title :where [?b :block/title ?title] [?b :block/name]]'
 
-# 2. Stop CLI server
-logseq server stop --repo my-graph
+# 2. CLI command finishes, lock is released automatically
 
-# 3. Wait for clean shutdown (lock file removed)
-# Server waits up to 5 seconds for graceful shutdown
-
-# 4. Open app
+# 3. Open app
 # Now safe to open the graph in the Logseq app
 
-# 5. Close app, work with CLI again
-# App releases lock on graph close
+# 4. Close app (releases lock on graph close)
 
-# 6. Use CLI again
-logseq server start --repo my-graph
-logseq show --page "My Page"
+# 5. Use CLI again
+logseq show my-graph
 ```
 
 ### Scenario 4: Stale Lock Recovery
@@ -216,10 +213,10 @@ From [db_worker_node_lock.cljs](../../src/main/frontend/worker/db_worker_node_lo
 
 ```bash
 # Terminal 1 - Graph A
-logseq add block --repo graph-a --content "Working on A"
+logseq query -g graph-a '[:find ?title :where [?b :block/title ?title] [?b :block/name]]'
 
 # Terminal 2 - Graph B (SAFE - different lock file)
-logseq add block --repo graph-b --content "Working on B"
+logseq query -g graph-b '[:find ?title :where [?b :block/title ?title] [?b :block/name]]'
 
 # Each graph has its own:
 # - db.sqlite file
@@ -251,56 +248,19 @@ The system performs WAL checkpoints at:
 
 ## Diagnostic Commands
 
-### Check Server Status
-
-```bash
-# Show status of a specific graph's server
-logseq server status --repo my-graph
-
-# List all running servers
-logseq server list
-
-# Sample output:
-# REPO       HOST         PORT   PID     STATUS   STARTED AT
-# my-graph   127.0.0.1    9234   12345   ready    2 minutes ago
-```
-
-### Run Diagnostics
-
-```bash
-# Comprehensive health check
-logseq doctor
-
-# Checks:
-# - db-worker-node.js script exists and is readable
-# - data-dir permissions (read/write)
-# - running servers readiness
-```
-
-From [logseq-cli.md](./logseq-cli.md#L74):
-
-> `doctor` - run runtime diagnostics for `db-worker-node.js`, `data-dir` permissions, and running server readiness
-
-### Manual Server Management
-
-```bash
-# Start server manually (usually automatic)
-logseq server start --repo my-graph
-
-# Stop server before opening app
-logseq server stop --repo my-graph
-
-# Restart server (stops then starts)
-logseq server restart --repo my-graph
-```
+> **Note:** The `server` subcommands (`server status`, `server list`, `server start`,
+> `server stop`, `server restart`) and the `doctor` command described below are not
+> currently available as user-facing CLI commands. They represent internal or planned
+> functionality. For troubleshooting, use `logseq validate -g <graph>` to check
+> graph integrity, and `logseq show <graph>` to inspect graph metadata.
 
 ## Common Error Codes
 
 | Error Code             | Meaning                          | Resolution                                  |
 | ---------------------- | -------------------------------- | ------------------------------------------- |
 | `:repo-locked`         | Another process holds the lock   | Stop other process or wait for timeout      |
-| `:missing-repo`        | No `--repo` specified            | Add `--repo <graph-name>` flag              |
-| `:repo-mismatch`       | Command targets wrong graph      | Check `--repo` matches server's graph       |
+| `:missing-repo`        | No graph specified               | Add `-g <graph-name>` flag                  |
+| `:repo-mismatch`       | Command targets wrong graph      | Check `-g` matches server's graph           |
 | `:server-not-found`    | Server not running               | CLI automatically starts it                 |
 | `:server-start-failed` | Server failed to start           | Check logs, ensure db-worker-node.js exists |
 | `:data-dir-permission` | Cannot read/write data directory | Fix permissions on `~/logseq/graphs`        |
@@ -318,25 +278,17 @@ From [db_worker_node.cljs](../../src/main/frontend/worker/db_worker_node.cljs#L2
 - **Retention**: 7 days (older logs deleted)
 - **Format**: Structured log entries with timestamps
 
-### Verbose CLI Logging
+### CLI Debugging
 
-```bash
-# Enable debug output to stderr
-logseq --verbose query --name task-search
-
-# Shows:
-# - Option parsing details
-# - db-worker-node API calls
-# - HTTP request/response timing
-```
+For debugging CLI issues, use `println` or `js/console.log` in the ClojureScript source, or inspect the db-worker-node log files located at `~/logseq/graphs/<graph-name>/db-worker-node-YYYYMMDD.log`.
 
 ## Best Practices
 
 ### ✅ Safe Patterns
 
 1. **Single access point**: Use either CLI or app at a time for a graph
-2. **Explicit server stop**: Run `server stop` before switching to app
-3. **Check status first**: Use `server status` to verify no conflicts
+2. **Wait for CLI to finish**: Ensure CLI commands complete before switching to app
+3. **Check for stale locks**: If the app reports a lock conflict, verify no CLI process is running
 4. **Multiple graphs**: Safe to use CLI on one graph while app uses another
 5. **Automation scripts**: CLI is perfect for scripting when app is closed
 
@@ -353,31 +305,23 @@ logseq --verbose query --name task-search
 
 ```bash
 # Morning: CLI for bulk operations
-logseq query --name task-search
-logseq add block --content "Daily standup notes"
-logseq server stop --repo my-graph
+logseq search -g my-graph "task"
+logseq append "Daily standup notes" -a $LOGSEQ_API_SERVER_TOKEN
 
 # Day: Use app for interactive work
 # (Open Logseq app, work on graph)
 
-# Evening: CLI for reports
-# (App closed)
-logseq query --query '[...]' --output json > report.json
-logseq graph export --type edn --output backup.edn
+# Evening: CLI for exports (app closed)
+logseq export-edn -g my-graph -f backup.edn
 ```
 
 **For automation:**
 
 ```bash
 #!/bin/bash
-# Ensure app is closed before running
-if logseq server status --repo my-graph | grep -q "running"; then
-    echo "Error: Server already running. Close app first."
-    exit 1
-fi
-
-logseq add block --repo my-graph --content "Automated entry"
-logseq server stop --repo my-graph
+# Export and validate
+logseq export-edn -g my-graph -f backup.edn
+logseq validate -g my-graph
 ```
 
 ## Technical Details
@@ -468,8 +412,8 @@ The browser-based app uses OPFS (Origin Private File System) with pooling:
 The lock file mechanism ensures **mutual exclusion** between CLI and app access to prevent SQLite database corruption. Users must:
 
 1. **Be aware**: Only one process can write to a graph at a time
-2. **Check status**: Use `server list` and `server status` commands
-3. **Clean shutdown**: Stop CLI servers before opening app
+2. **Check for locks**: If the app reports a lock conflict, ensure no CLI process is running
+3. **Clean shutdown**: Ensure CLI commands complete before opening app
 4. **Monitor logs**: Check `db-worker-node-*.log` for issues
 5. **Trust automation**: Stale lock cleanup is automatic
 

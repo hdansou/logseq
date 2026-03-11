@@ -4,7 +4,7 @@ description: 'How to capture content to Logseq from other apps using URL schemes
 status: stable
 lastVerified: '2026-01-29'
 logseqVersion: '0.11.x'
-platforms: [desktop, mobile]
+platforms: [desktop]
 graphType: [file, db]
 relatedDocs:
   howTo:
@@ -15,11 +15,15 @@ relatedDocs:
 
 # X-Callback-URL
 
+> **Last revised:** 2026-03-10
+
 > How to send content to Logseq from other apps, scripts, and automation tools.
 
 ## What is X-Callback-URL?
 
 X-callback-url is a way to send content to Logseq using special URLs. Works from browsers, scripts, and any app that can open URLs.
+
+> **Note:** X-callback-url is supported on **desktop (Electron) only**. The mobile app handles deeplinks differently and does not process `x-callback-url` actions. For mobile capture, use the share sheet or intent-based workflows instead.
 
 ---
 
@@ -52,19 +56,28 @@ Start-Process "logseq://x-callback-url/quickCapture?content=Hello%20from%20Power
 ## URL Structure
 
 ```
-logseq://x-callback-url/quickCapture?[parameters]
+logseq://x-callback-url/<action>?[parameters]
 ```
 
 | Part             | Purpose            |
 | ---------------- | ------------------ |
 | `logseq://`      | Opens Logseq       |
 | `x-callback-url` | Automation request |
-| `quickCapture`   | The action         |
-| `?parameters`    | What to capture    |
+| `<action>`       | The action to run  |
+| `?parameters`    | Action parameters  |
+
+### Supported Actions
+
+| Action           | Description                           |
+| ---------------- | ------------------------------------- |
+| `quickCapture`   | Capture text, URLs, or notes          |
+| `invokeCommand`  | Invoke an editor command by name      |
 
 ---
 
 ## Parameters
+
+### `quickCapture` Parameters
 
 | Parameter | Description     | Example                      |
 | --------- | --------------- | ---------------------------- |
@@ -72,7 +85,24 @@ logseq://x-callback-url/quickCapture?[parameters]
 | `url`     | Web address     | `url=https://example.com`    |
 | `title`   | Link title      | `title=Example Site`         |
 | `page`    | Target page     | `page=Ideas` or `page=TODAY` |
-| `append`  | Add to end      | `append=true`                |
+| `append`  | Add to end of page instead of current editing position | `append=true`                |
+
+When `page` is omitted, Logseq uses this priority: config `quick-capture-options.default-page`, then the currently open page, then today's journal (or a "quick capture" page if journals are disabled).
+
+The captured content is formatted using the template in your config at `quick-capture-templates.text`. The default template is:
+
+```
+**{time}** [[quick capture]]: {text} {url}
+```
+
+Available template placeholders: `{time}`, `{date}`, `{text}`, `{url}`.
+
+### `invokeCommand` Parameters
+
+| Parameter | Description              | Example                   |
+| --------- | ------------------------ | ------------------------- |
+| `action`  | Command name to invoke   | `action=toggle-theme`     |
+| `payload` | Optional command payload | `payload=some-value`      |
 
 ---
 
@@ -215,33 +245,6 @@ Save-ToLogseq "Meeting notes from today" "TODAY"
 
 ---
 
-## Mobile Integration
-
-### iOS Shortcuts
-
-1. Open Shortcuts app
-2. Create new shortcut
-3. Add "URL" action: `logseq://x-callback-url/quickCapture`
-4. Add "Open URLs" action
-
-### Share Sheet Integration
-
-1. Create shortcut that accepts share input
-2. Extract text/URL from input
-3. Build logseq:// URL
-4. Open URL
-
-### Android (Tasker)
-
-```
-Task: Save to Logseq
-A1: Variable Set [Name: %content To: %CLIP]
-A2: Variable Convert [Name: %content Function: URL Encode]
-A3: Browse URL [URL: logseq://x-callback-url/quickCapture?content=%content]
-```
-
----
-
 ## Alfred/Raycast Workflows
 
 ### Alfred (macOS)
@@ -298,4 +301,4 @@ echo "Saved to Logseq"
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

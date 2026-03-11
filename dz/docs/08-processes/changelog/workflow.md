@@ -1,5 +1,7 @@
 # Logseq Changelog Generation Workflow
 
+> **Last revised:** 2026-03-10
+
 This directory contains tools and guidelines for generating professional changelogs for Logseq releases.
 
 ## Quick Start
@@ -25,7 +27,7 @@ For manual workflow or automation:
 
 ```bash
 # Generate raw commit log
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
 
 # Then use AI to process the output
 @workspace /new-changelog --from-file changelog_2025-01-05_to_2025-01-15.md
@@ -96,7 +98,7 @@ Ensure all commits are properly formatted:
 Using the script:
 
 ```bash
-./scripts/generate-changelog-log.sh <start-date> <end-date> [options]
+./dz/scripts/generate-changelog-log.sh <start-date> <end-date> [options]
 ```
 
 **Options:**
@@ -108,13 +110,13 @@ Using the script:
 
 ```bash
 # Basic usage
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
 
 # Custom output
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -o release-notes.md
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -o release-notes.md
 
 # Specific branch
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
 ```
 
 ### 3. Generate Changelog
@@ -148,10 +150,10 @@ Or manually review the guidelines in `.github/prompts/changelog-generation.promp
 logseq/
 ├── .github/
 │   └── copilot-instructions.md      # Copilot command definitions
-├── prompts/
-│   └── changelog-generation.md      # Detailed formatting guidelines
-└── scripts/
-    └── generate-changelog-log.sh    # Raw commit log generator
+└── dz/
+    ├── docs/08-processes/changelog/ # Changelog documentation
+    └── scripts/
+        └── generate-changelog-log.sh # Raw commit log generator
 ```
 
 ## Changelog Categories
@@ -223,7 +225,7 @@ Choose spotlight items that:
 
 ```bash
 # Generate changelog for January 2025
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31
 
 # Create release notes
 @workspace /new-changelog 2025-01-01 2025-01-31 --format=release
@@ -233,7 +235,7 @@ Choose spotlight items that:
 
 ```bash
 # Generate changelog for specific commits
-./scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
+./dz/scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
 
 # Create detailed changelog
 @workspace /new-changelog 2025-01-15 2025-01-16
@@ -243,7 +245,7 @@ Choose spotlight items that:
 
 ```bash
 # Generate log for feature branch
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/rtc"
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/rtc"
 
 # Create changelog
 @workspace /new-changelog 2025-01-01 2025-01-31
@@ -269,7 +271,7 @@ git log --since="2025-01-01" --until="2025-01-31" --oneline
 
 ```bash
 # Filter by specific branch
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
 ```
 
 ### Issue: Missing contributors
@@ -278,7 +280,7 @@ git log --since="2025-01-01" --until="2025-01-31" --oneline
 
 ```bash
 git fetch --all
-./scripts/generate-changelog-log.sh <dates>
+./dz/scripts/generate-changelog-log.sh <dates>
 ```
 
 ## Resources

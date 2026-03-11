@@ -1,6 +1,8 @@
 # Logseq Database Graph Schema: A Detective's Investigation Report
 
-## 🔍 Case Summary
+> **Last revised:** 2026-03-10
+
+## Case Summary
 
 **What We're Investigating**: The Logseq Database Graph Schema - the foundational data architecture that powers Logseq's modern database-backed graphs (as opposed to file-based graphs).
 
@@ -14,11 +16,11 @@
 
 **Key Discovery Highlights**:
 
-- 🔍 **Schema Version**: Currently at 65.12 (major.minor versioning)
-- 🔍 **Dual Schema System**: Uses both DataScript schema (for database structure) and Malli schema (for validation)
-- 🔍 **100+ Built-in Properties**: Comprehensive property system from basic metadata to advanced features
-- 🔍 **13 Built-in Classes**: Root, Tag, Property, Page, Journal, Whiteboard, Task, Query, Card, Asset, and specialized block types
-- 🔍 **Multiple Entity Types**: Pages, blocks, properties, classes, closed values, property values, files, and more
+- **Schema Version**: Currently at 65.22 (major.minor versioning)
+- **Dual Schema System**: Uses both DataScript schema (for database structure) and Malli schema (for validation)
+- **100+ Built-in Properties**: Comprehensive property system from basic metadata to advanced features
+- **13 Built-in Classes**: Root, Tag, Property, Page, Journal, Whiteboard, Task, Query, Card, Asset, and specialized block types
+- **Multiple Entity Types**: Pages, blocks, properties, classes, closed values, property values, files, and more
 
 ---
 
@@ -1562,11 +1564,11 @@ sequenceDiagram
 
 ---
 
-### 3. 🔍 **Schema Version 65.12**
+### 3. 🔍 **Schema Version 65.22**
 
 **Evidence**: `deps/db/src/logseq/db/frontend/schema.cljs:40`
 
-**Finding**: Current schema version is **65.12** (major.minor format).
+**Finding**: Current schema version is **65.22** (major.minor format).
 
 **Major version (65)**: Breaking changes requiring migration
 **Minor version (12)**: Non-breaking additions
@@ -2252,7 +2254,7 @@ db-schema/version
 **Location**: `deps/db/src/logseq/db/frontend/schema.cljs:40`
 
 ```clojure
-(def version (parse-schema-version "65.12"))
+(def version (parse-schema-version "65.22"))
 ```
 
 **Version Comparison**: `deps/db/src/logseq/db/frontend/schema.cljs:34-38`
@@ -2820,7 +2822,7 @@ src/main/frontend/db/
 
 **Generated with**: Claude Code 🤖
 **Investigation Date**: 2025-10-15
-**Schema Version**: 65.12
+**Schema Version**: 65.22
 **Evidence Files**: 10+
 **Lines of Code Analyzed**: 3000+
 **Diagrams Created**: 8

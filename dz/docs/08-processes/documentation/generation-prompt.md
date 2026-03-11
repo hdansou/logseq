@@ -1,5 +1,7 @@
 # AI Prompt Template for Detective-Style Code Documentation
 
+> **Last revised:** 2026-03-10
+
 ## The Master Prompt
 
 Use this prompt template to generate comprehensive, investigative-style documentation for any codebase component:

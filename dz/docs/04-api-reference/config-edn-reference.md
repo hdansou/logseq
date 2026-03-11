@@ -1,5 +1,7 @@
 # Logseq config.edn Reference Guide
 
+> **Last revised:** 2026-03-10
+
 A comprehensive reference for all configuration options available in Logseq's `config.edn` file. This file is located in your graph's `logseq/` directory.
 
 > **Note:** Some options are only available for file-based graphs and are marked as such. Database graphs have different behavior for certain settings.
@@ -746,4 +748,4 @@ This documentation was compiled from:
 
 ---
 
-_Last updated: January 2026_
+_Last updated: March 2026_

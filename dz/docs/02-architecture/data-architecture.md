@@ -1,5 +1,7 @@
 # Data Architecture
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq's data architecture is built around a **graph-based data model** that treats all information as interconnected entities in a knowledge graph. The system supports both traditional file-based storage and modern database-driven approaches, providing flexibility for different user needs and use cases.
@@ -25,9 +27,9 @@ erDiagram
     Page {
         uuid id
         string name
+        string title
         datetime created-at
         datetime updated-at
-        string format
     }
 
     Block {
@@ -55,8 +57,8 @@ DataScript stores data in an EAV triple format, providing flexibility and query 
 [block-id :block/content "This is content"]
 [block-id :block/page page-id]
 [block-id :block/refs [ref-id-1 ref-id-2]]
-[page-id :page/name "My Page"]
-[page-id :page/created-at #inst "2024-01-01"]
+[page-id :block/name "my page"]
+[page-id :block/created-at #inst "2024-01-01"]
 ```
 
 ## Schema Definition
@@ -76,14 +78,13 @@ DataScript stores data in an EAV triple format, providing flexibility and query 
  :block/updated-at  {:db/valueType :db.type/instant}}
 ```
 
-**Page Entity**:
+**Page Entity** (pages are blocks with `:block/name`):
 
 ```clojure
-{:page/name         {:db/unique :db.unique/identity}
- :page/namespace    {:db/valueType :db.type/ref}
- :page/tags         {:db/valueType :db.type/ref
-                     :db/cardinality :db.cardinality/many}
- :page/properties   {:db/valueType :db.type/ref
+{:block/name        {:db/unique :db.unique/identity}  ; lowercase page name
+ :block/title       {}                                 ; display title
+ :block/namespace   {:db/valueType :db.type/ref}
+ :block/tags        {:db/valueType :db.type/ref
                      :db/cardinality :db.cardinality/many}}
 ```
 
@@ -160,35 +161,21 @@ created-at: 2024-01-15
 
 **SQLite Backend**:
 
+Logseq's SQLite storage uses an address-content model with Transit serialization for DataScript persistence, not a traditional relational schema. The key table stores serialized DataScript segments:
+
 ```sql
--- Simplified schema representation
-CREATE TABLE blocks (
-    id INTEGER PRIMARY KEY,
-    uuid TEXT UNIQUE NOT NULL,
-    content TEXT,
-    page_id INTEGER,
-    parent_id INTEGER,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    FOREIGN KEY (page_id) REFERENCES pages(id),
-    FOREIGN KEY (parent_id) REFERENCES blocks(id)
+-- Actual storage model (address-based for DataScript persistence)
+-- kvs table: stores Transit-serialized DataScript data
+CREATE TABLE IF NOT EXISTS kvs (
+    addr INTEGER PRIMARY KEY,
+    content TEXT,          -- Transit-serialized DataScript data
+    addresses TEXT         -- JSON array of referenced addresses
 );
 
-CREATE TABLE pages (
-    id INTEGER PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
-);
-
-CREATE TABLE properties (
-    id INTEGER PRIMARY KEY,
-    entity_id INTEGER,
-    entity_type TEXT,
-    key TEXT,
-    value TEXT,
-    value_type TEXT
-);
+-- Separate SQLite databases per graph:
+-- Main DB: DataScript graph data
+-- Search DB: FTS5 full-text search index
+-- Client-ops DB: RTC operation log
 ```
 
 ## Data Flow Architecture
@@ -252,9 +239,9 @@ sequenceDiagram
 ;; Find pages with specific tag
 [:find ?page-name
  :where
- [?page :page/name ?page-name]
- [?page :page/tags ?tag]
- [?tag :tag/name "project"]]
+ [?page :block/name ?page-name]
+ [?page :block/tags ?tag]
+ [?tag :block/name "project"]]
 ```
 
 **Advanced Queries**:
@@ -264,7 +251,7 @@ sequenceDiagram
 [:find ?related-page
  :in $ ?current-page
  :where
- [?current-page :page/name ?current-name]
+ [?current-page :block/name ?current-name]
  [?block :block/page ?current-page]
  [?block :block/refs ?ref]
  [?other-block :block/refs ?ref]
@@ -298,7 +285,7 @@ sequenceDiagram
 
 ```clojure
 ;; [[Page Name]] creates:
-{:block/refs [{:page/name "Page Name"}]}
+{:block/refs [{:block/name "page name"}]}
 ```
 
 **Block References**:
@@ -312,7 +299,7 @@ sequenceDiagram
 
 ```clojure
 ;; #tag creates:
-{:block/refs [{:tag/name "tag"}]}
+{:block/refs [{:block/name "tag"}]}
 ```
 
 ### Backlink Computation
@@ -381,11 +368,14 @@ sequenceDiagram
 **Database Persistence**:
 
 ```clojure
-;; Transaction-based updates
-(defn persist-transaction [tx-data]
-  (jdbc/with-db-transaction [conn db-spec]
-    (doseq [entity tx-data]
-      (upsert-entity conn entity))))
+;; SQLite storage via DataScript IStorage protocol
+;; DataScript automatically persists via the IStorage implementation
+;; which Transit-serializes data and stores it in the kvs table
+(reify IStorage
+  (-store [_ addr+data-seq _delete-addrs]
+    (upsert-addr-content! db data))
+  (-restore [_ addr]
+    (restore-data-from-addr db addr)))
 ```
 
 ## Performance Considerations

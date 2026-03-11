@@ -10,9 +10,11 @@ related-docs:
   - 'reference/syntax/markdown.md'
 ---
 
+> **Last revised:** 2026-03-10
+
 # Code Blocks Reference
 
-Complete reference for working with code blocks in Logseq, powered by CodeMirror.
+Complete reference for working with code blocks in Logseq, powered by CodeMirror 5.
 
 ## Basic Syntax
 
@@ -42,102 +44,103 @@ function greet(name) {
 
 ## Supported Languages
 
-Logseq supports 120+ programming languages through CodeMirror:
+Logseq imports ~120 CodeMirror mode files, which collectively support many language names and MIME types. Language resolution uses `CodeMirror.findModeByName`, so some languages (e.g., TypeScript, Kotlin, Scala) are handled by shared modes (`javascript`, `clike`) rather than dedicated ones.
 
 ### Popular Languages
 
-| Language   | Identifier            | Example Use             |
-| ---------- | --------------------- | ----------------------- |
-| JavaScript | `javascript`, `js`    | Web development         |
-| TypeScript | `typescript`, `ts`    | Typed JavaScript        |
-| Python     | `python`, `py`        | Data science, scripting |
-| Java       | `java`                | Enterprise applications |
-| C/C++      | `c`, `cpp`, `c++`     | Systems programming     |
-| C#         | `csharp`, `cs`        | .NET development        |
-| Go         | `go`, `golang`        | Cloud services          |
-| Rust       | `rust`                | Systems programming     |
-| Ruby       | `ruby`, `rb`          | Web development         |
-| PHP        | `php`                 | Web development         |
-| Swift      | `swift`               | iOS development         |
-| Kotlin     | `kotlin`              | Android development     |
-| R          | `r`                   | Statistics              |
-| MATLAB     | `matlab`              | Scientific computing    |
-| SQL        | `sql`                 | Database queries        |
-| Bash/Shell | `bash`, `shell`, `sh` | Scripts                 |
+| Language   | Identifier            | Example Use             | Mode          |
+| ---------- | --------------------- | ----------------------- | ------------- |
+| JavaScript | `javascript`, `js`    | Web development         | `javascript`  |
+| TypeScript | `typescript`, `ts`    | Typed JavaScript        | `javascript`  |
+| Python     | `python`, `py`        | Data science, scripting | `python`      |
+| Java       | `java`                | Enterprise applications | `clike`       |
+| C/C++      | `c`, `cpp`, `c++`     | Systems programming     | `clike`       |
+| C#         | `csharp`, `cs`        | .NET development        | `clike`       |
+| Go         | `go`, `golang`        | Cloud services          | `go`          |
+| Rust       | `rust`                | Systems programming     | `rust`        |
+| Ruby       | `ruby`, `rb`          | Web development         | `ruby`        |
+| PHP        | `php`                 | Web development         | `php`         |
+| Swift      | `swift`               | iOS development         | `swift`       |
+| Kotlin     | `kotlin`              | Android development     | `clike`       |
+| R          | `r`                   | Statistics              | `r`           |
+| MATLAB     | `matlab`              | Scientific computing    | `octave`      |
+| SQL        | `sql`                 | Database queries        | `sql`         |
+| Bash/Shell | `bash`, `shell`, `sh` | Scripts                 | `shell`       |
 
 ### Web Technologies
 
-| Language  | Identifier     |
-| --------- | -------------- |
-| HTML      | `html`         |
-| CSS       | `css`          |
-| SCSS/Sass | `scss`, `sass` |
-| Less      | `less`         |
-| JSX       | `jsx`          |
-| Vue       | `vue`          |
-| XML       | `xml`          |
-| JSON      | `json`         |
-| YAML      | `yaml`, `yml`  |
-| TOML      | `toml`         |
+| Language  | Identifier     | Mode           |
+| --------- | -------------- | -------------- |
+| HTML      | `html`         | `htmlmixed`    |
+| CSS       | `css`          | `css`          |
+| SCSS/Sass | `scss`, `sass` | `css` / `sass` |
+| Less      | `less`         | `css`          |
+| JSX       | `jsx`          | `jsx`          |
+| Vue       | `vue`          | `vue`          |
+| XML       | `xml`          | `xml`          |
+| JSON      | `json`         | `javascript`   |
+| YAML      | `yaml`, `yml`  | `yaml`         |
+| TOML      | `toml`         | `toml`         |
 
 ### Markup & Documentation
 
-| Language         | Identifier       |
-| ---------------- | ---------------- |
-| Markdown         | `markdown`, `md` |
-| reStructuredText | `rst`            |
-| AsciiDoc         | `asciidoc`       |
-| LaTeX            | `latex`, `tex`   |
-| Org Mode         | `org`            |
+| Language         | Identifier       | Notes                                       |
+| ---------------- | ---------------- | ------------------------------------------- |
+| Markdown         | `markdown`, `md` | Dedicated mode via `gfm` (GitHub Flavored)  |
+| reStructuredText | `rst`            | Dedicated `rst` mode                        |
+| LaTeX            | `latex`, `tex`   | Via `stex` mode                             |
+
+Note: AsciiDoc and Org Mode are not among the imported CodeMirror modes, so they will not receive syntax highlighting.
 
 ### Functional & Academic
 
-| Language    | Identifier       |
-| ----------- | ---------------- |
-| Haskell     | `haskell`, `hs`  |
-| Erlang      | `erlang`         |
-| Elixir      | `elixir`         |
-| Clojure     | `clojure`, `clj` |
-| Scheme      | `scheme`         |
-| Common Lisp | `commonlisp`     |
-| OCaml       | `ocaml`          |
-| F#          | `fsharp`         |
-| Elm         | `elm`            |
-| Scala       | `scala`          |
+| Language    | Identifier       | Mode        |
+| ----------- | ---------------- | ----------- |
+| Haskell     | `haskell`, `hs`  | `haskell`   |
+| Erlang      | `erlang`         | `erlang`    |
+| Clojure     | `clojure`, `clj` | `clojure`   |
+| Scheme      | `scheme`         | `scheme`    |
+| Common Lisp | `commonlisp`     | `commonlisp`|
+| OCaml       | `ocaml`          | `mllike`    |
+| F#          | `fsharp`         | `mllike`    |
+| Elm         | `elm`            | `elm`       |
+| Scala       | `scala`          | `clike`     |
+
+Note: Elixir does not have an imported CodeMirror mode and will not receive syntax highlighting.
 
 ### Data & Query Languages
 
-| Language | Identifier                   |
-| -------- | ---------------------------- |
-| SQL      | `sql`, `mysql`, `postgresql` |
-| GraphQL  | `graphql`                    |
-| SPARQL   | `sparql`                     |
-| Cypher   | `cypher`                     |
-| Datalog  | `datalog`                    |
+| Language | Identifier                   | Notes                          |
+| -------- | ---------------------------- | ------------------------------ |
+| SQL      | `sql`, `mysql`, `postgresql` | Dedicated `sql` mode           |
+| SPARQL   | `sparql`                     | Dedicated `sparql` mode        |
+| Cypher   | `cypher`                     | Dedicated `cypher` mode        |
+
+Note: GraphQL and Datalog do not have imported CodeMirror modes and will not receive syntax highlighting.
 
 ### Configuration & DevOps
 
-| Language   | Identifier             |
-| ---------- | ---------------------- |
-| Dockerfile | `dockerfile`, `docker` |
-| Nginx      | `nginx`                |
-| Apache     | `apache`               |
-| Properties | `properties`           |
-| INI        | `ini`                  |
-| Terraform  | `terraform`, `tf`      |
+| Language   | Identifier             | Notes                 |
+| ---------- | ---------------------- | --------------------- |
+| Dockerfile | `dockerfile`, `docker` | Dedicated mode        |
+| Nginx      | `nginx`                | Dedicated mode        |
+| Properties | `properties`           | Dedicated mode        |
+
+Note: Apache, INI, and Terraform do not have imported CodeMirror modes and will not receive syntax highlighting.
 
 ### Specialized Languages
 
-| Language  | Identifier    |
-| --------- | ------------- |
-| Verilog   | `verilog`     |
-| VHDL      | `vhdl`        |
-| Assembly  | `asm`, `nasm` |
-| Fortran   | `fortran`     |
-| COBOL     | `cobol`       |
-| Ada       | `ada`         |
-| APL       | `apl`         |
-| Brainfuck | `brainfuck`   |
+| Language  | Identifier  | Mode        |
+| --------- | ----------- | ----------- |
+| Verilog   | `verilog`   | `verilog`   |
+| VHDL      | `vhdl`      | `vhdl`      |
+| Assembly  | `gas`       | `gas`       |
+| Fortran   | `fortran`   | `fortran`   |
+| COBOL     | `cobol`     | `cobol`     |
+| APL       | `apl`       | `apl`       |
+| Brainfuck | `brainfuck` | `brainfuck` |
+
+Note: Ada and NASM do not have imported CodeMirror modes. The assembly mode is `gas` (GNU Assembler syntax).
 
 ## Code Block Features
 

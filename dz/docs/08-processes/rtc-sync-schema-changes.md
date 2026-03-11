@@ -1,7 +1,9 @@
 # RTC/Sync Schema Change Considerations
 
-**Document Type:** Process Guide  
-**Last Updated:** December 28, 2025  
+> **Last revised:** 2026-03-10
+
+**Document Type:** Process Guide
+**Last Updated:** December 28, 2025
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
@@ -181,20 +183,15 @@ Every property definition must include an `:rtc` map:
 
 ### Default RTC Configuration
 
-**Location:** [deps/db/src/logseq/db/frontend/property/build.cljc](deps/db/src/logseq/db/frontend/property/build.cljc)
+**Location:** [deps/db/src/logseq/db/frontend/property.cljs](deps/db/src/logseq/db/frontend/property.cljs)
 
 ```clojure
-;; Ignore completely (never sync)
+;; Ignore during ongoing sync (the only RTC ignore constant in the codebase)
 (def ^:private property-ignore-rtc
-  {:rtc/ignore-attr-when-init-upload true
-   :rtc/ignore-attr-when-init-download true
-   :rtc/ignore-attr-when-syncing true})
-
-;; Ignore upload and ongoing sync
-(def ^:private property-ignore-rtc-upload-sync
-  {:rtc/ignore-attr-when-init-upload true
-   :rtc/ignore-attr-when-syncing true})
+  {:rtc/ignore-attr-when-syncing true})
 ```
+
+> **Note:** The current codebase defines a single RTC ignore constant with only the `:rtc/ignore-attr-when-syncing` key. The three-key pattern (init-upload, init-download, syncing) shown elsewhere in this document represents the full set of available RTC configuration options, but the convenience constant only uses one.
 
 ### Decision Tree for RTC Configuration
 
@@ -608,7 +605,7 @@ When releasing schema changes:
 #### Step 1: Define Property with RTC Config
 
 ```clojure
-;; In deps/db/src/logseq/db/frontend/property/build.cljc
+;; In deps/db/src/logseq/db/frontend/property.cljs
 
 {:db/ident :logseq.property/my-sync-property
  :title "My Sync Property"

@@ -1,6 +1,8 @@
 # Logseq Theme Development Quick Reference
 
-**Companion to:** [Theme Development Guide](./theme-development-guide.md)
+> **Last revised:** 2026-03-10
+
+**Companion to:** [Theme Development Guide](./guide.md)
 
 ## Essential CSS Variables
 
@@ -113,12 +115,14 @@ html[data-color='red'] {
 
 ## Graph Mode Detection
 
+> **Note:** The `is-file-graph` CSS class is no longer set in the current codebase. The database version is now the primary mode. The selectors below are retained for reference only.
+
 ```css
-/* File-based mode */
+/* File-based mode (deprecated - class no longer set) */
 html.is-file-graph {
 }
 
-/* Database mode */
+/* Database mode (deprecated - class no longer set) */
 html:not(.is-file-graph) {
 }
 ```
@@ -253,7 +257,7 @@ dialog          segmented-control
 
 ## Resources
 
-- **Full Guide**: [theme-development-guide.md](./theme-development-guide.md)
+- **Full Guide**: [guide.md](./guide.md)
 - **Discord**: [#themes channel](https://discord.gg/logseq)
 - **Forum**: [discuss.logseq.com](https://discuss.logseq.com/)
 - **Radix Colors**: [radix-ui.com/colors](https://www.radix-ui.com/colors)
@@ -362,4 +366,4 @@ Radix provides 12-step scales. Typical usage:
 
 ---
 
-**For complete documentation, see [theme-development-guide.md](./theme-development-guide.md)**
+**For complete documentation, see [guide.md](./guide.md)**

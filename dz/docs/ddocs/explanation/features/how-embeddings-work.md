@@ -3,7 +3,7 @@ title: 'How Text Embeddings Work'
 description: "Understanding the technology behind Logseq's semantic search"
 type: explanation
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 relatedDocs:
   tutorials:
@@ -13,6 +13,8 @@ relatedDocs:
 ---
 
 # How Text Embeddings Work
+
+> **Last revised:** 2026-03-10
 
 > Understanding the AI technology that powers Logseq's semantic search.
 
@@ -76,12 +78,12 @@ DataScript   HNSW Index
 
 ### Components
 
-| Component        | Purpose             |
-| ---------------- | ------------------- |
-| DB Worker        | Database operations |
-| Inference Worker | ML model execution  |
-| HNSW Index       | Fast vector search  |
-| Transformers.js  | Model framework     |
+| Component        | Purpose                          |
+| ---------------- | -------------------------------- |
+| DB Worker        | Database operations, orchestrates embedding tasks |
+| Inference Worker | SharedWorker for ML model execution (via Comlink) |
+| HNSW Index       | Fast vector search (hnswlib-wasm)  |
+| Transformers.js  | Model framework (`@huggingface/transformers`) |
 
 ---
 
@@ -92,7 +94,7 @@ DataScript   HNSW Index
 Logseq uses a compact, efficient model:
 
 - **Name**: Xenova/all-MiniLM-L6-v2
-- **Size**: ~80MB
+- **Size**: ~23MB (fp32)
 - **Output**: 384-dimensional vectors
 - **Speed**: ~50ms per query
 - **Quality**: Excellent for semantic similarity
@@ -175,6 +177,15 @@ Hierarchical Navigable Small World is a data structure for fast approximate near
 - **Accurate**: >95% recall of true nearest neighbors
 - **Memory efficient**: Fits in browser memory
 
+### Configuration
+
+Logseq initializes HNSW with these parameters (see `init-index!` in `text_embedding.cljs`):
+
+- **M** (max connections per node): 16
+- **ef_construction** (index build quality): 200
+- **ef_search** (search quality): 32
+- **Initial max elements**: 100 (auto-resized as needed)
+
 ### How It Works
 
 Imagine a network of connected vectors:
@@ -213,17 +224,17 @@ final_score = (0.9 × keyword_score) + (0.1 × semantic_score) + bonuses
 
 ### Included
 
-✅ Page titles  
-✅ Block content  
-✅ Property values  
-✅ Regular content
+- Page titles
+- Block content (title text with UUID references resolved)
 
 ### Excluded
 
-❌ System pages (logseq/\*)  
-❌ Hidden entities  
-❌ Empty blocks  
-❌ Blocks currently being indexed
+- Hidden entities
+- View-for blocks (internal property views)
+- Empty blocks (blank titles)
+- Blocks currently being indexed
+
+Note: Tags and property descriptions are not currently included in the embedding text, though support for them is planned (code exists but is commented out).
 
 ### Staleness Detection
 
@@ -265,21 +276,14 @@ After initial index:
 
 ## Storage
 
-### OPFS (Origin Private File System)
+### Emscripten Virtual Filesystem (via hnswlib-wasm)
 
-The HNSW index is persisted to browser storage:
+The HNSW index is persisted using hnswlib-wasm's built-in Emscripten filesystem manager:
 
+- Uses `writeIndex`/`readIndex` for serialization
+- Synced via `EmscriptenFileSystemManager.isSynced()`
+- Per-graph storage (keyed by repo name)
 - Survives browser restarts
-- Per-graph storage
-- Automatic cleanup
-
-### Transit Format
-
-Logseq uses Transit for serialization:
-
-- Efficient binary format
-- Fast read/write
-- Compact storage
 
 ---
 
@@ -293,9 +297,9 @@ Logseq uses Transit for serialization:
 
 ### Context Window
 
-- ~256 tokens per block
-- Long blocks may be truncated
-- Consider splitting long content
+- MiniLM-L6-v2 supports up to 256 tokens (model limit)
+- Logseq does not explicitly truncate; the model's tokenizer handles overflow
+- Very long blocks may lose tail content during tokenization
 
 ### Semantic Gaps
 
@@ -332,4 +336,4 @@ Model may not understand:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

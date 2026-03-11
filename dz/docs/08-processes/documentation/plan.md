@@ -1,5 +1,7 @@
 # Comprehensive Product Documentation Plan for Logseq
 
+> **Last revised:** 2026-03-10
+
 ## Plan Overview
 
 I have created a structured documentation plan for comprehensive product documentation of the Logseq application. This plan is designed to provide stakeholders, developers, and users with deep insights into the application's architecture, features, and technical implementation.

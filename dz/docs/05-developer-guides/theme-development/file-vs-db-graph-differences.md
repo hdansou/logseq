@@ -1,9 +1,10 @@
 # UI & Framework Differences: File-Based vs Database-Based Graphs
 
+> **Last revised:** 2026-03-10
+
 **Purpose:** A comprehensive guide for theme developers to understand and plan for the UI/CSS differences between file-based graphs (v0.10.x) and database-based graphs (v0.10.x+).
 
-**Version:** 1.0  
-**Last Updated:** December 25, 2025  
+**Version:** 1.0
 **Target Audience:** Theme developers migrating themes from file-based to database-based graphs
 
 ---
@@ -63,15 +64,7 @@ html:not(.is-file-graph) {
 }
 ```
 
-**Implementation Location:**  
-[src/main/frontend/handler/ui.cljs](../../src/main/frontend/handler/ui.cljs#L127-L130)
-
-```clojure
-(defn set-file-graph-flag!
-  [file-graph?]
-  (apply (if file-graph? dom/add-class! dom/remove-class!)
-         [js/document.documentElement "is-file-graph"]))
-```
+**Note:** The `is-file-graph` CSS class and the `set-file-graph-flag!` function have been removed from the current codebase. The database version is now the primary mode. The selectors above are retained for historical reference; new themes should not rely on this class for mode detection.
 
 ### Theme Implementation
 
@@ -1123,7 +1116,7 @@ html[data-theme='dark'] .property-value-inner {
 
 **Mode Detection:**
 
-- [src/main/frontend/handler/ui.cljs#L127-L130](../../src/main/frontend/handler/ui.cljs#L127-L130)
+- The `is-file-graph` CSS class and `set-file-graph-flag!` function have been removed from the codebase.
 
 **Property System:**
 
@@ -1231,6 +1224,7 @@ When migrating your theme, ensure:
 | Version | Date       | Changes               |
 | ------- | ---------- | --------------------- |
 | 1.0     | 2025-12-25 | Initial guide created |
+| 1.1     | 2026-03-10 | Note removal of `is-file-graph` CSS class from codebase |
 
 ---
 

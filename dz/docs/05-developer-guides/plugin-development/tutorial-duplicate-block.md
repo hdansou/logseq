@@ -1,5 +1,7 @@
 # Tutorial: Build a Duplicate Block Plugin for Logseq DB Graphs
 
+> **Last revised:** 2026-03-10
+
 **What You'll Build:** A Logseq plugin that allows users to duplicate blocks/nodes with all their properties, children, and metadata.
 
 **Time Required:** 30-45 minutes

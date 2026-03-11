@@ -1,5 +1,7 @@
 # Logseq Real-Time Collaboration (RTC) Developer Onboarding Guide
 
+> **Last revised:** 2026-03-10
+
 Welcome to the Logseq RTC development team! This comprehensive guide will help you understand the RTC architecture, codebase structure, and how to contribute effectively to the real-time collaboration features.
 
 ## Table of Contents
@@ -56,37 +58,62 @@ Logseq's Real-Time Collaboration (RTC) enables multiple users to edit the same g
 
 ## Codebase Structure
 
-### Main RTC Directory: `src/main/frontend/worker/rtc/`
+The RTC/sync code is split across two main locations:
+
+### Sync library: `deps/db-sync/src/logseq/db_sync/`
+
+This is the core sync engine, extracted into its own dependency:
 
 ```txt
-rtc/
-├── core.cljs                    # Main RTC orchestration and API
-├── client.cljs                  # Client-side operation handling
-├── client_op.cljs              # Operation storage and management
-├── remote_update.cljs          # Applying remote changes
-├── ws.cljs                     # WebSocket wrapper
-├── ws_util.cljs                # WebSocket utilities
-├── malli_schema.cljs           # Data validation schemas
-├── db.cljs                     # RTC database operations
-├── asset.cljs                  # Asset synchronization
-├── branch_graph.cljs           # Graph branching/forking
-├── full_upload_download_graph.cljs  # Graph upload/download
-├── migrate.cljs                # Schema migrations
-├── log_and_state.cljs          # Logging and state management
-├── const.cljs                  # Constants and configuration
-├── exception.cljs              # Error handling
-├── gen_client_op.cljs          # Operation generation
-├── hash.cljs                   # Content hashing
-├── db_listener.cljs            # Database change listeners
-├── asset_db_listener.cljs      # Asset change listeners
-└── skeleton.cljs               # Placeholder/template code
+db_sync/
+├── worker.cljs                  # Main sync worker orchestration
+├── worker/
+│   ├── ws.cljs                  # WebSocket handling
+│   ├── auth.cljs                # Authentication
+│   ├── coerce.cljs              # Data coercion
+│   ├── dispatch.cljs            # Operation dispatch
+│   ├── http.cljs                # HTTP transport
+│   ├── presence.cljs            # User presence tracking
+│   ├── timing.cljs              # Timing utilities
+│   ├── routes/                  # Route handlers
+│   └── handler/
+│       ├── sync.cljs            # Sync handler
+│       ├── ws.cljs              # WebSocket handler
+│       ├── assets.cljs          # Asset sync handler
+│       └── index.cljs           # Index handler
+├── malli_schema.cljs            # Data validation schemas
+├── batch.cljs                   # Batch operations
+├── common.cljs                  # Shared utilities
+├── cycle.cljs                   # Sync cycle management
+├── index.cljs                   # Indexing
+├── order.cljs                   # Operation ordering
+├── snapshot.cljs                # Graph snapshots
+├── storage.cljs                 # Storage abstraction
+├── protocol.cljs                # Protocol definitions
+├── logging.cljs                 # Logging
+├── platform/                    # Platform adapters (node, cloudflare)
+└── sentry/                      # Error reporting
+```
+
+### Client-side sync files: `src/main/frontend/worker/sync/`
+
+```txt
+sync/
+├── client_op.cljs               # Client operation storage and management
+├── const.cljs                   # Constants and configuration
+├── crypt.cljs                   # Encryption utilities
+├── log_and_state.cljs           # Logging and state management
+└── asset_db_listener.cljs       # Asset change listeners
 ```
 
 ### Related Files
 
-- `src/main/frontend/fs/sync.cljs` - File synchronization (different from RTC)
 - `deps/db/src/logseq/db/common/order.cljs` - Fractional indexing utilities
-- `src/main/frontend/worker/rtc/` - All RTC worker code
+- `src/main/frontend/handler/db_based/rtc_flows.cljs` - RTC flow handlers in the app
+- `src/main/frontend/handler/db_based/rtc_background_tasks.cljs` - Background RTC tasks
+- `src/main/frontend/handler/events/rtc.cljs` - RTC event handlers
+- `src/main/frontend/components/rtc/indicator.cljs` - RTC UI indicator
+- `src/main/frontend/db/rtc/debug_ui.cljs` - RTC debug UI
 
 ## Key Concepts
 
@@ -120,10 +147,16 @@ Each operation has timestamps for conflict resolution:
 
 ### 3. Fractional Indexing
 
-Blocks use fractional indexes for ordering:
+Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logseq/db/common/order.cljs`:
 
 ```clojure
-;; Generate position between two blocks
+;; Generate a key after the current max key
+(order/gen-key)
+
+;; Generate a key between two existing keys
+(order/gen-key "a0" "a2")
+
+;; The underlying library function:
 (index/generate-key-between "a0" "a2")  ; Returns "a1"
 (index/generate-key-between nil "a0")   ; Returns position before "a0"
 (index/generate-key-between "a0" nil)   ; Returns position after "a0"
@@ -172,7 +205,6 @@ Blocks use fractional indexes for ordering:
 2. **Install dependencies**:
 
    ```bash
-   npm install
    yarn install
    ```
 
@@ -484,11 +516,11 @@ window.logseq.api.rtc_get_pending_ops()
 
 ### Key Files to Understand
 
-1. **Start here**: `core.cljs` - Main orchestration
-2. **Operation handling**: `client_op.cljs` - Local operation management
-3. **Remote updates**: `remote_update.cljs` - Applying remote changes
-4. **WebSocket layer**: `ws.cljs` - Communication protocol
-5. **Conflict resolution**: Look at the `update-remote-data-by-local-unpushed-ops` function
+1. **Start here**: `deps/db-sync/src/logseq/db_sync/worker.cljs` - Main sync worker orchestration
+2. **Operation handling**: `src/main/frontend/worker/sync/client_op.cljs` - Client-side operation management
+3. **Sync handler**: `deps/db-sync/src/logseq/db_sync/worker/handler/sync.cljs` - Sync handling
+4. **WebSocket layer**: `deps/db-sync/src/logseq/db_sync/worker/ws.cljs` - Communication protocol
+5. **RTC flows**: `src/main/frontend/handler/db_based/rtc_flows.cljs` - Application-level RTC flows
 
 ### Development Tips
 

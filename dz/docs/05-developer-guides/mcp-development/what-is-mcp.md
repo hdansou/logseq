@@ -1,5 +1,7 @@
 ## What is Model Context Protocol (MCP)?
 
+> **Last revised:** 2026-03-10
+
 Model Context Protocol is an open standard developed by Anthropic that enables seamless integration between LLM applications and external data sources and tools. It provides a universal, open standard for connecting AI models to different data sources and tools, replacing fragmented integrations with a single protocol.
 
 ## Core Concepts

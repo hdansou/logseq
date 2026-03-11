@@ -3,7 +3,7 @@ title: 'Basic Note-Taking'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-01-11'
+last-verified: '2026-03-10'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/02-first-graph.md'
@@ -13,6 +13,8 @@ related-docs:
 ---
 
 # Basic Note-Taking
+
+> **Last revised:** 2026-03-10
 
 Learn the fundamentals of editing blocks, formatting text, and organizing your thoughts in Logseq.
 
@@ -28,8 +30,8 @@ Unlike traditional note apps where you edit entire pages, Logseq works with **bl
 
 **Create a new block:**
 
-- Press `Enter` at the end of current block
-- Or click the `+` button that appears when hovering
+- Press `Enter` at the end of a block to create a new sibling block below
+- Click below the last block on a page to add a new block at the end
 
 **Edit a block:**
 
@@ -40,7 +42,7 @@ Unlike traditional note apps where you edit entire pages, Logseq works with **bl
 **Delete a block:**
 
 - Select all text (`Ctrl/Cmd + A`) and press `Backspace`
-- Or use `Ctrl/Cmd + Shift + Backspace` to delete immediately
+- The block is removed when all its content is deleted and you press `Backspace` again
 
 **Practice Exercise:**
 
@@ -119,13 +121,12 @@ Logseq supports Markdown formatting syntax:
 
 ### Keyboard Shortcuts
 
-| Action        | Windows/Linux      | macOS             |
-| ------------- | ------------------ | ----------------- |
-| Bold          | `Ctrl + B`         | `Cmd + B`         |
-| Italic        | `Ctrl + I`         | `Cmd + I`         |
-| Highlight     | `Ctrl + H`         | `Cmd + H`         |
-| Strikethrough | `Ctrl + Shift + S` | `Cmd + Shift + S` |
-| Code          | `Ctrl + Shift + C` | `Cmd + Shift + C` |
+| Action        | Windows/Linux          | macOS                 |
+| ------------- | ---------------------- | --------------------- |
+| Bold          | `Ctrl + B`             | `Cmd + B`             |
+| Italic        | `Ctrl + I`             | `Cmd + I`             |
+| Highlight     | `Ctrl + Shift + H`     | `Cmd + Shift + H`     |
+| Strikethrough | `Ctrl + Shift + S`     | `Cmd + Shift + S`     |
 
 ## Slash Commands
 
@@ -133,15 +134,17 @@ Type `/` to open the command menu for quick insertions:
 
 ### Common Commands
 
-- `/page` — Create/link to a page
-- `/block` — Embed a block reference
-- `/TODO` — Create a task
-- `/DOING` — Create an in-progress task
-- `/DONE` — Create a completed task
-- `/code` — Insert a code block
-- `/query` — Insert a query
-- `/image` — Embed an image
-- `/drawing` — Create a drawing (whiteboard)
+- `/Node reference` — Create a backlink to a page or block
+- `/Node embed` — Embed a block or page inline
+- `/Code block` — Insert a code block
+- `/Query` — Insert a query
+- `/Link` — Create a HTTP link
+- `/Image link` — Create a link to an image
+- `/Upload an asset` — Upload a file (image, PDF, etc.)
+- `/Quote` — Create a quote block
+- `/Math block` — Insert a LaTeX math block
+
+Task statuses (e.g., Todo, Doing, Done) appear as slash commands under **Task Status** when your graph has status properties configured.
 
 **Try it:**
 
@@ -225,8 +228,8 @@ Properties enable:
 
 **Shortcuts:**
 
-- `Ctrl/Cmd + Enter`: Toggle TODO/DONE
-- `/TODO`, `/DOING`, `/DONE`: Quick create
+- `Ctrl/Cmd + Enter`: Cycle through task statuses (e.g., TODO → DOING → DONE → none)
+- Use slash commands to set a specific status directly
 
 ### Headings
 
@@ -365,18 +368,20 @@ Create a project note with everything you've learned:
 
 ## Keyboard Shortcuts Summary
 
-| Action          | Shortcut (Win/Linux) | Shortcut (macOS) |
-| --------------- | -------------------- | ---------------- |
-| New block       | `Enter`              | `Enter`          |
-| Indent          | `Tab`                | `Tab`            |
-| Outdent         | `Shift + Tab`        | `Shift + Tab`    |
-| Bold            | `Ctrl + B`           | `Cmd + B`        |
-| Italic          | `Ctrl + I`           | `Cmd + I`        |
-| Toggle TODO     | `Ctrl + Enter`       | `Cmd + Enter`    |
-| Slash command   | `/`                  | `/`              |
-| Block reference | `((`                 | `((`             |
-| Page link       | `[[`                 | `[[`             |
-| Search          | `Ctrl + K`           | `Cmd + K`        |
+| Action          | Shortcut (Win/Linux)   | Shortcut (macOS)      |
+| --------------- | ---------------------- | --------------------- |
+| New block       | `Enter`                | `Enter`               |
+| Indent          | `Tab`                  | `Tab`                 |
+| Outdent         | `Shift + Tab`          | `Shift + Tab`         |
+| Bold            | `Ctrl + B`             | `Cmd + B`             |
+| Italic          | `Ctrl + I`             | `Cmd + I`             |
+| Highlight       | `Ctrl + Shift + H`     | `Cmd + Shift + H`     |
+| Strikethrough   | `Ctrl + Shift + S`     | `Cmd + Shift + S`     |
+| Cycle status    | `Ctrl + Enter`         | `Cmd + Enter`         |
+| Slash command   | `/`                    | `/`                   |
+| Block reference | `((`                   | `((`                  |
+| Page link       | `[[`                   | `[[`                  |
+| Search          | `Ctrl + K`             | `Cmd + K`             |
 
 ## What You've Learned
 

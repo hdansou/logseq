@@ -1,6 +1,8 @@
 # Logseq Plugin Developer Guide: File-Based Graphs
 
-**Last Updated:** October 2025
+> **Last revised:** 2026-03-10
+
+**Last Updated:** March 2026
 **Logseq Version:** 0.2.3+
 **Target Audience:** Plugin developers building for Logseq file-based graphs (Markdown/Org mode)
 

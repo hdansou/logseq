@@ -1,6 +1,8 @@
 # Logseq Plugin API: A Detective's Investigation Report
 
-## 🔍 Case Summary
+> **Last revised:** 2026-03-10
+
+## Case Summary
 
 The Logseq Plugin API is a sophisticated system that allows third-party developers to extend Logseq's functionality through isolated, sandboxed plugins. This investigation reveals a well-architected dual-mode plugin system (iframe and shadow DOM) with a comprehensive API surface spanning block manipulation, database queries, UI customization, and system integration.
 

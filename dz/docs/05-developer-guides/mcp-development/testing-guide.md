@@ -1,5 +1,7 @@
 # Logseq MCP Server Testing Guide
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 This guide provides comprehensive testing procedures for the Logseq MCP (Model Context Protocol) Server implementation. The MCP server exposes Logseq graph data to AI assistants and other MCP-compatible tools through a standardized protocol.
@@ -13,12 +15,14 @@ The server operates in two modes:
 
 ### Available Tools
 
-| Tool             | Description                                   | API Mode | Local Mode |
-| ---------------- | --------------------------------------------- | -------- | ---------- |
-| `getAllPages`    | List all pages in the graph                   | ✅       | ✅         |
-| `getPage`        | Get specific page content and block structure | ✅       | ✅         |
-| `listProperties` | List all properties in the graph              | ❌       | ✅         |
-| `listTags`       | List all tags/classes in the graph            | ❌       | ✅         |
+| Tool             | Description                                         | API Mode | Local Mode |
+| ---------------- | --------------------------------------------------- | -------- | ---------- |
+| `listPages`      | List all pages in the graph                         | ✅       | ✅         |
+| `getPage`        | Get specific page content and block structure       | ✅       | ✅         |
+| `upsertNodes`    | Create or edit pages, blocks, tags, and properties  | ✅       | ✅         |
+| `searchBlocks`   | Search graph for blocks containing a search term    | ✅       | ✅         |
+| `listProperties` | List all properties in the graph                    | ✅       | ✅         |
+| `listTags`       | List all tags/classes in the graph                  | ✅       | ✅         |
 
 ## Prerequisites
 
@@ -91,15 +95,15 @@ Expected behavior:
 
 - Server starts without errors
 - Connects via stdio transport
-- Registers 4 tools: getAllPages, getPage, listProperties, listTags
+- Registers 6 tools: listPages, getPage, upsertNodes, searchBlocks, listProperties, listTags
 
 #### 2.2 Debug Tool Testing
 
 Test each tool individually using debug mode:
 
 ```bash
-# Test getAllPages
-./logseq mcp-server -g "test-graph" -t getAllPages
+# Test listPages
+./logseq mcp-server -g "test-graph" -t listPages
 
 # Test getPage with existing page
 ./logseq mcp-server -g "test-graph" -t getPage --pageName "Your Page Title"
@@ -118,7 +122,7 @@ Test each tool individually using debug mode:
 
 For each debug test, verify:
 
-**getAllPages**:
+**listPages**:
 
 ```json
 {
@@ -203,8 +207,8 @@ export LOGSEQ_API_SERVER_TOKEN="your-api-token"
 #### 3.2 API Mode Debug Testing
 
 ```bash
-# Test getAllPages via API
-./logseq mcp-server -a "your-token" -t getAllPages
+# Test listPages via API
+./logseq mcp-server -a "your-token" -t listPages
 
 # Test getPage via API
 ./logseq mcp-server -a "your-token" -t getPage --pageName "Page Title"
@@ -220,11 +224,11 @@ Test various API failure scenarios:
 
 ```bash
 # Invalid token
-./logseq mcp-server -a "invalid-token" -t getAllPages
+./logseq mcp-server -a "invalid-token" -t listPages
 
 # Logseq not running (API server down)
 # Stop Logseq, then:
-./logseq mcp-server -a "valid-token" -t getAllPages
+./logseq mcp-server -a "valid-token" -t listPages
 
 # Network connectivity issues
 # Block port 12315, then test
@@ -385,7 +389,7 @@ Document common issues:
 - [ ] CLI command registration
 - [ ] Parameter validation
 - [ ] Local graph mode functionality
-- [ ] All four tools in debug mode
+- [ ] All six tools in debug mode
 - [ ] API server mode functionality
 - [ ] Error handling for invalid inputs
 - [ ] MCP protocol compliance
@@ -430,12 +434,3 @@ The MCP server implementation passes testing when:
 5. Security requirements are met
 6. Cross-platform compatibility is confirmed
 7. Integration with MCP clients works seamlessly
-
-{
-"mcpServers": {
-"logseq": {
-"command": "/Users/dzu/.nvm/versions/node/v22.17.0/bin/node",
-"args": ["/Users/dzu/Projects/src/github.com/logseq/deps/cli/cli.mjs", "mcp-server", "-g", "merge"]
-}
-}
-}

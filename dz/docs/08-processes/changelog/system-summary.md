@@ -1,5 +1,7 @@
 # Changelog Generation System - Implementation Summary
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 A comprehensive AI-powered changelog generation system for Logseq that transforms git commit logs into professional, user-facing changelogs and release notes.
@@ -32,7 +34,7 @@ A comprehensive AI-powered changelog generation system for Logseq that transform
 
 ### 2. Shell Script: `generate-changelog-log.sh`
 
-**Location:** `scripts/generate-changelog-log.sh`
+**Location:** `dz/scripts/generate-changelog-log.sh`
 
 **Purpose:** Generate raw git commit logs for changelog processing
 
@@ -47,9 +49,9 @@ A comprehensive AI-powered changelog generation system for Logseq that transform
 **Usage:**
 
 ```bash
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -o release.md
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -o release.md
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
 ```
 
 ### 3. Changelog Generation Guidelines
@@ -297,7 +299,7 @@ graph TD
 ```bash
 # Generate raw log
 cd ~/Projects/src/github.com/logseq
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31
 
 # Create release notes (in VS Code)
 @workspace /new-changelog 2025-01-01 2025-01-31 --format=release
@@ -310,7 +312,7 @@ cd ~/Projects/src/github.com/logseq
 
 ```bash
 # Generate log for hotfix branch
-./scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
+./dz/scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
 
 # Create changelog
 @workspace /new-changelog 2025-01-15 2025-01-16
@@ -320,7 +322,7 @@ cd ~/Projects/src/github.com/logseq
 
 ```bash
 # Generate log for feature branch
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/semantic-search"
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/semantic-search"
 
 # Create changelog
 @workspace /new-changelog 2025-01-01 2025-01-31
@@ -332,13 +334,14 @@ cd ~/Projects/src/github.com/logseq
 logseq/
 ├── .github/
 │   └── copilot-instructions.md      # Defines @workspace /new-changelog command
-├── docs/
-│   ├── CHANGELOG_WORKFLOW.md        # Complete workflow documentation
-│   └── CHANGELOG_QUICK_REFERENCE.md # Quick command reference
-├── prompts/
-│   └── changelog-generation.md      # AI processing guidelines
-└── scripts/
-    └── generate-changelog-log.sh    # Raw log generation script
+└── dz/
+    ├── docs/08-processes/changelog/
+    │   ├── readme.md                    # Overview and quick start
+    │   ├── workflow.md                  # Complete workflow documentation
+    │   ├── quick-reference.md           # Quick command reference
+    │   └── system-summary.md            # Technical implementation details
+    └── scripts/
+        └── generate-changelog-log.sh    # Raw log generation script
 ```
 
 ## Integration Points
@@ -356,7 +359,7 @@ The system integrates with GitHub Copilot through the `@workspace /new-changelog
 
 The script can be called from:
 
-- Command line: `./scripts/generate-changelog-log.sh`
+- Command line: `./dz/scripts/generate-changelog-log.sh`
 - Shell functions: Deprecated `New-LogseqChangeLog` now points to new system
 - CI/CD pipelines: Can be automated for releases
 
@@ -466,7 +469,7 @@ New-LogseqChangeLog 2025-01-05 2025-01-15
 **New workflow:**
 
 ```bash
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
 @workspace /new-changelog 2025-01-05 2025-01-15
 ```
 

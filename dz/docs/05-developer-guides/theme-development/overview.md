@@ -1,10 +1,12 @@
 # Logseq Theme Development Documentation
 
+> **Last revised:** 2026-03-10
+
 Welcome to the Logseq Theme Development documentation! This collection of guides will help you create beautiful, custom themes for Logseq.
 
 ## 📚 Documentation Overview
 
-### 1. [Theme Development Guide](./theme-development-guide.md) - **START HERE**
+### 1. [Theme Development Guide](./guide.md) - **START HERE**
 
 **Complete comprehensive guide covering:**
 
@@ -23,7 +25,7 @@ Welcome to the Logseq Theme Development documentation! This collection of guides
 
 ---
 
-### 2. [Quick Reference Guide](./theme-development-quick-reference.md) - **FOR QUICK LOOKUPS**
+### 2. [Quick Reference Guide](./quick-reference.md) - **FOR QUICK LOOKUPS**
 
 **One-page reference with:**
 
@@ -41,7 +43,7 @@ Welcome to the Logseq Theme Development documentation! This collection of guides
 
 ---
 
-### 3. [Example Theme: Ocean Breeze](./theme-example-ocean-breeze.md) - **LEARN BY EXAMPLE**
+### 3. [Example Theme: Ocean Breeze](./example-ocean-breeze.md) - **LEARN BY EXAMPLE**
 
 **Complete working theme including:**
 
@@ -64,15 +66,15 @@ Welcome to the Logseq Theme Development documentation! This collection of guides
 
 ### For Complete Beginners
 
-1. **Read:** [Theme Development Guide](./theme-development-guide.md) (Section 1-5)
-2. **Study:** [Example Theme: Ocean Breeze](./theme-example-ocean-breeze.md)
+1. **Read:** [Theme Development Guide](./guide.md) (Section 1-5)
+2. **Study:** [Example Theme: Ocean Breeze](./example-ocean-breeze.md)
 3. **Experiment:** Copy the example and modify colors
-4. **Reference:** Use [Quick Reference](./theme-development-quick-reference.md) while coding
+4. **Reference:** Use [Quick Reference](./quick-reference.md) while coding
 
 ### For Experienced CSS Developers
 
-1. **Skim:** [Theme Development Guide](./theme-development-guide.md) (Focus on "Design System Overview" and "CSS Variables Reference")
-2. **Review:** [Quick Reference](./theme-development-quick-reference.md)
+1. **Skim:** [Theme Development Guide](./guide.md) (Focus on "Design System Overview" and "CSS Variables Reference")
+2. **Review:** [Quick Reference](./quick-reference.md)
 3. **Start coding:** Use the basic template from Quick Start
 4. **Reference:** Check example theme for specific implementations
 
@@ -80,7 +82,7 @@ Welcome to the Logseq Theme Development documentation! This collection of guides
 
 1. **Complete your theme** using the guides above
 2. **Test thoroughly** using checklist in main guide
-3. **Follow publishing guidelines** in [Theme Development Guide - Publishing](./theme-development-guide.md#publishing-your-theme)
+3. **Follow publishing guidelines** in [Theme Development Guide - Publishing](./guide.md#publishing-your-theme)
 4. **Submit to Marketplace** or share with community
 
 ---
@@ -266,9 +268,9 @@ Found issues with these docs? Suggestions for improvement?
 
 **Documentation:**
 
-- [Full Development Guide](./theme-development-guide.md)
-- [Quick Reference](./theme-development-quick-reference.md)
-- [Example Theme](./theme-example-ocean-breeze.md)
+- [Full Development Guide](./guide.md)
+- [Quick Reference](./quick-reference.md)
+- [Example Theme](./example-ocean-breeze.md)
 
 **External Resources:**
 

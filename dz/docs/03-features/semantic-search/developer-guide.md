@@ -1,5 +1,7 @@
 # Logseq Semantic Search: A Detective's Investigation Report
 
+> **Last revised:** 2026-03-10
+
 ## 🔍 Case Summary
 
 This document chronicles the investigation into Logseq's semantic search implementation—a sophisticated vector-based search system built on top of transformer models, Web Workers, and HNSW (Hierarchical Navigable Small World) graphs.

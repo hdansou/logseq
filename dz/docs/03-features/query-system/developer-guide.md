@@ -1,5 +1,7 @@
 # Logseq Query System: A Detective's Investigation Report
 
+> **Last revised:** 2026-03-10
+
 ## 🔍 Case Summary
 
 The Logseq Query System is a sophisticated dual-mode querying engine that allows users to search and filter blocks and pages in their knowledge graphs. This investigation uncovers two distinct query systems operating under one unified interface:

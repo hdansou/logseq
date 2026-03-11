@@ -1,5 +1,7 @@
 # Working with Blocks and Pages
 
+> **Last revised:** 2026-03-10
+
 Complete guide to manipulating blocks and pages in Logseq.
 
 ## Table of Contents

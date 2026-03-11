@@ -1,5 +1,7 @@
 # Graph Validation Developer Guide
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 The "Validate current Graph" feature is a developer-only tool that validates the integrity of a Logseq DB-based graph's database. It checks for schema violations, structural inconsistencies, and invalid entities, then attempts to automatically fix detected issues.
@@ -59,7 +61,7 @@ Attempting to fix invalid blocks. Run validation again to see if they were fixed
 
 ### 1. UI Entry Point
 
-**File**: `src/main/frontend/handler/common/developer.cljs:94-95`
+**File**: `src/main/frontend/handler/common/developer.cljs:83-84`
 
 ```clojure
 (defn ^:export validate-db []
@@ -68,18 +70,17 @@ Attempting to fix invalid blocks. Run validation again to see if they were fixed
 
 This public function is triggered from the command palette and invokes the worker thread.
 
-**Command Registration**: `src/main/frontend/modules/shortcut/config.cljs:656-659`
+**Command Registration**: `src/main/frontend/modules/shortcut/config.cljs`
 
 ```clojure
 :dev/validate-db {:binding []
-                  :db-graph? true
                   :inactive (not (state/developer-mode?))
                   :fn :frontend.handler.common.developer/validate-db}
 ```
 
 ### 2. Worker Thread API
 
-**File**: `src/main/frontend/worker/db_worker.cljs:677-680`
+**File**: `src/main/frontend/worker/db_worker.cljs`
 
 ```clojure
 (def-thread-api :thread-api/validate-db
@@ -92,11 +93,17 @@ The worker thread handles validation to avoid blocking the UI thread.
 
 ### 3. Main Validation Orchestrator
 
-**File**: `src/main/frontend/worker/db/validate.cljs:99-119`
+**File**: `src/main/frontend/worker/db/validate.cljs`
 
 ```clojure
 (defn validate-db
   [conn]
+  (fix-extends-cardinality! conn)
+  (fix-icon-wrong-type! conn)
+  (db-migrate/ensure-built-in-data-exists! conn)
+  (fix-non-closed-values! conn)
+  (fix-num-prefix-db-idents! conn)
+
   (let [db @conn
         {:keys [errors datom-count entities]} (db-validate/validate-db! db)
         invalid-entity-ids (distinct (map (fn [e] (:db/id (:entity e))) errors))]
@@ -104,16 +111,14 @@ The worker thread handles validation to avoid blocking the UI thread.
       (do
         (fix-invalid-blocks! conn errors)
         (shared-service/broadcast-to-clients! :notification
-          {:type :warning
-           :msg (str "Validation detected " (count errors) " invalid block(s)...")})
-        (shared-service/broadcast-to-clients! :log
-          {:level :error
-           :payload [:div "Invalid entities:" (pr-str invalid-entity-ids)]}))
+          [(str "Validation detected " (count errors) " invalid block(s)...") :warning false]))
       (shared-service/broadcast-to-clients! :notification
-        {:type :success
-         :msg (str "Your graph is valid! "
-                   (assoc (db-validate/graph-counts db entities) :datoms datom-count))}))))
+        [(str "Your graph is valid! "
+              (assoc (db-validate/graph-counts db entities) :datoms datom-count))
+         :success false]))))
 ```
+
+> **Note:** Before running schema validation, the function applies several pre-fix steps (cardinality fixes, icon type fixes, built-in data checks, non-closed value fixes, and numeric-prefix db-ident fixes).
 
 ### 4. Core Schema Validation
 
@@ -169,7 +174,7 @@ All entities are validated against the Malli schema defined in:
 
 ## Auto-Fix Capabilities
 
-**File**: `src/main/frontend/worker/db/validate.cljs:31-92`
+**File**: `src/main/frontend/worker/db/validate.cljs`
 
 The `fix-invalid-blocks!` function attempts to repair issues:
 
@@ -211,29 +216,19 @@ The `fix-invalid-blocks!` function attempts to repair issues:
 
 ## Automatic Validation During Development
 
-**File**: `src/main/frontend/worker/pipeline.cljs:104-119`
+**File**: `deps/db/src/logseq/db/frontend/validate.cljs`
+
+Transaction-level validation is available via `validate-tx-report` which validates entities affected by a specific transaction:
 
 ```clojure
-(defn validate-db!
-  "Validate db is slow, we probably don't want to enable it for production."
-  [repo conn tx-report tx-meta context]
-  (when (and (not (::skip-validate-db? tx-meta false))
-             (or (:dev? context) (:undo? tx-meta) (:redo? tx-meta))
-             (not (:importing? context))
-             (sqlite-util/db-based-graph? repo))
-    (let [valid? (if (get-in tx-report [:tx-meta :reset-conn!])
-                   true
-                   (db-validate/validate-tx-report! tx-report (:validate-db-options context)))]
-      (when-not valid?
-        (throw (ex-info "Invalid transaction" {:tx-report tx-report}))))))
+(defn validate-tx-report
+  "Validates the datascript tx-report for entities that have changed. Returns
+  boolean indicating if db is valid"
+  [{:keys [db-after tx-data tx-meta]} {:keys [closed-schema?]}]
+  ...)
 ```
 
-### When Automatic Validation Runs
-
-- ✅ Every undo/redo operation
-- ✅ In dev mode for all transactions
-- ❌ Not during data import
-- ❌ Can be skipped with `::skip-validate-db?` tx-meta flag
+> **Note:** The pipeline-level `validate-db!` function that previously lived in `src/main/frontend/worker/pipeline.cljs` has been removed. Transaction validation is now handled directly in the DB validation layer.
 
 ## Configuration
 
@@ -293,7 +288,7 @@ Detailed error logs are sent to the browser console:
 | **Dev Mode**    | Required                  | Required                 |
 | **Performance** | ~1-5 seconds              | ~5-30 seconds            |
 | **Destructive** | Fixes orphaned entities   | Deletes unused addresses |
-| **Location**    | `worker/db/validate.cljs` | `worker/rtc/client.cljs` |
+| **Location**    | `worker/db/validate.cljs` | `deps/db/sqlite/gc.cljs` |
 
 ## Related Validation Layers
 
@@ -440,16 +435,15 @@ For performance-critical operations:
 
 ## File Reference
 
-| File                                               | Purpose                         | Lines   |
-| -------------------------------------------------- | ------------------------------- | ------- |
-| `src/main/frontend/handler/common/developer.cljs`  | UI entry point                  | 94-95   |
-| `src/main/frontend/modules/shortcut/config.cljs`   | Command registration            | 656-659 |
-| `src/main/frontend/worker/db_worker.cljs`          | Worker thread API               | 677-680 |
-| `src/main/frontend/worker/db/validate.cljs`        | Main orchestration & auto-fix   | 31-119  |
-| `src/main/frontend/worker/pipeline.cljs`           | Auto-validation in transactions | 104-119 |
-| `deps/db/src/logseq/db/frontend/validate.cljs`     | Core schema validation          | 91-111  |
-| `deps/db/src/logseq/db/frontend/malli_schema.cljs` | Entity schema definitions       | -       |
-| `src/resources/dicts/en.edn`                       | UI labels                       | -       |
+| File                                               | Purpose                         |
+| -------------------------------------------------- | ------------------------------- |
+| `src/main/frontend/handler/common/developer.cljs`  | UI entry point (lines 83-84)    |
+| `src/main/frontend/modules/shortcut/config.cljs`   | Command registration            |
+| `src/main/frontend/worker/db_worker.cljs`          | Worker thread API               |
+| `src/main/frontend/worker/db/validate.cljs`        | Main orchestration & auto-fix   |
+| `deps/db/src/logseq/db/frontend/validate.cljs`     | Core schema validation + tx validation |
+| `deps/db/src/logseq/db/frontend/malli_schema.cljs` | Entity schema definitions       |
+| `src/resources/dicts/en.edn`                       | UI labels                       |
 
 ## Testing
 

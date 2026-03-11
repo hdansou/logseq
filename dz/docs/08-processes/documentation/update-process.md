@@ -1,5 +1,7 @@
 # Plugin Documentation Update Process
 
+> **Last revised:** 2026-03-10
+
 > **Purpose**: This guide documents the complete process for updating and publishing Logseq Plugin API documentation to https://plugins-doc.logseq.com
 
 ---

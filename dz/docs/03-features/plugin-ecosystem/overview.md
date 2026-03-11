@@ -1,5 +1,7 @@
 # Plugin Ecosystem
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq's plugin ecosystem is a sophisticated, security-focused architecture that enables third-party developers to extend the application's functionality while maintaining user data privacy and system stability. The plugin system uses sandboxed execution environments and a comprehensive API framework to provide powerful extension capabilities.
@@ -253,8 +255,7 @@ logseq.DB.onChanged((txData) => {
 
 ```
 my-plugin/
-├── package.json          # NPM package configuration
-├── logseq.config.json    # Plugin manifest
+├── package.json          # NPM package config + plugin manifest (logseq key)
 ├── index.html            # Entry point (iframe mode)
 ├── index.js              # Main plugin logic
 ├── icon.png              # Plugin icon
@@ -264,28 +265,32 @@ my-plugin/
     └── images/
 ```
 
-### Plugin Manifest (logseq.config.json)
+### Plugin Manifest (package.json)
+
+Plugin metadata is defined in the standard `package.json` file, with plugin-specific fields under the `logseq` key:
 
 ```json
 {
-  "id": "my-awesome-plugin",
-  "title": "My Awesome Plugin",
+  "name": "my-awesome-plugin",
+  "version": "1.0.0",
   "description": "Enhances productivity with awesome features",
   "author": "Plugin Developer",
-  "repo": "https://github.com/user/my-awesome-plugin",
-  "version": "1.0.0",
-  "main": "index.html",
-  "icon": "icon.png",
-  "mode": "iframe",
-  "settings": [
-    {
-      "key": "apiKey",
-      "type": "string",
-      "title": "API Key",
-      "description": "Your API key for external service",
-      "default": ""
-    }
-  ]
+  "logseq": {
+    "id": "my-awesome-plugin",
+    "title": "My Awesome Plugin",
+    "main": "index.html",
+    "icon": "icon.png",
+    "mode": "iframe",
+    "settings": [
+      {
+        "key": "apiKey",
+        "type": "string",
+        "title": "API Key",
+        "description": "Your API key for external service",
+        "default": ""
+      }
+    ]
+  }
 }
 ```
 
@@ -505,31 +510,20 @@ const csp = {
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Installing: User Install
-    Installing --> Validating: Check Manifest
-    Validating --> Loading: Valid
-    Validating --> Error: Invalid
-
+    [*] --> Loading: User Install / Enable
     Loading --> Loaded: Success
     Loading --> Error: Load Failed
 
-    Loaded --> Initializing: Start Plugin
-    Initializing --> Running: Ready
-    Initializing --> Error: Init Failed
-
-    Running --> Suspended: Background/Pause
-    Suspended --> Running: Foreground/Resume
-    Running --> Updating: Version Change
-    Updating --> Running: Success
-    Updating --> Error: Update Failed
+    Loaded --> Running: Plugin Ready
 
     Running --> Unloading: Disable/Uninstall
-    Suspended --> Unloading: Disable/Uninstall
     Error --> Unloading: Force Remove
 
     Unloading --> Unloaded: Cleanup Complete
     Unloaded --> [*]: Removed
 ```
+
+> **Note:** The actual `PluginLocalLoadStatus` enum in the codebase defines five states: `LOADING`, `UNLOADING`, `LOADED`, `UNLOADED`, and `ERROR`. The states `SUSPENDED` and `UPDATING` do not exist in the current implementation.
 
 ### Complete Lifecycle Implementation
 
@@ -542,8 +536,6 @@ export enum PluginLocalLoadStatus {
   LOADED = 'loaded',
   UNLOADED = 'unload',
   ERROR = 'error',
-  SUSPENDED = 'suspended',
-  UPDATING = 'updating',
 }
 
 // Enhanced lifecycle with performance monitoring

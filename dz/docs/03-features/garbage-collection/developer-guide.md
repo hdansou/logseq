@@ -1,6 +1,8 @@
 # Database Garbage Collection: A Detective's Investigation Report
 
-## 🔍 Case Summary
+> **Last revised:** 2026-03-10
+
+## Case Summary
 
 **Case File**: Logseq Database Garbage Collection System
 **Jurisdiction**: SQLite Data Management

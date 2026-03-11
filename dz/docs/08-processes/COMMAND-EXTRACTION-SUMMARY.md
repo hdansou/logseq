@@ -1,5 +1,7 @@
 # Logseq Command Palette Extraction - Implementation Summary
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Successfully extracted and documented all 135 built-in commands from Logseq's command palette system into a comprehensive reference table.

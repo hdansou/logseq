@@ -1,5 +1,7 @@
 # Query Syntax: DB vs File-Based Graphs
 
+> **Last revised:** 2026-03-10
+
 **Critical Differences in How Queries Are Written**
 
 ---
@@ -201,9 +203,6 @@ DB-Based (using `/Query`):
          :where (between ?b ?start ?end)]
  :inputs [:-7d :today]}
 ```
-````
-
-`````
 
 **DB-Based** (using `/Query` command):
 ```clojure
@@ -270,8 +269,6 @@ DB-Based (using `/Query`):
 {:query [:find ...]
  :inputs [:today :current-page]}
 ```
-
-`````
 
 **Resolution**: Query inputs resolve **during** query execution in both
 
@@ -375,8 +372,6 @@ When you use `/Query`, the block structure is:
 {:title "My Query" ...}
 ```
 
-````
-
 ---
 
 ## Common Mistakes
@@ -385,7 +380,7 @@ When you use `/Query`, the block structure is:
 
 ```clojure
 ❌ {{query (and [[page]])}}
-````
+```
 
 This won't work! DB graphs don't use macro syntax.
 
@@ -478,20 +473,17 @@ Should render immediately if `test-page` exists.
 
 ### File-Based Cheat Sheet
 
-````clojure
+```
 # Simple Query
 {{query (and [[page]])}}
 
 # With Template Variables
 {{query (and <% today %>)}}
 
-# Advanced Query
-```query
+# Advanced Query (in a ```query code block)
 {:query [:find ...]
  :inputs [:today]}
-````
-
-````
+```
 
 ### DB-Based Cheat Sheet
 
@@ -542,7 +534,7 @@ Should render immediately if `test-page` exists.
 - `/Query` command: `src/main/frontend/commands.cljs:195-203`
 - Creates `:logseq.property/query` property with metadata
 - Property-based rendering: `src/main/frontend/components/query/view.cljs`
-- Query DSL parsing: `src/main/frontend/db/query_dsl.cljs:376-389` (`build-task` function)
+- Query DSL parsing: `src/main/frontend/db/query_dsl.cljs:365` (`build-task` function)
 - Task statuses: Title-cased via `common-util/capitalize-all`
 
 ---
@@ -565,12 +557,12 @@ The **resolution logic** is the same, only the **syntax wrapper** differs!
 
 ---
 
-**Last Updated**: 2025-11-22
-**Version**: 2.1.0
+**Last Updated**: 2026-03-10
+**Version**: 2.1.1
 **Changes**:
 - v2.1.0 (2025-11-22): Added scheduled/deadline syntax differences between file-based and DB-based graphs
-- v2.0.0 (2025-11-21): Updated to reflect actual DB graph query syntax using `/Query` command instead of incorrect `query::` property syntax. Corrected task status format (title-case without quotes)---
+- v2.0.0 (2025-11-21): Updated to reflect actual DB graph query syntax using `/Query` command instead of incorrect `query::` property syntax. Corrected task status format (title-case without quotes)
+
+---
 
 *Always check which graph type you're using before writing queries!*
-```
-````

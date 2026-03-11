@@ -1,5 +1,7 @@
 # Plugin Basics
 
+> **Last revised:** 2026-03-10
+
 Understanding core concepts and architecture of Logseq plugins.
 
 ## Table of Contents
@@ -125,7 +127,7 @@ import '@logseq/libs'
 
 // Now you can use logseq.* APIs
 logseq.Editor.insertBlock(...)
-logseq.App.showMsg(...)
+logseq.UI.showMsg(...)
 logseq.DB.datascriptQuery(...)
 ```
 

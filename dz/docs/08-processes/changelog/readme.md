@@ -1,5 +1,7 @@
 # Changelog Generation System
 
+> **Last revised:** 2026-03-10
+
 > AI-powered changelog generation for Logseq releases
 
 ## Quick Start
@@ -26,7 +28,7 @@ This will:
 cd ~/Projects/src/github.com/logseq
 
 # Generate raw commit log
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
 
 # Then use the output with AI to create the final changelog
 ```
@@ -72,11 +74,11 @@ Highlights major features and user-facing changes only.
 @workspace /new-changelog 2025-01-01 2025-01-31 --format=release
 
 # Hotfix release
-./scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
+./dz/scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
 @workspace /new-changelog 2025-01-15 2025-01-16
 
 # Feature branch preview
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/my-feature"
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/my-feature"
 @workspace /new-changelog 2025-01-01 2025-01-31
 ```
 

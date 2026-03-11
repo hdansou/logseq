@@ -2,7 +2,7 @@
 title: 'File vs Database Graphs'
 description: 'Understanding the differences between file-based and database-backed graphs in Logseq'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 category: concepts
 relatedDocs:
@@ -14,6 +14,8 @@ relatedDocs:
 
 # File vs Database Graphs
 
+> **Last revised:** 2026-03-10
+
 > Understanding the two storage architectures in Logseq and choosing the right one for your needs.
 
 ## Overview
@@ -24,7 +26,7 @@ Logseq supports two fundamentally different ways to store your knowledge:
 | -------------------- | ------------------ | ------------------- |
 | **Storage**          | Markdown/Org files | SQLite database     |
 | **Introduced**       | Original (v0.0.1)  | Modern (v0.10.0)    |
-| **Prefix**           | `graph_`           | `logseq_db_`        |
+| **Prefix**           | `logseq_local_`    | `logseq_db_`        |
 | **External editing** | ✅ Yes             | ❌ No               |
 | **Typed properties** | ❌ Text only       | ✅ Full type system |
 
@@ -86,8 +88,7 @@ Your knowledge is stored in a SQLite database:
 
 ```
 logseq_db_my-graph/
-├── db.sqlite          # Main database
-├── db.sqlite-wal      # Write-ahead log
+├── db.sqlite          # Main database (WAL mode enabled at runtime)
 └── assets/
     └── image.png
 ```
@@ -151,9 +152,9 @@ Data is stored as entities with typed attributes:
 | ----------------------- | ---------------- | ----------------- |
 | **Basic queries**       | ✅               | ✅                |
 | **Property filtering**  | ⚠️ Text matching | ✅ Type-aware     |
-| **Date ranges**         | ❌               | ✅ `:date-range`  |
+| **Date ranges**         | ⚠️ `:between`    | ✅ `:between`     |
 | **Numeric comparisons** | ❌               | ✅ `>`, `<`, `>=` |
-| **Class queries**       | ❌               | ✅ `:class` input |
+| **Class queries**       | ❌               | ✅ Tag-based      |
 
 ---
 
@@ -181,7 +182,7 @@ Data is stored as entities with typed attributes:
          [?b :block/tags ?t]
          [?t :db/ident :logseq.class/Task]
          [?b :logseq.property/priority ?p]
-         [?p :db/ident :logseq.property/priority.a]]}
+         [?p :db/ident :logseq.property/priority.high]]}
 #+END_QUERY
 ```
 
@@ -211,14 +212,17 @@ Data is stored as entities with typed attributes:
 
 ### File → Database
 
-1. Export file-based graph (Markdown files)
-2. Create new database graph
-3. Import Markdown content
+Logseq provides a built-in import feature (`frontend.components.imports/import-file-graph`) that handles the conversion:
+
+1. Use the import dialog in the app (or CLI)
+2. Select the file-based graph folder
+3. Configure tag conversion options (e.g., convert all tags to classes)
 4. Review converted properties
 
 **Notes**:
 
-- Text properties become `:default` type
+- The exporter (`logseq.graph-parser.exporter`) handles property type inference
+- Priority values are mapped (e.g., "A" → `:logseq.property/priority.high`)
 - Some formatting may change
 - Block UUIDs are regenerated
 
@@ -241,19 +245,21 @@ Data is stored as entities with typed attributes:
 ### File-Based Schema
 
 ```clojure
-;; Properties stored as text maps
-{:block/properties {"priority" "high"
-                   "due" "2026-02-15"}}
+;; Properties stored as keyword-value maps (values are strings or sets)
+{:block/properties {:priority "high"
+                    :due "2026-02-15"}
+ :block/properties-text-values {:priority "high"
+                                :due "2026-02-15"}}
 
-;; Tags as text
-{:block/tags ["project" "urgent"]}
+;; Tags as page entity references
+{:block/tags [{:db/id 45}]}  ; references to page entities
 ```
 
 ### Database Schema
 
 ```clojure
 ;; Properties as entity references
-{:logseq.property/priority {:db/ident :logseq.property/priority.a}
+{:logseq.property/priority {:db/ident :logseq.property/priority.high}
  :logseq.property/deadline #inst "2026-02-15T00:00:00"}
 
 ;; Tags as class references
@@ -265,16 +271,21 @@ Data is stored as entities with typed attributes:
 
 ## Identifying Graph Type
 
-In code:
+In code (from `logseq.db.sqlite.util`):
 
 ```clojure
-(defn db-based-graph? [graph-name]
-  (string/starts-with? graph-name "logseq_db_"))
+(defn db-based-graph?
+  [graph-name]
+  (when graph-name
+    (string/starts-with? graph-name db-version-prefix)))
+;; where db-version-prefix = "logseq_db_"
 ```
+
+File graphs use the prefix `logseq_local_` (defined as `file-version-prefix` in `logseq.common.config`).
 
 In the UI:
 
-- Database graphs show "(DB)" indicator
+- Database graphs are visually distinguished from file graphs
 - Settings page shows graph type
 
 ---
@@ -287,4 +298,4 @@ In the UI:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

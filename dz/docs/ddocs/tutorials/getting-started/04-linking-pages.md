@@ -3,7 +3,7 @@ title: 'Linking Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-01-11'
+last-verified: '2026-03-10'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/03-basic-editing.md'
@@ -11,6 +11,8 @@ related-docs:
   - 'explanation/concepts/knowledge-graph.md'
   - 'how-to/content/graph-view.md'
 ---
+
+> **Last revised:** 2026-03-10
 
 # Linking Pages
 
@@ -57,16 +59,15 @@ Tags are just page links with different syntax:
 - Meeting notes #important #review-later
 ```
 
-**Equivalence:**
+**Behavior differs by graph type:**
 
-- `#project` = `[[project]]`
-- Both create the same page
-- Use whichever feels more natural
+- **File-based graphs:** `#project` and `[[project]]` are equivalent and create the same page.
+- **DB-based graphs:** `#tag` assigns a tag (class) to the block, while `[[page]]` creates a page reference. They are not equivalent.
 
 **When to use each:**
 
-- **`[[Links]]`:** For entities, concepts, people (nouns)
-- **`#tags`:** For categories, statuses, labels (adjectives)
+- **`[[Links]]`:** For referencing entities, concepts, people (nouns)
+- **`#tags`:** For categorizing blocks with labels, statuses, types (adjectives)
 
 ### Block References: `((block-id))`
 
@@ -130,11 +131,11 @@ The magic of Logseq: **links work both ways**.
 
 ### Viewing Backlinks
 
-**Open right sidebar:**
+**Linked References appear at the bottom of the page:**
 
-1. Click the page you want to explore
-2. Right sidebar shows "Linked References"
-3. See ALL blocks that mention this page
+1. Navigate to the page you want to explore
+2. Scroll down past the page content
+3. The "Linked References" section shows ALL blocks that mention this page
 
 **Example for "Logseq" page:**
 
@@ -151,7 +152,7 @@ Linked References:
 | Type                | Syntax             | Creates             | Use Case             |
 | ------------------- | ------------------ | ------------------- | -------------------- |
 | **Page Link**       | `[[Page]]`         | New/existing page   | Concepts, entities   |
-| **Tag**             | `#tag`             | New/existing page   | Categories, labels   |
+| **Tag**             | `#tag`             | Tag/class (DB) or page (file) | Categories, labels   |
 | **Block Reference** | `((text))`         | Reference to block  | Quote, reuse content |
 | **Block Embed**     | `{{embed ((id))}}` | Embedded block tree | Show full context    |
 | **URL**             | `[Text](url)`      | External link       | Web resources        |
@@ -295,8 +296,8 @@ See your knowledge network visually:
 
 **Open Graph View:**
 
-- Click the graph icon in toolbar
-- Or press `Ctrl/Cmd + Shift + G`
+- Click the graph icon in the left sidebar
+- Or press `g g` (vim-style shortcut, press `g` twice in non-editing mode)
 
 **What you see:**
 
@@ -351,7 +352,7 @@ Build a small knowledge network:
 **Step 3: Check backlinks**
 
 1. Click on "Cognitive Bias" page
-2. Open right sidebar
+2. Scroll down to the "Linked References" section at the bottom
 3. See it's referenced in "Reading List 2026"
 
 **Step 4: View the graph**

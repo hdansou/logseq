@@ -1,9 +1,10 @@
 # Logseq CLI: EDN Format Reference
 
+> **Last revised:** 2026-03-10
+
 > Comprehensive guide to the EDN (Extensible Data Notation) format used by Logseq CLI for import/export operations
 
-**Version**: 0.4.2  
-**Last Updated**: 2025-12-22  
+**Version**: 0.4.3
 **For**: Developers & Advanced Users
 
 ---
@@ -215,8 +216,8 @@ Classes (tags) define types of pages and can have properties.
  :block/title "Project"                         ; Display name
  :block/created-at 1704844800000
  :block/updated-at 1704844800000
- :class/extends [:logseq.class/Root]            ; Parent classes
- :class/properties [:my.property/priority        ; Properties for this class
+ :logseq.property.class/extends [:logseq.class/Root]            ; Parent classes
+ :logseq.property.class/properties [:my.property/priority        ; Properties for this class
                     :my.property/status
                     :my.property/deadline]}
 ```
@@ -271,8 +272,6 @@ Blocks are nested content units within pages.
  :block/order 0                                 ; Position in parent (0-indexed)
  :block/created-at 1704844800000
  :block/updated-at 1704844800000
- :block/marker "TODO"                           ; Task marker (optional)
- :block/priority "A"                            ; Task priority (optional)
  :block/tags #{:logseq.class/Task}              ; Tags
  :block/collapsed? false                        ; Collapsed state (optional)
 
@@ -381,8 +380,8 @@ Many fields are optional and can be omitted:
 
  :classes [{:db/ident :my.class/Project
             :block/title "Project"
-            :class/extends [:logseq.class/Root]
-            :class/properties [:my.property/status]}]
+            :logseq.property.class/extends [:logseq.class/Root]
+            :logseq.property.class/properties [:my.property/status]}]
 
  :pages-and-blocks [{:block/uuid #uuid "a1b2c3d4-..."
                      :block/title "My Project"
@@ -409,20 +408,20 @@ Many fields are optional and can be omitted:
   ;; Child block 1
   {:db/id 2
    :block/uuid #uuid "block1-uuid"
-   :block/title "- TODO First task #task"
+   :block/title "TODO First task"
    :block/page {:db/id 1}
    :block/parent {:db/id 1}
    :block/order 0
-   :block/marker "TODO"}
+   :block/tags #{:logseq.class/Task}}
 
   ;; Child block 2
   {:db/id 3
    :block/uuid #uuid "block2-uuid"
-   :block/title "- DONE Second task #task"
+   :block/title "Second task"
    :block/page {:db/id 1}
    :block/parent {:db/id 1}
    :block/order 1
-   :block/marker "DONE"}]
+   :block/tags #{:logseq.class/Task}}]
 
  :logseq.db.sqlite.export/export-type :graph
  :logseq.db.sqlite.export/schema-version [1 2]}
@@ -446,14 +445,14 @@ Many fields are optional and can be omitted:
  :classes
  [{:db/ident :team.class/Task
    :block/title "Task"
-   :class/extends [:logseq.class/Root]
-   :class/properties [:team.property/priority
+   :logseq.property.class/extends [:logseq.class/Root]
+   :logseq.property.class/properties [:team.property/priority
                       :team.property/assignee]}
 
   {:db/ident :team.class/Epic
    :block/title "Epic"
-   :class/extends [:logseq.class/Root]
-   :class/properties [:team.property/priority]}]
+   :logseq.property.class/extends [:logseq.class/Root]
+   :logseq.property.class/properties [:team.property/priority]}]
 
  :logseq.db.sqlite.export/export-type :graph-ontology}
 ```
@@ -662,7 +661,7 @@ git commit -m "Schema version 1.0.0"
  :property/schema.classes         ; Set of keywords - Allowed classes (optional)
  :property/closed-values          ; Set - Enum values (optional)
  :property/schema.description     ; String - Description (optional)
- :property/public?                ; Boolean - Public property (optional)}
+ :logseq.property/public?         ; Boolean - Public property (optional)}
 ```
 
 ### Class Entity (Complete)
@@ -675,9 +674,9 @@ git commit -m "Schema version 1.0.0"
  :block/name                      ; String - Lowercase normalized name
  :block/created-at                ; Long - Unix timestamp ms (optional)
  :block/updated-at                ; Long - Unix timestamp ms (optional)
- :class/extends                   ; Vector of keywords - Parent classes (optional)
- :class/properties                ; Vector of keywords - Properties (optional)
- :class/public?                   ; Boolean - Public class (optional)}
+ :logseq.property.class/extends                   ; Vector of keywords - Parent classes (optional)
+ :logseq.property.class/properties                ; Vector of keywords - Properties (optional)
+}
 ```
 
 ### Page Entity (Complete)
@@ -708,10 +707,6 @@ git commit -m "Schema version 1.0.0"
  :block/order                     ; Long - Position in parent (required)
  :block/created-at                ; Long - Unix timestamp ms (optional)
  :block/updated-at                ; Long - Unix timestamp ms (optional)
- :block/marker                    ; String - Task marker (TODO, DONE, etc.) (optional)
- :block/priority                  ; String - Task priority (A, B, C) (optional)
- :block/scheduled                 ; Long - Scheduled timestamp (optional)
- :block/deadline                  ; Long - Deadline timestamp (optional)
  :block/tags                      ; Set of keywords - Tags (optional)
  :block/collapsed?                ; Boolean - Collapsed state (optional)
  ; ... custom properties based on graph schema

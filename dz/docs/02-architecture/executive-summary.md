@@ -1,5 +1,7 @@
 # Executive Summary
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq is a privacy-first, open-source knowledge management and collaboration platform that empowers users to organize, connect, and visualize their thoughts and information. Built on modern web technologies with a focus on user control and data ownership, Logseq combines the flexibility of a note-taking application with the power of a knowledge graph.
@@ -72,7 +74,7 @@ Logseq occupies a unique position in the knowledge management space by combining
 - **Frontend**: ClojureScript with React and Rum
 - **Database**: DataScript for in-memory graph database
 - **Desktop**: Electron-based cross-platform application
-- **Mobile**: React Native implementation
+- **Mobile**: Capacitor-based (ClojureScript web view)
 
 ### Performance
 

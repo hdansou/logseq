@@ -2,7 +2,7 @@
 title: 'Database Graph Schema Reference'
 description: "Complete reference for Logseq's database graph schema, property types, and built-in classes"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, mobile]
 graphType: [db]
@@ -17,6 +17,8 @@ relatedDocs:
 
 # Database Graph Schema Reference
 
+> **Last revised:** 2026-03-10
+
 > Complete reference for the database graph schema architecture, including entity types, property system, and built-in classes.
 
 ## Overview
@@ -27,7 +29,7 @@ Database graphs use a structured schema with three layers:
 2. **Malli Validation Layer**: Schema validation for data integrity
 3. **SQLite Persistence Layer**: Long-term storage
 
-**Current Schema Version**: 65.12
+**Current Schema Version**: 65.22
 
 ---
 
@@ -35,9 +37,9 @@ Database graphs use a structured schema with three layers:
 
 | Concept             | Count | Description                 |
 | ------------------- | ----- | --------------------------- |
-| Built-in Properties | 100+  | Core metadata system        |
-| Built-in Classes    | 13    | Entity classification       |
-| Property Types      | 14    | Value type definitions      |
+| Built-in Properties | ~87   | Core metadata system        |
+| Built-in Classes    | 16    | Entity classification       |
+| Property Types      | 18    | Value type definitions      |
 | Entity Types        | 10+   | Pages, blocks, assets, etc. |
 
 ---
@@ -120,6 +122,7 @@ Used by built-in properties only:
 | `:page`       | Page reference     | Page links          |
 | `:property`   | Property reference | Meta-properties     |
 | `:string`     | Raw string         | Internal text       |
+| `:json`       | JSON data          | Structured data     |
 | `:raw-number` | Raw number         | Internal counts     |
 
 ### Type Characteristics
@@ -154,18 +157,22 @@ Classes (tags) provide object-oriented classification with inheritance.
 | Class                      | Extends | Purpose      |
 | -------------------------- | ------- | ------------ |
 | `:logseq.class/Journal`    | Page    | Daily notes  |
-| `:logseq.class/Whiteboard` | Page    | Canvas pages |
+| `:logseq.class/Whiteboard` | Page    | Canvas pages (deprecated) |
 
 ### Block Classes
 
-| Class                      | Required Properties                   | Purpose            |
-| -------------------------- | ------------------------------------- | ------------------ |
-| `:logseq.class/Task`       | status, priority, deadline, scheduled | Task management    |
-| `:logseq.class/Query`      | query                                 | Executable queries |
-| `:logseq.class/Card`       | fsrs/state, fsrs/due                  | Flashcards         |
-| `:logseq.class/Asset`      | type, size, checksum                  | Files/images       |
-| `:logseq.class/Code-block` | display-type, code/lang               | Code blocks        |
-| `:logseq.class/Template`   | template-applied-to                   | Block templates    |
+| Class                           | Schema Properties                     | Purpose             |
+| ------------------------------- | ------------------------------------- | ------------------- |
+| `:logseq.class/Task`            | status, priority, deadline, scheduled | Task management     |
+| `:logseq.class/Query`           | query                                 | Executable queries  |
+| `:logseq.class/Card`            | fsrs/state, fsrs/due                  | Flashcards          |
+| `:logseq.class/Cards`           | (extends Query)                       | Flashcard decks     |
+| `:logseq.class/Asset`           | type, size, checksum                  | Files/images        |
+| `:logseq.class/Code-block`      | display-type, code/lang               | Code blocks         |
+| `:logseq.class/Quote-block`     | display-type                          | Block quotes        |
+| `:logseq.class/Math-block`      | display-type                          | Math expressions    |
+| `:logseq.class/Pdf-annotation`  | hl-color, hl-page, hl-value, etc.    | PDF annotations     |
+| `:logseq.class/Template`        | template-applied-to                   | Block templates     |
 
 ### Class Hierarchy
 
@@ -175,10 +182,10 @@ Root
 ├── Property (custom properties inherit from here)
 ├── Page
 │   ├── Journal
-│   └── Whiteboard
+│   └── Whiteboard (deprecated)
 ├── Task
 ├── Query
-│   └── Cards
+│   └── Cards (flashcard decks)
 ├── Card
 ├── Asset
 ├── Code-block
@@ -217,18 +224,18 @@ Classes support multiple inheritance via `:logseq.property.class/extends`:
 | `:block/order`       | string  | one         | Sibling order           |
 | `:block/refs`        | entity  | many        | Outgoing links          |
 | `:block/collapsed?`  | boolean | one         | Collapse state          |
-| `:block/created-at`  | number  | one         | Creation timestamp      |
-| `:block/updated-at`  | number  | one         | Last update timestamp   |
-| `:block/journal-day` | number  | one         | Journal date (YYYYMMDD) |
+| `:block/created-at`  | datetime| one         | Creation timestamp      |
+| `:block/updated-at`  | datetime| one         | Last update timestamp   |
+| `:block/journal-day` | raw-number | one      | Journal date (YYYYMMDD) |
 
 ### Task Properties
 
 | Property                     | Type    | Description                 |
 | ---------------------------- | ------- | --------------------------- |
 | `:logseq.property/status`    | default | Task status (closed values) |
-| `:logseq.property/priority`  | default | A/B/C priority              |
-| `:logseq.property/deadline`  | date    | Due date                    |
-| `:logseq.property/scheduled` | date    | Scheduled date              |
+| `:logseq.property/priority`  | default  | Low/Medium/High/Urgent      |
+| `:logseq.property/deadline`  | datetime | Due date                    |
+| `:logseq.property/scheduled` | datetime | Scheduled date              |
 
 **Status Closed Values**:
 
@@ -241,31 +248,30 @@ Classes support multiple inheritance via `:logseq.property.class/extends`:
 
 ### View Properties
 
-| Property                         | Type    | Description                      |
-| -------------------------------- | ------- | -------------------------------- |
-| `:logseq.property.view/type`     | keyword | View type (table, list, gallery) |
-| `:logseq.property.table/sorting` | map     | Column sort configuration        |
-| `:logseq.property.table/filters` | coll    | Active filters                   |
-| `:logseq.property.table/columns` | coll    | Visible columns                  |
+| Property                                  | Type    | Description                      |
+| ----------------------------------------- | ------- | -------------------------------- |
+| `:logseq.property.view/type`              | default | View type (table, list, gallery) |
+| `:logseq.property.table/sorting`          | coll    | Column sort configuration        |
+| `:logseq.property.table/filters`          | map     | Active filters                   |
+| `:logseq.property.table/ordered-columns`  | coll    | Column ordering                  |
+| `:logseq.property.table/hidden-columns`   | keyword | Hidden columns (many)            |
+| `:logseq.property.table/sized-columns`    | map     | Column size settings             |
+| `:logseq.property.table/pinned-columns`   | property| Pinned columns (many)            |
 
 ### Asset Properties
 
-| Property                          | Type    | Description        |
-| --------------------------------- | ------- | ------------------ |
-| `:logseq.property.asset/type`     | keyword | File MIME type     |
-| `:logseq.property.asset/size`     | number  | File size in bytes |
-| `:logseq.property.asset/checksum` | string  | File hash          |
+| Property                          | Type       | Description        |
+| --------------------------------- | ---------- | ------------------ |
+| `:logseq.property.asset/type`     | string     | File MIME type     |
+| `:logseq.property.asset/size`     | raw-number | File size in bytes |
+| `:logseq.property.asset/checksum` | string     | File hash          |
 
 ### FSRS (Flashcard) Properties
 
 | Property                           | Type     | Description      |
 | ---------------------------------- | -------- | ---------------- |
-| `:logseq.property.fsrs/state`      | keyword  | Learning state   |
+| `:logseq.property.fsrs/state`      | map      | Learning state   |
 | `:logseq.property.fsrs/due`        | datetime | Next review time |
-| `:logseq.property.fsrs/stability`  | number   | Memory stability |
-| `:logseq.property.fsrs/difficulty` | number   | Item difficulty  |
-| `:logseq.property.fsrs/reps`       | number   | Review count     |
-| `:logseq.property.fsrs/lapses`     | number   | Forget count     |
 
 ---
 
@@ -281,10 +287,12 @@ Each property has a configuration structure:
           :public? true       ; User-visible
           :hide? false        ; Hidden from UI
           :view-context :block ; Where shown
-          :ui-position :properties} ; UI location
+          :ui-position :properties ; UI location
+          :classes #{...}}    ; Restrict to specific classes (optional)
  :closed-values [...]         ; Predefined choices (optional)
  :queryable? true             ; Available in query builder
- :properties {...}}           ; Meta-properties
+ :properties {...}            ; Meta-properties
+ :rtc {...}}                  ; RTC sync configuration (optional)
 ```
 
 ### View Contexts
@@ -318,16 +326,23 @@ The DataScript schema defines attribute constraints:
 
 ### Attribute Types
 
-| Attribute       | Value Type | Cardinality | Notes           |
-| --------------- | ---------- | ----------- | --------------- |
-| `:block/uuid`   | identity   | one         | Unique lookup   |
-| `:block/name`   | indexed    | one         | Fast lookup     |
-| `:block/title`  | -          | one         | Content         |
-| `:block/parent` | ref        | one         | Parent entity   |
-| `:block/page`   | ref        | one         | Containing page |
-| `:block/tags`   | ref        | many        | Classes         |
-| `:block/refs`   | ref        | many        | Outgoing links  |
-| `:db/ident`     | identity   | one         | Unique keyword  |
+| Attribute                    | Value Type | Cardinality | Notes           |
+| ---------------------------- | ---------- | ----------- | --------------- |
+| `:block/uuid`                | identity   | one         | Unique lookup   |
+| `:block/name`                | indexed    | one         | Fast lookup     |
+| `:block/title`               | indexed    | one         | Content         |
+| `:block/parent`              | ref        | one         | Parent entity   |
+| `:block/page`                | ref        | one         | Containing page |
+| `:block/tags`                | ref        | many        | Classes         |
+| `:block/refs`                | ref        | many        | Outgoing links  |
+| `:block/link`                | ref        | one         | Tag/embed link  |
+| `:block/alias`               | ref        | many        | Page aliases    |
+| `:block/closed-value-property` | ref      | many        | Closed value owner |
+| `:block/order`               | indexed    | one         | Sibling order   |
+| `:block/created-at`          | indexed    | one         | Creation time   |
+| `:block/updated-at`          | indexed    | one         | Update time     |
+| `:block/journal-day`         | indexed    | one         | Journal date    |
+| `:db/ident`                  | identity   | one         | Unique keyword  |
 
 ### Reference vs Scalar
 
@@ -373,7 +388,7 @@ The DataScript schema defines attribute constraints:
 
 ## Schema Migrations
 
-Schema versions follow major.minor format (e.g., 65.12).
+Schema versions follow major.minor format (e.g., 65.22).
 
 Migrations are defined in:
 
@@ -391,4 +406,4 @@ When adding properties to `built-in-properties`, add corresponding migration.
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_

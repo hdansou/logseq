@@ -2,10 +2,10 @@
 title: 'MCP Server Reference'
 description: "Reference for Logseq's Model Context Protocol (MCP) server for AI assistant integration"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop]
-graphType: [file, db]
+graphType: [db]
 sinceVersion: '0.10.5'
 relatedDocs:
   tutorials:
@@ -16,6 +16,8 @@ relatedDocs:
 
 # MCP Server Reference
 
+> **Last revised:** 2026-03-10
+
 > Reference for Logseq's Model Context Protocol (MCP) server, enabling AI assistants to interact with your knowledge graph.
 
 ## Overview
@@ -23,9 +25,9 @@ relatedDocs:
 The **MCP Server** implements the [Model Context Protocol](https://modelcontextprotocol.io/) specification, allowing AI assistants like Claude Desktop, Cline, and other MCP-compatible clients to:
 
 - **Read** pages, blocks, tags, and properties from your graph
-- **Write** new blocks and update existing content
-- **Search** your knowledge base semantically
-- **Query** structured data
+- **Write** new pages, blocks, tags, and properties (via `upsertNodes`)
+- **Search** your knowledge base for matching blocks
+- **Query** structured data (tags, properties)
 
 **Endpoint**: `http://127.0.0.1:12315/mcp`
 
@@ -33,15 +35,14 @@ The **MCP Server** implements the [Model Context Protocol](https://modelcontextp
 
 ## Quick Reference
 
-| Tool             | Description        | Input                           |
-| ---------------- | ------------------ | ------------------------------- |
-| `listPages`      | Get all pages      | -                               |
-| `getPage`        | Get page content   | `pageName`                      |
-| `searchBlocks`   | Search blocks      | `searchTerm`                    |
-| `addToPage`      | Add block to page  | `pageName`, `content`, `force?` |
-| `updateBlock`    | Update block       | `blockUUID`, `content`          |
-| `listTags`       | Get all tags       | -                               |
-| `listProperties` | Get all properties | -                               |
+| Tool             | Description                       | Key Input                          |
+| ---------------- | --------------------------------- | ---------------------------------- |
+| `listPages`      | List all pages                    | `expand?`                          |
+| `getPage`        | Get page content and blocks       | `pageName`                         |
+| `searchBlocks`   | Search blocks by text             | `searchTerm`                       |
+| `upsertNodes`    | Create or edit pages/blocks/tags/properties | `operations`, `dry-run?` |
+| `listTags`       | List all tags                     | `expand?`                          |
+| `listProperties` | List all properties               | `expand?`                          |
 
 ---
 
@@ -51,8 +52,8 @@ The **MCP Server** implements the [Model Context Protocol](https://modelcontextp
 
 1. **Open Settings**: Click gear icon or press `t s`
 2. **Go to AI Settings**: Find "AI" section
-3. **Enable MCP Server**: Toggle ON
-4. **Configure Token**: Click API icon → "Authorization tokens" → Add token
+3. **Enable MCP Server**: Toggle "MCP Server" ON (this also enables the HTTP API server if not already running)
+4. **Configure Token**: Click API icon -> "Authorization tokens" -> Add token
 5. **Verify**: Visit `http://127.0.0.1:12315/mcp` in browser
 
 ### Enable via CLI
@@ -61,14 +62,17 @@ The **MCP Server** implements the [Model Context Protocol](https://modelcontextp
 # Navigate to CLI directory
 cd /path/to/logseq/deps/cli
 
-# Run with local graph
-yarn logseq mcp-server -g /path/to/your/graph
+# Run with local graph (HTTP Streamable transport, default port 12315)
+logseq mcp-server -g /path/to/your/graph
 
-# Run with HTTP transport
-yarn logseq mcp-server -g /path/to/graph --port 3000
+# Run with custom port
+logseq mcp-server -g /path/to/graph --port 3000
 
-# Run with stdio (for Claude Desktop)
-yarn logseq mcp-server -g /path/to/graph --stdio
+# Run with stdio transport (for Claude Desktop)
+logseq mcp-server -g /path/to/graph --stdio
+
+# Run against the in-app graph via API server token
+logseq mcp-server -a YOUR_API_TOKEN
 ```
 
 ---
@@ -77,21 +81,24 @@ yarn logseq mcp-server -g /path/to/graph --stdio
 
 ### Desktop Settings
 
-| Setting    | Default     | Description       |
-| ---------- | ----------- | ----------------- |
-| MCP Server | `false`     | Toggle MCP on/off |
-| Host       | `127.0.0.1` | Server host       |
-| Port       | `12315`     | Server port       |
+The MCP Server shares the HTTP API server's host and port settings.
+
+| Setting    | Default     | Description                                                |
+| ---------- | ----------- | ---------------------------------------------------------- |
+| MCP Server | `false`     | Toggle MCP on/off (under Settings -> AI)                   |
+| Host       | `127.0.0.1` | HTTP API server host (shared with MCP)                    |
+| Port       | `12315`     | HTTP API server port (shared with MCP)                    |
 
 ### CLI Options
 
-| Option                | Description               |
-| --------------------- | ------------------------- |
-| `-g, --graph <path>`  | Path to graph directory   |
-| `--port <number>`     | HTTP port (default: 3000) |
-| `--host <address>`    | Host address              |
-| `--stdio`             | Use stdio transport       |
-| `--debug-tool <name>` | Debug specific tool       |
+| Option                    | Description                                          |
+| ------------------------- | ---------------------------------------------------- |
+| `-g, --graph <path>`      | Path to local graph directory                        |
+| `-a, --api-server-token`  | API server token to connect to current in-app graph  |
+| `-p, --port <number>`     | HTTP port (default: 12315)                           |
+| `--host <address>`        | Host address (default: 127.0.0.1)                    |
+| `-s, --stdio`             | Use stdio transport instead of HTTP Streamable       |
+| `-t, --debug-tool <name>` | Debug a specific MCP tool with direct invocation     |
 
 ---
 
@@ -99,215 +106,198 @@ yarn logseq mcp-server -g /path/to/graph --stdio
 
 ### listPages
 
-Get all pages in the graph.
+List all pages in the graph.
 
-**Input**: None
+**Input**:
+| Parameter | Type    | Required | Description                             |
+|-----------|---------|----------|-----------------------------------------|
+| `expand`  | boolean | No       | Provide additional detail on each page  |
 
-**Output**:
+**Output** (default, without `expand`):
 
 ```json
-{
-  "pages": [
-    {
-      "name": "Page Name",
-      "uuid": "page-uuid",
-      "createdAt": 1640000000000,
-      "updatedAt": 1640000000000
-    }
-  ]
-}
+[
+  {
+    "block/title": "Page Name",
+    "block/uuid": "page-uuid"
+  }
+]
 ```
 
-**Example (Claude)**:
+**Output** (with `expand: true`):
 
-```
-Use the listPages tool to show me all pages in my knowledge base.
+```json
+[
+  {
+    "block/title": "Page Name",
+    "block/uuid": "page-uuid",
+    "block/created-at": 1640000000000,
+    "block/updated-at": 1640000000000
+  }
+]
 ```
 
 ---
 
 ### getPage
 
-Get full content of a specific page.
+Get full content of a specific page including its blocks.
 
 **Input**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `pageName` | string | Yes | Page name or UUID |
+| Parameter  | Type   | Required | Description          |
+|------------|--------|----------|----------------------|
+| `pageName` | string | Yes      | Page name or UUID    |
 
 **Output**:
 
 ```json
 {
-  "page": {
-    "name": "Page Name",
-    "uuid": "page-uuid",
-    "blocks": [
-      {
-        "uuid": "block-uuid",
-        "content": "Block content",
-        "children": [...]
-      }
-    ]
-  }
+  "entity": {
+    "block/uuid": "page-uuid",
+    "block/title": "Page Name"
+  },
+  "blocks": [
+    {
+      "block/uuid": "block-uuid",
+      "block/title": "Block content"
+    }
+  ]
 }
 ```
+
+Note: Properties and tags are also pages. You can use `getPage` to retrieve their details.
 
 ---
 
 ### searchBlocks
 
-Search for blocks containing specific text.
+Search for blocks containing specific text. This tool is only available when connecting to the in-app graph via the API server (not available in local CLI mode).
 
 **Input**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `searchTerm` | string | Yes | Text to search for |
+| Parameter    | Type   | Required | Description            |
+|--------------|--------|----------|------------------------|
+| `searchTerm` | string | Yes      | Text to search for     |
 
-**Output**:
+**Output**: Returns search results from the app's search index.
+
+---
+
+### upsertNodes
+
+Create or edit pages, blocks, tags, and properties in a single batch operation. This tool replaces separate add/update tools with a unified operations-based approach.
+
+**Input**:
+| Parameter    | Type    | Required | Description                                                  |
+|--------------|---------|----------|--------------------------------------------------------------|
+| `operations` | array   | Yes      | Array of operation objects (see below)                       |
+| `dry-run`    | boolean | No       | Validate without committing changes to the database          |
+
+Each operation object has:
+| Field        | Type   | Description                                                        |
+|--------------|--------|--------------------------------------------------------------------|
+| `operation`  | string | `"add"` or `"edit"`                                                |
+| `entityType` | string | `"block"`, `"page"`, `"tag"`, or `"property"`                     |
+| `id`         | string | For `edit`: must be a UUID string. For `add`: a temporary unique ID if referenced by later operations |
+| `data`       | object | Fields to set (see below)                                          |
+
+The `data` object can contain:
+| Field                    | Description                                           |
+|--------------------------|-------------------------------------------------------|
+| `title`                  | Page/tag/property name or block content               |
+| `page-id`               | Page UUID string (required when adding a block)        |
+| `tags`                   | Array of tag UUID strings                             |
+| `property-type`          | Property type (e.g., `"string"`, `"node"`)            |
+| `property-cardinality`   | `"one"` or `"many"`                                   |
+| `property-classes`       | Array of allowed tag UUIDs or names                   |
+| `class-extends`          | Array of parent tag UUIDs or names                    |
+| `class-properties`       | Array of property UUIDs or names                      |
+
+**Example** -- Add a block to an existing page:
 
 ```json
 {
-  "blocks": [
+  "operations": [
     {
-      "uuid": "block-uuid",
-      "content": "Matching content",
-      "page": "Page Name"
+      "operation": "add",
+      "entityType": "block",
+      "id": null,
+      "data": {
+        "page-id": "119268a6-704f-4e9e-8c34-36dfc6133729",
+        "title": "New block text"
+      }
     }
   ]
 }
 ```
 
----
-
-### addToPage
-
-Add a new block to a page.
-
-**Input**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `pageName` | string | Yes | Target page name |
-| `content` | string | Yes | Block content |
-| `force` | boolean | No | Create page if not exists |
-
-**Output**:
+**Example** -- Create a new page with a block:
 
 ```json
 {
-  "success": true,
-  "blockUUID": "new-block-uuid"
+  "operations": [
+    {
+      "operation": "add",
+      "entityType": "page",
+      "id": "temp-Inbox",
+      "data": { "title": "Inbox" }
+    },
+    {
+      "operation": "add",
+      "entityType": "block",
+      "data": {
+        "page-id": "temp-Inbox",
+        "title": "My first block"
+      }
+    }
+  ]
 }
 ```
 
----
-
-### updateBlock
-
-Update an existing block's content.
-
-**Input**:
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `blockUUID` | string | Yes | Block UUID |
-| `content` | string | Yes | New content |
-
-**Output**:
-
-```json
-{
-  "success": true
-}
-```
+**Limitations**: Editing pages, tags, and properties is not yet supported; only blocks can be edited.
 
 ---
 
 ### listTags
 
-Get all tags/classes in the graph.
+List all tags/classes in the graph.
 
-**Input**: None
+**Input**:
+| Parameter | Type    | Required | Description                                              |
+|-----------|---------|----------|----------------------------------------------------------|
+| `expand`  | boolean | No       | Include additional detail (parents, tag properties, etc) |
 
-**Output**:
+**Output** (default, without `expand`):
 
 ```json
-{
-  "tags": [
-    {
-      "name": "Tag Name",
-      "uuid": "tag-uuid",
-      "count": 42
-    }
-  ]
-}
+[
+  {
+    "block/title": "Tag Name",
+    "block/uuid": "tag-uuid"
+  }
+]
 ```
 
 ---
 
 ### listProperties
 
-Get all properties defined in the graph.
+List all properties defined in the graph.
 
-**Input**: None
+**Input**:
+| Parameter | Type    | Required | Description                                                |
+|-----------|---------|----------|------------------------------------------------------------|
+| `expand`  | boolean | No       | Include additional detail (type, cardinality, etc)         |
 
-**Output**:
+**Output** (default, without `expand`):
 
 ```json
-{
-  "properties": [
-    {
-      "name": "property-name",
-      "type": "string",
-      "cardinality": "one"
-    }
-  ]
-}
+[
+  {
+    "block/title": "property-name",
+    "block/uuid": "property-uuid"
+  }
+]
 ```
-
----
-
-## MCP Resources
-
-Resources provide direct URI-based access to content:
-
-| URI Pattern                  | Description           |
-| ---------------------------- | --------------------- |
-| `logseq://page/{pageName}`   | Access specific page  |
-| `logseq://block/{blockUUID}` | Access specific block |
-| `logseq://graph`             | Access graph metadata |
-
----
-
-## MCP Prompts
-
-Pre-built AI workflows:
-
-### search-and-summarize
-
-Search and summarize a topic from your knowledge base.
-
-**Parameters**:
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `topic` | string | Subject to search for |
-| `depth` | string | How detailed (optional) |
-
-**Example**:
-
-```
-Use the search-and-summarize prompt to summarize everything about machine learning.
-```
-
-### create-page-structure
-
-Generate structured template for a new page.
-
-**Parameters**:
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `pageType` | string | Type (e.g., "meeting notes") |
-| `pageName` | string | Name for new page |
-| `sections` | array | Custom sections (optional) |
 
 ---
 
@@ -323,7 +313,7 @@ Add to `claude_desktop_config.json`:
     "logseq": {
       "command": "node",
       "args": [
-        "/path/to/logseq/deps/cli/dist/logseq.js",
+        "/path/to/logseq/deps/cli/cli.mjs",
         "mcp-server",
         "-g",
         "/path/to/your/graph",
@@ -356,14 +346,11 @@ Add to Cline MCP settings:
 
 ```javascript
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
-import { StreamableHTTPClientTransport } from '@anthropic-ai/sdk/mcp'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
-const transport = new StreamableHTTPClientTransport({
-  url: 'http://127.0.0.1:12315/mcp',
-  headers: {
-    Authorization: 'Bearer YOUR_TOKEN',
-  },
-})
+const transport = new StreamableHTTPClientTransport(
+  new URL('http://127.0.0.1:12315/mcp')
+)
 
 const client = new Client({
   name: 'my-client',
@@ -379,14 +366,16 @@ const pages = await client.callTool({
 })
 ```
 
+Note: When connecting to the desktop app's MCP endpoint, requests must include an `Authorization: Bearer YOUR_TOKEN` header (handled by the HTTP API server's auth layer).
+
 ---
 
 ## Troubleshooting
 
 ### MCP Not Available
 
-1. Ensure MCP Server is enabled in Settings → AI
-2. Check HTTP server is running (API icon should be green)
+1. Ensure MCP Server is enabled in Settings -> AI
+2. Check HTTP API server is running (API icon should be green)
 3. Verify token authentication
 
 ### Connection Refused
@@ -397,12 +386,9 @@ const pages = await client.callTool({
 
 ### Tool Errors
 
-```json
-{ "error": "Page not found" }
-```
-
-- Verify page name is correct
-- Check page exists in graph
+- Verify page name is correct and page exists in graph
+- Use `dry-run` option with `upsertNodes` to validate operations before committing
+- Use `--debug-tool` CLI option to test individual tools directly
 
 ---
 
@@ -414,4 +400,4 @@ const pages = await client.callTool({
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_

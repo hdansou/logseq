@@ -1,5 +1,7 @@
 # Plugin Development Guides
 
+> **Last revised:** 2026-03-10
+
 Comprehensive guides for developing Logseq plugins in TypeScript, JavaScript, or ClojureScript.
 
 ## 🚀 Quick Start
@@ -115,7 +117,7 @@ Full API reference: [../../04-api-reference/plugin-api/](../../04-api-reference/
 
 ### Required Tools
 
-- Node.js (v16+)
+- Node.js (v18+)
 - npm or yarn
 - TypeScript (for TS plugins)
 - Clojure tooling (for CLJS plugins)
@@ -205,7 +207,7 @@ Before publishing:
 
 - **Maintainer**: Plugin Developer Community
 - **Review**: As needed based on API changes
-- **Last Updated**: November 15, 2025
+- **Last Updated**: March 10, 2026
 
 ---
 

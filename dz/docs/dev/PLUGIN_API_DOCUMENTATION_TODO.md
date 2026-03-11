@@ -1,5 +1,7 @@
 # Plugin API Documentation Task List
 
+> **Last revised:** 2026-03-10
+
 > **Goal**: Improve TypeDoc documentation coverage for Logseq Plugin APIs to enhance developer experience and ensure all methods appear properly on https://plugins-doc.logseq.com
 
 ## Current Status (Updated: October 26, 2025)

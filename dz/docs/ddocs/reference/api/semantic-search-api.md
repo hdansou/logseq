@@ -3,7 +3,7 @@ title: 'Semantic Search API'
 description: "API reference for Logseq's semantic search functionality"
 type: reference
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [db]
@@ -16,11 +16,13 @@ relatedDocs:
 
 # Semantic Search API
 
+> **Last revised:** 2026-03-10
+
 > Complete API reference for Logseq's semantic search system.
 
 ## Overview
 
-The semantic search API is available through the DB Worker thread API and the CLI.
+The semantic search API is available through the DB Worker thread API. The CLI provides basic text search but does not currently use semantic/vector search.
 
 ---
 
@@ -33,16 +35,16 @@ Execute a semantic search query.
 **Call:**
 
 ```clojure
-(state/<invoke-db-worker :thread-api/vec-search-search repo query limit)
+(state/<invoke-db-worker :thread-api/vec-search-search repo query nums-neighbors)
 ```
 
 **Parameters:**
 
-| Name    | Type   | Description                   |
-| ------- | ------ | ----------------------------- |
-| `repo`  | string | Graph identifier              |
-| `query` | string | Search query text             |
-| `limit` | number | Maximum results (default: 10) |
+| Name             | Type   | Description                          |
+| ---------------- | ------ | ------------------------------------ |
+| `repo`           | string | Graph identifier                     |
+| `query`          | string | Search query text                    |
+| `nums-neighbors` | number | Number of nearest neighbors to return |
 
 **Returns:**
 
@@ -67,31 +69,102 @@ Execute a semantic search query.
 
 ---
 
-### `vec-search-enabled?`
+### `vec-search-embedding-model-info`
 
-Check if semantic search is available for a graph.
+Get information about available and currently loaded embedding models.
 
 **Call:**
 
 ```clojure
-(state/<invoke-db-worker :thread-api/vec-search-enabled? repo)
+(state/<invoke-db-worker :thread-api/vec-search-embedding-model-info repo)
 ```
 
-**Returns:** `boolean`
+**Returns:**
+
+```clojure
+{:available-model-names ["Xenova/all-MiniLM-L6-v2"]
+ :graph-text-embedding-model-name "Xenova/all-MiniLM-L6-v2"}
+```
 
 ---
 
-### `vec-search-reindex`
+### `vec-search-embedding-graph`
 
-Force re-indexing of the semantic search index.
+Index (or re-index) the graph for semantic search.
 
 **Call:**
 
 ```clojure
-(state/<invoke-db-worker :thread-api/vec-search-reindex repo)
+(state/<invoke-db-worker :thread-api/vec-search-embedding-graph repo opts)
+```
+
+**Parameters:**
+
+| Name   | Type   | Description                                                |
+| ------ | ------ | ---------------------------------------------------------- |
+| `repo` | string | Graph identifier                                           |
+| `opts` | map    | Options map. `{:reset-embedding? true}` to force re-index. |
+
+**Returns:** `nil`
+
+---
+
+### `vec-search-cancel-indexing`
+
+Cancel an in-progress indexing operation.
+
+**Call:**
+
+```clojure
+(state/<invoke-db-worker :thread-api/vec-search-cancel-indexing repo)
 ```
 
 **Returns:** `nil`
+
+---
+
+### `vec-search-update-index-info`
+
+Refresh the vector search index state (current count, dimensions, etc.).
+
+**Call:**
+
+```clojure
+(state/<invoke-db-worker :thread-api/vec-search-update-index-info repo)
+```
+
+**Returns:** `nil`
+
+---
+
+### `vec-search-load-model`
+
+Load a specific embedding model for the graph.
+
+**Call:**
+
+```clojure
+(state/<invoke-db-worker :thread-api/vec-search-load-model repo model-name)
+```
+
+**Parameters:**
+
+| Name         | Type   | Description                             |
+| ------------ | ------ | --------------------------------------- |
+| `repo`       | string | Graph identifier                        |
+| `model-name` | string | Model name (e.g. "Xenova/all-MiniLM-L6-v2") |
+
+---
+
+### `vec-search-init-embedding-model`
+
+Initialize the embedding model previously configured for the graph.
+
+**Call:**
+
+```clojure
+(state/<invoke-db-worker :thread-api/vec-search-init-embedding-model repo)
+```
 
 ---
 
@@ -126,48 +199,51 @@ Internal search function called by the worker.
 **Behavior:**
 
 - Returns empty if indexing is in progress
-- Filters results with distance ≥ 0.6
-- Skips invalid labels (NaN, overflow)
+- Excludes results with distance >= 0.6 (lower distance = better match)
+- Skips invalid labels (NaN, overflow past `2147483647`)
 
 ---
 
-### `task--index-embedding`
+### `embedding-graph!`
 
-Index blocks for semantic search.
+Entry point for indexing blocks for semantic search.
 
 ```clojure
-(task--index-embedding repo)
+(embedding-graph! repo {:keys [reset-embedding?]})
 ```
 
 **Behavior:**
 
-- Finds stale blocks (updated since last embedding)
-- Batches blocks (500 chars per batch)
-- Generates embeddings via inference worker
-- Stores in HNSW index
-- Updates `hnsw-label-updated-at` timestamps
+- Checks that a model name has been set (via `logseq.kv/graph-text-embedding-model-name`)
+- Marks blocks with `hnsw-label-updated-at` = 0 if no prior embedding exists or if resetting
+- Delegates to `task--embedding-stale-blocks!` which:
+  - Finds stale blocks (where `block/updated-at` > `hnsw-label-updated-at`)
+  - Partitions blocks by text size (500 characters per partition)
+  - Generates embeddings via inference worker (`text-embedding+store!`)
+  - Writes HNSW index to storage
+  - Updates `hnsw-label-updated-at` timestamps
 
 ---
 
 ## Inference Worker API
 
-Located in `frontend.inference-worker.text-embedding`.
+Located in `frontend.inference-worker.inference-worker` (class `InferenceWorker`), backed by `frontend.inference-worker.text-embedding`.
 
 ### `search`
 
-Execute vector similarity search.
+Execute vector similarity search (k-nearest-neighbor).
 
 ```javascript
-inferWorker.search(repo, queryString, numNeighbors)
+inferWorker.search(repo, queryString, numsNeighbors)
 ```
 
 **Parameters:**
 
-| Name           | Type   | Description         |
-| -------------- | ------ | ------------------- |
-| `repo`         | string | Graph identifier    |
-| `queryString`  | string | Query text          |
-| `numNeighbors` | number | K nearest neighbors |
+| Name             | Type   | Description         |
+| ---------------- | ------ | ------------------- |
+| `repo`           | string | Graph identifier    |
+| `queryString`    | string | Query text          |
+| `numsNeighbors`  | number | K nearest neighbors |
 
 **Returns:**
 
@@ -180,29 +256,72 @@ inferWorker.search(repo, queryString, numNeighbors)
 
 ---
 
-### `addBlocks`
+### `text-embedding+store!`
 
-Add block embeddings to the index.
+Generate embeddings for text and add them to the HNSW index.
 
 ```javascript
-inferWorker.addBlocks(repo, blocks)
+inferWorker["text-embedding+store!"](repo, textArray, labels, replaceDeleted)
 ```
 
 **Parameters:**
 
-| Name     | Type   | Description                         |
-| -------- | ------ | ----------------------------------- |
-| `repo`   | string | Graph identifier                    |
-| `blocks` | array  | `[{id: number, text: string}, ...]` |
+| Name              | Type       | Description                              |
+| ----------------- | ---------- | ---------------------------------------- |
+| `repo`            | string     | Graph identifier                         |
+| `textArray`       | string[]   | Array of block text strings              |
+| `labels`          | number[]   | Array of `db/id` values (HNSW labels)    |
+| `replaceDeleted`  | boolean    | Whether to replace previously deleted items |
 
 ---
 
-### `removeBlocks`
+### `delete-labels`
 
-Remove blocks from the index.
+Remove items from the HNSW index by label.
 
 ```javascript
-inferWorker.removeBlocks(repo, blockIds)
+inferWorker["delete-labels"](repo, labels)
+```
+
+---
+
+### `force-reset-index!`
+
+Remove all data from the HNSW index and reinitialize it.
+
+```javascript
+inferWorker["force-reset-index!"](repo)
+```
+
+---
+
+### `write-index!`
+
+Persist the HNSW index to storage (OPFS).
+
+```javascript
+inferWorker["write-index!"](repo)
+```
+
+---
+
+### `index-info`
+
+Get current index statistics.
+
+```javascript
+inferWorker["index-info"](repo)
+```
+
+**Returns:**
+
+```javascript
+{
+  currentCount: number,   // Number of items in index
+  maxElements: number,    // Current capacity
+  efSearch: number,       // Query-time ef parameter
+  numDims: number         // Embedding dimensions
+}
 ```
 
 ---
@@ -215,66 +334,58 @@ inferWorker.removeBlocks(repo, blockIds)
 logseq search [options] <query>
 ```
 
+The CLI search command performs basic text matching on `:block/title`. It does not use semantic/vector search. It supports two modes: local graph search (`-g`) and in-app API search (`-a`).
+
 **Options:**
 
-| Flag                 | Description               |
-| -------------------- | ------------------------- |
-| `-g, --graph <name>` | Graph to search           |
-| `-l, --limit <n>`    | Max results (default: 20) |
-| `-p, --pages-only`   | Only search page titles   |
+| Flag                              | Description                              |
+| --------------------------------- | ---------------------------------------- |
+| `-g, --graph <name>`              | Local graph to search                    |
+| `-l, --limit <n>`                 | Max results (default: 100)               |
+| `-r, --raw`                       | Print raw response                       |
+| `-a, --api-server-token <token>`  | API server token to search in-app graph  |
 
 **Examples:**
 
 ```bash
-# Basic search (uses semantic if enabled)
-logseq search "machine learning"
-
-# Search specific graph
+# Search a local graph
 logseq search -g my-notes "project ideas"
 
+# Search with API (in-app graph)
+logseq search -a <token> "machine learning"
+
 # Limit results
-logseq search -l 5 "important tasks"
-```
-
-**Output:**
-
-```
-Results for "machine learning":
-
-1. [Page: AI Research]
-   Block: Introduction to neural networks...
-   Score: 0.92 (keyword: 0.95, semantic: 0.78)
-
-2. [Page: Study Notes]
-   Block: Deep learning fundamentals...
-   Score: 0.85 (keyword: 0.0, semantic: 0.85)
+logseq search -g my-notes -l 5 "important tasks"
 ```
 
 ---
 
 ## Search Result Structure
 
+When semantic search is active, the in-app combined search produces results with the following fields:
+
 ### Combined Result
 
 ```clojure
-{:id "block-uuid"
- :db/id 12345
- :block/uuid #uuid "..."
- :block/title "Block content"
- :combined-score 0.85        ; Final ranking
- :keyword-score 0.92         ; FTS match score
- :semantic-score 0.78        ; Vector similarity
- :page {:block/name "page-name"}}
+{:id "block-uuid-string"
+ :title "Block content"
+ :combined-score 0.85        ; Final ranking score
+ :keyword-score 0.92         ; FTS/fuzzy match score
+ :semantic-score 0.78        ; Vector similarity (1 / (1 + distance))
+ :page "page-uuid-string"}
 ```
 
 ### Scoring Formula
 
 ```
-combined_score = (0.9 × normalized_keyword)
-               + (0.1 × semantic_score)
-               + page_bonus
-               + tag_bonus
+combined_score = (0.9 x normalized_keyword_score)
+               + (0.1 x semantic_score)
+               + bonus
 ```
+
+Where `semantic_score = 1.0 / (1.0 + cosine_distance)`.
+
+**Normalization:** Keyword scores are min-max normalized across the result set. Page blocks receive a +2 boost to the raw keyword score before normalization.
 
 **Bonuses:**
 
@@ -285,21 +396,17 @@ combined_score = (0.9 × normalized_keyword)
 
 ## Configuration
 
-### Graph Settings
+### Model Selection
 
-In `config.edn`:
+Semantic search is configured per-graph through the Logseq UI (Settings > Features). The selected model name is stored in the database as `logseq.kv/graph-text-embedding-model-name`.
 
-```clojure
-{:feature/semantic-search? true
- :semantic-search/model "Xenova/all-MiniLM-L6-v2"
- :semantic-search/batch-size 100}
-```
+There are no `config.edn` settings for semantic search. Model loading and index management are handled through the thread API calls described above.
 
 ### Model Options
 
-| Model              | Size | Dimensions | Notes             |
-| ------------------ | ---- | ---------- | ----------------- |
-| `all-MiniLM-L6-v2` | 80MB | 384        | Default, balanced |
+| Model                    | Dimensions | Notes             |
+| ------------------------ | ---------- | ----------------- |
+| `Xenova/all-MiniLM-L6-v2` | 384        | Default, balanced |
 
 ---
 
@@ -309,15 +416,16 @@ In `config.edn`:
 
 - **Algorithm**: Hierarchical Navigable Small World
 - **Library**: hnswlib-wasm
-- **Storage**: OPFS (browser) / file (CLI)
+- **Distance metric**: cosine
+- **Storage**: OPFS (Origin Private File System in browser)
 
 ### Index Parameters
 
 | Parameter      | Value | Description               |
 | -------------- | ----- | ------------------------- |
 | M              | 16    | Max connections per layer |
-| efConstruction | 200   | Build-time neighbors      |
-| efSearch       | 50    | Query-time neighbors      |
+| efConstruction | 200   | Build-time search depth   |
+| efSearch       | 32    | Query-time search depth   |
 
 ---
 
@@ -373,4 +481,4 @@ In `config.edn`:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

@@ -1,5 +1,7 @@
 # Feature Documentation
 
+> **Last revised:** 2026-03-10
+
 Deep-dive documentation for specific Logseq features and subsystems.
 
 ## Overview
@@ -131,8 +133,8 @@ Each feature folder has its own maintainer:
 
 ### Last Updated
 
-- Most docs: November 15, 2025
-- Schema docs: October 2025 (schema version 65.12)
+- Most docs: March 10, 2026
+- Schema docs: March 2026 (schema version 65.22)
 
 ## Related Documentation
 

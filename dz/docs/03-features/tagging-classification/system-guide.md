@@ -1,5 +1,7 @@
 # Enhanced Tagging and Classification System
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq features a sophisticated tagging and classification system that represents a significant evolution in personal knowledge management. The system introduces **class-based hierarchies**, **property inheritance**, and **advanced query capabilities** through a dual-mode architecture that supports both traditional file-based tagging and modern database-driven classification systems.
@@ -60,7 +62,7 @@ The database-based system uses an enhanced DataScript schema:
     :block/closed-value-property {:db/valueType :db.type/ref
                                   :db/cardinality :db.cardinality/many}}))
 
-;; Current schema version: 65.10
+;; Current schema version: 65.22
 ```
 
 ### Class Entity Structure
@@ -145,6 +147,12 @@ Logseq provides a rich set of built-in classes organized in hierarchical relatio
     :schema {:properties [:logseq.property.fsrs/state :logseq.property.fsrs/due]}
     :description "Spaced repetition flashcards"}
 
+   :logseq.class/Cards
+   {:title "Cards"
+    :properties {:logseq.property/icon {:type :tabler-icon :id "search"}
+                 :logseq.property.class/extends :logseq.class/Query}
+    :description "Card collection queries (extends Query)"}
+
    :logseq.class/Asset
    {:title "Asset"
     :properties {:logseq.property.class/hide-from-node true
@@ -182,12 +190,17 @@ Logseq provides a rich set of built-in classes organized in hierarchical relatio
     :logseq.class/Root :logseq.class/Asset})
 ```
 
-**System Classes** (reserved for internal use):
+**Private Classes** (hidden from direct user usage):
 
 ```clojure
+;; private-tags = (set/union (disj internal-tags :logseq.class/Root)
+;;                           #{:logseq.class/Journal :logseq.class/Whiteboard
+;;                             :logseq.class/Pdf-annotation})
+;; Expands to:
 (def private-tags
-  #{:logseq.class/Journal :logseq.class/Whiteboard :logseq.class/Asset
-    :logseq.class/Code-block :logseq.class/Quote-block :logseq.class/Math-block})
+  #{:logseq.class/Page :logseq.class/Property :logseq.class/Tag
+    :logseq.class/Asset :logseq.class/Journal :logseq.class/Whiteboard
+    :logseq.class/Pdf-annotation})
 ```
 
 ## Class Inheritance System
@@ -305,7 +318,7 @@ Logseq implements a comprehensive property type system with validation:
 ;; Internal system property types
 (def internal-built-in-property-types
   "Valid property types only for use by internal built-in-properties"
-  #{:keyword :map :coll :any :entity :class :page :property :string :raw-number})
+  #{:keyword :map :coll :any :entity :class :page :property :string :json :raw-number})
 ```
 
 ### Property Validation Schemas

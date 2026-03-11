@@ -1,5 +1,7 @@
 # Logseq Command Palette Data Extraction - Execution Plan
 
+> **Last revised:** 2026-03-10
+
 ## Investigation Summary
 
 Following the [Code Detective Investigation Framework](../../.github/prompts/code-detective-investigation.prompt.md), I conducted a comprehensive investigation of Logseq's command palette system to understand how commands are registered, stored, and can be extracted.

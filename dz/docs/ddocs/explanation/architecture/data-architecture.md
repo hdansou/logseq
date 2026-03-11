@@ -2,7 +2,7 @@
 title: 'Data Architecture'
 description: 'Understanding how Logseq stores and manages knowledge graph data'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 category: architecture
 relatedDocs:
@@ -14,6 +14,8 @@ relatedDocs:
 ---
 
 # Data Architecture
+
+> **Last revised:** 2026-03-10
 
 > Understanding how Logseq structures, stores, and queries your knowledge.
 
@@ -35,7 +37,7 @@ In Logseq, all data is represented as entities:
 | **Block**    | Unit of content      | content, parent, children |
 | **Property** | Metadata field       | type, cardinality, schema |
 | **Class**    | Category/tag         | extends, properties       |
-| **Asset**    | Attached file        | type, size, checksum      |
+| **Asset**    | Attached file        | asset/type, asset/size, asset/checksum |
 
 ### Entity-Attribute-Value (EAV)
 
@@ -128,6 +130,7 @@ Properties are first-class entities in database graphs:
 ```clojure
 {:db/ident :user.property/priority
  :block/title "Priority"
+ :block/tags [:logseq.class/Property]
  :logseq.property/type :default  ; or :number, :date, etc.
  :db/cardinality :db.cardinality/one}
 ```
@@ -149,12 +152,17 @@ Properties are first-class entities in database graphs:
 Properties can have predefined options:
 
 ```clojure
-{:db/ident :logseq.property/status
- :closed-values
- [{:db/ident :logseq.property/status.todo :value "Todo"}
-  {:db/ident :logseq.property/status.doing :value "Doing"}
-  {:db/ident :logseq.property/status.done :value "Done"}]}
+;; :logseq.property/status has these closed values:
+;; Each is a separate entity linked via :block/closed-value-property
+[{:db/ident :logseq.property/status.backlog  :block/title "Backlog"}
+ {:db/ident :logseq.property/status.todo     :block/title "Todo"}
+ {:db/ident :logseq.property/status.doing    :block/title "Doing"}
+ {:db/ident :logseq.property/status.in-review :block/title "In Review"}
+ {:db/ident :logseq.property/status.done     :block/title "Done"}
+ {:db/ident :logseq.property/status.canceled :block/title "Canceled"}]
 ```
+
+Closed value entities reference back to their property via `:block/closed-value-property`.
 
 ---
 
@@ -167,24 +175,35 @@ Classes categorize entities and define schemas:
 ```clojure
 {:db/ident :logseq.class/Task
  :block/title "Task"
- :logseq.property.class/extends [:logseq.class/Root]
- :schema {:properties [:logseq.property/status
-                       :logseq.property/priority
-                       :logseq.property/deadline]}}
+ :block/tags [:logseq.class/Tag]
+ ;; schema properties defined during graph creation:
+ ;; :logseq.property/status, :logseq.property/priority,
+ ;; :logseq.property/deadline, :logseq.property/scheduled
+ }
 ```
+
+Note: User-created classes automatically extend `:logseq.class/Root` via `:logseq.property.class/extends`. Built-in classes like Task do not set an explicit extends.
 
 ### Inheritance
 
 Classes can extend other classes:
 
 ```
-Root
-├── Page
-│   ├── Journal
-│   └── Whiteboard
-├── Task
-├── Card
-└── Asset
+Built-in classes (all are tagged :logseq.class/Tag):
+  Root            (top-level, user classes extend this by default)
+  Tag
+  Property
+  Page
+  ├── Journal     (extends Page)
+  └── Whiteboard  (extends Page, deprecated)
+  Task
+  Query
+  ├── Cards       (extends Query)
+  Card
+  Asset
+  Template
+  Code-block, Quote-block, Math-block
+  Pdf-annotation
 ```
 
 ---
@@ -261,13 +280,21 @@ DataScript Transaction
 
 ### Indexed Attributes
 
-| Attribute     | Index Type | Purpose               |
-| ------------- | ---------- | --------------------- |
-| `:block/uuid` | Unique     | Fast UUID lookup      |
-| `:block/name` | Index      | Page name search      |
-| `:block/refs` | Many-ref   | Backlink queries      |
-| `:block/tags` | Many-ref   | Class filtering       |
-| `:db/ident`   | Unique     | Property/class lookup |
+| Attribute          | Index Type | Purpose               |
+| ------------------ | ---------- | --------------------- |
+| `:block/uuid`      | Unique     | Fast UUID lookup      |
+| `:block/name`      | Index      | Page name search (lowercase, not unique) |
+| `:block/title`     | Index      | Original page name    |
+| `:block/refs`      | Many-ref   | Backlink queries      |
+| `:block/tags`      | Many-ref   | Class filtering       |
+| `:block/parent`    | Ref+Index  | Tree traversal        |
+| `:block/page`      | Ref+Index  | Page membership       |
+| `:block/link`      | Ref+Index  | Tag/embed links       |
+| `:block/order`     | Index      | Sibling ordering      |
+| `:block/created-at`| Index      | Time-based queries    |
+| `:block/updated-at`| Index      | Time-based queries    |
+| `:db/ident`        | Unique     | Property/class lookup |
+| `:file/path`       | Unique     | File lookup (file graphs) |
 
 ### Query Performance
 
@@ -296,9 +323,8 @@ DataScript Transaction
 ### Transaction Metadata
 
 ```clojure
-{:tx-data [...]
- :tx-meta {:outliner-op :save-block
-           :undo-id 12345}}
+;; Transactions are submitted with metadata:
+{:outliner-op :save-block}  ; or :insert-blocks, :delete-blocks, :move-blocks, etc.
 ```
 
 ---
@@ -320,20 +346,17 @@ Each transaction can be reversed by applying its inverse.
 
 ### Malli Schema
 
-Database graphs validate all entities:
+Database graphs validate entities using Malli schemas defined in `logseq.db.frontend.malli-schema`. Validation covers entity structure, property values, and `:db/ident` namespace correctness.
 
 ```clojure
-;; Page must have these attributes
-[:map
- [:block/uuid uuid?]
- [:block/name string?]
- [:block/title string?]
- [:block/created-at number?]]
+;; Example: block order must be a valid fractional index string
+;; Property values are validated per property type
+;; :db/ident namespaces must follow naming conventions
 ```
 
 ### Validation Points
 
-1. **On transaction**: Before committing
+1. **On graph open**: Validates and auto-fixes invalid blocks
 2. **On import**: When loading external data
 3. **On sync**: When receiving remote changes
 
@@ -364,4 +387,4 @@ Database graphs validate all entities:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

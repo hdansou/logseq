@@ -2,7 +2,7 @@
 title: 'HTTP API Reference'
 description: "Reference for Logseq's HTTP Server API for external application integration"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
@@ -16,6 +16,8 @@ relatedDocs:
 ---
 
 # HTTP API Reference
+
+> **Last revised:** 2026-03-10
 
 > Complete reference for Logseq's HTTP Server API, enabling external applications to interact with your knowledge graph programmatically.
 
@@ -34,11 +36,15 @@ The HTTP Server API provides REST-like access to Logseq's plugin API methods. It
 
 ## Quick Reference
 
-| Endpoint    | Purpose               | Auth Required |
-| ----------- | --------------------- | ------------- |
-| `GET /`     | HTML documentation    | No            |
-| `POST /api` | Main API endpoint     | Yes           |
-| `POST /mcp` | MCP protocol endpoint | Yes           |
+| Endpoint      | Purpose                          | Auth Required |
+| ------------- | -------------------------------- | ------------- |
+| `GET /`       | HTML documentation               | No            |
+| `POST /api`   | Main API endpoint                | Yes           |
+| `POST /mcp`   | MCP Streamable HTTP endpoint     | Yes           |
+| `GET /mcp`    | MCP SSE transport endpoint       | Yes           |
+| `DELETE /mcp` | MCP session termination endpoint | Yes           |
+
+> **Note:** The `/mcp` endpoints are only available when the MCP Server is enabled in Settings.
 
 ---
 
@@ -151,13 +157,13 @@ The HTTP API exposes all Logseq Plugin SDK methods. Organized by namespace:
 | ------------------------ | ---------------------- | -------------------------------- |
 | `getCurrentGraph`        | Get current graph info | -                                |
 | `getUserConfigs`         | Get user configuration | -                                |
-| `getInfo`                | Get app info           | -                                |
+| `getInfo`                | Get app info           | `key?`                           |
 | `pushState`              | Navigate to route      | `type`, `opts`                   |
 | `replaceState`           | Replace current route  | `type`, `opts`                   |
-| `showMsg`                | Show notification      | `content`, `status?`, `opts?`    |
+| `setLeftSidebarVisible`  | Toggle left sidebar    | `visible`                        |
 | `setRightSidebarVisible` | Toggle right sidebar   | `visible`                        |
-| `registerCommand`        | Register command       | `name`, `keybinding`, `callback` |
-| `registerCommandPalette` | Add to command palette | `action`                         |
+| `registerCommand`        | Register command       | `type`, `opts`, `action`         |
+| `registerCommandPalette` | Add to command palette | `opts`, `action`                 |
 
 ### logseq.Editor
 
@@ -177,7 +183,7 @@ The HTTP API exposes all Logseq Plugin SDK methods. Organized by namespace:
 | `moveBlock`           | Move block               | `srcBlock`, `targetBlock`, `opts?` |
 | `insertBatchBlock`    | Insert multiple blocks   | `srcBlock`, `blocks`, `opts?`      |
 | `getBlockProperty`    | Get block property       | `block`, `key`                     |
-| `setBlockProperty`    | Set block property       | `block`, `key`, `value`            |
+| `upsertBlockProperty` | Set block property       | `block`, `key`, `value`            |
 | `removeBlockProperty` | Remove block property    | `block`, `key`                     |
 | `getBlockProperties`  | Get all block properties | `block`                            |
 | `scrollToBlockInPage` | Scroll to block          | `pageName`, `blockId`, `opts?`     |
@@ -190,15 +196,7 @@ The HTTP API exposes all Logseq Plugin SDK methods. Organized by namespace:
 | ----------------- | ------------------- | ------------------ |
 | `datascriptQuery` | Run Datalog query   | `query`, `inputs?` |
 | `q`               | Shorthand for query | `query`, `inputs?` |
-| `onChanged`       | Watch DB changes    | `callback`         |
-
-### logseq.Git
-
-| Method           | Description         | Args      |
-| ---------------- | ------------------- | --------- |
-| `execCommand`    | Execute git command | `args`    |
-| `loadIgnoreFile` | Load .gitignore     | -         |
-| `saveIgnoreFile` | Save .gitignore     | `content` |
+| `customQuery`     | Run custom query    | `query`, `inputs?` |
 
 ### logseq.UI
 
@@ -213,7 +211,7 @@ The HTTP API exposes all Logseq Plugin SDK methods. Organized by namespace:
 | Method                    | Description      | Args            |
 | ------------------------- | ---------------- | --------------- |
 | `listFilesOfCurrentGraph` | List asset files | `exts?`         |
-| `builtInOpen`             | Open asset       | `path`, `opts?` |
+| `builtInOpen`             | Open asset       | `path`          |
 
 ---
 

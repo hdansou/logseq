@@ -1,8 +1,12 @@
 # Query Performance Optimization: The Complete Guide
 
+> **Last revised:** 2026-03-10
+
 **Make your Logseq queries 10-1000x faster with proper clause ordering**
 
 This guide will teach you how to write blazingly fast queries by understanding and optimizing clause ordering. Whether you're dealing with slow queries or want to build efficient ones from the start, this guide has you covered.
+
+> **Note:** The examples in this guide use file-based graph attributes (`:block/marker`, `:block/priority`, `:block/scheduled`). In DB-based graphs, these attributes do not exist; the equivalent properties live under the `:logseq.property/` namespace (e.g., `:logseq.property/priority`). The optimization principles apply equally to both graph types.
 
 ---
 
@@ -1172,8 +1176,8 @@ The same query, different order = massive performance difference.
 
 **Happy querying!**
 
-_Last updated: 2025-01-17_
-_Version: 1.0_
+_Last updated: 2026-03-10_
+_Version: 1.1_
 
 ---
 

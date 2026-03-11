@@ -1,5 +1,7 @@
 # Logseq Query Inputs: Complete Guide
 
+> **Last revised:** 2026-03-10
+
 **Master Advanced Queries with Dynamic Inputs for DB-Based Graphs**
 
 ---
@@ -24,7 +26,7 @@ Use `query::` property (**NO `{{query}}` wrapper!**):
 query:: (and [[page]])
 ```
 
-**📖 See [Query Syntax: DB vs File-Based](./query-syntax-db-vs-file.md) for complete syntax guide.**
+**See [Query Syntax: DB vs File-Based](./syntax-db-vs-file.md) for complete syntax guide.**
 
 ---
 
@@ -270,7 +272,7 @@ Context inputs provide information about the current editing context.
          :where
          [?current :block/parent ?p]
          [?sibling :block/parent ?p]
-         [(!= ?sibling ?current)]]
+         [(not= ?sibling ?current)]]
  :inputs [:current-block]}
 ```
 
@@ -676,7 +678,7 @@ Combine relative dates with timestamps for powerful time-range queries.
                   [?related :block/parent ?current]
                   ;; Siblings
                   (and [?related :block/parent ?parent]
-                       [(!= ?related ?current)])
+                       [(not= ?related ?current)])
                   ;; Parent
                   [?parent :db/id ?related])]
  :inputs [:current-block :parent-block]}
@@ -1469,8 +1471,8 @@ Shows exactly what the input resolves to.
 
 ---
 
-**Last Updated:** 2025-10-16
-**Version:** 1.0.0
+**Last Updated:** 2026-03-10
+**Version:** 1.0.1
 **Tested With:** Logseq DB-based graphs (primary), File-based graphs (compatible)
 
 ---

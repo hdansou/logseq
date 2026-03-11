@@ -1,5 +1,7 @@
 # Development Setup
 
+> **Last revised:** 2026-03-10
+
 Complete guide to setting up your Logseq plugin development environment.
 
 ## Table of Contents
@@ -134,7 +136,7 @@ Update `tsconfig.json`:
     "typescript": "^4.9.0"
   },
   "dependencies": {
-    "@logseq/libs": "^0.2.9"
+    "@logseq/libs": "^0.2.12"
   }
 }
 ```

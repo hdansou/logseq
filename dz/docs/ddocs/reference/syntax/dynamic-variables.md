@@ -2,7 +2,7 @@
 title: 'Dynamic Variables Reference'
 description: "Complete reference for Logseq's dynamic template variables (< % syntax)"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, mobile, web]
 graphType: [file, db]
@@ -14,6 +14,8 @@ relatedDocs:
 ---
 
 # Dynamic Variables Reference
+
+> **Last revised:** 2026-03-10
 
 > Complete reference for Logseq's dynamic template variables, which provide runtime resolution of dates, page references, and contextual information.
 
@@ -80,7 +82,7 @@ Returns the current time (no page reference).
 → 14:30
 ```
 
-**Note**: Time format follows your system locale settings.
+**Note**: Time is always rendered in 24-hour format (`HH:MM`). The implementation uses `hourCycle: "h23"` regardless of system locale.
 
 ### current page
 
@@ -123,7 +125,7 @@ Beyond built-in variables, you can use natural language date expressions. These 
 → [[2026-02-28]]
 
 <% end of month %>
-→ [[2026-01-31]]
+→ [[2026-01-31]]  (may not work in all chrono-node versions)
 ```
 
 ### Supported Expressions
@@ -135,7 +137,7 @@ Beyond built-in variables, you can use natural language date expressions. These 
 | Relative weeks  | `next week`, `2 weeks ago`                     |
 | Relative months | `next month`, `3 months from now`              |
 | Specific dates  | `March 15`, `Jan 1 2027`                       |
-| Special         | `end of month`, `beginning of year`            |
+| Special         | `end of month`, `beginning of year` (support varies by chrono-node version) |
 
 ---
 
@@ -203,19 +205,15 @@ Dynamic variables are resolved **before** query parsing, making them useful for 
 #+END_QUERY
 ```
 
-### Alternative with Variable in Query String
+### Alternative with Variable in Simple Query
 
-```clojure
-#+BEGIN_QUERY
-{:title "Tasks Scheduled for Today"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/page ?p]
-         [?p :block/title "<% today %>"]]}
-#+END_QUERY
+Dynamic variables can also be used in simple (DSL) queries, where `resolve-dynamic-template!` is called on the query string before parsing:
+
+```
+{{query (between <% yesterday %> <% tomorrow %>)}}
 ```
 
-**Note**: Using `:inputs [:today]` is preferred over embedding `<% today %>` in the query string for better performance and cleaner syntax.
+**Note**: Using `:inputs [:today]` in advanced queries is preferred over embedding `<% today %>` in the query string. The `:today` input resolves to a date integer suitable for comparison with `:block/scheduled` and `:block/deadline`, whereas `<% today %>` resolves to a page reference string (e.g., `[[2026-01-29]]`) which is not directly comparable to date integer attributes.
 
 ---
 
@@ -247,10 +245,7 @@ Configure in Settings → Date format.
 
 ### Time Format
 
-Time follows your system locale:
-
-- 24-hour: `14:30`
-- 12-hour: `2:30 PM`
+Time is always output in 24-hour format (e.g., `14:30`). The locale is used only for formatting conventions (e.g., separator characters), not for choosing between 12-hour and 24-hour display.
 
 ---
 
@@ -326,4 +321,4 @@ The resolution is **storage-agnostic** - works identically on file and DB graphs
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_

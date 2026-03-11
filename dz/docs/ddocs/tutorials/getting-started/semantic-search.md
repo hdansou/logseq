@@ -3,7 +3,7 @@ title: 'Semantic Search'
 description: 'Learn to use AI-powered semantic search to find content by meaning'
 type: tutorial
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [db]
@@ -20,6 +20,8 @@ relatedDocs:
 ---
 
 # Semantic Search
+
+> **Last revised:** 2026-03-10
 
 > Learn to find content by meaning, not just keywords.
 
@@ -64,17 +66,19 @@ Semantic search finds meaning:
 ### Enable Feature
 
 1. Open **Settings** (gear icon)
-2. Go to **Features**
-3. Toggle **Semantic Search** ON
-4. Wait for model download (~100MB)
+2. Under **Semantic search**, find the **Local embedding model** dropdown
+3. Select a model (e.g., `Xenova/all-MiniLM-L6-v2`)
+4. Wait for model download (progress is shown inline)
+
+> **Note:** WebGPU support is required. If your browser does not support WebGPU, a warning will appear instead of the model selector.
 
 ### First-Time Setup
 
-After enabling:
+After selecting a model:
 
-1. Model downloads automatically
+1. Model files download automatically
 2. Your graph is indexed (may take minutes for large graphs)
-3. Status shows in bottom-right
+3. Indexing status shows as "Embedding..." in the header bar
 
 ---
 
@@ -96,11 +100,9 @@ Try:
 "discussions about the new product launch"
 ```
 
-### Search Command
-
-Use `/Semantic Search` on any page for dedicated search.
-
 ### CLI Search
+
+The CLI `search` command uses keyword-based (FTS) search, not semantic search. Semantic search is currently only available in the desktop app UI.
 
 ```bash
 logseq search "concepts related to learning"
@@ -112,10 +114,12 @@ logseq search "concepts related to learning"
 
 ### Hybrid Scoring
 
-Search results combine:
+Search results combine keyword and semantic scores with the following weights:
 
-- **90%**: Keyword match score
-- **10%**: Semantic similarity score
+- **0.9 weight**: Normalized keyword match score
+- **0.1 weight**: Semantic similarity score
+
+Pages and tagged blocks receive a small additional boost.
 
 ### Result Display
 
@@ -222,25 +226,22 @@ When you edit content:
 
 ### Manual Re-index
 
-If search seems off:
-
-1. Settings → Features
-2. Click "Re-index semantic search"
-3. Wait for completion
+If search seems off, use the general **Rebuild search indices** action. This rebuilds both keyword and semantic indices, including a full re-embedding of all blocks.
 
 ### What Gets Indexed
 
-✅ Indexed:
+Indexed:
 
-- Page titles
-- Block content
-- Property values
+- Block content (including page titles, which are blocks)
 
-❌ Not indexed:
+Not indexed:
 
-- System pages (logseq/\*)
 - Hidden blocks
 - Empty blocks
+- View-for blocks (internal UI blocks)
+- Description property blocks (created-from-property)
+
+> **Note:** Tags and property descriptions are not currently included in the embedding text, though support for this is planned.
 
 ---
 
@@ -263,7 +264,7 @@ If search seems off:
 For graphs with 50,000+ blocks:
 
 - Initial indexing: 5-15 minutes
-- Use "pause indexing" during intensive work
+- Indexing can be cancelled from the developer sidebar if needed
 - Results may be slightly delayed after major edits
 
 ---
@@ -284,9 +285,9 @@ For graphs with 50,000+ blocks:
 
 ### "Indexing stuck"
 
-1. Check status in bottom-right
+1. Check "Embedding..." status in the header bar
 2. Restart Logseq
-3. If persists, try re-indexing
+3. If persists, try rebuilding search indices
 
 ### "High memory usage"
 
@@ -316,7 +317,8 @@ Reduce by:
 
 - **Algorithm**: HNSW (Hierarchical Navigable Small World)
 - **Library**: hnswlib-wasm
-- **Storage**: OPFS (Origin Private File System)
+- **Distance metric**: Cosine
+- **Storage**: Emscripten virtual filesystem (persisted via IDBFS)
 
 ### Distance Threshold
 
@@ -362,4 +364,4 @@ Reduce by:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

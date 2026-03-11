@@ -1,5 +1,7 @@
 # Example Logseq Theme: "Ocean Breeze"
 
+> **Last revised:** 2026-03-10
+
 A sample theme demonstrating Logseq theme development best practices.
 
 ## Files in This Example

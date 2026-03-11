@@ -1,5 +1,7 @@
 # Logseq Plugin API Changes (October 2024 - October 2025)
 
+> **Last revised:** 2026-03-10
+
 > **For Plugin Developers**: A comprehensive list of all API changes, new features, and improvements made to the Logseq Plugin API over the past 12 months.
 
 ---
@@ -447,7 +449,7 @@ Check the [CHANGELOG](./CHANGELOG.md) regularly for new features and updates.
 ### Package Information
 
 - **npm Package**: `@logseq/libs`
-- **Current Version**: 0.2.3
+- **Current Version**: 0.2.12
 - **Latest API Version**: 0.0.17
 
 ### Community

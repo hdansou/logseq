@@ -2,10 +2,10 @@
 title: 'Create a Flashcard Deck'
 description: 'How to organize flashcards into focused study decks'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
-graphType: [file, db]
+graphType: [db]
 relatedDocs:
   tutorials:
     - '[Flashcards Basics](../../tutorials/knowledge-management/flashcards-basics.md)'
@@ -15,212 +15,131 @@ relatedDocs:
 
 # Create a Flashcard Deck
 
+> **Last revised:** 2026-03-10
+
 > How to organize flashcards into focused study decks for efficient learning.
 
-## Page-Based Decks
+Logseq uses FSRS (Free Spaced Repetition Scheduler) for its flashcard system. In DB-based graphs, cards are blocks tagged with the built-in `#Card` class, and decks are managed through `Cards` objects that contain queries.
 
-### Create a Deck Page
+## Creating Cards
 
-All cards on a page automatically form a deck:
+### Tag Blocks as Cards
+
+Add the `#Card` tag to any block to make it a flashcard. The block content is the question, and child blocks form the answer:
 
 ```markdown
-# Spanish Vocabulary
+What is H2O? #Card
+  Water
 
-## Greetings
-
-Hola #card
-Hello
-
-Buenos días #card  
-Good morning
-
-## Numbers
-
-Uno #card
-One
-
-Dos #card
-Two
+What is NaCl? #Card
+  Sodium Chloride (Salt)
 ```
 
-### Study the Deck
+You can also select multiple blocks and use the context menu or command palette to batch-tag them as `#Card`.
 
-1. Navigate to the page
-2. Use `{{cards [[Spanish Vocabulary]]}}`
-3. Or click the flashcard icon in sidebar
+### Cloze Deletions
+
+Use the `{{cloze ...}}` macro to create fill-in-the-blank cards:
+
+```markdown
+The capital of France is {{cloze Paris}} #Card
+```
+
+You can add a cue hint with a backslash separator: `{{cloze answer \\ hint}}`.
+
+Insert a cloze via the `/Cloze` slash command.
 
 ---
 
-## Tag-Based Decks
+## Opening the Flashcard Viewer
 
-### Use Tags for Categorization
+Access the flashcard review modal in one of these ways:
 
-```markdown
-What is H2O? #card #chemistry
-Water
+1. Click the flashcard icon in the left sidebar (if enabled in settings)
+2. Use the keyboard shortcut `t c`
 
-What is NaCl? #card #chemistry
-Sodium Chloride (Salt)
+The viewer shows due cards and lets you rate recall with **Again** (1), **Hard** (2), **Good** (3), or **Easy** (4).
 
-When was World War II? #card #history
-1939-1945
-```
-
-### Study by Tag
-
-Create a query for the tag:
-
-```
-{{cards [[chemistry]]}}
-```
+> **Note:** Flashcards must be enabled in **Settings > Features > Enable Flashcards** (controlled by `:feature/enable-flashcards?` in config).
 
 ---
 
-## Property-Based Decks
+## Organizing Decks with Cards Objects
+
+Logseq uses `Cards` objects (blocks tagged with the built-in `#Cards` class) to define filtered subsets of your cards. Each `Cards` object contains a query that selects which `#Card` blocks to include.
+
+### Create a Cards Object
+
+1. Open the flashcard viewer (`t c`)
+2. Click the **+** button in the viewer toolbar
+3. This creates a new `Cards` block on today's journal page with an associated query
+4. Edit the query to filter cards (e.g., `[[chemistry]]` to show only cards that reference the chemistry page)
+
+### Switch Between Decks
+
+In the flashcard viewer, use the dropdown at the top to switch between:
+
+- **All cards** -- reviews every `#Card` in the graph
+- Any named `Cards` objects you have created
+
+### Example: Tag-Based Decks
+
+Create cards with topic tags, then create `Cards` objects with queries for each topic:
+
+```markdown
+What is H2O? #Card #chemistry
+  Water
+
+What is NaCl? #Card #chemistry
+  Sodium Chloride (Salt)
+
+When was World War II? #Card #history
+  1939-1945
+```
+
+Then create a `Cards` object with query `[[chemistry]]` to study only chemistry cards.
+
+---
+
+## Property-Based Organization
 
 ### Add Properties to Cards
 
 ```markdown
-What is photosynthesis? #card
-topic:: biology
-difficulty:: medium
-source:: [[Biology Textbook]]
-The process by which plants convert light to energy
+What is photosynthesis? #Card
+  topic:: biology
+  difficulty:: medium
+  The process by which plants convert light to energy
 ```
 
-### Query by Property
-
-```clojure
-#+BEGIN_QUERY
-{:title "Medium Difficulty Cards"
- :query [:find (pull ?b [*])
-         :where [?b :block/refs ?ref]
-                [?ref :block/name "card"]
-                [?b :block/properties ?props]
-                [(get ?props :difficulty) ?d]
-                [(= ?d "medium")]]}
-#+END_QUERY
-```
-
----
-
-## Multi-Level Organization
-
-### Namespace Structure
-
-```
-Languages/Spanish/Vocabulary  ← Deck page
-Languages/Spanish/Grammar     ← Another deck
-Languages/French/Vocabulary   ← French deck
-```
-
-### Parent-Level Queries
-
-Study all Spanish cards:
-
-```
-{{cards [[Languages/Spanish]]}}
-```
-
----
-
-## Dynamic Decks
-
-### Due Today
-
-```clojure
-#+BEGIN_QUERY
-{:title "Due Today"
- :query [:find (pull ?b [*])
-         :in $ ?today
-         :where [?b :block/refs ?ref]
-                [?ref :block/name "card"]
-                [?b :block/properties ?props]
-                [(get ?props :card-next-schedule) ?date]
-                [(<= ?date ?today)]]
- :inputs [:today]}
-#+END_QUERY
-```
-
-### Recent Cards
-
-Cards created in the last week:
-
-```clojure
-{{query (and (property :card) (between [[created-at]] [[7d-ago]] [[now]]))}}
-```
-
----
-
-## Deck Templates
-
-### Create a Deck Template
-
-```markdown
-# Deck: {Name}
-
-Tags: #deck #{topic}
-
-## To Study
-
-(Add cards here)
-
-## Mastered
-
-(Move completed cards here)
-
-## Card Query
-
-{{cards [[Deck: {Name}]]}}
-
-## Stats
-
-Total cards:
-Due today:
-```
-
-### Use the Template
-
-1. Create new page
-2. Apply template
-3. Start adding cards
+Properties on card blocks can be used for personal organization and filtering.
 
 ---
 
 ## Import Cards
 
-### From Markdown
+### From Existing Notes
 
-Create cards from existing notes:
+Convert existing notes into flashcards:
 
-1. Find key concepts
-2. Add `#card` tag
-3. Ensure answer is indented child
+1. Find key concepts in your notes
+2. Add the `#Card` tag to those blocks
+3. Ensure the answer is in indented child blocks
 
 ### Bulk Creation
 
-Use search and replace:
-
-- Find: `Key concept:`
-- Replace with: `Key concept: #card`
+Select multiple blocks, then use the command palette or right-click context menu to batch-tag them as `#Card`.
 
 ---
 
-## Export Decks
+## FSRS Scheduling
 
-### Export to Markdown
+Logseq uses the FSRS algorithm to schedule card reviews. The scheduling state is stored in two built-in properties on each card block:
 
-1. Navigate to deck page
-2. Use `Cmd/Ctrl+Shift+E`
-3. Select Markdown format
-4. Save file
+- `logseq.property.fsrs/due` -- the next review date (as a timestamp)
+- `logseq.property.fsrs/state` -- the full FSRS card state (stability, difficulty, reps, lapses, etc.)
 
-### Share Decks
-
-1. Export deck page
-2. Include all linked pages
-3. Share as `.md` files
-4. Others can import to their graph
+These properties are managed automatically when you rate cards during review. You do not need to edit them manually.
 
 ---
 
@@ -230,31 +149,16 @@ Use search and replace:
 
 Check for:
 
-- Orphan cards (no deck)
+- Orphan cards (blocks tagged `#Card` not covered by any `Cards` query)
 - Duplicate cards
 - Outdated content
-- Too-easy cards to archive
-
-### Archive Mastered Cards
-
-Move very easy cards to archive:
-
-```markdown
-## Active Cards
-
-(Current study cards)
-
-## Archived
-
-(Well-known cards, rarely review)
-```
 
 ### Split Large Decks
 
-If a deck exceeds 200 cards:
+If you have many cards on a single topic:
 
-1. Create sub-decks by topic
-2. Use namespace pages
+1. Add more specific tags to cards (e.g., `#organic-chemistry`, `#inorganic-chemistry`)
+2. Create separate `Cards` objects with queries for each sub-topic
 3. Rotate focus between sub-decks
 
 ---
@@ -288,23 +192,23 @@ For multiple decks:
 
 ## Troubleshooting
 
-### No Cards in Deck
+### No Cards Appearing
 
-1. Check `#card` tags present
-2. Verify page/tag references correct
-3. Check query syntax
+1. Verify blocks are tagged with `#Card` (the built-in class, not a custom tag)
+2. Check that flashcards are enabled in Settings
+3. If using a `Cards` object, verify the query is correct
 
 ### Wrong Cards Appearing
 
-1. Review query filters
-2. Check for stray tags
-3. Verify property values
+1. Review the query in your `Cards` object
+2. Check for unintended tag references on card blocks
+3. Switch to "All cards" to see if the issue is query-specific
 
 ### Cards Not Scheduled
 
-1. Complete initial review
-2. Check algorithm settings
-3. Verify due dates
+1. Complete an initial review (rate the card at least once)
+2. Check the `logseq.property.fsrs/due` property on the block
+3. Ensure flashcards feature is enabled
 
 ---
 
@@ -315,4 +219,4 @@ For multiple decks:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

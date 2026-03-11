@@ -1,5 +1,7 @@
 # Architecture Documentation
 
+> **Last revised:** 2026-03-10
+
 High-level system architecture and design documentation for Logseq.
 
 ## Overview
@@ -62,7 +64,7 @@ Update these documents when:
 
 - **Maintainer**: Tech Lead, Architecture Team
 - **Review Frequency**: Quarterly
-- **Last Updated**: November 15, 2025
+- **Last Updated**: March 10, 2026
 
 ### Related Documentation
 

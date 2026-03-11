@@ -1,8 +1,10 @@
 # Logseq CLI: A Detective's Investigation Report
 
+> **Last revised:** 2026-03-10
+
 ## 🔍 Case Summary
 
-**Current Version**: 0.4.2 (Last Updated: December 22, 2025)
+**Current Version**: 0.4.3
 
 The Logseq CLI is a command-line interface for interacting with Logseq DB graphs. This investigation reveals a well-architected tool built with ClojureScript and nbb-logseq, providing both **offline** (local SQLite access) and **online** (HTTP API) modes of operation.
 

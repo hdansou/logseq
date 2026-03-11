@@ -3,7 +3,7 @@ title: 'Project Planning'
 description: 'Learn to plan and track larger projects with Logseq'
 type: tutorial
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -18,6 +18,8 @@ relatedDocs:
 ---
 
 # Project Planning
+
+> **Last revised:** 2026-03-10
 
 > Learn to plan, organize, and track larger projects in Logseq.
 
@@ -72,8 +74,8 @@ A brief description of what this project is about.
 
 Save this as a template for reuse:
 
-1. Select all blocks
-2. Right-click → "Make template"
+1. Select the blocks you want to save as a template
+2. Use the slash command `/Template` to insert or create a template
 3. Name it "Project Template"
 
 ---
@@ -183,9 +185,13 @@ Create a query-based dashboard to track progress:
          :in $ ?project
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
-                [?b :block/marker ?m]
-                [(contains? #{"TODO" "DOING"} ?m)]
-                [?b :block/priority "A"]]
+                [?b :block/tags ?task-tag]
+                [?task-tag :db/ident :logseq.class/Task]
+                [?b :logseq.property/status ?s]
+                [(contains? #{:logseq.property/status.todo
+                              :logseq.property/status.doing} (:db/ident ?s))]
+                [?b :logseq.property/priority ?pr]
+                [(= :logseq.property/priority.high (:db/ident ?pr))]]
  :inputs ["project alpha"]}
 #+END_QUERY
 
@@ -196,7 +202,8 @@ Create a query-based dashboard to track progress:
          :in $ ?project
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
-                [?b :block/marker "DOING"]]}
+                [?b :logseq.property/status ?s]
+                [(= :logseq.property/status.doing (:db/ident ?s))]]
  :inputs ["project alpha"]}
 #+END_QUERY
 
@@ -204,13 +211,20 @@ Create a query-based dashboard to track progress:
 #+BEGIN_QUERY
 {:title "Done This Week"
  :query [:find (pull ?b [*])
-         :in $ ?project ?week-ago
+         :in $ ?project
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
-                [?b :block/marker "DONE"]]
- :inputs ["project alpha" :7d-before]}
+                [?b :logseq.property/status ?s]
+                [(= :logseq.property/status.done (:db/ident ?s))]]
+ :inputs ["project alpha"]}
 #+END_QUERY
 ```
+
+> **Note:** These queries use the DB graph property model introduced in Logseq 0.11.x.
+> Tasks are tagged with `:logseq.class/Task` and use `:logseq.property/status`
+> (with values like `status.todo`, `status.doing`, `status.done`) and
+> `:logseq.property/priority` (with values like `priority.high`, `priority.medium`,
+> `priority.low`) instead of the legacy `:block/marker` and `:block/priority` attributes.
 
 ---
 
@@ -252,7 +266,7 @@ Show upcoming deadlines:
          :in $ ?today ?project
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
-                [?b :block/deadline ?d]
+                [?b :logseq.property/deadline ?d]
                 [(>= ?d ?today)]]
  :inputs [:today "project alpha"]}
 #+END_QUERY
@@ -283,13 +297,20 @@ Create a page for each team member showing their tasks:
 #+BEGIN_QUERY
 {:title "Assigned to Alice"
  :query [:find (pull ?b [*])
-         :where [?b :block/properties ?props]
-                [(get ?props :assignee) ?a]
-                [(= ?a "[[Alice]]")]
-                [?b :block/marker ?m]
-                [(contains? #{"TODO" "DOING"} ?m)]]}
+         :in $ ?assignee-name
+         :where [?b :block/tags ?task-tag]
+                [?task-tag :db/ident :logseq.class/Task]
+                [?b :logseq.property/status ?s]
+                [(contains? #{:logseq.property/status.todo
+                              :logseq.property/status.doing} (:db/ident ?s))]
+                [?b :user.property/assignee ?person]
+                [?person :block/title ?assignee-name]]
+ :inputs ["Alice"]}
 #+END_QUERY
 ```
+
+> **Note:** Custom properties like `assignee` are namespaced as `:user.property/assignee`
+> in DB graphs. The property must be created in your graph before using it in queries.
 
 ---
 
@@ -298,7 +319,7 @@ Create a page for each team member showing their tasks:
 ### Create Review Template
 
 ```markdown
-# Weekly Review - [[{{date}}]]
+# Weekly Review - <% today %>
 
 ## Progress This Week
 
@@ -389,4 +410,4 @@ Organize related pages with namespaces:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

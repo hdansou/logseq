@@ -1,5 +1,7 @@
 # Namespaces and Library System
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq provides a sophisticated namespace and library system that enables hierarchical organization of pages and content. The namespace feature allows you to create structured hierarchies using forward-slash notation, while the Library system serves as a centralized repository for reusable pages, templates, and orphaned content. Together, these features provide powerful organizational capabilities that scale from personal note-taking to enterprise knowledge management.

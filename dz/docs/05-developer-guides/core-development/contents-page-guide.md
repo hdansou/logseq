@@ -1,5 +1,7 @@
 # Contents Page Guide
 
+> **Last revised:** 2026-03-10
+
 The Contents page is a special built-in page in Logseq that serves as your knowledge base's main navigation hub. It appears as a dedicated button in the right sidebar and provides a central location for organizing and accessing your most important content.
 
 ## What is the Contents Page?
@@ -145,7 +147,7 @@ Create links between related Contents sections:
 ### Code Location
 
 - **Right Sidebar Component**: `src/main/frontend/components/right_sidebar.cljs:113-116`
-- **Initial Data**: `deps/db/src/logseq/db/common/initial_data.cljs:364`
+- **Initial Data**: `deps/db/src/logseq/db/common/initial_data.cljs:344`
 - **Page Rendering**: Uses the standard `page-cp` component
 
 ### How It Works

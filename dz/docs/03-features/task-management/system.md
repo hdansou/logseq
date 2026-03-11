@@ -1,5 +1,7 @@
 # Task Management System
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq provides a powerful, flexible task management system that seamlessly integrates with your knowledge graph. The system supports multiple task states, workflows, and organizational approaches while maintaining compatibility across both file-based and database-based graphs. Tasks in Logseq are first-class citizens that can be queried, filtered, and managed using the full power of the knowledge graph.
@@ -78,18 +80,28 @@ Tasks use the properties and class system for enhanced flexibility:
 
 ### Standard Task States
 
-Logseq supports multiple task states with semantic meaning:
+Logseq supports different task states depending on the graph type:
 
-| State           | Description      | Visual | Usage                              |
-| --------------- | ---------------- | ------ | ---------------------------------- |
-| **TODO**        | Pending task     | ☐      | Standard to-do items               |
-| **DOING**       | Active task      | ⏳     | Currently working on               |
-| **DONE**        | Completed task   | ✅     | Finished tasks                     |
-| **NOW**         | Urgent/immediate | 🔥     | High priority, immediate attention |
-| **LATER**       | Deferred task    | 📅     | Scheduled for future               |
-| **WAITING**     | Blocked task     | ⏸️     | Waiting on dependencies            |
-| **CANCELED**    | Cancelled task   | ❌     | Will not be completed              |
-| **IN-PROGRESS** | Work in progress | 🔄     | Alternative to DOING               |
+**File-based graphs** use block markers (org-mode style):
+
+| Marker     | Description      | Usage                              |
+| ---------- | ---------------- | ---------------------------------- |
+| **TODO**   | Pending task     | Standard to-do items               |
+| **DOING**  | Active task      | Currently working on               |
+| **DONE**   | Completed task   | Finished tasks                     |
+| **NOW**    | Urgent/immediate | High priority, immediate attention |
+| **LATER**  | Deferred task    | Scheduled for future               |
+
+**Database-based graphs** use the `:logseq.property/status` closed-value property:
+
+| Status        | Description      | Usage                              |
+| ------------- | ---------------- | ---------------------------------- |
+| **Backlog**   | Not yet planned  | Items awaiting prioritization      |
+| **Todo**      | Pending task     | Standard to-do items (default)     |
+| **Doing**     | Active task      | Currently working on               |
+| **In Review** | Under review     | Awaiting review or approval        |
+| **Done**      | Completed task   | Finished tasks                     |
+| **Canceled**  | Cancelled task   | Will not be completed              |
 
 ### Task Workflows
 
@@ -138,22 +150,14 @@ stateDiagram-v2
     CANCELED --> [*]
 ```
 
-### Workflow Configuration
+### Workflow Configuration (File-based Graphs)
 
-Users can configure their preferred workflow in settings:
+File-based graphs support two workflow modes selectable in settings:
 
-```clojure
-;; Configuration options (/src/main/frontend/state.cljs)
-(def preferred-workflow
-  #{:now           ; NOW/LATER workflow
-    :todo})        ; TODO/DOING workflow
+- **`:todo`** workflow: cycles through TODO -> DOING -> DONE
+- **`:now`** workflow: cycles through NOW -> LATER -> DONE
 
-;; Workflow-specific state cycling
-(defn get-workflow-states [workflow]
-  (case workflow
-    :now ["NOW" "LATER" "DONE"]
-    :todo ["TODO" "DOING" "DONE"]))
-```
+Database-based graphs use the status property system instead of marker-based workflows.
 
 ## Task Creation and Management
 
@@ -309,26 +313,20 @@ Tasks integrate deeply with Logseq's query system, supporting both simple and ad
 
 #### File-Based Task Rules
 
+File-based graphs use `:block/marker` attributes for task state queries:
+
 ```clojure
-;; Task query rules (/deps/db/src/logseq/db/file_based/rules.cljc)
+;; Task query rules (file-based graphs use block markers)
 :task
 '[(task ?b ?markers)
   [?b :block/marker ?marker]
   [(contains? ?markers ?marker)]]
-
-;; Task with scheduling
-:scheduled-task
-'[(scheduled-task ?b ?start ?end)
-  [?b :block/marker ?marker]
-  [?b :block/scheduled ?scheduled]
-  [(>= ?scheduled ?start)]
-  [(<= ?scheduled ?end)]]
 ```
 
 #### Database-Based Task Rules
 
 ```clojure
-;; Database graph task rules (/deps/db/src/logseq/db/frontend/rules.cljc)
+;; Database graph task rules (deps/db/src/logseq/db/frontend/rules.cljc)
 :task-by-status
 '[(task-by-status ?b ?status)
   [?b :block/tags ?class]
@@ -427,20 +425,18 @@ TODO Daily standup (team A)
 
 #### Built-in Queries
 
-Logseq provides default task views in journal templates:
+You can add task queries to journal pages or any other page:
 
 ```clojure
-;; Journal page task queries (/resources/templates/journals.md)
+;; Example task queries for journal pages (file-based graphs)
 ## DOING
 {{query (task DOING)}}
 
 ## TODO
 {{query (task TODO)}}
-
-## Task Statistics
-Total tasks: {{query-count (task TODO DOING DONE)}}
-Completed today: {{query-count (and (task DONE) (between updated-at today now))}}
 ```
+
+Note: There is no built-in `{{query-count}}` macro in Logseq. To see task counts, use standard `{{query}}` blocks which display result counts in their headers.
 
 #### Custom Dashboard Queries
 
@@ -605,32 +601,18 @@ Tasks integrate with calendar views and scheduling:
 
 ### Task Configuration Options
 
-```clojure
-;; User configuration (/src/main/frontend/config.cljs)
-(def task-config
-  {:preferred-workflow :todo              ; :todo or :now
-   :default-task-state "TODO"             ; Default when creating tasks
-   :show-task-count-in-sidebar true       ; Display task counters
-   :auto-set-deadline false               ; Automatically add deadlines
-   :task-completion-sound true            ; Audio feedback
-   :recurring-task-cleanup 30             ; Days to keep completed recurring tasks
-   :task-priority-colors {:high "#ff4757"  ; Custom priority colors
-                         :medium "#ffa502"
-                         :low "#2ed573"}})
-```
+The primary task-related configuration option in `config.edn` is the preferred workflow mode (file-based graphs only):
+
+- **`:preferred-workflow :todo`** - Uses TODO/DOING/DONE cycle
+- **`:preferred-workflow :now`** - Uses NOW/LATER/DONE cycle
+
+Database-based graphs use the status property system and do not require workflow configuration.
 
 ### Custom Task States
 
-Users can define custom task states for specific workflows:
+In database-based graphs, users can customize the closed values of the `:logseq.property/status` property to add custom statuses beyond the built-in ones (Backlog, Todo, Doing, In Review, Done, Canceled). This is done through the property configuration UI.
 
-```clojure
-;; Custom markers configuration
-(def custom-markers
-  {"REVIEW" {:color "#f39c12" :icon "📋"}
-   "BLOCKED" {:color "#e74c3c" :icon "🚫"}
-   "TESTING" {:color "#9b59b6" :icon "🧪"}
-   "DEPLOYED" {:color "#27ae60" :icon "🚀"}})
-```
+File-based graphs use a fixed set of markers (TODO, DOING, DONE, NOW, LATER) and do not support custom task states.
 
 ## Performance and Scalability
 

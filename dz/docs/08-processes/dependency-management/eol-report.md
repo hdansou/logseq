@@ -1,5 +1,7 @@
 # Logseq Dependencies: End of Life & Deprecation Report
 
+> **Last revised:** 2026-03-10
+
 **Report Generated:** 2025-11-20
 
 ## Executive Summary
@@ -8,7 +10,7 @@ This report provides a comprehensive overview of all major dependencies used in 
 
 ### Critical Findings
 
-- **Electron 38.4.0** - Recently upgraded, reaches EOL on March 4, 2026 (~3-4 months)
+- **Electron 38.4.0** - EOL reached on March 4, 2026; upgrade to Electron 39.x or later is now overdue
 - **TypeScript 4.4.3** is 3+ years outdated with no security support
 - **CodeMirror 5** is in legacy/maintenance mode
 - **Node.js 22.20.0** - Recently upgraded to LTS version
@@ -20,7 +22,7 @@ This report provides a comprehensive overview of all major dependencies used in 
 | Dependency     | Current Version | Latest Version | EOL/Deprecation Date | Status                | Priority | Notes                                                                       |
 | -------------- | --------------- | -------------- | -------------------- | --------------------- | -------- | --------------------------------------------------------------------------- |
 | **Node.js**    | ≥22.20.0        | 23.x           | **April 30, 2027**   | 🟢 Active LTS         | -        | Node 22 LTS (upgraded). Node 23 is current release.                         |
-| **Electron**   | 38.4.0          | 39.x           | **March 4, 2026**    | 🟡 Monitor EOL        | MEDIUM   | Upgraded from 37.2.6. Only supports latest 3 stable versions.               |
+| **Electron**   | 38.4.0          | 39.x           | **March 4, 2026**    | 🔴 EOL reached         | HIGH     | Upgraded from 37.2.6. Only supports latest 3 stable versions. EOL passed.   |
 | **TypeScript** | 4.4.3           | 5.9+           | No official EOL      | 🔴 Very outdated      | HIGH     | Released Sep 2021. Security fixes backported ~1 year only. 3+ years behind. |
 | **Webpack**    | 5.98.0          | 5.x            | No official EOL      | 🟢 Current            | -        | Webpack 5 is current major version. No v6 announced.                        |
 | **Gulp**       | 4.0.2           | 4.x            | No official EOL      | 🟢 Current            | -        | Gulp 4 is current major version.                                            |
@@ -101,8 +103,7 @@ This report provides a comprehensive overview of all major dependencies used in 
 
 **Next Steps:**
 
-- Monitor for Electron 39.x release
-- Plan upgrade before Electron 38 EOL (March 4, 2026)
+- Electron 38 EOL has passed (March 4, 2026); upgrade to Electron 39.x is now required
 - Continue monitoring Electron 40 release timeline
 
 ### 2. HIGH - TypeScript Upgrade
@@ -279,7 +280,7 @@ The following dependencies don't publish formal EOL dates but follow a "latest v
 
    - Automated regression testing for dependency updates
    - Platform-specific testing (macOS, Windows, Linux, iOS, Android)
-   - Performance benchmarking after major upgradesa
+   - Performance benchmarking after major upgrades
 
 4. **Documentation**
    - Maintain this EOL report quarterly
@@ -297,7 +298,7 @@ The following dependencies don't publish formal EOL dates but follow a "latest v
 
 ## Next Review Date
 
-**Recommended:** February 2026 (before Electron 38 EOL on March 4, 2026)
+**Recommended:** Immediately (Electron 38 EOL passed on March 4, 2026)
 
 ---
 

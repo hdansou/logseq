@@ -1,5 +1,7 @@
 # Quick Start Guide
 
+> **Last revised:** 2026-03-10
+
 Get your first Logseq plugin running in minutes!
 
 ## Prerequisites

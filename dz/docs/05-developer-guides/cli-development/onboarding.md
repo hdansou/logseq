@@ -1,5 +1,7 @@
 # Logseq CLI Developer Onboarding
 
+> **Last revised:** 2026-03-10
+
 Audience: Junior developers contributing to the Logseq CLI (the `deps/cli` package).
 
 Scope: Local setup, how it works, how to run/debug/test, how to add a new command, conventions, and common pitfalls.
@@ -57,7 +59,7 @@ If you didn’t `yarn link`, substitute `node cli.mjs` for `logseq`.
 - `deps/cli/src/logseq/cli/common/` — Shared infrastructure:
   - `graph.cljs` — DB graphs directory logic
   - `file.cljs` — File operations
-  - `util.cljs` — Common utilities
+  - `util.cljc` — Common utilities
   - `export/` — Export utilities (text, common)
   - `mcp/` — MCP server and tools (v0.3.0+)
 - `deps/cli/README.md` — User-facing CLI usage docs.

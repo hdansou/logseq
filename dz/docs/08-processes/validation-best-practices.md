@@ -1,7 +1,9 @@
 # Validation Best Practices
 
-**Document Type:** Process Guide  
-**Last Updated:** December 28, 2025  
+> **Last revised:** 2026-03-10
+
+**Document Type:** Process Guide
+**Last Updated:** December 28, 2025
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
@@ -42,7 +44,7 @@ Logseq uses two complementary validation approaches:
 | **Enforces**    | Types, cardinality, uniqueness, refs                                   | Required fields, formats, relationships                                                      |
 | **Performance** | Fast (built-in)                                                        | Slower (runs on every entity)                                                                |
 | **Flexibility** | Limited                                                                | Highly flexible                                                                              |
-| **Location**    | [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs) | [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
+| **Location**    | [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs) | [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
 
 ### When to Use Each
 
@@ -96,7 +98,7 @@ Transaction Submitted
 
 ### Schema Definition Location
 
-[deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+[deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 
 ### Common DataScript Schema Attributes
 
@@ -159,7 +161,7 @@ Transaction Submitted
 When adding a property that needs DataScript validation:
 
 ```clojure
-;; In deps/db/src/logseq/db/schema.cljs
+;; In deps/db/src/logseq/db/frontend/schema.cljs
 
 ;; 1. Add to schema definition
 (def db-attribute-properties

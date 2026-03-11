@@ -2,8 +2,8 @@
 title: 'Logseq System Overview'
 description: "High-level overview of Logseq's architecture, value propositions, and design principles"
 status: stable
-lastVerified: '2026-01-29'
-logseqVersion: '0.11.x'
+lastVerified: '2026-03-10'
+logseqVersion: '2.0.x'
 category: architecture
 relatedDocs:
   reference:
@@ -15,6 +15,8 @@ relatedDocs:
 ---
 
 # Logseq System Overview
+
+> **Last revised:** 2026-03-10
 
 > Understanding what Logseq is, why it exists, and how it empowers users to manage knowledge effectively.
 
@@ -55,7 +57,7 @@ Logseq supports two storage architectures:
 | **Storage**       | Markdown/Org files        | SQLite database      |
 | **Compatibility** | External editors          | Logseq only          |
 | **Properties**    | Text-based                | First-class entities |
-| **Scalability**   | File system limits        | Unlimited            |
+| **Scalability**   | File system limits        | Better (SQLite-backed) |
 | **Collaboration** | File sync                 | Real-time (RTC)      |
 | **Best For**      | Git workflows, simplicity | Power users, teams   |
 
@@ -75,10 +77,10 @@ Both types maintain the same user experience—the difference is in how data is 
 │            State Management                 │
 │   (Atoms, Event Handlers, Subscriptions)    │
 └─────────────────────┬───────────────────────┘
-                      │
+                      │ Comlink (main ↔ worker)
 ┌─────────────────────▼───────────────────────┐
-│           DataScript Database               │
-│   (In-memory graph DB, Datalog queries)     │
+│           DB Worker  (Web Worker)            │
+│   DataScript · SQLite WASM · Sync · Search  │
 └─────────────────────┬───────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────┐
@@ -96,9 +98,15 @@ Both types maintain the same user experience—the difference is in how data is 
 
 ### 1. Database Layer
 
-- **DataScript**: In-memory Datalog database for queries
+- **DataScript**: In-memory Datalog database for queries (runs inside a Web Worker)
+- **SQLite**: Persistent storage via WASM/OPFS in browsers, `better-sqlite3` on desktop/Node
 - **Schema System**: Validates entity structure and relationships
 - **Transaction Log**: Tracks changes for undo/redo
+
+### 1b. DB Worker
+
+- **Web Worker**: Heavy database operations run off the main thread via Comlink
+- **Responsibilities**: DataScript queries, SQLite persistence, sync, search indexing, undo/redo validation
 
 ### 2. Editor System
 
@@ -122,15 +130,17 @@ Both types maintain the same user experience—the difference is in how data is 
 
 ## Technology Stack
 
-| Layer           | Technology         | Purpose                   |
-| --------------- | ------------------ | ------------------------- |
-| **Language**    | ClojureScript      | Main application code     |
-| **UI**          | React + Rum        | Component rendering       |
-| **Database**    | DataScript         | In-memory graph queries   |
-| **Persistence** | SQLite (WASM/OPFS) | Database graph storage    |
-| **Desktop**     | Electron           | Cross-platform native app |
-| **Mobile**      | Capacitor          | iOS/Android apps          |
-| **Styling**     | Tailwind CSS       | UI styling                |
+| Layer           | Technology                | Purpose                            |
+| --------------- | ------------------------- | ---------------------------------- |
+| **Language**    | ClojureScript             | Main application code              |
+| **UI**          | React + Rum               | Component rendering                |
+| **UI Components** | Shui                   | Shared UI component library        |
+| **Database**    | DataScript                | In-memory graph queries            |
+| **Persistence** | SQLite (WASM/OPFS, better-sqlite3) | Database graph storage    |
+| **Concurrency** | Web Workers + Comlink     | Off-main-thread DB operations      |
+| **Desktop**     | Electron                  | Cross-platform native app          |
+| **Mobile**      | Capacitor                 | iOS/Android apps                   |
+| **Styling**     | Tailwind CSS              | UI styling                         |
 
 ---
 
@@ -185,4 +195,4 @@ Both types maintain the same user experience—the difference is in how data is 
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

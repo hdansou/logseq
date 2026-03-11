@@ -2,7 +2,7 @@
 title: 'config.edn Reference'
 description: "Complete reference for Logseq's config.edn configuration file"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -19,6 +19,8 @@ relatedDocs:
 
 # config.edn Reference
 
+> **Last revised:** 2026-03-10
+
 > Complete reference for all configuration options in Logseq's `config.edn` file. For DB-specific configuration, see [config-edn-db.md](config-edn-db.md).
 
 ## Overview
@@ -28,7 +30,7 @@ The `config.edn` file controls Logseq's behavior and appearance. It's located in
 **Location:**
 
 - **File-based graphs**: `<your-graph-folder>/logseq/config.edn`
-- **Database graphs**: `~/.logseq/graphs/<graph-name>/logseq/config.edn`
+- **Database graphs**: Stored within the database itself (accessible at `logseq/config.edn` inside the graph)
 
 ## Quick Reference
 
@@ -91,7 +93,6 @@ Enable or disable major Logseq features.
 | `:feature/enable-journals?`                      | `boolean` | `true`  | Enable journals feature                                                       |
 | `:feature/enable-flashcards?`                    | `boolean` | `true`  | Enable flashcards/spaced repetition                                           |
 | `:feature/disable-scheduled-and-deadline-query?` | `boolean` | `false` | Disable built-in task query on journal pages                                  |
-| `:feature/enable-grammarly?`                     | `boolean` | `false` | Enable Grammarly integration                                                  |
 
 ```clojure
 {:feature/enable-search-remove-accents? true
@@ -412,31 +413,11 @@ Add custom styling, scripts, and text macros.
 
 ## 17. DWIM Settings (Do What I Mean)
 
-Context-aware Enter key behavior.
+> **Removed**: `:dwim/settings` is no longer present in the current configuration schema or default template. It appeared in older versions of Logseq but has been removed from the active codebase. The key is retained here for historical reference only.
 
 | Key              | Type  | Default | Description        |
 | ---------------- | ----- | ------- | ------------------ |
-| `:dwim/settings` | `map` | `nil`   | DWIM configuration |
-
-### `:dwim/settings` Sub-keys
-
-| Sub-key            | Type      | Default | Description                       |
-| ------------------ | --------- | ------- | --------------------------------- |
-| `:admonition&src?` | `boolean` | `true`  | DWIM in admonitions/source blocks |
-| `:markup?`         | `boolean` | `false` | DWIM for markup formatting        |
-| `:block-ref?`      | `boolean` | `true`  | Enter opens block references      |
-| `:page-ref?`       | `boolean` | `true`  | Enter opens page references       |
-| `:properties?`     | `boolean` | `true`  | DWIM for properties               |
-| `:list?`           | `boolean` | `false` | DWIM for lists (new list item)    |
-
-```clojure
-{:dwim/settings {:admonition&src? true
-                 :markup? false
-                 :block-ref? true
-                 :page-ref? true
-                 :properties? true
-                 :list? false}}
-```
+| `:dwim/settings` | `map` | `nil`   | DWIM configuration (removed) |
 
 ---
 
@@ -460,23 +441,32 @@ Context-aware Enter key behavior.
 | `:property-pages/enabled?`          | `boolean`        | `true`           | Create pages for properties                |
 | `:property/separated-by-commas`     | `set<keyword>`   | `nil`            | Properties with comma-separated values     |
 | `:feature/enable-whiteboards?`      | `boolean`        | `true`           | Enable whiteboards                         |
-| `:feature/enable-block-timestamps?` | `boolean`        | `false`          | Enable block timestamps                    |
+| `:feature/enable-block-timestamps?` | `boolean`        | `false`          | Enable block timestamps (always enabled in DB graphs) |
+| `:logbook/settings`                 | `map`            | `nil`            | Logbook configuration                      |
+| `:org-mode/insert-file-link?`       | `boolean`        | `false`          | Convert page refs to org-mode file links   |
+| `:file-sync/ignore-files`           | `vector<string>` | `[]`             | Files to ignore during sync (regexp supported) |
+| `:ignored-page-references-keywords` | `set<keyword>`   | `nil`            | Properties to ignore when parsing page refs |
+| `:property-pages/excludelist`       | `set<keyword>`   | `nil`            | Properties excluded from having property pages |
+| `:block-hidden-properties`          | `set<keyword>`   | `nil`            | Hide specific block properties (not used in DB graphs) |
 
-### Logbook Settings (File-Graph Only)
+### `:logbook/settings` Sub-keys (File-Graph Only)
 
-| Sub-key                  | Type      | Default | Description                   |
-| ------------------------ | --------- | ------- | ----------------------------- |
-| `:with-second-support?`  | `boolean` | `true`  | Include seconds in timestamps |
-| `:enabled-in-all-blocks` | `boolean` | `false` | Show logbook in all blocks    |
+| Sub-key                          | Type      | Default | Description                              |
+| -------------------------------- | --------- | ------- | ---------------------------------------- |
+| `:with-second-support?`          | `boolean` | `true`  | Include seconds in timestamps            |
+| `:enabled-in-all-blocks`         | `boolean` | `false` | Show logbook in all blocks               |
+| `:enabled-in-timestamped-blocks` | `boolean` | `true`  | Display logbook in timestamped blocks    |
 
 ---
 
 ## 19. Spaced Repetition (File Graphs Only)
 
-| Key                      | Type    | Default | Description                |
-| ------------------------ | ------- | ------- | -------------------------- |
-| `:srs/learning-fraction` | `float` | `0.5`   | Interval change rate (0-1) |
-| `:srs/initial-interval`  | `int`   | `4`     | Initial interval in days   |
+> These settings are file-graph only and are not used in DB graphs. They are not part of the validated configuration schema but are read at runtime.
+
+| Key                      | Type    | Default | Description                                              |
+| ------------------------ | ------- | ------- | -------------------------------------------------------- |
+| `:srs/learning-fraction` | `float` | `0.5`   | Interval change rate (0-1); higher = faster progression  |
+| `:srs/initial-interval`  | `int`   | `4`     | Initial interval in days after first successful review   |
 
 ```clojure
 {:srs/learning-fraction 0.5
@@ -487,11 +477,13 @@ Context-aware Enter key behavior.
 
 ## 20. Deprecated Options
 
-| Deprecated Key              | Replacement                     | Notes       |
-| --------------------------- | ------------------------------- | ----------- |
-| `:editor/command-trigger`   | N/A                             | Use `/`     |
-| `:all-pages-public?`        | `:publishing/all-pages-public?` | Use new key |
-| `:block/content-max-length` | `:block/title-max-length`       | Use new key |
+| Deprecated Key              | Replacement                     | Notes                |
+| --------------------------- | ------------------------------- | -------------------- |
+| `:editor/command-trigger`   | N/A                             | Use `/`              |
+| `:all-pages-public?`        | `:publishing/all-pages-public?` | Use new key          |
+| `:block/content-max-length` | `:block/title-max-length`       | Use new key          |
+| `:arweave/gateway`          | N/A                             | No longer supported  |
+| `:dwim/settings`            | N/A                             | Removed from codebase |
 
 ---
 
@@ -545,4 +537,4 @@ Context-aware Enter key behavior.
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_

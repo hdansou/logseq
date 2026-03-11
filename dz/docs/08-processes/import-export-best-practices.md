@@ -1,7 +1,9 @@
 # Import/Export Best Practices
 
-**Document Type:** Process Guide  
-**Last Updated:** December 28, 2025  
+> **Last revised:** 2026-03-10
+
+**Document Type:** Process Guide
+**Last Updated:** December 28, 2025
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
@@ -31,7 +33,7 @@ Logseq's import/export system enables graph portability, backup/restore, and cro
 
 ---
 
-## Expo rt Format Overview
+## Export Format Overview
 
 ### Available Export Formats
 

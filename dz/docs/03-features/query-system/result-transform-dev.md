@@ -1,5 +1,7 @@
 # Logseq :result-transform Feature: A Detective's Investigation Report
 
+> **Last revised:** 2026-03-10
+
 ## 🔍 Case Summary
 
 The `:result-transform` feature is a powerful query customization mechanism that allows users to programmatically transform, sort, and filter query results in Logseq. This investigation reveals a sophisticated system that works across both file-based and DB graphs, using a secure sandboxed execution environment (SCI - Small Clojure Interpreter) to run user-defined transformation functions.

@@ -1,7 +1,9 @@
 # Schema Change Testing Strategies
 
-**Document Type:** Testing Guide  
-**Last Updated:** December 28, 2025  
+> **Last revised:** 2026-03-10
+
+**Document Type:** Testing Guide
+**Last Updated:** December 28, 2025
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
@@ -1185,7 +1187,7 @@ on:
   pull_request:
     paths:
       - 'deps/db/src/logseq/db/**'
-      - 'src/main/frontend/worker/db_migrate.cljs'
+      - 'src/main/frontend/worker/db/migrate.cljs'
 
 jobs:
   schema-tests:

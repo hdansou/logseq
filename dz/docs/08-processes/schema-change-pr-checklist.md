@@ -1,7 +1,9 @@
 # Schema Change PR Review Checklist
 
-**Document Type:** Process Checklist  
-**Last Updated:** December 28, 2025  
+> **Last revised:** 2026-03-10
+
+**Document Type:** Process Checklist
+**Last Updated:** December 28, 2025
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
@@ -19,8 +21,8 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 ✅ **YES - Use this checklist if PR modifies:**
 
 - [ ] Files in `deps/db/src/logseq/db/frontend/property/`
-- [ ] `deps/db/src/logseq/db/schema.cljs`
-- [ ] `src/main/frontend/worker/db_migrate.cljs`
+- [ ] `deps/db/src/logseq/db/frontend/schema.cljs`
+- [ ] `src/main/frontend/worker/db/migrate.cljs`
 - [ ] `deps/db/src/logseq/db/frontend/validate.cljs`
 - [ ] `deps/db/src/logseq/db/sqlite/build.cljs`
 - [ ] Any file with `built-in-properties` or `built-in-classes`
@@ -39,9 +41,9 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 ### 1.1 New Property Added
 
-- [ ] **Property definition** added to `built-in-properties` in [deps/db/src/logseq/db/frontend/property/build.cljc](deps/db/src/logseq/db/frontend/property/build.cljc)
-- [ ] **Migration entry** added to `schema-version->updates` in [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
-- [ ] **Schema version** bumped in [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+- [ ] **Property definition** added to `built-in-properties` in [deps/db/src/logseq/db/frontend/property.cljs](deps/db/src/logseq/db/frontend/property.cljs)
+- [ ] **Migration entry** added to `schema-version->updates` in [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
+- [ ] **Schema version** bumped in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 - [ ] **Version numbers match** between migration entry and schema version
 - [ ] **RTC configuration** explicitly specified (`:rtc` map present)
 - [ ] **Property namespace** follows conventions (`logseq.property.*`, `user.property.*`, etc.)
@@ -109,7 +111,7 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 ### 2.1 Version Bump
 
-- [ ] **Version incremented** in [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+- [ ] **Version incremented** in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 - [ ] **Bump type appropriate:**
   - Minor bump (65.16 → 65.17) for additive changes
   - Major bump (65.x → 66.0) for breaking changes
@@ -311,7 +313,7 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 ⚠️ **CRITICAL: Bootstrap order must not change!**
 
-- [ ] **Bootstrap order unchanged** in [deps/db/src/logseq/db/frontend/create_graph.cljs](deps/db/src/logseq/db/frontend/create_graph.cljs)
+- [ ] **Bootstrap order unchanged** in [deps/db/src/logseq/db/sqlite/create_graph.cljs](deps/db/src/logseq/db/sqlite/create_graph.cljs)
 - [ ] **New properties added to correct stage** (bootstrap vs regular)
 - [ ] **Circular dependencies considered**
 - [ ] **Graph creation tested** if bootstrap touched
@@ -564,7 +566,7 @@ Copy this into PR description:
 
 ```
 ❌ Property added but no migration entry
-✅ Add migration entry in db_migrate.cljs
+✅ Add migration entry in db/migrate.cljs
 ```
 
 ### Issue 2: Version Mismatch

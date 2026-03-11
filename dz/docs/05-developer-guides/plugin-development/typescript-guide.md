@@ -1,5 +1,7 @@
 # Logseq Plugin Development Guide: TypeScript Edition
 
+> **Last revised:** 2026-03-10
+
 A comprehensive, practical guide for building Logseq plugins with TypeScript.
 
 ## 📚 Table of Contents
@@ -25,7 +27,7 @@ A comprehensive, practical guide for building Logseq plugins with TypeScript.
 
 ### Prerequisites
 
-- Node.js 16+ and npm/yarn
+- Node.js 18+ and npm/yarn
 - Basic TypeScript knowledge
 - Logseq installed (desktop or web)
 

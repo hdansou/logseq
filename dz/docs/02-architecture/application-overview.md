@@ -1,5 +1,7 @@
 # Application Overview
 
+> **Last revised:** 2026-03-10
+
 ## What is Logseq?
 
 Logseq is a **knowledge management and collaboration platform** designed to help users capture, organize, and connect their thoughts and information in a meaningful way. Unlike traditional note-taking applications, Logseq treats knowledge as an interconnected graph where every piece of information can link to and reference other pieces, creating a rich web of understanding.
@@ -168,8 +170,8 @@ Built-in query language for dynamic content aggregation:
 
 ### Mobile Applications
 
-- **iOS**: Native mobile app (DB version)
-- **Android**: Native mobile app (in development)
+- **iOS**: Capacitor-based mobile app (DB graphs)
+- **Android**: Capacitor-based mobile app (DB graphs)
 
 ## Integration Ecosystem
 

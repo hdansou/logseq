@@ -1,5 +1,7 @@
 # The Case of the ClojureScript SDK: A Developer's Investigation
 
+> **Last revised:** 2026-03-10
+
 **Case File:** #12168
 **Date Opened:** October 21, 2025
 **Status:** SOLVED
@@ -27,7 +29,7 @@ When we first arrived at the scene (commit d8809f0b7), we found a pristine imple
 ```
 libs/cljs-sdk/
 ├── src/com/logseq/
-│   ├── core.cljs       (150 lines) - The mastermind
+│   ├── core.cljs       (149 lines) - The mastermind
 │   ├── app.cljs        (348 lines) - Application control
 │   ├── editor.cljs     (432 lines) - Content manipulation
 │   ├── db.cljs         (34 lines)  - Query operations
@@ -578,7 +580,7 @@ Minimal but complete git interface:
 ```json
 {
   "name": "@logseq/cljs-libs",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Logseq plugin API wrapper",
   "dependencies": {
     "@logseq/libs": "^0.2.3"
@@ -593,7 +595,7 @@ Minimal but complete git interface:
 **Evidence:** `libs/cljs-sdk/deps.edn`
 
 ```clojure
-{:deps {org.clojure/clojurescript {:mvn/version "1.11.60"}
+{:deps {org.clojure/clojurescript {:mvn/version "1.12.42"}
         cljs-bean/cljs-bean {:mvn/version "1.5.0"}}}
 ```
 
@@ -887,7 +889,7 @@ clojure -T:build jar
 clojure -T:build deploy
 ```
 
-**Artifact:** `com.logseq/libs` version 0.0.10
+**Artifact:** `com.logseq/libs` version 0.0.11
 
 ---
 
@@ -1116,7 +1118,7 @@ npm install @logseq/cljs-libs
 ### deps.edn
 
 ```clojure
-{:deps {org.clojure/clojurescript {:mvn/version "1.11.60"}
+{:deps {org.clojure/clojurescript {:mvn/version "1.12.42"}
         cljs-bean/cljs-bean {:mvn/version "1.5.0"}}}
 ```
 
@@ -1147,7 +1149,7 @@ npm install @logseq/cljs-libs
 
 | Namespace           | Functions | Lines    | Auto-Generated            |
 | ------------------- | --------- | -------- | ------------------------- |
-| `com.logseq.core`   | 15        | 150      | Partial (ready is custom) |
+| `com.logseq.core`   | 15        | 149      | Partial (ready is custom) |
 | `com.logseq.app`    | 72        | 348      | Yes                       |
 | `com.logseq.editor` | 70        | 432      | Yes                       |
 | `com.logseq.db`     | 4         | 34       | Yes                       |
@@ -1155,7 +1157,7 @@ npm install @logseq/cljs-libs
 | `com.logseq.assets` | 4         | 37       | Yes                       |
 | `com.logseq.git`    | 3         | 23       | Yes                       |
 | `com.logseq.util`   | 2         | 31       | No (hand-written)         |
-| **TOTAL**           | **176+**  | **1104** | **~98%**                  |
+| **TOTAL**           | **176+**  | **1103** | **~98%**                  |
 
 ---
 

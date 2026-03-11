@@ -2,7 +2,7 @@
 title: 'RTC vs File Sync'
 description: 'Understanding the differences between File Sync and Real-Time Collaboration synchronization methods'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 category: comparisons
 relatedDocs:
@@ -13,6 +13,8 @@ relatedDocs:
 ---
 
 # RTC vs File Sync
+
+> **Last revised:** 2026-03-10
 
 > Understanding the two synchronization methods in Logseq and when to use each.
 
@@ -62,8 +64,8 @@ Device A          RTC Server           Device B
 
 - Syncs operations (not files)
 - Sub-second updates
-- Automatic conflict resolution (CRDT-like)
-- Live cursor and presence awareness
+- Automatic conflict resolution (transaction-level merge)
+- Block-level editing presence awareness
 
 ---
 
@@ -100,8 +102,7 @@ Device A          RTC Server           Device B
 | Resource          | Limit         | Reason             |
 | ----------------- | ------------- | ------------------ |
 | Per-asset size    | 100 MB        | S3 upload limits   |
-| WebSocket message | 100 KB        | Auto-splits larger |
-| Operations batch  | 400 ops       | Extended timeout   |
+| Flush batch        | 50 txs        | Per flush cycle    |
 | Total graph       | No hard limit | Incremental sync   |
 
 ---
@@ -144,11 +145,11 @@ When two devices edit the same file:
 When two users edit the same block:
 
 1. Both operations sent to server
-2. Server applies **operation transform**
+2. Server applies **transaction-level merge** (last-writer-wins per attribute)
 3. Both clients receive merged result
 4. **No user intervention needed**
 
-Operations are designed to be commutative—order doesn't matter.
+Conflicting local operations on the same block attributes as incoming remote changes are dropped in favor of the remote version.
 
 ---
 
@@ -207,7 +208,7 @@ RTC uses a hybrid encryption model:
 
 - **RSA-4096** for key exchange
 - **AES-256-GCM** for data encryption
-- **PBKDF2** (100k iterations) for password key derivation
+- **PBKDF2** (600k iterations) for password key derivation
 
 ---
 
@@ -254,4 +255,4 @@ RTC uses a hybrid encryption model:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

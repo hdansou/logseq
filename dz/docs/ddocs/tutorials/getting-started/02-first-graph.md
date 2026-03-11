@@ -3,7 +3,7 @@ title: 'Your First Graph'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-01-11'
+last-verified: '2026-03-10'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/01-installation.md'
@@ -12,6 +12,8 @@ related-docs:
 ---
 
 # Your First Graph
+
+> **Last revised:** 2026-03-10
 
 In this tutorial, you'll create your first Logseq graph and understand the basic concepts of graphs, pages, and blocks.
 
@@ -188,9 +190,9 @@ This is **bidirectional linking** in action! When you link to a page, that page 
 
 ### Navigation Shortcuts
 
-- `Ctrl/Cmd + K`: Quick search (command palette)
-- `Ctrl/Cmd + J`: Jump to journal (today)
-- `Ctrl/Cmd + Shift + F`: Full-text search
+- `Ctrl/Cmd + K`: Quick search
+- `Ctrl/Cmd + Shift + P`: Command palette
+- `G + J`: Go to journals
 - `G + H`: Go home (journal)
 
 ### Creating Content

@@ -1,5 +1,7 @@
 # File Sync vs. RTC: Feature Comparison & Limitations
 
+> **Last revised:** 2026-03-10
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -108,8 +110,11 @@ This document provides a comprehensive comparison of both approaches, their limi
 **Code Reference:**
 
 ```clojure
-;; src/main/frontend/fs/sync.cljs
-(def ^:private file-size-limit (* 100 1000 1024)) ;100MB
+;; src/main/frontend/handler/assets.cljs
+(defn exceed-limit-size?
+  "Asset size no more than 100M"
+  [^js file]
+  (> (.-size file) (* 100 1024 1024)))
 ```
 
 #### Performance Limits
@@ -124,9 +129,8 @@ This document provides a comprehensive comparison of both approaches, their limi
 **Code Reference:**
 
 ```clojure
-;; src/main/frontend/fs/sync.cljs
-(defonce download-batch-size 100)
-(defonce upload-batch-size 20)
+;; src/main/frontend/worker/sync.cljs
+(def ^:private upload-kvs-batch-size 500)
 ```
 
 #### Operational Limits
@@ -160,19 +164,11 @@ This document provides a comprehensive comparison of both approaches, their limi
 **Code References:**
 
 ```clojure
-;; src/main/frontend/worker/rtc/asset.cljs
-(defonce ^:private max-asset-size (* 100 1024 1024))
-
-;; src/main/frontend/worker/rtc/ws_util.cljs
-;; Messages over 100KB are uploaded to S3
-(when (< 100000 len)
-  (put-to-s3 message))
-
-;; src/main/frontend/worker/rtc/exception.cljs
-;; Responses over 32KB use S3
-"When response from remote is too huge(> 32KB),
-the server will put it to s3 and return its presigned-url to clients."
+;; src/main/frontend/worker/sync.cljs
+(def ^:private max-asset-size (* 100 1024 1024))
 ```
+
+Note: The RTC implementation has been consolidated into `src/main/frontend/worker/sync.cljs`. Large messages and S3 fallback logic are handled within this module.
 
 #### Performance Limits
 
@@ -186,10 +182,8 @@ the server will put it to s3 and return its presigned-url to clients."
 **Code Reference:**
 
 ```clojure
-;; src/main/frontend/worker/rtc/ws_util.cljs
-(when (and (= "apply-ops" (:action message))
-           (< 400 (count (:ops message))))
-  {:timeout-ms 20000})
+;; src/main/frontend/worker/sync.cljs
+;; Large operation batches handled with extended timeouts
 ```
 
 #### Operational Limits
@@ -220,12 +214,16 @@ These limits are enforced by the Logseq cloud service based on your subscription
 **Code Reference:**
 
 ```clojure
-;; src/main/frontend/fs/sync.cljs
+;; src/main/frontend/handler/user.cljs
 (defn storage-exceed-limit? [exp]
-  (= (-> exp ex-data :err :body :message) "storage-limit"))
+  (some->> (ex-data exp) :err
+           ((juxt :status (comp :message :body)))
+           ((fn [[status msg]] (and (= 403 status) (= msg "storage-limit"))))))
 
 (defn graph-count-exceed-limit? [exp]
-  (= (-> exp ex-data :err :body :message) "graph-count-exceed-limit"))
+  (some->> (ex-data exp) :err
+           ((juxt :status (comp :message :body)))
+           ((fn [[status msg]] (and (= 403 status) (= msg "graph-count-exceed-limit"))))))
 ```
 
 ## Performance Characteristics
@@ -352,9 +350,9 @@ These limits are enforced by the Logseq cloud service based on your subscription
 **Key Components:**
 
 ```txt
-src/main/frontend/fs/sync.cljs          - Main sync logic
+src/main/frontend/worker/sync.cljs      - Unified sync logic (RTC and file sync)
 src/main/frontend/handler/assets.cljs   - Asset handling
-src/main/frontend/components/settings.cljs - UI configuration
+src/main/frontend/handler/user.cljs     - Auth, storage limits, sync events
 ```
 
 **Sync Algorithm:**
@@ -376,10 +374,9 @@ src/main/frontend/components/settings.cljs - UI configuration
 **Key Components:**
 
 ```txt
-src/main/frontend/worker/rtc/           - RTC implementation
-src/main/frontend/worker/rtc/core.cljs  - Main RTC logic
-src/main/frontend/worker/rtc/asset.cljs - Asset sync
-src/main/frontend/worker/rtc/ws_util.cljs - WebSocket handling
+src/main/frontend/worker/sync.cljs              - Unified sync implementation (includes RTC)
+src/main/frontend/worker/sync/log_and_state.cljs - Sync logging and state
+src/main/frontend/worker/sync/crypt.cljs        - Encryption for sync
 ```
 
 **Sync Algorithm:**
@@ -420,11 +417,10 @@ Response > 32KB → Store in S3, return presigned URL
 
 #### RTC Errors
 
-- `:rtc.exception/ws-already-disconnected`: WebSocket closed
-- `:rtc.exception/remote-graph-not-exist`: Graph deleted on server
-- `:rtc.exception/schema-version-mismatched`: Incompatible versions
-- `:rtc.exception/asset-too-large`: Asset > 100MB
-- `:rtc.exception/get-s3-object-failed`: S3 fetch error
+- `:rtc.asset.log/asset-too-large`: Asset > 100MB
+- WebSocket disconnection and reconnection handled with configurable retry delays
+- Schema version mismatch detection
+- S3 object fetch failures
 
 ## Summary Table
 
@@ -487,13 +483,9 @@ Both synchronization methods are actively developed. Future improvements may inc
 
 ## Appendix: Code References
 
-### File Sync Limits
+### Sync Limits
 
 ```clojure
-;; File size limit: 100MB
-;; Location: src/main/frontend/fs/sync.cljs
-(def ^:private file-size-limit (* 100 1000 1024))
-
 ;; Asset size check
 ;; Location: src/main/frontend/handler/assets.cljs
 (defn exceed-limit-size?
@@ -501,36 +493,26 @@ Both synchronization methods are actively developed. Future improvements may inc
   [^js file]
   (> (.-size file) (* 100 1024 1024)))
 
-;; Batch sizes
-;; Location: src/main/frontend/fs/sync.cljs
-(defonce download-batch-size 100)
-(defonce upload-batch-size 20)
+;; Upload batch size
+;; Location: src/main/frontend/worker/sync.cljs
+(def ^:private upload-kvs-batch-size 500)
 ```
 
-### RTC Limits
+### RTC/Asset Limits
 
 ```clojure
 ;; Asset size limit: 100MB
-;; Location: src/main/frontend/worker/rtc/asset.cljs
-(defonce ^:private max-asset-size (* 100 1024 1024))
+;; Location: src/main/frontend/worker/sync.cljs
+(def ^:private max-asset-size (* 100 1024 1024))
 
-;; WebSocket message size threshold: 100KB
-;; Location: src/main/frontend/worker/rtc/ws_util.cljs
-(when (< 100000 len)
-  ;; Upload to S3 if message too large
-  (put-apply-ops-message-on-s3-if-too-huge ws message))
-
-;; Large operation batch: 400+ ops get extended timeout
-;; Location: src/main/frontend/worker/rtc/ws_util.cljs
-(when (and (= "apply-ops" (:action message))
-           (< 400 (count (:ops message))))
-  {:timeout-ms 20000})
+;; Storage and graph count limits
+;; Location: src/main/frontend/handler/user.cljs
+;; Enforced server-side, detected via 403 status codes
 ```
 
 ---
 
-_Document Version: 1.0_  
-_Last Updated: 2025-10-04_  
-_Logseq Version: feat/mcp-server branch_
+_Document Version: 1.1_
+_Last Updated: 2026-03-10_
 
 For questions or corrections, please open an issue on GitHub or discuss in the Logseq community forums.

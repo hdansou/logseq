@@ -2,7 +2,7 @@
 title: 'View Functions'
 description: 'How to create custom view functions for advanced query results'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -15,6 +15,8 @@ relatedDocs:
 
 # View Functions
 
+> **Last revised:** 2026-03-10
+
 > How to use `:view` functions to create custom presentations of query results.
 
 ## What is :view?
@@ -24,6 +26,8 @@ The `:view` parameter in advanced queries lets you control exactly how results a
 ---
 
 ## Basic Syntax
+
+**File graph example:**
 
 ```clojure
 #+BEGIN_QUERY
@@ -37,6 +41,8 @@ The `:view` parameter in advanced queries lets you control exactly how results a
              [:div (:block/title r)])])}
 #+END_QUERY
 ```
+
+> **Note:** In DB graphs, `:block/marker` does not exist. Use `:logseq.property/status` instead. See the "Accessing Block Data" section below for details.
 
 ---
 
@@ -79,6 +85,8 @@ The `:view` parameter in advanced queries lets you control exactly how results a
 
 ## Card Layout
 
+**File graph example** (uses `:block/properties`):
+
 ```clojure
 :view (fn [result]
         [:div {:style {:display "grid"
@@ -93,11 +101,15 @@ The `:view` parameter in advanced queries lets you control exactly how results a
                 (str "Priority: " (get-in item [:block/properties :priority] "None"))]])])
 ```
 
+In a DB graph, replace `(get-in item [:block/properties :priority] "None")` with `(str (:logseq.property/priority item))` or access the property's `:block/title` for its display name.
+
 ---
 
 ## Accessing Block Data
 
 ### Common Fields
+
+**File graphs:**
 
 | Field      | Access              | Description       |
 | ---------- | ------------------- | ----------------- |
@@ -108,17 +120,43 @@ The `:view` parameter in advanced queries lets you control exactly how results a
 | Page       | `:block/page`       | Page entity       |
 | Parent     | `:block/parent`     | Parent block      |
 
+**DB graphs (0.11.x+):** In DB graphs, `:block/marker` and `:block/priority` do not exist. Tasks use `:logseq.property/status` (with entity values like `:logseq.property/status.todo`, `:logseq.property/status.doing`, `:logseq.property/status.done`, etc.) and `:logseq.property/priority` (with values `:logseq.property/priority.high`, `.medium`, `.low`). Properties are stored as direct attributes on the entity rather than inside a `:block/properties` map.
+
+| Field    | Access                     | Description                        |
+| -------- | -------------------------- | ---------------------------------- |
+| Title    | `:block/title`             | Block content                      |
+| Status   | `:logseq.property/status`  | Entity ref (e.g., status.todo)     |
+| Priority | `:logseq.property/priority`| Entity ref (e.g., priority.high)   |
+| Page     | `:block/page`              | Page entity                        |
+| Parent   | `:block/parent`            | Parent block                       |
+
 ### Access Patterns
+
+**File graphs:**
 
 ```clojure
 ;; Direct access
 (:block/title item)
 
-;; Nested access
+;; Nested access (file graphs only)
 (get-in item [:block/properties :status])
 
-;; With default
+;; With default (file graphs only)
 (get-in item [:block/properties :priority] "Normal")
+
+;; Page name
+(get-in item [:block/page :block/title])
+```
+
+**DB graphs:** Properties are direct attributes on the entity, not nested under `:block/properties`.
+
+```clojure
+;; Direct access
+(:block/title item)
+
+;; Properties are direct attributes (DB graphs)
+(:logseq.property/status item)
+(:logseq.property/priority item)
 
 ;; Page name
 (get-in item [:block/page :block/title])
@@ -127,6 +165,8 @@ The `:view` parameter in advanced queries lets you control exactly how results a
 ---
 
 ## Conditional Styling
+
+**File graph example** (uses `:block/properties` with string priority values "A", "B", "C"):
 
 ```clojure
 :view (fn [result]
@@ -144,9 +184,13 @@ The `:view` parameter in advanced queries lets you control exactly how results a
                 (:block/title item)]))])
 ```
 
+> **DB graph note:** Priority values in DB graphs are entity references (`:logseq.property/priority.high`, `.medium`, `.low`) rather than strings. Adjust the `case` expression accordingly.
+
 ---
 
 ## Table with Custom Columns
+
+**File graph example** (uses `:block/marker` and `:block/properties`):
 
 ```clojure
 :view (fn [result]
@@ -164,9 +208,13 @@ The `:view` parameter in advanced queries lets you control exactly how results a
                 [:td (get-in item [:block/properties :priority] "—")]])]])
 ```
 
+> **DB graph note:** Replace `(:block/marker item)` with `(:block/title (:logseq.property/status item))` and `(get-in item [:block/properties :priority])` with `(:block/title (:logseq.property/priority item))` to get display names for status and priority.
+
 ---
 
 ## Statistics View
+
+**File graph example** (uses `:block/marker`):
 
 ```clojure
 :view (fn [result]
@@ -182,6 +230,8 @@ The `:view` parameter in advanced queries lets you control exactly how results a
                              :width (str (* 100 (/ done total)) "%")
                              :border-radius "4px"}}]]]))
 ```
+
+> **DB graph note:** Replace `(= "DONE" (:block/marker %))` with a check against the status entity, e.g., `(= "Done" (:block/title (:logseq.property/status %)))`.
 
 ---
 
@@ -232,6 +282,8 @@ Define views in `config.edn` and reuse across queries:
 
 ### Using Both
 
+**File graph example:**
+
 ```clojure
 #+BEGIN_QUERY
 {:title "Top 5 Tasks"
@@ -244,6 +296,8 @@ Define views in `config.edn` and reuse across queries:
          [:ol (for [r result] [:li (:block/title r)])])}
 #+END_QUERY
 ```
+
+> **DB graph note:** Replace `(get-in % [:block/properties :priority])` with direct property access like `(:logseq.property/priority %)`.
 
 ---
 
@@ -309,4 +363,4 @@ Hiccup is a way to write HTML using ClojureScript data structures:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

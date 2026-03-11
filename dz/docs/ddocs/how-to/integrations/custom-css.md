@@ -2,9 +2,9 @@
 title: 'Custom CSS'
 description: "How to customize Logseq's appearance with custom CSS"
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
-platforms: [desktop, web]
+platforms: [desktop, web, mobile]
 graphType: [file, db]
 relatedDocs:
   reference:
@@ -15,17 +15,19 @@ relatedDocs:
 
 # Custom CSS
 
+> **Last revised:** 2026-03-10
+
 > How to customize Logseq's appearance with your own CSS styles.
 
 ## Where to Add Custom CSS
 
 ### Option 1: custom.css File (Recommended)
 
+**File-based graphs:**
+
 1. Open your graph folder
 2. Navigate to `logseq/` subfolder
 3. Create or edit `custom.css`
-
-**Path:**
 
 ```
 your-graph/
@@ -33,12 +35,14 @@ your-graph/
     └── custom.css
 ```
 
+**DB-based graphs:** The `custom.css` file is stored inside the database as a file entity at `logseq/custom.css`. Use the Settings UI (Option 2) or the command palette to edit it.
+
 ### Option 2: Settings UI
 
 1. Open Settings (gear icon)
 2. Go to **Editor** tab
-3. Find **Custom CSS** section
-4. Paste your CSS
+3. Find **Custom theme** and click **Edit custom.css**
+4. This opens `custom.css` in Logseq's built-in editor
 
 ---
 
@@ -297,4 +301,4 @@ a.tag {
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

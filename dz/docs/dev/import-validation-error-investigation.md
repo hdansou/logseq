@@ -1,5 +1,7 @@
    # Import Validation Error Investigation Report
 
+> **Last revised:** 2026-03-10
+
 **Date:** 2025-11-01
 **Issue:** Logseq Markdown to Database Graph Import Validation Failures
 **Log File:** `/Users/dzu/Downloads/-1761842989160.log`
@@ -37,13 +39,14 @@ All errors in the log file follow the same structure:
 
 Based on code analysis of the validation system:
 
-#### 1. **Entity Dispatch Mechanism** (malli_schema.cljs:513-543)
+#### 1. **Entity Dispatch Mechanism** (malli_schema.cljs:553-586)
 
 The validation system uses `entity-dispatch-key` to classify entities into different types:
+- `:reaction-entity` - Reaction entities
 - `:property` - Property pages
 - `:class` - Class pages
 - `:hidden` - Hidden pages
-- `:normal-page` - Regular pages
+- `:normal-page` - Regular pages (including whiteboards)
 - `:block` - Normal blocks
 - `:property-value-block` - Property value blocks
 - `:closed-value-block` - Closed value blocks
@@ -57,14 +60,14 @@ When `entity-dispatch-key` returns `nil`, it means **the entity doesn't match an
 
 #### 2. **Why Dispatch Returns `nil`**
 
-The dispatch function (malli_schema.cljs:513-543) uses a `cond` statement with specific conditions. If none match, it implicitly returns `nil`. This happens when:
+The dispatch function (malli_schema.cljs:553-586) uses a `cond` statement with specific conditions. If none match, it implicitly returns `nil`. This happens when:
 
 1. Entity has attributes that don't conform to any expected pattern
 2. During import, entities may have **temporary or intermediate states** not recognized by the schema
 3. **Data corruption or malformation** during markdown-to-DB conversion
 4. **Missing required attributes** that prevent proper entity classification
 
-#### 3. **Import Process Context** (validate.cljs:104-106)
+#### 3. **Import Process Context** (validate.cljs:94)
 
 The validation code explicitly acknowledges import issues:
 
@@ -178,8 +181,8 @@ Entities may reference other entities not yet created or with invalid IDs:
 
 - **Validation Logic**: `deps/db/src/logseq/db/frontend/validate.cljs`
 - **Malli Schema**: `deps/db/src/logseq/db/frontend/malli_schema.cljs`
-  - Entity dispatch: Lines 513-543
-  - Schema definitions: Lines 545-559
+  - Entity dispatch: Lines 553-586
+  - Schema definitions: Lines 588-600
 - **Entity Type Utilities**: `deps/db/src/logseq/db/frontend/entity_util.cljs` (referenced)
 
 ### Proposed Fixes

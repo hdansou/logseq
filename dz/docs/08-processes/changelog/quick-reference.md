@@ -1,5 +1,7 @@
 # Changelog Generation Quick Reference
 
+> **Last revised:** 2026-03-10
+
 ## Commands
 
 ### GitHub Copilot Commands
@@ -16,16 +18,16 @@
 
 ```bash
 # Basic usage
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
 
 # Custom output file
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15 -o my-changelog.md
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15 -o my-changelog.md
 
 # Specific branch only
-./scripts/generate-changelog-log.sh 2025-01-05 2025-01-15 -b "origin/master"
+./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15 -b "origin/master"
 
 # Show help
-./scripts/generate-changelog-log.sh --help
+./dz/scripts/generate-changelog-log.sh --help
 ```
 
 ## Output Formats
@@ -86,7 +88,7 @@
 
 ```bash
 # 1. Generate raw log
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31
 
 # 2. Create release notes
 @workspace /new-changelog 2025-01-01 2025-01-31 --format=release
@@ -99,7 +101,7 @@
 
 ```bash
 # 1. Generate log for hotfix branch
-./scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
+./dz/scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
 
 # 2. Create changelog
 @workspace /new-changelog 2025-01-15 2025-01-16
@@ -109,7 +111,7 @@
 
 ```bash
 # 1. Generate log for feature branch
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/new-feature"
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/new-feature"
 
 # 2. Create changelog
 @workspace /new-changelog 2025-01-01 2025-01-31
@@ -180,7 +182,7 @@ git log --since="2025-01-01" --until="2025-01-31" --oneline
 
 ```bash
 # Use branch filtering
-./scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
+./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
 ```
 
 ### Missing contributors

@@ -3,7 +3,7 @@ title: 'Managing Favorites & Recent Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'How-To'
-last-verified: '2026-01-11'
+last-verified: '2026-03-10'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/04-linking-pages.md'
@@ -11,6 +11,8 @@ related-docs:
 ---
 
 # Managing Favorites & Recent Pages
+
+> **Last revised:** 2026-03-10
 
 Learn how to organize and quickly access your most important pages using Favorites and Recent pages features.
 
@@ -25,36 +27,31 @@ Logseq provides two navigation features to access pages quickly:
 
 ### Adding to Favorites
 
-**Method 1: From Page**
+**Method 1: From Page Menu**
 
 1. Open the page you want to favorite
-2. Click the **⭐ star icon** next to the page title
-3. The page appears in left sidebar under "Favorites"
+2. Click the **⋯** (more options) menu in the page header
+3. Select **"Add to favorites"**
+4. The page appears in left sidebar under "Favorites"
 
-**Method 2: From Page Menu**
-
-1. Right-click (or long-press on mobile) any page link
-2. Select **"Add to favorites"**
-3. Page is added to favorites list
-
-**Method 3: Keyboard Shortcut**
+**Method 2: Keyboard Shortcut**
 
 When viewing a page:
 
-- Press `Ctrl/Cmd + Shift + F`
+- Press `Ctrl/Cmd + Shift + F` (toggles favorite on/off)
 
 ### Removing from Favorites
 
-**From Sidebar:**
-
-1. Find the page in "Favorites" section
-2. Right-click → **"Remove from favorites"**
-3. Or click the star icon again to toggle off
-
-**From Page:**
+**From Page Menu:**
 
 1. Open the favorited page
-2. Click the ⭐ (filled) star icon to unfavorite
+2. Click the **⋯** (more options) menu
+3. Select **"Unfavorite page"**
+
+**Via Keyboard:**
+
+1. Open the favorited page
+2. Press `Ctrl/Cmd + Shift + F` to toggle off
 
 ### Organizing Favorites
 
@@ -92,16 +89,7 @@ Add properties to favorite pages for better organization:
   access-frequency:: daily
 ```
 
-Then query favorited pages by category:
-
-```clojure
-#+BEGIN_QUERY
-{:query [:find (pull ?p [*])
-         :where
-         [?p :block/favorite? true]
-         [?p :favorite-category "important"]]}
-#+END_QUERY
-```
+Note: Favorites are stored internally via a special `$$$favorites` page whose child blocks link to favorited pages. There is no `:block/favorite?` attribute on pages, so you cannot query favorites directly by a boolean property. Instead, organize favorites using your own custom properties and queries.
 
 ## Recent Pages
 
@@ -113,31 +101,19 @@ Then query favorited pages by category:
 2. See chronologically ordered pages you've visited
 3. Click any page to navigate
 
-**Keyboard Shortcut:**
-
-- `Ctrl/Cmd + Shift + R` - Open recent pages
-
 ### How Recent Pages Work
 
-Recent pages automatically track:
+Recent pages are actually **recently updated pages**, sorted by the `block/updated-at` timestamp. They track:
 
-- ✅ Pages you open
-- ✅ Pages you edit
-- ✅ Pages you create
-- ❌ Not tracked: Pages only mentioned in links
+- Pages you edit (content changes update the timestamp)
+- Pages you create (creation sets the timestamp)
+- Pages whose blocks are modified
 
-**Tracking behavior:**
-
-```markdown
-Jan 11th → Opens "Project A" → Added to recent
-→ Edits "Meeting Notes" → Added to recent
-→ Types [[New Idea]] → NOT added (only link)
-→ Clicks [[New Idea]] → NOW added to recent
-```
+Note: Simply viewing/opening a page without editing it does not update the timestamp, so it may not appear in the recent list.
 
 ### Recent Pages Limit
 
-Logseq keeps track of the **last 20-30 pages** (varies by version).
+Logseq keeps track of the **last 15 recently updated pages**.
 
 Older pages automatically drop off the list.
 
@@ -165,9 +141,10 @@ Favorites:
 
 **Navigate quickly:**
 
-1. `Ctrl/Cmd + J` - Jump to today's journal
-2. Click "Dashboard" from favorites
-3. Review tasks and notes
+1. `g j` - Go to journals page (non-editing shortcut)
+2. `Ctrl/Cmd + Shift + J` (macOS) or `Alt + Shift + J` (Windows/Linux) - Open today's page in sidebar
+3. Click "Dashboard" from favorites
+4. Review tasks and notes
 
 ### Project-Based Navigation
 
@@ -220,38 +197,27 @@ Create a dashboard page with all favorites:
 
     - {{embed [[Work/Projects]]}}
     - {{embed [[Personal/Goals]]}}
-
-  - ## Recent Work
-    query-table:: false
-    #+BEGIN_QUERY
-    {:query [:find (pull ?p [:block/title :block/updated-at])
-    :where
-    [?p :block/favorite? true]
-    [?p :block/updated-at ?t]]
-    :order-by [[?t :desc]]
-    :limit 10}
-    #+END_QUERY
 ```
 
-### Smart Recent Pages Query
+Note: Since favorites are stored via an internal system page (`$$$favorites`) rather than a queryable attribute, you cannot query "all favorited pages" with a Datalog query. Instead, curate your dashboard manually or use your own custom properties.
 
-Find pages you frequently visit:
+### Finding Recently Updated Pages
+
+You can query for recently updated pages using the `block/updated-at` attribute:
 
 ```clojure
 #+BEGIN_QUERY
-{:query [:find ?title (count ?visit)
-         :keys title visit-count
+{:query [:find (pull ?p [:block/title :block/updated-at])
          :where
          [?p :block/title ?title]
-         [?v :visit/page ?p]
-         [?v :visit/timestamp ?visit]]
- :group-by ?title
- :order-by [[visit-count :desc]]
+         [?p :block/updated-at ?t]
+         [(> ?t 1700000000000)]]
+ :result-transform (fn [result] (sort-by :block/updated-at > result))
  :limit 20}
 #+END_QUERY
 ```
 
-_(Note: Visit tracking must be enabled)_
+Note: Logseq does not track page visit frequency. The "recent" feature is based solely on `block/updated-at` timestamps.
 
 ### Combine with Quick Capture
 
@@ -301,13 +267,14 @@ On mobile, favorites are even more valuable:
 
 ## Keyboard Shortcuts Summary
 
-| Action          | Windows/Linux      | macOS             |
-| --------------- | ------------------ | ----------------- |
-| Toggle favorite | `Ctrl + Shift + F` | `Cmd + Shift + F` |
-| Open recent     | `Ctrl + Shift + R` | `Cmd + Shift + R` |
-| Jump to journal | `Ctrl + J`         | `Cmd + J`         |
-| Quick search    | `Ctrl + K`         | `Cmd + K`         |
-| Go to page      | `Ctrl + O`         | `Cmd + O`         |
+| Action                       | Windows/Linux        | macOS               |
+| ---------------------------- | -------------------- | ------------------- |
+| Toggle favorite              | `Ctrl + Shift + F`   | `Cmd + Shift + F`   |
+| Go to journals               | `g j`                | `g j`               |
+| Open today in sidebar        | `Alt + Shift + J`    | `Cmd + Shift + J`   |
+| Quick search                 | `Ctrl + K`           | `Cmd + K`           |
+| Highlight recent blocks      | `Ctrl + C, Ctrl + R` | `Cmd + C, Cmd + R`  |
+| Follow link under cursor     | `Ctrl + O`           | `Cmd + O`           |
 
 ## Troubleshooting
 
@@ -328,8 +295,8 @@ On mobile, favorites are even more valuable:
 
 **Solution:**
 
-- Recent pages track actual navigation
-- Visit some pages to populate list
+- Recent pages track recently *updated* pages, not just visited ones
+- Edit some pages to populate the list
 - Check you're in correct graph
 - Restart Logseq if issue persists
 
@@ -350,10 +317,11 @@ On mobile, favorites are even more valuable:
 
 **Solution:**
 
-- Page may have aged out (only shows ~20-30)
+- Page may have aged out (only shows the last 15)
+- The "recent" list is based on edit timestamps, not page visits -- simply opening a page without editing may not add it
 - Use search instead: `Ctrl/Cmd + K`
 - Check if page was renamed/deleted
-- Use full-text search: `Ctrl/Cmd + Shift + F`
+- Use in-page search: `Ctrl/Cmd + F` (Electron find-in-page)
 
 ## Best Practices
 
@@ -418,16 +386,7 @@ Monthly review:
 
 ### With Search
 
-Favorites show up first in search results:
-
-```
-Search: "project"
-Results:
-★ Project Alpha (Favorite)
-★ Projects Dashboard (Favorite)
-- Project Beta
-- Old Project
-```
+Use `Ctrl/Cmd + K` to open the command palette / search. The initial view shows recently updated pages. Typing will fuzzy-search across all pages. Favorites are not given special priority in search results, but they remain easily accessible from the left sidebar.
 
 ### With Command Palette
 
@@ -439,11 +398,7 @@ Access favorites via command palette:
 
 ### With Graph View
 
-Favorited pages highlighted in graph:
-
-- Special color/icon in graph view
-- Easy to spot important nodes
-- Visual navigation aid
+The graph view displays all pages and their connections. Favorited pages do not currently receive special visual treatment (no distinct color or icon) in the graph view, but you can use the graph's search and filter controls to locate important nodes.
 
 ## See Also
 

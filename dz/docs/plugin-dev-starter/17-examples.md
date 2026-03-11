@@ -1,5 +1,7 @@
 # Plugin Examples
 
+> **Last revised:** 2026-03-10
+
 Real-world examples to help you build Logseq plugins quickly.
 
 ## Table of Contents

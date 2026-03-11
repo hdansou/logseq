@@ -1,5 +1,7 @@
 # Logseq Plugin Development - Starter Documentation
 
+> **Last revised:** 2026-03-10
+
 Comprehensive documentation to help you build Logseq plugins quickly.
 
 ## 📚 Documentation Structure
@@ -90,5 +92,5 @@ Found an issue or want to improve the documentation? Contributions are welcome!
 
 ---
 
-**Last Updated**: December 31, 2025
-**SDK Version**: @logseq/libs v0.2.9
+**Last Updated**: March 10, 2026
+**SDK Version**: @logseq/libs v0.2.12

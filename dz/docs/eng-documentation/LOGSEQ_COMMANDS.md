@@ -1,6 +1,8 @@
 # Logseq CLI Commands Reference
 
-**Logseq Version:** 0.4.0
+> **Last revised:** 2026-03-10
+
+**Logseq Version:** 0.4.3
 
 This document provides detailed help for all Logseq CLI commands.
 
@@ -14,7 +16,7 @@ Usage: logseq list
 
 **Description:**
 
-List all DB and file graphs on your system.
+List all local DB graphs on your system.
 
 **Examples:**
 
@@ -26,12 +28,8 @@ logseq list
 **Sample Output:**
 
 ```text
-DB Graphs:
 my-notes
 work-journal
-
-File Graphs:
-old-graph
 ```
 
 **Use When:**
@@ -97,7 +95,7 @@ Usage: logseq search [search-terms] [options]
 
 **Description:**
 
-Search a local graph or the current in-app graph if --api-server-token is given. For a local graph it searches the `:block/title` attribute of all blocks and pages.
+Search a local graph or the current in-app graph if --api-server-token is given. For a local graph it only searches the `:block/title` of blocks.
 
 **Examples:**
 
@@ -333,9 +331,11 @@ Usage: logseq export-edn [options]
 - `-a, --api-server-token` - API server token to export current graph
 - `-g, --graph` - Local graph to export
 - `-T, --include-timestamps?` - Include timestamps in export
-- `-c, --catch-validation-errors?` - Catch validation errors for dev
+- `-c, --catch-validation-errors?` - (Dev) Catch validation errors and still write invalid EDN
 - `-F, --exclude-files?` - Exclude :file/path files
 - `-b, --exclude-built-in-pages?` - Exclude built-in pages
+- `-r, --roundtrip` - (Dev) Validate export is idempotent by importing into a temp graph and diffing its export
+- `-v, --validate` - (Dev) Validate export with a temp graph built on exported EDN
 
 **Description:**
 
@@ -640,7 +640,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 - Server runs continuously until terminated (Ctrl+C)
 - In API mode, changes in Logseq app are immediately available
-- In local mode, the server has read-only access to the graph
+- In local mode, the server has both read and write access to the graph (e.g., `upsertNodes`)
 - For security, bind to localhost (127.0.0.1) unless network access needed
 
 ---
@@ -653,7 +653,8 @@ Usage: logseq validate [options]
 
 **Options:**
 
-- `-g, --graphs` - Local graph(s) to validate
+- `-g, --graphs` - Local graph(s) to validate (required)
+- `-o, --open-schema` - Validate with open schema to allow extra keys/attributes in an entity map
 
 **Description:**
 

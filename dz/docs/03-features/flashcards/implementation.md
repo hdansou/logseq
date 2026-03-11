@@ -1,26 +1,26 @@
 # Logseq Flashcard Implementation Guide
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq provides a powerful flashcard system that integrates seamlessly with your knowledge management workflow. The implementation uses spaced repetition algorithms to optimize learning and retention. This guide explains how flashcards work internally and how users can leverage them effectively.
 
 ## System Architecture
 
-Logseq implements a dual-system approach for flashcards, supporting both legacy file-based graphs and modern database-based graphs:
+Logseq's current flashcard system uses the FSRS algorithm for database-based graphs. Legacy file-based graph SRS support (which used block properties like `:card-last-interval`, `:card-ease-factor`, etc.) has been deprecated and the related code removed from the active codebase; those properties now only appear in the graph migration/export layer.
 
-### File-based Graphs (Legacy)
-
-- **Algorithm**: SuperMemo SM-5 spaced repetition
-- **Storage**: Block properties in markdown files
-- **Review Interface**: 3-button system (Forgotten, Recall, Remembered)
-- **Status**: Will be deprecated in favor of database-based system
-
-### Database-based Graphs (Modern)
+### Database-based Graphs (Current)
 
 - **Algorithm**: FSRS (Free Spaced Repetition Scheduler)
 - **Storage**: Database entities with structured properties
 - **Review Interface**: 4-button system (Again, Hard, Good, Easy)
-- **Status**: Current recommended approach
+- **Status**: Current active implementation
+
+### File-based Graphs (Legacy/Deprecated)
+
+- **Storage**: Block properties in markdown files (e.g., `:card-last-interval`, `:card-repeats`, `:card-ease-factor`)
+- **Status**: Deprecated; properties are only handled during migration/export to DB-based graphs
 
 ## Creating Flashcards
 
@@ -56,9 +56,9 @@ The capital of {{cloze France\\country}} is {{cloze Paris\\city}}
 
 ## Spaced Repetition Algorithms
 
-### Legacy SM-5 Algorithm (File-based)
+### Legacy Properties (File-based, Deprecated)
 
-**Key Properties**:
+The following block properties were used by the old file-based SRS system and are now only relevant during migration/export:
 
 - `:card-last-interval` - Days since last review
 - `:card-repeats` - Number of successful reviews
@@ -66,14 +66,11 @@ The capital of {{cloze France\\country}} is {{cloze Paris\\city}}
 - `:card-next-schedule` - Next review date
 - `:card-last-score` - Previous review performance (1-5)
 
-**Algorithm Logic**:
+Configuration keys (still recognized in `config.edn` for legacy graphs):
+- `:srs/learning-fraction` (default: 0.5)
+- `:srs/initial-interval` (default: 4 days)
 
-- Initial interval: 4 days (configurable)
-- Learning fraction: 0.5 (configurable)
-- Uses optimum factor (OF) matrix for interval calculation
-- Adjusts intervals based on review performance
-
-### Modern FSRS Algorithm (Database-based)
+### FSRS Algorithm (Database-based, Current)
 
 **Key Properties**:
 
@@ -116,20 +113,20 @@ The capital of {{cloze France\\country}} is {{cloze Paris\\city}}
 
 - `s` - Start review session
 - `n` - Next card / Show answer
-- `f` - Forgotten (legacy) / Again (FSRS)
-- `r` - Recall (legacy)
-- `t` - Remembered (legacy) / Easy (FSRS)
-- `1-4` - Direct rating (FSRS only)
+- `1` - Again
+- `2` - Hard
+- `3` - Good
+- `4` - Easy
 
 ## Configuration Options
 
 ### Graph Settings
 
 ```clojure
-;; File-based configuration (config.edn)
-:srs/learning-fraction 0.5        ; Speed of difficulty adjustment
-:srs/initial-interval 4           ; First review after 4 days
-:feature/enable-flashcards? true  ; Enable/disable flashcards
+;; config.edn settings
+:srs/learning-fraction 0.5        ; Speed of difficulty adjustment (legacy file-based graphs)
+:srs/initial-interval 4           ; First review after 4 days (legacy file-based graphs)
+:feature/enable-flashcards? true  ; Enable/disable flashcards (default: true)
 ```
 
 ### Built-in Classes (Database-based)
@@ -231,10 +228,11 @@ For users transitioning from file-based to database-based graphs:
 
 ### Code Organization
 
-- **Core Logic**: `/src/main/frontend/extensions/` (srs.cljs, fsrs.cljs)
+- **Core Logic**: `src/main/frontend/extensions/fsrs.cljs` (FSRS algorithm and review UI)
+- **SRS Handler**: `src/main/frontend/extensions/srs/handler.cljs` (button click handlers)
+- **Class Definition**: `deps/db/src/logseq/db/frontend/class.cljs` (`:logseq.class/Card`)
 - **UI Components**: Integrated with block editor and modal system
 - **Database Schema**: Uses built-in class system for type safety
-- **Algorithm Libraries**: External FSRS library for modern implementation
 
 ### Data Flow
 

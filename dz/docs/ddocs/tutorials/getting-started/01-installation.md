@@ -3,13 +3,15 @@ title: 'Installation Guide'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-01-11'
+last-verified: '2026-03-10'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/02-first-graph.md'
 ---
 
 # Installation Guide
+
+> **Last revised:** 2026-03-10
 
 Welcome to Logseq! This tutorial will guide you through installing Logseq on your device in under 10 minutes.
 
@@ -93,7 +95,7 @@ flatpak install flathub com.logseq.Logseq
 3. Tap **Install**
 4. Open Logseq from your app drawer
 
-**Requirements:** Android 8.0 or later
+**Requirements:** Android 6.0 (Marshmallow) or later
 
 ### Web Version
 
@@ -120,7 +122,7 @@ When you first open Logseq, you'll see a welcome screen with setup options:
 
 ### Desktop
 
-- **OS:** Windows 10+, macOS 10.12+, or modern Linux distribution
+- **OS:** Windows 10+, macOS 10.15+ (Catalina or later), or modern Linux distribution
 - **RAM:** 4GB minimum, 8GB recommended
 - **Storage:** 500MB for app + storage for your graphs
 - **Display:** 1280x720 minimum resolution
@@ -128,7 +130,7 @@ When you first open Logseq, you'll see a welcome screen with setup options:
 ### Mobile
 
 - **iOS:** 14.0 or later
-- **Android:** 8.0 or later
+- **Android:** 6.0 (Marshmallow) or later
 - **Storage:** 200MB for app + storage for your graphs
 
 ## Troubleshooting

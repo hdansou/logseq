@@ -1,5 +1,7 @@
 # Logseq Quick Capture: Complete Guide
 
+> **Last revised:** 2026-03-10
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -321,13 +323,9 @@ _Captured 14:30 on [[Dec 15th, 2024]]_
 
 ### Content Type Detection
 
-For different content types, you can create specialized workflows:
+Logseq automatically detects certain content types and formats them appropriately before applying your template. Video URLs are wrapped in `{{video URL}}` format, and Twitter/X links are converted to `{{twitter URL}}` format. This detection happens automatically -- no conditional template syntax is needed.
 
-```clojure
-;; Example of content-aware template
-:quick-capture-templates
-{:text "{% if url contains 'youtube.com' %}\n## 🎥 Video: {text}\n{{video {url}}}\n{% elsif url contains 'twitter.com' %}\n## 🐦 Tweet\n{{twitter {url}}}\n{% else %}\n## 📄 {text}\n{url}\n{% endif %}\n\n**Captured:** {time} on [[{date}]]"}
-```
+Note that quick capture templates do **not** support conditional logic (if/else). The automatic content type detection is built into the capture function itself.
 
 ## Troubleshooting
 

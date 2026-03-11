@@ -1,4 +1,6 @@
-# 🚀 Logseq Plugin Development Starter Kit
+# Logseq Plugin Development Starter Kit
+
+> **Last revised:** 2026-03-10
 
 **Comprehensive documentation to get you building Logseq plugins fast!**
 
@@ -287,7 +289,7 @@ This documentation provides:
 - ✅ **Practical** - 100+ working code examples
 - ✅ **Clear** - Simple explanations
 - ✅ **Structured** - Easy to navigate
-- ✅ **Up-to-date** - Based on latest SDK (v0.2.9)
+- ✅ **Up-to-date** - Based on latest SDK (v0.2.12)
 - ✅ **Tested** - All examples verified
 
 ---
@@ -306,7 +308,7 @@ Want to improve this documentation?
 ## 📅 Version Info
 
 - **Created**: December 31, 2025
-- **SDK Version**: @logseq/libs v0.2.9
+- **SDK Version**: @logseq/libs v0.2.12
 - **Status**: Complete starter documentation
 - **Next Update**: As SDK evolves
 

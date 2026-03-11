@@ -1,5 +1,7 @@
 # Logseq Plugin SDK - Quick Reference
 
+> **Last revised:** 2026-03-10
+
 Fast lookup for common APIs and patterns.
 
 ## Core APIs

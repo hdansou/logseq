@@ -1,5 +1,7 @@
 # Technical Stack
 
+> **Last revised:** 2026-03-10
+
 ## Technology Overview
 
 Logseq is built on a modern, carefully selected technology stack that prioritizes performance, maintainability, and extensibility. The choice of functional programming languages and reactive patterns reflects the application's focus on data relationships and user interaction.
@@ -111,12 +113,14 @@ graph TD
 **Configuration**:
 
 ```clojure
-{:source-paths ["src/main" "src/dev"]
- :dependencies [[reagent "1.1.1"]
-                [datascript "1.3.15"]]
+;; shadow-cljs.edn uses deps.edn for dependency management
+{:deps true
+ :source-paths ["src/main" "src/electron" "src/resources"]
  :builds {:app {:target :browser
-                :output-dir "public/js"
-                :modules {:main {:init-fn frontend.core/init}}}}}
+                :output-dir "./static/js"
+                :modules {:main {:init-fn frontend.core/init}
+                          :code-editor {:entries [frontend.extensions.code]
+                                        :depends-on #{:main}}}}}}
 ```
 
 ### Gulp (4.0.2)
@@ -212,32 +216,29 @@ ipcRenderer.on('file-changed', (event, filePath) => {
 })
 ```
 
-## Mobile Platform: React Native
+## Mobile Platform: Capacitor
 
 ### Mobile Architecture
 
-**React Native Components**:
-
-- Native UI components
-- Platform-specific styling
-- Performance optimizations
-- Native module integration
-
 **Capacitor (7.2.0)**:
 
-- Cross-platform native runtime
-- Plugin ecosystem
-- Web view integration
-- Native API access
+The mobile app runs the same ClojureScript application inside a Capacitor web view, with native functionality provided through Capacitor plugins. This is not a React Native app.
+
+- Cross-platform native runtime (web view based)
+- Plugin ecosystem for native APIs
+- Shared codebase with web/desktop
+- Native API access via Capacitor bridge
 
 ### Mobile-Specific Features
 
-**Plugins Used**:
+**Key Capacitor Plugins**:
 
-- `@capacitor/filesystem` - File system access
-- `@capacitor/camera` - Camera integration
-- `@capacitor/clipboard` - Clipboard operations
-- `@capacitor/haptics` - Tactile feedback
+- `@capacitor/filesystem` (7.0.1) - File system access
+- `@capacitor/camera` (7.0.1) - Camera integration
+- `@capacitor/clipboard` (7.0.2) - Clipboard operations
+- `@capacitor/haptics` (7.0.1) - Tactile feedback
+- `@capacitor/keyboard` (7.0.1) - Keyboard management
+- `@aparajita/capacitor-secure-storage` (7.1.6) - Secure storage
 
 ## Testing and Quality Assurance
 
@@ -348,11 +349,11 @@ yarn test
 - IndexedDB storage
 - File System Access API
 
-**Mobile (Capacitor)**:
+**Mobile (Capacitor 7.2.0)**:
 
 - Native camera access
 - File system integration
-- Platform-specific UI components
+- Secure storage and keyboard management
 
 ## Performance Optimizations
 

@@ -1,5 +1,7 @@
 # Tabler Icons Extension Catalog
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 **Confirmed:** Logseq uses custom Tabler icon extensions with the `tie-` prefix (Tabler Icons Extension).
@@ -63,56 +65,6 @@ Below is the complete catalog of all 31 custom Tabler icon extensions currently 
 
 ## Usage in Code
 
-### TypeScript/React (TLDraw/Whiteboard)
-
-The icons are used via the `TablerIcon` component which automatically determines the correct prefix:
-
-**File:** [packages/tldraw/apps/tldraw-logseq/src/components/icons/TablerIcon.tsx](../packages/tldraw/apps/tldraw-logseq/src/components/icons/TablerIcon.tsx)
-
-```tsx
-const extendedIcons = [
-  'add-link',
-  'block-search',
-  'block',
-  'connector',
-  'group',
-  'internal-link',
-  'link-to-block',
-  'link-to-page',
-  'link-to-whiteboard',
-  'move-to-sidebar-right',
-  'object-compact',
-  'object-expanded',
-  'open-as-page',
-  'page-search',
-  'page',
-  'references-hide',
-  'references-show',
-  'select-cursor',
-  'text',
-  'ungroup',
-  'whiteboard-element',
-  'whiteboard',
-]
-
-export const TablerIcon = ({
-  name,
-  className,
-  ...props
-}: { name: string } & React.HTMLAttributes<HTMLElement>) => {
-  const classNamePrefix = extendedIcons.includes(name) ? `tie tie-` : `ti ti-`
-  return <i className={cx(classNamePrefix + name, className)} {...props} />
-}
-```
-
-**Example Usage:**
-
-```tsx
-<TablerIcon name="link-to-block" />
-<TablerIcon name="new-whiteboard" />
-<TablerIcon name="page-search" />
-```
-
 ### ClojureScript (Main App)
 
 Icons are used via the `icon` component with the `:extension?` flag:
@@ -151,14 +103,14 @@ Icons can also be used directly via CSS classes:
 - `group`, `ungroup`
 - `move-to-sidebar-right`
 
-### UI State Icons (6)
+### UI State Icons (7)
 
 - `object-compact`, `object-expanded`
 - `references-hide`, `references-show`
 - `heading-off`
 - `select-cursor`, `text`
 
-### Misc Icons (5)
+### Misc Icons (4)
 
 - `app-feature`
 - `cloud-exclamation`
@@ -184,13 +136,11 @@ According to the comments in [resources/css/tabler-extension.css](../resources/c
 1. Download the zip from Webfont app
 2. Extract and replace `resources/fonts/tabler-icons-extension.woff2`
 3. Update the CSS rules in `resources/css/tabler-extension.css`
-4. Update the `extendedIcons` array in `packages/tldraw/apps/tldraw-logseq/src/components/icons/TablerIcon.tsx`
 
 ## Files to Update When Adding/Removing Icons
 
 1. **Font file:** `resources/fonts/tabler-icons-extension.woff2`
 2. **CSS definitions:** `resources/css/tabler-extension.css`
-3. **TypeScript icon list:** `packages/tldraw/apps/tldraw-logseq/src/components/icons/TablerIcon.tsx`
 
 ## Standard Tabler Icons
 
@@ -225,5 +175,5 @@ When planning an update to the latest Tabler Icons version:
 
 ---
 
-**Last Updated:** December 15, 2025
+**Last Updated:** March 10, 2026
 **Total Custom Icons:** 31

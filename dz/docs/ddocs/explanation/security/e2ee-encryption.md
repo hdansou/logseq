@@ -3,13 +3,15 @@ title: 'End-to-End Encryption (E2EE) in Logseq'
 status: '🟡 Active Development'
 version: 'Since v0.9.0'
 quadrant: 'Explanation'
-platform: 'Desktop (macOS/Windows/Linux)'
+platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
 related-docs:
   - '../../tutorials/collaboration/real-time-sync.md'
   - '../../reference/features/user-profiles.md'
 ---
 
 # End-to-End Encryption (E2EE) in Logseq
+
+> **Last revised:** 2026-03-10
 
 ## Overview
 
@@ -20,7 +22,7 @@ Logseq's End-to-End Encryption (E2EE) protects your remote graphs by encrypting 
 - **Zero-knowledge architecture**: Server never sees unencrypted data or passwords
 - **Client-side encryption**: All encryption/decryption happens in your browser/app
 - **Password-based protection**: You control access with a single master password
-- **Secure key storage**: Private keys stored in OS keychain (macOS/Windows/Linux)
+- **Secure password storage**: E2EE password persisted in OS keychain (desktop) or secure storage (mobile)
 - **RSA + AES hybrid**: Strong cryptography combining asymmetric and symmetric encryption
 
 ## Why E2EE Matters
@@ -46,11 +48,15 @@ Your Device → Encrypted Data → Server (Cannot Read) → Storage
 
 ✅ **Encrypted in cloud:**
 
-- All block content and properties
-- Page titles and structure
+- Block titles/content (`:block/title` attribute)
+- Page names (`:block/name` attribute)
+
+❌ **Not encrypted (even in cloud):**
+
+- Other block properties and metadata
 - Assets (images, PDFs, files)
 - Tags and relationships
-- Graph metadata
+- Graph-level metadata (graph names, timestamps)
 
 ❌ **Not encrypted locally:**
 
@@ -75,8 +81,8 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 │     └─► Encrypt private key with password (PBKDF2)              │
 │                                                                   │
 │  2. Store keys securely                                          │
-│     ├─► Private key → OS Keychain (encrypted with password)     │
-│     ├─► Public key → Cloud (unencrypted, for others)            │
+│     ├─► Encrypted private key + public key → Cloud server       │
+│     ├─► Password (encrypted with refresh token) → OS Keychain   │
 │     └─► AES key → Memory only (regenerated or shared)           │
 │                                                                   │
 └─────────────────────────────────────────────────────────────────┘
@@ -115,7 +121,7 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 - Hash function: SHA-256
 - Padding: OAEP (Optimal Asymmetric Encryption Padding)
 
-**Implementation** ([`frontend.common.crypt/generate-rsa-key-pair`](../../src/main/frontend/common/crypt.cljs#L73-L82)):
+**Implementation** ([`frontend.common.crypt/generate-rsa-key-pair`](../../src/main/frontend/common/crypt.cljs#L63-L77)):
 
 ```clojure
 (.generateKey subtle
@@ -138,7 +144,7 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 - Authentication: Built-in AEAD (Authenticated Encryption with Associated Data)
 - IV: 12 bytes (96 bits), randomly generated per encryption
 
-**Implementation** ([`frontend.common.crypt/generate-aes-key`](../../src/main/frontend/common/crypt.cljs#L84-L90)):
+**Implementation** ([`frontend.common.crypt/generate-aes-key`](../../src/main/frontend/common/crypt.cljs#L79-L86)):
 
 ```clojure
 (.generateKey subtle
@@ -161,7 +167,7 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 - Salt: 16 bytes (128 bits), randomly generated
 - Derived key length: 256 bits (for AES-256)
 
-**Implementation** ([`frontend.common.crypt/encrypt-private-key`](../../src/main/frontend/common/crypt.cljs#L92-L115)):
+**Implementation** ([`frontend.common.crypt/encrypt-private-key`](../../src/main/frontend/common/crypt.cljs#L88-L114)):
 
 ```clojure
 (.deriveKey subtle
@@ -177,29 +183,25 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 
 ### Key Management
 
-#### Password Storage: Never Stored
+#### Password Storage
 
-Your master password **never leaves your device** and **is never stored anywhere**:
+Your master password **never leaves your device** and **is never sent to the server**. It is persisted locally by encrypting it with your refresh token and storing the result in the OS keychain (desktop) or secure storage (mobile). On web, it falls back to OPFS (Origin Private File System).
 
 ```txt
 User Password
-      ↓ (in memory only)
-PBKDF2 (600k iterations)
       ↓
-Derived Key
-      ↓ (used once)
-Encrypt Private Key → Store in OS Keychain
-      ↓ (password discarded)
-Memory Cleared
+Encrypt with refresh token (PBKDF2 + AES-GCM)
+      ↓
+Encrypted password → OS Keychain / Secure Storage / OPFS
 ```
 
 #### OS Keychain Integration
 
-Logseq uses the operating system's secure keychain to store encrypted private keys ([`electron.keychain`](../../src/electron/electron/keychain.cljs)):
+Logseq uses the operating system's secure keychain to store the encrypted E2EE password ([`electron.keychain`](../../src/electron/electron/keychain.cljs)). The account key used is `"logseq-encrypted-password"`.
 
 **macOS**: Keychain Access
 
-- Service name: `"Logseq E2EE"`
+- Service name: `"Logseq E2EE"` (derived from app name)
 - Uses Apple's Keychain Services API via `keytar` library
 - Protected by system-level security (FileVault, Touch ID, etc.)
 
@@ -213,11 +215,16 @@ Logseq uses the operating system's secure keychain to store encrypted private ke
 - Uses `libsecret` (GNOME Keyring, KDE Wallet, etc.)
 - Requires desktop environment support
 
-**Implementation** ([`electron.keychain/set-password!`](../../src/electron/electron/keychain.cljs#L21-L30)):
+**Mobile (iOS/Android)**: Secure Storage
+
+- Uses Capacitor secure storage plugin
+- Protected by platform-level secure enclave / keystore
+
+**Implementation** ([`electron.keychain/set-password!`](../../src/electron/electron/keychain.cljs#L25-L34)):
 
 ```clojure
 (defn <set-password!
-  "Persist encrypted-text for the refresh-token entry."
+  "Persist `encrypted-text` for the `refresh-token` entry."
   [key encrypted-text]
   (if-let [account (and (supported?) key)]
     (-> (p/let [_ (.setPassword keytar (keychain-service) account encrypted-text)]
@@ -254,11 +261,11 @@ Step 2: Key Generation (Client-Side)
 └─► Encrypt private key with derived key
 
 Step 3: Secure Storage
-├─► Store encrypted private key in OS keychain
-│   (Account: refresh-token identifier)
+├─► Upload encrypted private key + public key to server
+│   (via POST /e2ee/user-keys)
 │
-├─► Upload public key to server
-│   (Allows other users to encrypt data for you)
+├─► Encrypt password with refresh token, store in OS keychain
+│   (Account: "logseq-encrypted-password")
 │
 └─► Keep AES key in memory for current session
 
@@ -269,14 +276,14 @@ Step 4: Graph Upload
 └─► Server stores opaque encrypted data
 ```
 
-**UI Component** ([`frontend.components.e2ee/e2ee-request-new-password`](../../src/main/frontend/components/e2ee.cljs#L13-L70)):
+**UI Component** ([`frontend.components.e2ee/e2ee-request-new-password`](../../src/main/frontend/components/e2ee.cljs#L12-L64)):
 
 This modal enforces strong security practices:
 
 - Password confirmation to prevent typos
 - Visual warnings about password importance
 - Cannot submit until passwords match
-- No password strength meter (to avoid leaking information)
+- No password strength meter
 
 ### Decryption Flow (Subsequent Sessions)
 
@@ -293,13 +300,12 @@ Step 1: Password Prompt
 └──────────────────────────────────────────────┘
 
 Step 2: Key Recovery
-├─► Retrieve encrypted private key from OS keychain
-├─► Derive decryption key from entered password (PBKDF2)
-├─► Decrypt private key
+├─► Retrieve encrypted private key from server (/e2ee/user-keys)
+├─► Decrypt private key using entered password (PBKDF2 + AES-GCM)
 │   ├─► Success → Proceed to Step 3
 │   └─► Failure → Show "Wrong password" error
 │
-└─► Cache password in memory for session
+└─► Persist password encrypted with refresh token to OS keychain
 
 Step 3: Graph Decryption
 ├─► Download encrypted graph blobs from server
@@ -309,14 +315,14 @@ Step 3: Graph Decryption
 └─► Ready to use!
 ```
 
-**UI Component** ([`frontend.components.e2ee/e2ee-password-to-decrypt-private-key`](../../src/main/frontend/components/e2ee.cljs#L72-L104)):
+**UI Component** ([`frontend.components.e2ee/e2ee-password-to-decrypt-private-key`](../../src/main/frontend/components/e2ee.cljs#L66-L99)):
 
 This modal handles password verification:
 
 - Single password field (no confirmation needed)
 - Error feedback if decryption fails
 - Enter key submits automatically
-- Caches password with refresh token for session
+- Persists password (encrypted with refresh token) to OS keychain for subsequent sessions
 
 ### Data Encryption During Sync
 
@@ -397,10 +403,12 @@ Local Edit → RTC Operation
 - If someone has physical access to your unlocked computer, they can access your graphs
 - Use full-disk encryption and lock your device when away
 
-❌ **Metadata**
+❌ **Metadata and Non-Title Properties**
 
 - Graph names, file sizes, and access patterns are not encrypted
 - Timestamps of operations may be visible to the server
+- Block properties other than `:block/title` and `:block/name` are sent unencrypted
+- Assets (images, PDFs) are not encrypted
 
 ## Password Best Practices
 
@@ -501,72 +509,93 @@ window.crypto.subtle
 
 - Uses Chromium's crypto implementation
 - Same security guarantees as Chrome browser
-- Access to `keytar` library for OS keychain integration
+- Access to `keytar` library for OS keychain integration (stores encrypted password)
 
 ### Key Storage Locations
 
-**Development Mode**:
+**Server-side** (encrypted, opaque to server):
 
-```clojure
-;; Keys stored in memory only (not persistent)
-{:encrypted-private-key [...] ; Vector of [version salt iv encrypted-data]
- :public-key [...]            ; Public key for RSA
- :aes-key CryptoKey}          ; AES key object
-```
+- Encrypted private key + public key stored via `/e2ee/user-keys` API
+- Per-graph encrypted AES key stored via `/e2ee/graphs/:id/aes-key` API
 
-**Production (Desktop)**:
+**Client-side (Desktop)**:
 
 ```bash
-# macOS
-~/Library/Keychains/login.keychain-db
-# Account: Logseq refresh token
+# OS Keychain stores: E2EE password encrypted with refresh token
+# Account: "logseq-encrypted-password"
 # Service: "Logseq E2EE"
 
-# Windows
-Credential Manager → Windows Credentials
-# Generic Credentials → "Logseq E2EE"
-
-# Linux
-Secret Service (GNOME Keyring / KDE Wallet)
-# Requires desktop environment with libsecret support
+# macOS: ~/Library/Keychains/login.keychain-db
+# Windows: Credential Manager → Windows Credentials
+# Linux: Secret Service (GNOME Keyring / KDE Wallet)
 ```
 
-**Production (Web)**:
+**Client-side (Mobile)**:
 
-```javascript
-// Browser: IndexedDB (encrypted with session key)
-// Cannot use OS keychain from web browser
-// Falls back to sessionStorage for current tab only
+```txt
+# Capacitor secure storage
+# Key: "logseq-encrypted-password"
+# Value: E2EE password encrypted with refresh token
+```
+
+**Client-side (Web)**:
+
+```txt
+# OPFS (Origin Private File System)
+# File: "e2ee-password"
+# Content: E2EE password encrypted with refresh token
+# Also: IndexedDB ("localforage" store) for cached encrypted AES keys
+```
+
+**In-memory (all platforms)**:
+
+```clojure
+;; Decrypted AES keys cached per graph in worker thread
+;; atom: *graph->aes-key {graph-id CryptoKey}
 ```
 
 ### Code References
 
 **Core Encryption Logic**:
 
-- [`frontend.common.crypt`](../../src/main/frontend/common/crypt.cljs) — All cryptographic functions (358 lines)
+- [`frontend.common.crypt`](../../src/main/frontend/common/crypt.cljs) — All cryptographic primitives (~315 lines)
   - `<generate-rsa-key-pair` — Create RSA-4096 key pair
   - `<generate-aes-key` — Create AES-256 key
   - `<encrypt-private-key` — Password-encrypt private key with PBKDF2
   - `<decrypt-private-key` — Decrypt private key with password
-  - `<encrypt-uint8array` / `<decrypt-uint8array` — Data encryption/decryption
+  - `<encrypt-uint8array` / `<decrypt-uint8array` — Binary data encryption/decryption
+  - `<encrypt-text` / `<decrypt-text` — Transit-encoded text encryption/decryption
+  - `<encrypt-aes-key` / `<decrypt-aes-key` — RSA-wrap/unwrap AES keys
+
+**Sync-layer E2EE Logic**:
+
+- [`frontend.worker.sync.crypt`](../../src/main/frontend/worker/sync/crypt.cljs) — E2EE helpers for db-sync (~600 lines)
+  - `<ensure-graph-aes-key` — Load or create per-graph AES key
+  - `<encrypt-tx-data` / `<decrypt-tx-data` — Encrypt/decrypt sync transactions
+  - `<grant-graph-access!` — Share graph AES key with another user via their public key
+  - `<change-e2ee-password!` — Re-encrypt private key with new password
 
 **UI Components**:
 
-- [`frontend.components.e2ee`](../../src/main/frontend/components/e2ee.cljs) — E2EE modals (150 lines)
+- [`frontend.components.e2ee`](../../src/main/frontend/components/e2ee.cljs) — E2EE modals (~100 lines)
   - `e2ee-request-new-password` — Initial password setup modal
   - `e2ee-password-to-decrypt-private-key` — Password entry on startup
 
-**Keychain Integration**:
+**Main-thread E2EE Handler**:
 
-- [`electron.keychain`](../../src/electron/electron/keychain.cljs) — OS keychain wrapper (100 lines)
-  - `<set-password!` — Store encrypted key in OS keychain
-  - `<get-password` — Retrieve encrypted key
-  - `<delete-password!` — Remove key from keychain
+- [`frontend.handler.e2ee`](../../src/main/frontend/handler/e2ee.cljs) — Bridges worker thread to keychain/secure-storage (~83 lines)
+  - `<keychain-save!` / `<keychain-get` / `<keychain-delete!` — Platform-aware storage (Electron keytar, Capacitor secure storage)
 
-**Worker API**:
+**Keychain Integration (Electron)**:
 
-- [`frontend.worker.db-worker/save-e2ee-password`](../../src/main/frontend/worker/db_worker.cljs) — Cache password in worker thread
-- RTC sync uses worker thread to encrypt/decrypt data without blocking UI
+- [`electron.keychain`](../../src/electron/electron/keychain.cljs) — OS keychain wrapper via `keytar` (~56 lines)
+  - `<set-password!` — Store encrypted password in OS keychain
+  - `<get-password` — Retrieve encrypted password
+  - `<delete-password!` — Remove entry from keychain
+
+**Encrypted Attributes**:
+
+- [`frontend.worker.sync.const/encrypt-attr-set`](../../src/main/frontend/worker/sync/const.cljs) — Defines which attributes are encrypted: `#{:block/title :block/name}`
 
 ## Comparison with Other Systems
 
@@ -591,7 +620,7 @@ Secret Service (GNOME Keyring / KDE Wallet)
 **Logseq's Weaknesses:**
 
 - No password recovery mechanism
-- Metadata not encrypted (graph names, timestamps)
+- Only block titles and page names are encrypted; other properties, assets, and metadata are not yet encrypted
 - No key export/backup feature yet
 
 ## Frequently Asked Questions
@@ -635,7 +664,7 @@ A: Currently, changing your E2EE password requires:
 
 **Q: Are assets (images, PDFs) encrypted?**
 
-A: Yes, all assets uploaded to remote graphs are encrypted with the same AES-256-GCM algorithm.
+A: No. Currently, only block titles (`:block/title`) and page names (`:block/name`) are encrypted during sync. Assets and other properties are not encrypted. This may change in future releases.
 
 **Q: How does E2EE work with Real-Time Collaboration?**
 
@@ -713,6 +742,8 @@ Check:
 
 🔜 **Planned**:
 
+- Encrypt all block properties (currently only `:block/title` and `:block/name`)
+- Asset encryption (images, PDFs, files)
 - Hardware security key support (YubiKey, etc.)
 - Biometric unlock (Touch ID, Face ID)
 - Metadata encryption (graph names, timestamps)
@@ -743,6 +774,6 @@ For user profile configuration, see [User Profiles Reference](../../reference/fe
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: March 2026
 **Status**: 🟡 Active Development (E2EE feature evolving with RTC improvements)  
 **Feedback**: Report E2EE issues on [GitHub](https://github.com/logseq/logseq/issues) with `encryption` label

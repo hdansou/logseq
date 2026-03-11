@@ -1,7 +1,9 @@
 # Schema Migration Best Practices
 
-**Document Type:** Process Guide  
-**Last Updated:** December 28, 2025  
+> **Last revised:** 2026-03-10
+
+**Document Type:** Process Guide
+**Last Updated:** December 28, 2025
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
@@ -41,9 +43,9 @@ Every new built-in property requires updates in multiple locations:
 
 #### Step 1: Define Property
 
-**Location:** [deps/db/src/logseq/db/frontend/property/build.cljc](deps/db/src/logseq/db/frontend/property/build.cljc)
+**Location:** [deps/db/src/logseq/db/frontend/property.cljs](deps/db/src/logseq/db/frontend/property.cljs)
 
-**Add to `built-in-properties` vector:**
+**Add to `built-in-properties` map:**
 
 ```clojure
 ;; Example: Adding a new asset property
@@ -71,7 +73,7 @@ Every new built-in property requires updates in multiple locations:
 
 #### Step 2: Add Migration Entry
 
-**Location:** [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
+**Location:** [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
 
 **Add to `schema-version->updates` vector:**
 
@@ -95,7 +97,7 @@ Every new built-in property requires updates in multiple locations:
 
 #### Step 3: Bump Schema Version
 
-**Location:** [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+**Location:** [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 
 **Update version constant:**
 
@@ -362,7 +364,7 @@ Schema versions use **major.minor** format:
 
 ### Version Comparison
 
-**Location:** [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+**Location:** [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 
 ```clojure
 (defn compatible-schema-version?
@@ -404,7 +406,7 @@ Migrations run automatically when:
 - User opens graph in newer app version
 - During graph import
 
-**Migration Runner Location:** [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
+**Migration Runner Location:** [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
 
 ```clojure
 (defn migrate-db-graph
@@ -555,7 +557,7 @@ Bootstrap is the initialization process that creates a new graph from scratch. I
 
 ### Bootstrap Order (Critical!)
 
-**Location:** [deps/db/src/logseq/db/frontend/create_graph.cljs](deps/db/src/logseq/db/frontend/create_graph.cljs)
+**Location:** [deps/db/src/logseq/db/sqlite/create_graph.cljs](deps/db/src/logseq/db/sqlite/create_graph.cljs)
 
 **Initialization sequence (DO NOT CHANGE ORDER!):**
 
@@ -908,9 +910,9 @@ Use this checklist for every schema change:
 
 ### Property Addition Checklist
 
-- [ ] Add property to `built-in-properties` in [deps/db/src/logseq/db/frontend/property/build.cljc](deps/db/src/logseq/db/frontend/property/build.cljc)
-- [ ] Add migration entry to `schema-version->updates` in [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
-- [ ] Bump `version` in [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+- [ ] Add property to `built-in-properties` in [deps/db/src/logseq/db/frontend/property.cljs](deps/db/src/logseq/db/frontend/property.cljs)
+- [ ] Add migration entry to `schema-version->updates` in [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
+- [ ] Bump `version` in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 - [ ] Version in migration matches version in schema.cljs
 - [ ] Configure `:rtc` behavior explicitly
 - [ ] Add validation rules if needed in [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
@@ -938,7 +940,7 @@ Use this checklist for every schema change:
 ### Schema Version Bump Checklist
 
 - [ ] Determine bump type (minor vs major)
-- [ ] Update version in [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+- [ ] Update version in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 - [ ] Ensure all migrations have matching version
 - [ ] Update CHANGELOG.md
 - [ ] Test migration from previous versions

@@ -1,5 +1,7 @@
 # Logseq Plugin Developer Guide
 
+> **Last revised:** 2026-03-10
+
 **Welcome to Logseq Plugin Development!**
 
 This is your starting point for building plugins for Logseq. Choose the guide that matches your target graph type.
@@ -19,7 +21,7 @@ Logseq supports two types of graphs, each with different capabilities and APIs:
 - Want portable, plain-text notes
 - Need traditional file system access
 
-**→ [File-Based Graph Plugin Guide](./plugin-developer-guide-file-graphs.md)**
+**→ [File-Based Graph Plugin Guide](./file-graphs.md)**
 
 ### 🗄️ Database (DB) Graphs
 
@@ -30,7 +32,7 @@ Logseq supports two types of graphs, each with different capabilities and APIs:
 - Want real-time collaboration features
 - Need advanced querying capabilities
 
-**→ [DB Graph Plugin Guide](./plugin-developer-guide-db-graphs.md)**
+**→ [DB Graph Plugin Guide](./db-graphs.md)**
 
 ---
 
@@ -84,7 +86,7 @@ if (isDbGraph) {
 
 ### Core Guides
 
-1. **[Plugin Developer Guide: File-Based Graphs](./plugin-developer-guide-file-graphs.md)**
+1. **[Plugin Developer Guide: File-Based Graphs](./file-graphs.md)**
 
    - Working with Markdown/Org files
    - Manual property parsing and formatting
@@ -92,7 +94,7 @@ if (isDbGraph) {
    - File system operations
    - Git integration
 
-2. **[Plugin Developer Guide: DB Graphs](./plugin-developer-guide-db-graphs.md)**
+2. **[Plugin Developer Guide: DB Graphs](./db-graphs.md)**
    - Structured property system with types
    - Property schemas and validation
    - Advanced Datascript queries
@@ -101,25 +103,25 @@ if (isDbGraph) {
 
 ### Language-Specific Guides
 
-3. **[ClojureScript Plugin SDK Guide](./clojurescript-plugin-sdk-guide.md)**
+3. **[ClojureScript Plugin SDK Guide](./clojurescript-guide.md)**
 
    - Complete API reference for ClojureScript developers
    - Idiomatic ClojureScript patterns
    - Works with both graph types
 
-4. **[ClojureScript Plugin SDK: Detective Guide](./clojurescript-plugin-sdk-detective-guide.md)**
+4. **[ClojureScript Plugin SDK: Detective Guide](./clojurescript-detective.md)**
    - Deep dive into SDK internals
    - Code generation system
    - Advanced topics
 
 ### Additional Resources
 
-5. **[Library and Namespace User Guide](./library-and-namespace-user-guide.md)**
+5. **Library and Namespace User Guide** (see architecture docs)
 
    - Namespace organization in DB graphs
    - Page hierarchies
 
-6. **[Graph Validation Developer Guide](./graph-validation-developer-guide.md)**
+6. **Graph Validation Developer Guide** (see architecture docs)
    - Validation patterns
    - Error handling
 
@@ -184,6 +186,11 @@ yarn add @logseq/cljs-libs
 
 (main)
 ```
+
+> **Note:** The `@logseq/cljs-libs` package wraps the JS SDK; there is no
+> separate `@logseq/cljs-libs` npm install step beyond adding it to your
+> project dependencies. See the [ClojureScript Guide](./clojurescript-guide.md)
+> for full setup instructions.
 
 ---
 
@@ -405,7 +412,7 @@ If you have a file-based plugin and want to support DB graphs:
 
 See detailed examples in:
 
-- [DB Graph Migration Section](./plugin-developer-guide-db-graphs.md#migration-guide)
+- [DB Graph Migration Section](./db-graphs.md#migration-guide)
 
 ### Migrating from DB to File-Based Support
 
@@ -418,7 +425,7 @@ If you have a DB-only plugin and want to support file-based:
 
 See detailed examples in:
 
-- [File Graph Guide](./plugin-developer-guide-file-graphs.md#properties-in-file-based-graphs)
+- [File Graph Guide](./file-graphs.md#properties-in-file-based-graphs)
 
 ---
 
@@ -462,8 +469,8 @@ See detailed examples in:
 
 1. **Check the relevant guide:**
 
-   - [File-Based Guide](./plugin-developer-guide-file-graphs.md)
-   - [DB Graph Guide](./plugin-developer-guide-db-graphs.md)
+   - [File-Based Guide](./file-graphs.md)
+   - [DB Graph Guide](./db-graphs.md)
 
 2. **Search existing issues:**
 

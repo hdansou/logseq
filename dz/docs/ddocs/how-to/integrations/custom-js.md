@@ -2,7 +2,7 @@
 title: 'Custom JavaScript'
 description: 'How to extend Logseq functionality with custom JavaScript'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
@@ -14,6 +14,8 @@ relatedDocs:
 ---
 
 # Custom JavaScript
+
+> **Last revised:** 2026-03-10
 
 > How to add custom functionality to Logseq with JavaScript without creating a full plugin.
 
@@ -40,20 +42,20 @@ your-graph/
     └── custom.js
 ```
 
+**Alternative:** You can also set `:custom-js-url` in your `config.edn` to load a remote JS file by URL instead of using a local file.
+
 ---
 
 ## Basic Example
 
 ```javascript
-// Log when Logseq is ready
+// Log when custom.js is executed
 console.log('Custom JS loaded!')
 
-// Wait for Logseq to be fully initialized
-if (typeof logseq !== 'undefined') {
-  logseq.ready().then(() => {
-    console.log('Logseq is ready!')
-  })
-}
+// Custom JS runs via js/eval in the main Electron window.
+// It has full access to the DOM and standard browser APIs.
+// The Logseq plugin SDK (logseq.Editor, logseq.DB, etc.) is NOT
+// available in custom.js — that API is only injected into plugin sandboxes.
 ```
 
 ---
@@ -190,29 +192,26 @@ document.addEventListener(
 
 ---
 
-## Using Logseq API
+## Accessing Internal APIs
 
-When Logseq is available, you can use its API:
+Custom JS runs in the main Electron renderer process via `js/eval`. The `window.logseq` object exists but exposes internal host-side APIs (`window.logseq.api`, `window.logseq.sdk`) — **not** the plugin SDK proxy (i.e., `logseq.Editor.*`, `logseq.DB.*` are not available).
+
+For most custom.js use cases, stick to standard DOM manipulation and browser APIs. If you need programmatic access to Logseq data and commands, use a proper plugin instead.
 
 ```javascript
-// Check if we have access to Logseq API
-if (typeof logseq !== 'undefined') {
-  // Register a command
-  logseq.Editor.registerSlashCommand('Current Time', async () => {
-    const time = new Date().toLocaleTimeString()
-    await logseq.Editor.insertAtEditingCursor(time)
-  })
+// Custom JS has access to:
+// - The full DOM (document.querySelector, etc.)
+// - Standard browser APIs (fetch, localStorage, MutationObserver, etc.)
+// - Electron renderer globals
 
-  // Listen to events
-  logseq.DB.onChanged(({ blocks, txData }) => {
-    console.log('Database changed:', blocks.length, 'blocks affected')
-  })
-
-  // Get current page
-  logseq.Editor.getCurrentPage().then((page) => {
-    console.log('Current page:', page?.name)
-  })
-}
+// Custom JS does NOT have access to:
+// - logseq.Editor.registerSlashCommand()
+// - logseq.Editor.insertAtEditingCursor()
+// - logseq.DB.onChanged()
+// - Any other plugin SDK methods
+//
+// For those capabilities, create a plugin instead.
+// See: Plugin API Reference
 ```
 
 ---
@@ -227,10 +226,14 @@ async function fetchAndInsert() {
     const response = await fetch('https://api.quotable.io/random')
     const data = await response.json()
 
-    if (typeof logseq !== 'undefined') {
-      await logseq.Editor.insertAtEditingCursor(
-        `> ${data.content} — ${data.author}`
-      )
+    // Insert into the active editor textarea via DOM
+    const editor = document.activeElement
+    if (editor && editor.tagName === 'TEXTAREA') {
+      const text = `> ${data.content} — ${data.author}`
+      const start = editor.selectionStart
+      editor.value =
+        editor.value.slice(0, start) + text + editor.value.slice(start)
+      editor.selectionStart = editor.selectionEnd = start + text.length
     }
   } catch (error) {
     console.error('Failed to fetch quote:', error)
@@ -301,6 +304,7 @@ try {
 
 Consider a proper plugin when you need:
 
+- Access to the Logseq SDK (slash commands, block/page operations, DB events)
 - Distribution to other users
 - UI components (sidebars, modals)
 - Settings UI
@@ -316,8 +320,8 @@ See: [Plugin API Reference](../../reference/api/plugin-api.md)
 ### JS Not Loading
 
 1. Check file is named exactly `custom.js`
-2. Verify it's in `logseq/` folder
-3. Enable in Settings → Advanced → Enable custom.js
+2. Verify it's in `logseq/` folder inside your graph
+3. When Logseq detects `custom.js`, it shows a confirmation dialog asking permission to execute it — click **OK** to allow (this permission is cached for 7 days, then re-asked)
 4. Reload Logseq (`Cmd/Ctrl+R`)
 
 ### Errors Breaking Logseq
@@ -329,12 +333,23 @@ See: [Plugin API Reference](../../reference/api/plugin-api.md)
 
 ### Code Works in Console but Not in File
 
-Wrap code in ready check:
+Custom JS executes once Logseq loads the graph (not at DOM load time). If your code depends on specific DOM elements that render later, use a `MutationObserver` or a `setTimeout` delay:
 
 ```javascript
-document.addEventListener('DOMContentLoaded', () => {
+// Option 1: Wait for a specific element
+function waitForElement(selector, callback) {
+  const el = document.querySelector(selector)
+  if (el) return callback(el)
+  new MutationObserver((_, obs) => {
+    const el = document.querySelector(selector)
+    if (el) { obs.disconnect(); callback(el) }
+  }).observe(document.body, { childList: true, subtree: true })
+}
+
+// Option 2: Simple delay
+setTimeout(() => {
   // Your code here
-})
+}, 2000)
 ```
 
 ---
@@ -346,4 +361,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

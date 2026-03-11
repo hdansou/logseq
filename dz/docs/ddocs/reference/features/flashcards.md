@@ -3,10 +3,10 @@ title: 'Flashcard System'
 description: "Complete reference for Logseq's flashcard and spaced repetition system"
 type: reference
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
-graphType: [file, db]
+graphType: [db]
 relatedDocs:
   tutorials:
     - '[Flashcards Basics](../../tutorials/knowledge-management/flashcards-basics.md)'
@@ -16,17 +16,19 @@ relatedDocs:
 
 # Flashcard System
 
+> **Last revised:** 2026-03-10
+
 > Complete reference for Logseq's flashcard and spaced repetition functionality.
 
 ## Overview
 
-Logseq supports two flashcard implementations:
+Logseq uses the FSRS (Free Spaced Repetition Scheduler) algorithm for flashcards in database graphs. The legacy SM-5 algorithm and file-based flashcard code have been removed from the codebase.
 
-| Feature       | File-Based (Legacy) | Database-Based |
-| ------------- | ------------------- | -------------- |
-| Algorithm     | SM-5                | FSRS           |
-| Rating System | 3-button            | 4-button       |
-| Status        | Deprecated          | Recommended    |
+| Feature       | Database-Based       |
+| ------------- | -------------------- |
+| Algorithm     | FSRS                 |
+| Rating System | 4-button             |
+| Graph Type    | DB graphs only       |
 
 ---
 
@@ -34,75 +36,51 @@ Logseq supports two flashcard implementations:
 
 ### Tag Method
 
-Add `#card` to any block:
+Add `#Card` to any block (note the capital C in DB graphs):
 
 ```
-What is the capital of France? #card
+What is the capital of France? #Card
 Paris
 ```
-
-### Reversed Cards
-
-Create bidirectional cards:
-
-```
-Bonjour #card #reversed
-Hello
-```
-
-Creates two cards:
-
-- Bonjour → Hello
-- Hello → Bonjour
 
 ### Cloze Deletions
 
 Hide parts of text:
 
 ```
-The capital of France is {{cloze Paris}}. #card
+The capital of France is {{cloze Paris}}. #Card
 ```
 
 ### Cloze with Hints
 
-Add context hints:
+Add context hints using `\\` as a separator:
 
 ```
-The capital of {{cloze France\\country}} is {{cloze Paris\\city}}. #card
+The capital of {{cloze France\\country}} is {{cloze Paris\\city}}. #Card
 ```
 
-### Multiple Clozes
-
-Numbered clozes create separate cards:
-
-```
-{{c1 Photosynthesis}} uses {{c2 sunlight}} to produce {{c3 glucose}}. #card
-```
-
-Creates 3 cards, each hiding one term.
+Multiple `{{cloze ...}}` blocks within a single card are supported. Each cloze is revealed individually during review.
 
 ---
 
 ## Card Properties
 
-### File-Based Graph Properties
-
-| Property              | Type   | Description               |
-| --------------------- | ------ | ------------------------- |
-| `:card-last-interval` | number | Days since last review    |
-| `:card-repeats`       | number | Successful review count   |
-| `:card-ease-factor`   | float  | Difficulty (default: 2.5) |
-| `:card-next-schedule` | date   | Next review date          |
-| `:card-last-score`    | number | Last rating (1-5)         |
-
 ### Database Graph Properties
 
-| Property                       | Type      | Description              |
-| ------------------------------ | --------- | ------------------------ |
-| `:logseq.property.fsrs/state`  | map       | Stability and difficulty |
-| `:logseq.property.fsrs/due`    | timestamp | Next review time         |
-| `:logseq.property.fsrs/reps`   | number    | Total reviews            |
-| `:logseq.property.fsrs/lapses` | number    | Times forgotten          |
+| Property                      | Type     | Description                                           |
+| ----------------------------- | -------- | ----------------------------------------------------- |
+| `:logseq.property.fsrs/state` | map      | Contains stability, difficulty, reps, lapses, state, last-repeat, and last rating |
+| `:logseq.property.fsrs/due`   | datetime | Next review time                                      |
+
+The `:logseq.property.fsrs/state` map stores all FSRS scheduling data including:
+
+- `stability` - memory stability (days until 90% retention probability)
+- `difficulty` - item difficulty (0-10)
+- `reps` - total review count
+- `lapses` - times forgotten
+- `state` - card state (`:new`, `:learning`, `:review`, `:relearning`)
+- `last-repeat` - timestamp of last review
+- `logseq/last-rating` - last rating given (`:again`, `:hard`, `:good`, `:easy`)
 
 ---
 
@@ -110,7 +88,7 @@ Creates 3 cards, each hiding one term.
 
 ### Overview
 
-Free Spaced Repetition Scheduler (FSRS) is a modern algorithm based on the memory forgetting curve.
+Free Spaced Repetition Scheduler (FSRS) is a modern algorithm based on the memory forgetting curve. Logseq uses the [open-spaced-repetition/cljc-fsrs](https://github.com/open-spaced-repetition/cljc-fsrs) library.
 
 ### Rating Buttons
 
@@ -121,15 +99,6 @@ Free Spaced Repetition Scheduler (FSRS) is a modern algorithm based on the memor
 | **Good**  | Normal recall            | Standard interval increase |
 | **Easy**  | Instant recall           | Longer interval            |
 
-### State Variables
-
-| Variable         | Description              |
-| ---------------- | ------------------------ |
-| `stability`      | Days until 90% retention |
-| `difficulty`     | Item difficulty (0-10)   |
-| `elapsed_days`   | Days since last review   |
-| `scheduled_days` | Days until next review   |
-
 ### Retention Target
 
 FSRS schedules reviews to maintain ~90% retention:
@@ -139,31 +108,11 @@ FSRS schedules reviews to maintain ~90% retention:
 
 ---
 
-## Legacy SM-5 Algorithm
-
-### Rating Buttons
-
-| Button         | Score | Description      |
-| -------------- | ----- | ---------------- |
-| **Forgotten**  | 1     | Complete failure |
-| **Recall**     | 3     | Partial recall   |
-| **Remembered** | 5     | Full recall      |
-
-### Interval Calculation
-
-```
-new_interval = old_interval × ease_factor × optimal_factor
-```
-
-Where optimal_factor depends on review history.
-
----
-
 ## Configuration
 
 ### Enable Flashcards
 
-Settings → Features → Enable Flashcards
+Settings -> Features -> Enable Flashcards
 
 ### config.edn Options
 
@@ -171,15 +120,10 @@ Settings → Features → Enable Flashcards
 {;; Enable/disable flashcards
  :feature/enable-flashcards? true
 
- ;; SM-5 options (file-based only)
- :srs/learning-fraction 0.5
- :srs/initial-interval 4
-
- ;; New cards per day
- :srs/new-cards-limit 20
-
- ;; Daily review limit
- :srs/review-limit 200}
+ ;; Legacy SRS options (file-based graphs only, no longer active)
+ ;; :srs/learning-fraction 0.5
+ ;; :srs/initial-interval 4
+ }
 ```
 
 ---
@@ -188,13 +132,11 @@ Settings → Features → Enable Flashcards
 
 ### Review Session
 
-| Key     | Action                  |
-| ------- | ----------------------- |
-| `s`     | Start review            |
-| `n`     | Show answer / Next card |
-| `Space` | Show answer             |
+| Key | Action                   |
+| --- | ------------------------ |
+| `s` | Show/hide answer (toggle)|
 
-### Rating (FSRS)
+### Rating
 
 | Key | Rating |
 | --- | ------ |
@@ -203,70 +145,36 @@ Settings → Features → Enable Flashcards
 | `3` | Good   |
 | `4` | Easy   |
 
-### Rating (SM-5)
-
-| Key | Rating     |
-| --- | ---------- |
-| `f` | Forgotten  |
-| `r` | Recall     |
-| `t` | Remembered |
+The flashcard dialog can be opened with the shortcut `t c`.
 
 ---
 
-## Card Queries
+## Card Collections (DB Graphs)
 
-### Basic Query
+### Built-in Classes
 
-Show cards from a page:
-
-```
-{{cards [[MyPage]]}}
-```
-
-### All Due Cards
-
-```
-{{cards}}
-```
-
-### Filter by Tag
-
-```
-{{query (and (property :card) [[chemistry]])}}
-```
-
-### Custom Card Collection
-
-```clojure
-#+BEGIN_QUERY
-{:title "Spanish Vocabulary"
- :query [:find (pull ?b [*])
-         :where [?b :block/refs ?ref]
-                [?ref :block/name "spanish"]
-                [?b :block/refs ?card]
-                [?card :block/name "card"]]}
-#+END_QUERY
-```
-
----
-
-## Built-in Classes (DB Graphs)
-
-### Card Class
+#### Card Class
 
 `:logseq.class/Card`
 
-Properties:
+Schema properties:
 
-- FSRS state
-- Due date
-- Review history
+- `:logseq.property.fsrs/state` - FSRS scheduling state
+- `:logseq.property.fsrs/due` - next review datetime
 
-### Cards Collection
+#### Cards Class
 
 `:logseq.class/Cards`
 
-Used for card queries and collections.
+Extends `:logseq.class/Query`. Used for defining filtered card collections with custom queries.
+
+### Creating Card Collections
+
+In the flashcard dialog, click the "+" button to create a new Cards block on the current journal page. Each Cards block has an associated query that filters which cards to review.
+
+### Selecting Card Sets
+
+Use the dropdown in the flashcard dialog to switch between "All cards" and any defined Cards collections.
 
 ---
 
@@ -283,60 +191,34 @@ Used for card queries and collections.
 
 ### Metrics
 
-- **Due today**: Cards needing review
-- **Review forecast**: Upcoming reviews
-- **Retention rate**: Success percentage
-- **Streak**: Consecutive review days
+- **Due today**: Cards needing review (shown in sidebar badge)
+
+Note: Detailed statistics (retention rate, review history breakdowns) exist in the codebase as commented-out/experimental code and are not yet exposed in the UI.
 
 ---
 
 ## Data Storage
 
-### File-Based
-
-Properties stored in block metadata:
-
-```markdown
-- Question here #card
-  card-last-interval:: 7
-  card-repeats:: 3
-  card-ease-factor:: 2.5
-  card-next-schedule:: 2026-02-05
-  - Answer here
-```
-
 ### Database-Based
 
-Stored in SQLite with Transit serialization:
+Stored in SQLite via Datascript:
 
-- Card entities reference source blocks
-- FSRS state as structured property
-- Efficient querying and filtering
+- Blocks tagged with `:logseq.class/Card` are flashcards
+- FSRS state stored as a map in `:logseq.property.fsrs/state`
+- Due date stored as datetime in `:logseq.property.fsrs/due`
+- Queried via Datalog for efficient filtering
 
 ---
 
 ## Integration
 
-### Plugin API
-
-```javascript
-// Get due cards
-const dueCards = await logseq.App.getFlashcards()
-
-// Review a card
-await logseq.Editor.reviewCard(cardId, rating)
-
-// Create card from block
-await logseq.Editor.insertAtEditingCursor('#card')
-```
-
 ### Slash Commands
 
 | Command  | Action                |
 | -------- | --------------------- |
-| `/card`  | Add card tag          |
-| `/cards` | Insert card query     |
-| `/cloze` | Create cloze deletion |
+| `/Cloze` | Insert cloze template |
+
+Note: `/Cloze` is the only flashcard-related slash command currently registered. There are no `/card` or `/cards` slash commands.
 
 ---
 
@@ -344,14 +226,14 @@ await logseq.Editor.insertAtEditingCursor('#card')
 
 ### Card Design
 
-✅ **Do:**
+**Do:**
 
 - One concept per card
 - Clear, specific questions
 - Include context when needed
 - Use images for visual content
 
-❌ **Don't:**
+**Don't:**
 
 - Cram multiple facts
 - Use vague questions
@@ -371,55 +253,28 @@ await logseq.Editor.insertAtEditingCursor('#card')
 
 ### Cards Not Appearing
 
-1. Check `#card` tag present
-2. Verify flashcards enabled
-3. Check due date in future
-4. Look for syntax errors
+1. Check `#Card` tag is present (capital C in DB graphs)
+2. Verify flashcards are enabled in settings
+3. Check due date -- cards not yet due will not appear
+4. Look for syntax errors in cloze blocks
 
 ### Scheduling Issues
 
-1. Check algorithm settings
-2. Review card properties
-3. Reset card if corrupted
-
-### Performance
-
-For large collections (>1000 cards):
-
-- Use filtered queries
-- Archive old cards
-- Optimize query complexity
-
----
-
-## Migration
-
-### File to Database
-
-When converting:
-
-1. Card content preserved
-2. Review history may need manual migration
-3. FSRS re-learns your patterns
-4. Initial reviews may feel different
-
-### Adapting to FSRS
-
-- 4 buttons instead of 3
-- More nuanced ratings
-- Different interval calculations
-- Generally better long-term retention
+1. Review the `:logseq.property.fsrs/state` property on the card block
+2. Check `:logseq.property.fsrs/due` for the next scheduled date
 
 ---
 
 ## Code Locations
 
-| Component     | Path                                        |
-| ------------- | ------------------------------------------- |
-| SM-5 Logic    | `src/main/frontend/extensions/srs.cljs`     |
-| FSRS Logic    | `src/main/frontend/extensions/fsrs.cljs`    |
-| UI Components | `src/main/frontend/components/`             |
-| Card Classes  | `deps/db/src/logseq/db/frontend/class.cljs` |
+| Component        | Path                                             |
+| ---------------- | ------------------------------------------------ |
+| FSRS Logic & UI  | `src/main/frontend/extensions/fsrs.cljs`         |
+| Shortcut Handler | `src/main/frontend/extensions/srs/handler.cljs`  |
+| Shortcut Config  | `src/main/frontend/modules/shortcut/config.cljs` |
+| Card Classes     | `deps/db/src/logseq/db/frontend/class.cljs`      |
+| FSRS Properties  | `deps/db/src/logseq/db/frontend/property.cljs`   |
+| FSRS Library     | `open-spaced-repetition/cljc-fsrs` (dependency)  |
 
 ---
 
@@ -430,4 +285,4 @@ When converting:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

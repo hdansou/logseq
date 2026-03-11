@@ -3,10 +3,10 @@ title: 'Flashcards Basics'
 description: "Learn to create and study flashcards with Logseq's spaced repetition system"
 type: tutorial
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
-graphType: [file, db]
+graphType: [db]
 difficulty: beginner
 timeToComplete: '15 minutes'
 prerequisites: ['basic-editing']
@@ -19,15 +19,16 @@ relatedDocs:
 
 # Flashcards Basics
 
+> **Last revised:** 2026-03-10
+
 > Learn to create flashcards and use spaced repetition for effective learning.
 
 ## What You'll Learn
 
-- 🎴 Creating flashcards
-- 🔄 The spaced repetition system (FSRS)
-- 📚 Studying your cards
-- 📊 Tracking progress
-- ✨ Best practices
+- Creating flashcards
+- The spaced repetition system (FSRS)
+- Studying your cards
+- Best practices
 
 **Time:** ~15 minutes
 
@@ -41,30 +42,32 @@ Spaced repetition is a learning technique that shows you information right befor
 - Schedules reviews optimally
 - Adapts to your performance
 
+> **Note:** The FSRS-based flashcard system only works in **DB-based graphs**.
+
 ---
 
 ## Step 1: Create Your First Flashcard
 
 ### Basic Card (Front/Back)
 
-Type on any block, then use the slash command:
+Tag any block with `#Card` to turn it into a flashcard:
 
 ```
 What is the capital of France?
-#card
+#Card
 Paris
 ```
 
-Or use the keyboard shortcut: `Cmd/Ctrl+Shift+C`
-
-The text before `#card` becomes the **front** (question).
+The text before `#Card` becomes the **front** (question).
 Child blocks become the **back** (answer).
+
+You can also select one or more blocks, right-click, and choose "Make Flashcard" from the context menu.
 
 ### Try It Now
 
 1. Create a new block
 2. Type: `What is 2 + 2?`
-3. Add `#card` tag
+3. Add `#Card` tag
 4. Press Enter and indent
 5. Type: `4`
 
@@ -76,44 +79,31 @@ Child blocks become the **back** (answer).
 
 ```
 Question here
-#card
+#Card
 Answer here
 ```
 
 ### Cloze Deletion
 
-Hide part of the text:
+Hide part of the text using the `/Cloze` slash command or by typing `{{cloze ...}}` directly:
 
 ```
 The {{cloze capital}} of France is Paris.
-#card
+#Card
 ```
 
-When studying, you'll see: "The **\_** of France is Paris."
+When studying, you'll see: "The **[...]** of France is Paris."
 
 ### Multiple Clozes
 
-```
-{{c1 Photosynthesis}} converts {{c2 light energy}} into {{c3 chemical energy}}.
-#card
-```
-
-Each cloze becomes a separate card.
-
-### Reversed Card
-
-Creates both directions automatically:
+You can use multiple cloze deletions in a single card:
 
 ```
-Bonjour
-#card #reversed
-Hello
+{{cloze Photosynthesis}} converts {{cloze light energy}} into {{cloze chemical energy}}.
+#Card
 ```
 
-Generates:
-
-- Card 1: Bonjour → Hello
-- Card 2: Hello → Bonjour
+All clozes are revealed together as part of a single card.
 
 ---
 
@@ -127,133 +117,72 @@ Generates:
 
 **Method 2: Keyboard**
 
-- Press `t` then `f` (toggle flashcards)
-
-**Method 3: Slash Command**
-
-- Type `/Flashcards` on any page
+- Press `g` then `f`, or `t` then `c` (go to flashcards)
 
 ### Study Session
 
 1. A card appears showing the front (question)
 2. Think of the answer
-3. Click "Show Answer"
+3. Click "Show Answer" (or press `s`)
 4. Rate how well you remembered:
-   - **Again** - Forgot completely
-   - **Hard** - Struggled but got it
-   - **Good** - Remembered correctly
-   - **Easy** - Knew it instantly
+   - **Again** (press `1`) - Forgot completely
+   - **Hard** (press `2`) - Struggled but got it
+   - **Good** (press `3`) - Remembered correctly
+   - **Easy** (press `4`) - Knew it instantly
 
 ### Review Schedule
 
-Based on your rating, the card appears again:
-
-- **Again**: Within minutes
-- **Hard**: Next day
-- **Good**: Several days
-- **Easy**: Many days/weeks
+Based on your rating, FSRS calculates when to show the card again. Each rating button displays the projected next review time so you can see how your choice affects scheduling.
 
 ---
 
-## Step 4: Organize Into Decks
+## Step 4: Organize With Cards Queries
 
-### Page-Based Decks
+### Using the Cards Selector
 
-All cards on a page form a deck:
+When studying, a dropdown at the top lets you switch between "All cards" and any custom Cards queries you have created.
 
-```
-# Spanish Vocabulary
-## Greetings
-Hola #card
-Hello
+### Creating a Cards Query
 
-Buenos días #card
-Good morning
-
-## Food
-Manzana #card
-Apple
-```
-
-### Tag-Based Decks
-
-Use specific tags to group cards:
-
-```
-What is H2O? #card #chemistry
-Water
-
-When was WWII? #card #history
-1939-1945
-```
-
-### Study by Tag
-
-Filter cards when studying:
-
-1. Open flashcards
-2. Click "Filter"
-3. Select tag or page
+Click the "+" button in the study view to create a new Cards query block. This lets you define custom filtered sets of cards to study.
 
 ---
 
-## Step 5: Track Progress
-
-### Card Status
-
-Each card shows:
-
-- **New**: Never studied
-- **Learning**: Recently introduced
-- **Review**: In regular rotation
-- **Due**: Needs review today
-
-### Statistics
-
-View your learning stats:
-
-- Cards due today
-- Review forecast
-- Retention rate
-- Streak
-
----
-
-## Step 6: Write Better Cards
+## Step 5: Write Better Cards
 
 ### Good Card Principles
 
-✅ **One idea per card**
+**One idea per card**
 
 ```
 What is the atomic number of Carbon?
-#card
+#Card
 6
 ```
 
-❌ **Too much info**
+**Avoid too much info**
 
 ```
 Describe Carbon including atomic number, mass, and properties
-#card
+#Card
 (Long answer that's hard to review)
 ```
 
 ### Use Context
 
-✅ **Specific question**
+**Specific question**
 
 ```
 In JavaScript, what keyword declares a constant?
-#card
+#Card
 const
 ```
 
-❌ **Vague question**
+**Avoid vague questions**
 
 ```
 What is const?
-#card
+#Card
 (Could mean many things)
 ```
 
@@ -261,7 +190,7 @@ What is const?
 
 ```
 What is a metaphor?
-#card
+#Card
 A figure of speech comparing two unlike things.
 Example: "Time is money"
 ```
@@ -272,26 +201,23 @@ Example: "Time is money"
 
 Create a mini study deck:
 
-1. Create page "My First Deck"
+1. Create a new page "My First Deck"
 2. Add these cards:
 
 ```
 What is the largest planet in our solar system?
-#card
+#Card
 Jupiter
 
 The Great Wall of China is in {{cloze Asia}}.
-#card
-
-Agua #card #reversed
-Water
+#Card
 
 What does CPU stand for?
-#card
+#Card
 Central Processing Unit
 ```
 
-3. Study your cards
+3. Study your cards using `g f` or the sidebar icon
 4. Review again tomorrow
 
 ---
@@ -312,14 +238,14 @@ Notes about photosynthesis...
 - Produces: oxygen and glucose
 
 Photosynthesis uses {{cloze sunlight}} to produce oxygen and glucose.
-#card
+#Card
 ```
 
 ### Use Images
 
 ```
 What bird is this?
-#card
+#Card
 ![robin](image.jpg)
 Robin
 ```
@@ -332,13 +258,7 @@ If a card keeps failing, rewrite it simpler or break into smaller cards.
 
 ## Settings
 
-Customize in Settings → Flashcards:
-
-| Setting       | Description                     |
-| ------------- | ------------------------------- |
-| New cards/day | How many new cards to introduce |
-| Reviews/day   | Maximum daily reviews           |
-| Card order    | Random or by due date           |
+In **Settings**, you can enable or disable the flashcards feature with the **Enable flashcards** toggle.
 
 ---
 
@@ -352,12 +272,12 @@ Customize in Settings → Flashcards:
 
 ## Summary
 
-✅ Created basic flashcards with `#card`  
-✅ Used cloze deletions  
-✅ Studied and rated cards  
-✅ Understood the FSRS algorithm  
-✅ Organized cards into decks
+- Created basic flashcards with `#Card`
+- Used cloze deletions with `{{cloze ...}}`
+- Studied and rated cards
+- Understood the FSRS algorithm
+- Organized cards with Cards queries
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

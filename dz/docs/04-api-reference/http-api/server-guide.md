@@ -1,5 +1,7 @@
 # Logseq HTTP Server API Guide
 
+> **Last revised:** 2026-03-10
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -168,79 +170,16 @@ This endpoint implements the MCP protocol, enabling AI assistants like Claude De
 
 The MCP endpoint exposes three types of capabilities to AI assistants:
 
-**1. Tools (7 available)** - Execute operations on your graph:
+**1. Tools (6 available)** - Execute operations on your graph:
 
-| Tool             | Description            | Input                          | Output                     |
-| ---------------- | ---------------------- | ------------------------------ | -------------------------- |
-| `listPages`      | Get all pages in graph | None                           | Array of page objects      |
-| `getPage`        | Get full page content  | `pageName`                     | Page entity + blocks       |
-| `searchBlocks`   | Search for blocks      | `searchTerm`                   | Array of matching blocks   |
-| `addToPage`      | Add block to page      | `pageName`, `content`, `force` | Success confirmation       |
-| `updateBlock`    | Update block content   | `blockUUID`, `content`         | Success confirmation       |
-| `listTags`       | Get all tags           | None                           | Array of tag entities      |
-| `listProperties` | Get all properties     | None                           | Array of property entities |
-
-**2. Resources (3 available)** - Direct URI-based access:
-
-| Resource URI                 | Description                   | Access Method                 |
-| ---------------------------- | ----------------------------- | ----------------------------- |
-| `logseq://page/{pageName}`   | Access specific page content  | GET via MCP resource protocol |
-| `logseq://block/{blockUUID}` | Access specific block content | GET via MCP resource protocol |
-| `logseq://graph`             | Access graph-level metadata   | GET via MCP resource protocol |
-
-**3. Prompts (2 available)** - Pre-built AI workflows:
-
-| Prompt                  | Description                                                                          | Parameters                                                                                                                                                                            | Use Case                                                                                                                                                                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search-and-summarize`  | Search your knowledge base for a specific topic and generate a comprehensive summary | `topic` (string): The subject to search for<br>`depth` (optional): How detailed the summary should be                                                                                 | Quick research: "Summarize everything in my graph about machine learning"<br>Project overview: "What have I written about the XYZ project?"                                                                                   |
-| `create-page-structure` | Generate a structured template for a new page based on content type                  | `pageType` (string): Type of page (e.g., "meeting notes", "project", "book notes")<br>`pageName` (string): Name for the new page<br>`sections` (optional array): Custom section names | Consistent documentation: "Create a project page template"<br>Meeting prep: "Generate meeting notes structure with agenda, attendees, action items"<br>Learning: "Set up book notes page with chapters, key insights, quotes" |
-
-**How Prompts Work:**
-
-Prompts are structured workflows that combine multiple MCP tools with AI reasoning:
-
-1. **`search-and-summarize` workflow:**
-
-   ```txt
-   User: "Summarize my notes about React"
-
-   AI executes:
-   1. searchBlocks({searchTerm: "React"})
-   2. Analyzes returned blocks for key themes
-   3. getPage() for relevant pages to get full context
-   4. Generates structured summary with key points
-   5. Returns: "Based on your 23 notes about React: ..."
-   ```
-
-2. **`create-page-structure` workflow:**
-
-   ```txt
-   User: "Create a project page for 'Website Redesign'"
-
-   AI executes:
-   1. Determines optimal structure for project pages
-   2. addToPage("Website Redesign", "## Overview", force: true)
-   3. addToPage("Website Redesign", "## Goals")
-   4. addToPage("Website Redesign", "## Timeline")
-   5. addToPage("Website Redesign", "## Resources")
-   6. Returns: "Created structured project page with 4 sections"
-   ```
-
-**Using Prompts with AI Assistants:**
-
-With Claude Desktop or compatible MCP clients, prompts appear as suggested workflows:
-
-```txt
-You: "Help me understand what I've written about productivity"
-Claude: [Uses search-and-summarize prompt automatically]
-        "I've searched your 47 notes about productivity. Here's what I found..."
-
-You: "I need to take meeting notes"
-Claude: [Offers create-page-structure prompt]
-        "I can create a meeting notes page. What's the meeting name?"
-You: "Team Standup - Jan 15"
-Claude: [Creates structured page with sections for Attendees, Agenda, Notes, Action Items]
-```
+| Tool             | Description                         | Input                    | Output                     |
+| ---------------- | ----------------------------------- | ------------------------ | -------------------------- |
+| `listPages`      | List all pages in graph             | `expand` (optional bool) | Array of page objects      |
+| `getPage`        | Get page content including blocks   | `pageName`               | Page entity + blocks       |
+| `searchBlocks`   | Search for blocks by term           | `searchTerm`             | Array of matching blocks   |
+| `upsertNodes`    | Batch create/edit pages, blocks, tags, properties | `operations`, `dry-run` (optional) | Summary of changes |
+| `listTags`       | List all tags in graph              | `expand` (optional bool) | Array of tag entities      |
+| `listProperties` | List all properties in graph        | `expand` (optional bool) | Array of property entities |
 
 **What AI Assistants Can Do**:
 
@@ -1222,6 +1161,6 @@ Happy integrating! 🚀
 
 ---
 
-_Document Version: 1.0_  
-_Last Updated: 2025-09-30_  
+_Document Version: 1.1_
+_Last Updated: 2026-03-10_
 _Logseq Version: DB Version Compatible_

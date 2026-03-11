@@ -12,6 +12,8 @@ related-docs:
 
 # Getting Started with Real-Time Collaboration
 
+> **Last revised:** 2026-03-10
+
 ## What You'll Learn
 
 In this tutorial, you'll learn how to:
@@ -48,7 +50,7 @@ Logseq's Real-Time Collaboration (RTC) lets multiple people edit the same graph 
     Local Database                                                       Local Database
 ```
 
-Unlike CRDT-based systems (Conflict-free Replicated Data Types), Logseq uses an **operation-based approach** with **centralized conflict resolution**, ensuring consistency across all clients.
+Logseq uses a **transaction-based sync approach** with **optimistic concurrency control** on a centralized server (Cloudflare Durable Objects), ensuring consistency across all clients. Each client sends batched transactions with a `t-before` value; the server rejects stale transactions and broadcasts changes to other clients.
 
 ## Step 1: Create Your First Remote Graph
 
@@ -157,7 +159,7 @@ When joining an encrypted graph:
 └──────────────────────────────────────────────┘
 ```
 
-**Important**: Each collaborator sets their **own password** for the shared graph. This is different from the graph creator's password. All users share the same encryption key but protect it with individual passwords.
+**Important**: Each collaborator sets their **own E2EE password**, which protects their RSA private key. The graph is encrypted with a shared AES key. Each user's copy of the AES key is encrypted with their RSA public key, so everyone can decrypt the graph data using their own password and RSA key pair.
 
 **Result**: Once set up, all collaborators can edit the graph simultaneously!
 
@@ -230,56 +232,30 @@ Result:      - This is a collaborative test block for RTC
 
 ### 4.2 Conflict Resolution Algorithm
 
-Logseq uses **operation-based conflict resolution** with timestamps:
+Logseq uses **optimistic concurrency control** with transaction versioning:
 
-1. **Local Operation**: You edit → Generate operation with timestamp `t1`
-2. **Remote Operation**: Alice edits → Generate operation with timestamp `t2`
-3. **Server Ordering**: Server receives both, orders by timestamp
-4. **Merge**: Earlier operation applied first, later operation reconciled
-5. **Broadcast**: Result sent to all clients
+1. **Local Edit**: You edit a block, generating a local transaction
+2. **Send to Server**: Client sends the transaction with `t-before` (the last known server transaction number)
+3. **Server Check**: Server verifies `t-before` matches its current `t`
+4. **Accept or Reject**: If `t-before` matches, the transaction is applied and broadcast. If stale, the server rejects with the current `t`
+5. **Retry**: On rejection, the client pulls the latest changes, merges locally, and retries
 
 **Conflict Strategies**:
 
-| Situation                    | Resolution                         |
-| ---------------------------- | ---------------------------------- |
-| Different blocks             | No conflict — both changes applied |
-| Same block, different words  | Text merged intelligently          |
-| Same block, overlapping text | Last edit wins (higher timestamp)  |
-| Block deleted + edited       | Deletion wins (safer)              |
-
-### 4.3 Manual Conflict Review
-
-Sometimes you'll see a conflict marker:
-
-```markdown
-- Original text
-  <<<<<<< Your changes
-  Your edit here
-  =======
-  Their edit here
-  > > > > > > > Alice's changes
-```
-
-**To resolve**:
-
-1. Review both versions
-2. Edit to combine the best of both
-3. Delete the conflict markers
-4. Save — everyone sees the merged result
+| Situation                    | Resolution                                        |
+| ---------------------------- | ------------------------------------------------- |
+| Different blocks             | No conflict — transactions applied sequentially   |
+| Same block, non-overlapping  | Both transactions applied in server order          |
+| Same block, stale t-before   | Rejected; client pulls remote changes and retries |
+| Duplicate block orders       | Server auto-generates unique fractional indexes    |
 
 ## Step 5: Advanced Features
 
-### 5.1 Block-Level Locking (Soft Lock)
+### 5.1 Block-Level Presence
 
-When you start editing a block, others see a **visual indicator**:
+When you start editing a block, the system broadcasts your `editing-block-uuid` to other connected clients via the WebSocket presence protocol. Other users can see which block you are currently editing.
 
-```txt
-┌─────────────────────────────────────────────────┐
-│  - This is a block [🔒 You are editing]        │
-└─────────────────────────────────────────────────┘
-```
-
-**Not a hard lock**: Others can still edit, but they'll see your changes in real-time and know you're actively working there.
+**Not a lock**: Others can still edit the same block. This is purely informational presence tracking, not a locking mechanism.
 
 ### 5.2 Offline Editing
 
@@ -298,7 +274,7 @@ RTC gracefully handles offline scenarios:
 3. Conflicts resolved using same algorithm
 4. Green indicator shows you're back online
 
-**Storage**: Local changes stored in IndexedDB until synced.
+**Storage**: Local changes are stored in the local SQLite database and a Datascript-based client-ops store until synced.
 
 ### 5.3 Asset Synchronization
 
@@ -323,11 +299,11 @@ When you rename or move pages:
 ```txt
 Your action:        Rename [[Old Name]] → [[New Name]]
                               ↓
-RTC operation:      [:update-page t {:page-uuid uuid :new-name "New Name"}]
+Transaction:        Datascript tx-data updating :block/title and related refs
                               ↓
-Server broadcast:   All clients update page name + backlinks
+Server broadcast:   {:type "changed" :t new-t} sent to all clients
                               ↓
-Collaborators see:  Page renamed everywhere, backlinks updated
+Collaborators:      Pull latest transactions, apply page rename + backlinks
 ```
 
 **Result**: All references updated automatically for everyone.
@@ -427,7 +403,7 @@ Settings → Sync → Sync Status
 1. **Coordinate**: Use chat to divide work
 2. **Work in sections**: Each person focuses on different pages
 3. **Take turns**: For complex edits, announce "I'm editing X page"
-4. **Review conflicts**: Use git-style diff to understand what happened
+4. **Review conflicts**: Check the sync indicator for pending operations and logs
 
 ### Password Issues
 
@@ -481,52 +457,57 @@ Settings → Sync → Sync Status
 
 ## Reference: Key Concepts
 
-### Operations
+### Transactions
 
-Every edit generates an **operation** that's synchronized:
+Every edit generates **Datascript transaction data** that is synchronized:
 
 ```clojure
-;; Update block content
-[:update t {:block-uuid uuid :av-coll [[attr value] ...]}]
-
-;; Move block to new position
-[:move t {:block-uuid uuid :parent-uuid uuid :left-uuid uuid}]
-
-;; Delete block
-[:remove t {:block-uuid uuid}]
-
-;; Update page properties
-[:update-page t {:block-uuid uuid :av-coll [...]}]
+;; Transaction data is a sequence of datoms:
+;; [:db/add entity-id :block/title "New content"]
+;; [:db/add entity-id :block/updated-at timestamp]
+;; [:db/retract entity-id :block/title "Old content"]
 ```
 
-**Transaction Timestamp** (`t`): Determines order for conflict resolution.
+The client normalizes local Datascript transactions, serializes them as Transit, optionally encrypts them (if E2EE is enabled), and sends them as a `tx/batch` message. The server assigns a monotonically increasing transaction number `t` for ordering.
 
 ### Fractional Indexing
 
-Blocks use **fractional indexes** for ordering without conflicts:
+Blocks use **fractional indexing** (via `logseq.db.common.order` and `logseq.clj-fractional-indexing`) for the `:block/order` attribute, allowing insertion between any two blocks without renumbering:
 
 ```txt
-Block A:  index="a0"
-Block B:  index="a2"
+Block A:  order="a0"
+Block B:  order="a2"
 
-Insert between A and B:  index="a1"  (generated automatically)
+Insert between A and B:  order="a1"  (generated via generate-key-between)
 ```
 
-**Advantage**: Two people can insert blocks at the same position without conflict — server generates unique indexes.
+**Advantage**: Two people can insert blocks at different positions without conflict. The `logseq.db-sync.order` module also detects and fixes duplicate order keys that can arise from concurrent edits.
 
 ### WebSocket Protocol
 
-RTC uses **WebSocket** for real-time communication:
+Sync uses **WebSocket** for real-time communication. Messages are JSON-encoded with a `type` field:
 
 ```txt
-Client → Server:   {:action "apply-ops" :ops [...]}
-Server → Client:   {:req-id "push-updates" :value {:ops [...]}}
+Client → Server:   {"type": "hello", "client": "<repo>"}
+Client → Server:   {"type": "tx/batch", "t-before": 42, "txs": "<transit-encoded>"}
+Client → Server:   {"type": "pull", "since": 42}
+Client → Server:   {"type": "presence", "editing-block-uuid": "<uuid>"}
+Client → Server:   {"type": "ping"}
+
+Server → Client:   {"type": "hello", "t": 42}
+Server → Client:   {"type": "tx/batch/ok", "t": 43}
+Server → Client:   {"type": "tx/reject", "reason": "stale", "t": 43}
+Server → Client:   {"type": "changed", "t": 43}
+Server → Client:   {"type": "pull/ok", "t": 43, "txs": [...]}
+Server → Client:   {"type": "online-users", "online-users": [...]}
+Server → Client:   {"type": "presence", "user-id": "...", "editing-block-uuid": "..."}
+Server → Client:   {"type": "pong"}
 ```
 
-**Encrypted**: If E2EE enabled, operations are encrypted before sending.
+**Encrypted**: If E2EE is enabled, the `txs` payload within `tx/batch` messages is encrypted before sending using the graph's AES key.
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: March 2026  
 **Status**: 🟡 Active Development (RTC features evolving rapidly)  
 **Feedback**: Join [Logseq Discord](https://discord.gg/logseq) `#rtc-feedback` channel

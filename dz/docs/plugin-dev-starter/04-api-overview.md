@@ -1,5 +1,7 @@
 # API Overview
 
+> **Last revised:** 2026-03-10
+
 Complete overview of the Logseq Plugin SDK API.
 
 ## Table of Contents
@@ -62,7 +64,6 @@ Application-level operations and lifecycle.
 // Commands
 registerCommand(command, callback)
 registerCommandPalette(command, callback)
-registerSlashCommand(command, actions)
 
 // UI Registration
 registerUIItem(type, config)

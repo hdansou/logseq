@@ -2,7 +2,7 @@
 title: 'Create a Theme'
 description: 'How to create and publish custom themes for Logseq'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop, web]
 graphType: [file, db]
@@ -14,6 +14,8 @@ relatedDocs:
 ---
 
 # Create a Theme
+
+> **Last revised:** 2026-03-10
 
 > How to create a complete custom theme for Logseq.
 
@@ -90,9 +92,11 @@ Logseq uses 12-step color scales:
 /* Layer 2: Logseq extended */
 --lx-gray-01: var(--rx-gray-1);
 
-/* Layer 3: Legacy variables */
+/* Layer 3: Legacy variables (most commonly overridden by themes) */
 --ls-primary-background-color: var(--lx-gray-01);
 ```
+
+> **Note:** The default Logseq color scheme is scoped with `html[data-theme=light][data-color=logseq]`. When overriding variables in a personal theme, using `html[data-theme='light']` (without `data-color`) is usually sufficient and will apply regardless of the selected accent color.
 
 ---
 
@@ -198,11 +202,18 @@ html[data-theme='dark'] {
 
 :root {
   --ls-font-family: 'Inter', sans-serif;
-  --ls-editor-font: 'JetBrains Mono', monospace;
+}
+
+/* Code blocks use CodeMirror; target the editor class */
+.CodeMirror pre,
+.extensions__code .cm-editor .cm-content {
+  font-family: 'JetBrains Mono', monospace;
 }
 ```
 
 ### Local Fonts
+
+Place font files in your graph's `logseq/` folder:
 
 ```css
 @font-face {
@@ -223,6 +234,7 @@ html[data-theme='dark'] {
 ### Tags
 
 ```css
+/* File graphs use a.tag; DB graphs use .block-tag */
 a.tag {
   background-color: var(--ls-tertiary-background-color);
   padding: 2px 6px;
@@ -233,18 +245,26 @@ a.tag[data-ref='important'] {
   background-color: #ef4444;
   color: white;
 }
+
+/* DB graph tag styling */
+.block-tag a.tag {
+  padding: 2px 6px;
+  border-radius: 4px;
+}
 ```
 
 ### Code Blocks
 
 ```css
-.cm-s-default {
+/* CodeMirror editor wrapper */
+.extensions__code {
   background: var(--ls-secondary-background-color);
   border-radius: 8px;
 }
 
-.CodeMirror-line {
-  font-family: var(--ls-editor-font);
+.CodeMirror pre,
+.cm-editor .cm-content {
+  font-family: 'JetBrains Mono', monospace;
 }
 ```
 
@@ -366,4 +386,4 @@ Study these for inspiration:
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

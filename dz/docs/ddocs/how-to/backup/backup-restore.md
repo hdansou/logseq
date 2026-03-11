@@ -2,7 +2,7 @@
 title: 'Backup and Restore'
 description: 'How to backup and restore your Logseq database graphs'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-03-10'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [db]
@@ -15,6 +15,8 @@ relatedDocs:
 
 # Backup and Restore
 
+> **Last revised:** 2026-03-10
+
 > How to protect your Logseq database graphs with backups and restore when needed.
 
 ## How Automatic Backups Work
@@ -23,9 +25,10 @@ Logseq automatically creates backup copies of your database graphs. No action re
 
 ### When Backups Are Created
 
-- ✅ Every manual save (Cmd+S / Ctrl+S)
-- ✅ Automatically every 30 seconds (if changes)
-- ✅ When closing Logseq
+Logseq persists your database to disk every 30 seconds (if there are changes) and on manual save (Cmd+S / Ctrl+S). Each persist creates a backup of the previous database file, but a **minimum 1-hour interval** is enforced between backups to avoid excessive copies.
+
+- A backup is created at most **once per hour** during normal use
+- The backup captures the state _before_ the latest save, not after
 
 ### How Many Backups Are Kept
 
@@ -41,9 +44,9 @@ Logseq automatically creates backup copies of your database graphs. No action re
 
 | Platform    | Path                                                |
 | ----------- | --------------------------------------------------- |
-| **macOS**   | `~/.logseq/graphs/<GraphName>/backups/`             |
-| **Windows** | `%USERPROFILE%\.logseq\graphs\<GraphName>\backups\` |
-| **Linux**   | `~/.logseq/graphs/<GraphName>/backups/`             |
+| **macOS**   | `~/logseq/graphs/<GraphName>/backups/`             |
+| **Windows** | `%USERPROFILE%\logseq\graphs\<GraphName>\backups\` |
+| **Linux**   | `~/logseq/graphs/<GraphName>/backups/`             |
 
 ### Navigate to Backups
 
@@ -51,13 +54,13 @@ Logseq automatically creates backup copies of your database graphs. No action re
 
 1. Open Finder
 2. Press `Cmd+Shift+G`
-3. Type: `~/.logseq/graphs`
+3. Type: `~/logseq/graphs`
 4. Open your graph folder → `backups`
 
 **Windows:**
 
 1. Open File Explorer
-2. Type in address bar: `%USERPROFILE%\.logseq\graphs`
+2. Type in address bar: `%USERPROFILE%\logseq\graphs`
 3. Open your graph folder → `backups`
 
 ### Understand Backup Names
@@ -92,7 +95,7 @@ Logseq automatically creates backup copies of your database graphs. No action re
 Navigate to:
 
 ```
-~/.logseq/graphs/<YourGraph>/
+~/logseq/graphs/<YourGraph>/
 ```
 
 You'll see:
@@ -149,11 +152,11 @@ Best for: Regular backups, safe keeping
 Best for: Automation, scheduled backups
 
 ```bash
-# Export to Markdown
-logseq export -g my-graph -o ~/backups/
+# Export to Markdown (produces a .zip file)
+logseq export -g my-graph -f ~/backups/my-graph.zip
 
-# Export to EDN
-logseq export -g my-graph --format edn -o ~/backups/
+# Export to EDN (separate command)
+logseq export-edn -g my-graph -f ~/backups/my-graph.edn
 ```
 
 ### Method 3: Copy Database File
@@ -162,10 +165,10 @@ Best for: Quick local backup
 
 ```bash
 # macOS/Linux
-cp ~/.logseq/graphs/my-graph/db.sqlite ~/backups/my-graph-$(date +%Y%m%d).sqlite
+cp ~/logseq/graphs/my-graph/db.sqlite ~/backups/my-graph-$(date +%Y%m%d).sqlite
 
 # Windows (PowerShell)
-Copy-Item "$env:USERPROFILE\.logseq\graphs\my-graph\db.sqlite" "C:\backups\my-graph-$(Get-Date -Format yyyyMMdd).sqlite"
+Copy-Item "$env:USERPROFILE\logseq\graphs\my-graph\db.sqlite" "C:\backups\my-graph-$(Get-Date -Format yyyyMMdd).sqlite"
 ```
 
 ---
@@ -186,7 +189,7 @@ DATE=$(date +%Y-%m-%d_%H%M)
 mkdir -p "$BACKUP_DIR"
 
 # Copy database
-cp ~/.logseq/graphs/$GRAPH_NAME/db.sqlite "$BACKUP_DIR/$GRAPH_NAME-$DATE.sqlite"
+cp ~/logseq/graphs/$GRAPH_NAME/db.sqlite "$BACKUP_DIR/$GRAPH_NAME-$DATE.sqlite"
 
 # Keep only last 30 backups
 ls -t "$BACKUP_DIR"/*.sqlite | tail -n +31 | xargs rm -f 2>/dev/null
@@ -214,7 +217,7 @@ $Date = Get-Date -Format "yyyy-MM-dd_HHmm"
 New-Item -ItemType Directory -Force -Path $BackupDir
 
 # Copy database
-Copy-Item "$env:USERPROFILE\.logseq\graphs\$GraphName\db.sqlite" "$BackupDir\$GraphName-$Date.sqlite"
+Copy-Item "$env:USERPROFILE\logseq\graphs\$GraphName\db.sqlite" "$BackupDir\$GraphName-$Date.sqlite"
 
 Write-Host "Backup created: $GraphName-$Date.sqlite"
 ```
@@ -225,29 +228,23 @@ Schedule with Task Scheduler.
 
 ## Cloud Backup Strategies
 
-### Option 1: Sync Folder Location
+### Option 1: Sync Backup Copies (Recommended)
 
-Move graph to synced folder:
+Sync your _backup copies_ (not the live database) to a cloud folder. Copy database files into a synced directory using the automated backup script above, pointing `BACKUP_DIR` to your cloud-synced folder.
 
-```bash
-# Move graph
-mv ~/.logseq/graphs/my-graph ~/Dropbox/logseq/my-graph
-
-# Create symlink
-ln -s ~/Dropbox/logseq/my-graph ~/.logseq/graphs/my-graph
-```
+> **Warning:** Do not symlink or sync the live graph folder (containing `db.sqlite`) with cloud sync services like Dropbox, iCloud, or OneDrive. SQLite databases can become corrupted when multiple sync clients modify the same file. Instead, sync backup copies only.
 
 ### Option 2: Backup to Cloud CLI
 
 ```bash
 # AWS S3
-aws s3 cp ~/.logseq/graphs/my-graph/db.sqlite s3://my-bucket/logseq/
+aws s3 cp ~/logseq/graphs/my-graph/db.sqlite s3://my-bucket/logseq/
 
 # Google Cloud Storage
-gsutil cp ~/.logseq/graphs/my-graph/db.sqlite gs://my-bucket/logseq/
+gsutil cp ~/logseq/graphs/my-graph/db.sqlite gs://my-bucket/logseq/
 
 # Backblaze B2
-b2 upload-file my-bucket ~/.logseq/graphs/my-graph/db.sqlite logseq/db.sqlite
+b2 upload-file my-bucket ~/logseq/graphs/my-graph/db.sqlite logseq/db.sqlite
 ```
 
 ---
@@ -301,4 +298,4 @@ You may have restored an older backup. Try a more recent one.
 
 ---
 
-_Last updated: 2026-01-29_
+_Last updated: 2026-03-10_

@@ -1,5 +1,7 @@
 # Library and Namespace: Complete User Guide
 
+> **Last revised:** 2026-03-10
+
 ## Introduction
 
 Logseq provides two powerful features for organizing your pages: **Library** and **Namespaces**. While they serve similar purposes (keeping your content organized), they work differently depending on which type of graph you're using.
@@ -808,5 +810,4 @@ Based on the community documentation:
 
 ---
 
-_Last updated: 2025-10-21_
 _Written for Logseq users of all experience levels_

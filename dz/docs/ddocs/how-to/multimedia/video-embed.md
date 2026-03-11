@@ -12,16 +12,20 @@ related-docs:
 
 # Video Embedding in Logseq
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
-Logseq supports embedding videos from YouTube, Vimeo, Bilibili, and other platforms, as well as local video files. Videos are embedded as interactive players directly in your blocks, allowing you to watch content without leaving your graph.
+Logseq supports embedding videos from YouTube, Vimeo, Bilibili, Loom, and other platforms, as well as local video files. Videos are embedded as interactive players directly in your blocks, allowing you to watch content without leaving your graph.
 
 **Supported Sources**:
 
-- 🎥 YouTube (with timestamp support and API control)
-- 📹 Vimeo
-- 🎬 Bilibili (Chinese platform)
-- 🎞️ Local video files (MP4, WebM, OGG, MOV, AVI)
+- YouTube (with timestamp support and API control)
+- Vimeo
+- Bilibili (Chinese platform)
+- Loom
+- YouTube-nocookie (privacy-enhanced mode)
+- Local video files (MP4, WebM, MOV, FLV, AVI, MKV)
 
 ## Quick Start
 
@@ -93,17 +97,11 @@ All three syntaxes work identically and embed the same player.
 {{video https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=90s}}
 ```
 
-Or using timestamp format:
-
-```markdown
-{{video https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=1m30s}}
-```
-
 **Parameters**:
 
-- `t=90s` — Start at 90 seconds
-- `t=1m30s` — Start at 1 minute 30 seconds
-- `t=1h15m30s` — Start at 1 hour 15 minutes 30 seconds
+- `t=90` — Start at 90 seconds (numeric seconds only)
+
+Note: The `&t=` parameter accepts numeric seconds only (e.g., `t=90`). Formats like `t=1m30s` are not parsed by Logseq; convert to total seconds instead.
 
 **Result**: Player starts automatically at specified timestamp
 
@@ -120,8 +118,8 @@ While not directly supported in macro syntax, you can control size via CSS:
 Then add custom CSS:
 
 ```css
-/* In custom.css */
-.youtube-player-dQw4w9WgXcQ {
+/* In custom.css — target by iframe id */
+#youtube-player-dQw4w9WgXcQ {
   width: 800px;
   height: 450px;
 }
@@ -133,7 +131,7 @@ Then add custom CSS:
 - Height: Maintains 16:9 aspect ratio (315px for 560px width)
 - Mobile: Full width of screen minus padding
 
-**Code Reference**: [`youtube.cljs:68-75`](../../src/main/frontend/extensions/video/youtube.cljs#L68-L75)
+**Code Reference**: [`youtube.cljs:64-66`](../../src/main/frontend/extensions/video/youtube.cljs#L64-L66)
 
 ```clojure
 (let [width  (or width (min (- (util/get-width) 96) 560))
@@ -160,7 +158,7 @@ Then add custom CSS:
 
 **Mobile Limitation**: Timestamp controls don't work on iOS/Android native apps (WebView limitation).
 
-**Code Reference**: [`youtube.cljs:166-186`](../../src/main/frontend/extensions/video/youtube.cljs#L166-L186)
+**Code Reference**: [`youtube.cljs:139-154`](../../src/main/frontend/extensions/video/youtube.cljs#L139-L154)
 
 ```clojure
 (rum/defc timestamp
@@ -173,8 +171,11 @@ Then add custom CSS:
                   (when-let [player (get-player (.-target e))]
                     (if-let [seek-to (player-method player "seekTo")]
                       (.call seek-to player seconds true)
-                      (notification/show! "YouTube player isn't ready yet.")))))}
-   (svg/play-icon)
+                      (notification/show!
+                       "YouTube player isn't ready yet."
+                       :warning
+                       false)))))}
+   svg/clock
    (seconds->display seconds)])
 ```
 
@@ -189,7 +190,7 @@ Then add custom CSS:
 - Event handling (ready, state changes)
 - Multiple players on same page
 
-**Code Reference**: [`youtube.cljs:17-28`](../../src/main/frontend/extensions/video/youtube.cljs#L17-L28)
+**Code Reference**: [`youtube.cljs:20-27`](../../src/main/frontend/extensions/video/youtube.cljs#L20-L27)
 
 ```clojure
 (defn load-youtube-api []
@@ -212,13 +213,14 @@ Then add custom CSS:
 
 Logseq supports standard HTML5 video formats:
 
-| Format          | Extension      | Browser Support    | Notes                                |
-| --------------- | -------------- | ------------------ | ------------------------------------ |
-| MP4 (H.264)     | `.mp4`         | ✅ All browsers    | **Recommended** — Best compatibility |
-| WebM (VP8/VP9)  | `.webm`        | ✅ Most browsers   | Good compression, open format        |
-| OGG (Theora)    | `.ogg`, `.ogv` | ⚠️ Firefox, Chrome | Older format                         |
-| MOV (QuickTime) | `.mov`         | ⚠️ Safari only     | Apple format, limited support        |
-| AVI             | `.avi`         | ❌ Varies          | Legacy format, avoid if possible     |
+| Format          | Extension | Browser Support    | Notes                                |
+| --------------- | --------- | ------------------ | ------------------------------------ |
+| MP4 (H.264)     | `.mp4`    | All browsers       | **Recommended** — Best compatibility |
+| WebM (VP8/VP9)  | `.webm`   | Most browsers      | Good compression, open format        |
+| MOV (QuickTime) | `.mov`    | Safari mainly      | Apple format, limited support        |
+| FLV (Flash)     | `.flv`    | Limited            | Legacy format, needs plugin/codec    |
+| AVI             | `.avi`    | Varies             | Legacy format, avoid if possible     |
+| MKV (Matroska)  | `.mkv`    | Limited            | Container format, limited browser support |
 
 **Recommendation**: Use **MP4 with H.264 codec** for maximum compatibility.
 
@@ -226,7 +228,7 @@ Logseq supports standard HTML5 video formats:
 
 ```clojure
 (def video-formats
-  #{:mp4 :ogg :ogv :webm :mov :avi})
+  #{:mp4 :webm :mov :flv :avi :mkv})
 ```
 
 ### Adding Local Videos
@@ -302,10 +304,11 @@ Or using image macro:
 
 ### Vimeo
 
-**Syntax**:
+**Syntax** (either form works):
 
 ```markdown
 {{video https://vimeo.com/VIDEO_ID}}
+{{vimeo https://vimeo.com/VIDEO_ID}}
 ```
 
 **Example**:
@@ -316,21 +319,26 @@ Or using image macro:
 
 **Result**: Embedded Vimeo player (uses Vimeo's embed URL)
 
-### Bilibili (Chinese Platform)
+### Loom
 
 **Syntax**:
 
 ```markdown
-{{bilibili https://www.bilibili.com/video/BV1XXXXXXXXX}}
+{{video https://www.loom.com/share/VIDEO_ID}}
 ```
 
-**Example**:
+**Result**: Embedded Loom player
+
+### Bilibili (Chinese Platform)
+
+**Syntax** (either form works):
 
 ```markdown
+{{video https://www.bilibili.com/video/BV1XXXXXXXXX}}
 {{bilibili https://www.bilibili.com/video/BV1GJ411x7h7}}
 ```
 
-**Result**: Embedded Bilibili player (popular in China)
+**Result**: Embedded Bilibili player (popular in China). The `{{video}}` macro auto-detects Bilibili URLs.
 
 ---
 
@@ -419,7 +427,7 @@ Create video blocks separately and reference them. Videos only load when blocks 
 **Features**:
 
 - ✅ YouTube embeds work (using wrapper page)
-- ⚠️ Timestamp controls don't work (see [youtube.cljs:166](../../src/main/frontend/extensions/video/youtube.cljs#L166))
+- Timestamp controls don't work (see [youtube.cljs:139](../../src/main/frontend/extensions/video/youtube.cljs#L139))
 - ⚠️ Local video playback may have codec issues
 - ⚠️ Fullscreen may exit Logseq app (platform behavior)
 
@@ -428,7 +436,7 @@ Create video blocks separately and reference them. Videos only load when blocks 
 - YouTube timestamp links show error: "YouTube timestamps aren't available on mobile yet"
 - Some video formats don't play (device-dependent)
 
-**Code Reference**: [`youtube.cljs:30-32`](../../src/main/frontend/extensions/video/youtube.cljs#L30-L32)
+**Code Reference**: [`youtube.cljs:29-30`](../../src/main/frontend/extensions/video/youtube.cljs#L29-L30)
 
 ```clojure
 (defn- use-youtube-wrapper? []
@@ -513,7 +521,7 @@ Create video blocks separately and reference them. Videos only load when blocks 
 
 **Size Limits**:
 
-- Assets: 100 MB per file (see [assets.cljs:21-24](../../src/main/frontend/handler/assets.cljs#L21-L24))
+- Assets: 100 MB per file (see [assets.cljs:22-25](../../src/main/frontend/handler/assets.cljs#L22-L25))
 - RTC sync: Large assets slow down collaboration
 
 ---
@@ -533,7 +541,7 @@ Create video blocks separately and reference them. Videos only load when blocks 
 
 - Embed 10+ videos on one page (causes lag)
 - Upload 4K videos directly (compress first)
-- Use MOV or AVI formats (limited support)
+- Use FLV, AVI, or MKV formats (limited browser support)
 
 ### Organization
 
@@ -597,11 +605,11 @@ Create video blocks separately and reference them. Videos only load when blocks 
 
 **Key Functions**:
 
-- `youtube-video` (line 60-104) — Main YouTube embed component
-- `timestamp` (line 166-186) — Clickable timestamp links
-- `load-youtube-api` (line 17-28) — YouTube IFrame API loader
-- `get-player` (line 126-141) — Get player instance for controls
-- `seconds->display` (line 106-117) — Format seconds as HH:MM:SS
+- `youtube-video` (line 53-92) — Main YouTube embed component
+- `timestamp` (line 139-154) — Clickable timestamp links
+- `load-youtube-api` (line 20-27) — YouTube IFrame API loader
+- `get-player` (line 113-127) — Get player instance for controls
+- `seconds->display` (line 94-105) — Format seconds as HH:MM:SS
 
 **Configuration**: [`src/main/frontend/config.cljs`](../../src/main/frontend/config.cljs)
 
@@ -609,7 +617,7 @@ Create video blocks separately and reference them. Videos only load when blocks 
 
 **Asset Handling**: [`src/main/frontend/handler/assets.cljs`](../../src/main/frontend/handler/assets.cljs)
 
-- `exceed-limit-size?` (line 21-24) — 100 MB asset limit check
+- `exceed-limit-size?` (line 22-25) — 100 MB asset limit check
 - `normalize-asset-resource-url` — Convert paths to URLs
 
 ---
@@ -636,6 +644,6 @@ Create video blocks separately and reference them. Videos only load when blocks 
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: March 2026  
 **Status**: 🟢 Stable (Video embedding mature feature)  
 **Feedback**: Report video issues on [GitHub](https://github.com/logseq/logseq/issues) with `video` label

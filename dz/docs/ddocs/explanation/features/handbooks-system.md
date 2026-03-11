@@ -12,6 +12,8 @@ related-docs:
 
 # Handbooks System: Interactive In-App Tutorials
 
+> **Last revised:** 2026-03-10
+
 ## Overview
 
 Logseq's Handbooks system provides interactive, in-app tutorials and help documentation accessible from within the editor. Unlike external documentation, handbooks are tightly integrated with the app, offering contextual help, demos, and keyboard shortcut references without leaving your workflow.
@@ -33,19 +35,17 @@ Logseq's Handbooks system provides interactive, in-app tutorials and help docume
 **Method 1: Menu**
 
 1. Click **Help** menu (top bar)
-2. Select **Handbooks**
+2. Select **Handbook**
 
-**Method 2: Keyboard Shortcut**
-
-- Press **?** (question mark) — Opens handbooks dialog
-
-**Method 3: Search**
+**Method 2: Command Palette**
 
 1. Open command palette (Cmd+K / Ctrl+K)
 2. Type "handbook"
-3. Select "Toggle handbooks"
+3. Select the handbook option
 
-**Result**: Modal dialog with handbook categories
+> **Note**: There is no dedicated keyboard shortcut (e.g., `?`) for opening handbooks. Access is through the Help menu or command palette.
+
+**Result**: Draggable popup panel with handbook categories
 
 ---
 
@@ -147,20 +147,11 @@ Logseq's Handbooks system provides interactive, in-app tutorials and help docume
 
 **Structure**:
 
+All handbook content is served from a single EDN file at the root:
+
 ```
 handbooks.pages.dev/
-  ├── index.json                 # Root structure
-  ├── getting-started.edn        # Category manifest
-  ├── getting-started/
-  │   ├── quick-start.edn        # Topic manifest
-  │   ├── quick-start.html       # Topic content
-  │   ├── installation.edn
-  │   └── installation.html
-  ├── features/
-  │   ├── queries.edn
-  │   ├── queries.html
-  │   ├── pdf.edn
-  │   └── pdf.html
+  ├── handbooks.edn              # Single file: all categories, topics, content
   └── assets/
       ├── demo-query.mp4
       ├── screenshot-1.png
@@ -169,11 +160,12 @@ handbooks.pages.dev/
 
 **Content Format**:
 
-- **Manifests** (.edn): Metadata, structure, navigation
-- **Content** (.html): Markdown-rendered HTML for topic body
-- **Assets**: Images, videos, demos
+- **`handbooks.edn`**: A single EDN tree containing all categories, topics, metadata, and inline HTML content
+- **Assets**: Images, videos, demos (referenced by relative paths, resolved to CDN URLs at render time)
 
-**Code Reference**: [`handbooks/core.cljs:25-36`](../../src/main/frontend/extensions/handbooks/core.cljs#L25-L36)
+> **Note**: Earlier documentation described separate `.edn` manifests and `.html` files per category/topic. The actual implementation loads everything from one `handbooks.edn` file and parses it into a node tree client-side.
+
+**Code Reference**: [`handbooks/core.cljs:26-32`](../../src/main/frontend/extensions/handbooks/core.cljs#L26-L32)
 
 ```clojure
 (defn get-handbooks-endpoint [resource]
@@ -195,64 +187,62 @@ handbooks.pages.dev/
 
 **On Open**:
 
-1. Fetch `index.json` (root structure)
-2. Parse categories and popular topics
-3. Render dashboard
+1. Fetch `handbooks.edn` from CDN (single request)
+2. Parse entire EDN tree using `edn/read-string`
+3. Flatten tree into a keyed node map using `tree-seq` (stored in component state)
+4. Render dashboard with categories and popular topics
 
 **On Category Click**:
 
-1. Fetch `{category}.edn` (e.g., `getting-started.edn`)
-2. Parse topics list
-3. Render category view
+1. Look up category node from the in-memory node map
+2. Render category view (no additional network request)
 
 **On Topic Click**:
 
-1. Fetch `{category}/{topic}.edn` (metadata)
-2. Fetch `{category}/{topic}.html` (content)
-3. Parse chapters if multi-chapter
-4. Render topic detail view
+1. Look up topic node from the in-memory node map
+2. Parse chapters if multi-chapter (children in the tree)
+3. Render topic detail view (no additional network request)
 
-**Code Reference**: [`handbooks/core.cljs`](../../src/main/frontend/extensions/handbooks/core.cljs)
+**Code Reference**: [`handbooks/core.cljs`](../../src/main/frontend/extensions/handbooks/core.cljs) — see `load-handbooks!` (around line 502) and the `tree-seq` node flattening (around line 577).
 
-**Caching**: Loaded content cached in memory for session (reused on re-open).
+**Caching**: All content is loaded in a single fetch and held in component state for the session. Navigation between categories and topics requires no further network requests.
 
 ### Content Structure (EDN Format)
 
-**Category Manifest**:
+The entire handbook content lives in a single `handbooks.edn` file as a nested tree. The root has `:popular-topics` and `:children` (categories). Each category has `:children` (topics), and each topic may have `:children` (chapters).
+
+**Full Tree Structure** (simplified):
 
 ```clojure
-{:key "getting-started"
- :title "Getting Started"
- :description "Essential tutorials for new users"
- :color "#10B981"
- :icon "book"
+{:popular-topics ["getting-started/quick-start" "features/queries"]
  :children
- [{:key "getting-started/quick-start"
-   :title "Quick Start Guide"
-   :description "Get up and running in 5 minutes"
-   :cover "./assets/quickstart-cover.png"}
-  {:key "getting-started/installation"
-   :title "Installation"
-   :description "Install Logseq on your platform"}]}
+ [{:key "getting-started"
+   :title "Getting Started"
+   :description "Essential tutorials for new users"
+   :color "#10B981"
+   :icon "book"
+   :children
+   [{:key "getting-started/quick-start"
+     :title "Quick Start Guide"
+     :description "Get up and running in 5 minutes"
+     :cover "./assets/quickstart-cover.png"
+     :demos ["./assets/quickstart-demo.mp4"]
+     :content "<h2>Welcome to Logseq</h2><p>This guide will...</p>"
+     :children ; Multi-chapter topics (optional)
+     [{:key "getting-started/quick-start/chapter-1"
+       :title "Chapter 1: Installation"
+       :content "<h3>Installing Logseq</h3>..."}
+      {:key "getting-started/quick-start/chapter-2"
+       :title "Chapter 2: First Graph"
+       :content "<h3>Creating your first graph</h3>..."}]}
+    {:key "getting-started/installation"
+     :title "Installation"
+     :description "Install Logseq on your platform"}]}]}
 ```
 
-**Topic Manifest**:
+At load time, this tree is flattened into a keyed map via `tree-seq`, with the root stored under the `"__root"` key. Parent keys are computed from the `/`-delimited key paths (see `bind-parent-key` and `parse-parent-key`).
 
-```clojure
-{:key "getting-started/quick-start"
- :title "Quick Start Guide"
- :demos ["./assets/quickstart-demo.mp4"]
- :content "<h2>Welcome to Logseq</h2><p>This guide will...</p>"
- :children ; Multi-chapter topics
- [{:key "getting-started/quick-start/chapter-1"
-   :title "Chapter 1: Installation"
-   :content "<h3>Installing Logseq</h3>..."}
-  {:key "getting-started/quick-start/chapter-2"
-   :title "Chapter 2: First Graph"
-   :content "<h3>Creating your first graph</h3>..."}]}
-```
-
-**Code Reference**: [`handbooks/core.cljs:65-80`](../../src/main/frontend/extensions/handbooks/core.cljs#L65-L80)
+**Code Reference**: [`handbooks/core.cljs:63-74`](../../src/main/frontend/extensions/handbooks/core.cljs#L63-L74) (key parsing), tree flattening around line 577.
 
 ---
 
@@ -268,10 +258,11 @@ handbooks.pages.dev/
 
 **Result**: Clickable image → Opens lightbox for full-size view
 
-**Code**: [`handbooks/core.cljs:130-145`](../../src/main/frontend/extensions/handbooks/core.cljs#L130-L145)
+**Code**: [`handbooks/core.cljs:108-121`](../../src/main/frontend/extensions/handbooks/core.cljs#L108-L121)
 
 ```clojure
-(rum/defc media-render [src]
+(rum/defc media-render
+  [src]
   (let [src (util/trim-safe src)
         extname (some-> src (util/full-path-extname) (subs 1))
         youtube-id (and (string/includes? src "youtube.com/watch?v=")
@@ -315,7 +306,7 @@ handbooks.pages.dev/
 
 **Result**: Carousel with navigation bullets (powered by Glide.js)
 
-**Code Reference**: [`handbooks/core.cljs:88-102`](../../src/main/frontend/extensions/handbooks/core.cljs#L88-L102)
+**Code Reference**: [`handbooks/core.cljs:76-81`](../../src/main/frontend/extensions/handbooks/core.cljs#L76-L81)
 
 ```clojure
 (defn load-glide-assets! []
@@ -359,7 +350,7 @@ Current chapter: [ Chapter 1: Basics ▼ ]
 [⬅ Prev Chapter]           [Next Chapter ➡]
 ```
 
-**Code Reference**: [`handbooks/core.cljs:147-172`](../../src/main/frontend/extensions/handbooks/core.cljs#L147-L172)
+**Code Reference**: [`handbooks/core.cljs:123-152`](../../src/main/frontend/extensions/handbooks/core.cljs#L123-L152)
 
 ---
 
@@ -369,31 +360,35 @@ Current chapter: [ Chapter 1: Basics ▼ ]
 
 **From Handbooks Dashboard**:
 
-1. Open handbooks (**?**)
-2. Click **"Keyboard Shortcuts"** card
-3. Opens shortcuts panel in right sidebar
+1. Open handbooks via Help menu
+2. Click **"Keyboard shortcuts"** card at the bottom of the categories list
+3. Handbooks panel closes and shortcuts panel opens in the right sidebar
 
 **Direct Access**:
 
-1. Open right sidebar (Cmd+Shift+L / Ctrl+Shift+L)
-2. Click **Shortcuts** tab
+1. Open Help menu (top bar)
+2. Click **"Keyboard shortcuts"** directly (separate menu item from Handbook)
 
-**Code Reference**: [`handbooks/core.cljs:325-330`](../../src/main/frontend/extensions/handbooks/core.cljs#L325-L330)
+**Code Reference**: [`handbooks/core.cljs:278-296`](../../src/main/frontend/extensions/handbooks/core.cljs#L278-L296)
 
 ```clojure
+;; The keyboard shortcuts card is appended to the categories list in pane-dashboard:
 {:key      :ls-shortcuts
  :title    [:span "Keyboard shortcuts"]
  :children [:span (->> (vals @shortcut-config/*config)
                        (map count)
                        (apply +))
             " shortcuts"]
- :icon     "command"
- :on-click #(do (state/toggle! :ui/handbooks-open?)
-                (state/open-right-sidebar!)
-                (state/sidebar-add-block!
-                  (state/get-current-repo)
-                  "shortcut-settings"
-                  :shortcut-settings))}
+ :color    "#2563EB"
+ :icon     "command"}
+
+;; On click, the handler checks for :ls-shortcuts key and opens the sidebar:
+:on-click #(if (= key :ls-shortcuts)
+             (do (state/toggle! :ui/handbooks-open?)
+                 (state/open-right-sidebar!)
+                 (state/sidebar-add-block! (state/get-current-repo)
+                   "shortcut-settings" :shortcut-settings))
+             (nav-to-pane! [:topics category title] pane-state))
 ```
 
 ### Shortcut Categories
@@ -421,9 +416,11 @@ Shortcuts organized by functional area:
 
 ### For Logseq Team
 
-**Creating New Handbook**:
+**Creating New Handbook Content**:
 
-1. **Create Category** (`categories/{name}.edn`):
+All content is authored in a single `handbooks.edn` file. To add a new category or topic, edit this file directly.
+
+1. **Add a Category** (top-level child in the tree):
 
    ```clojure
    {:key "my-category"
@@ -434,38 +431,37 @@ Shortcuts organized by functional area:
     :children []}
    ```
 
-2. **Create Topic** (`categories/{name}/{topic}.edn`):
+2. **Add a Topic** (child of a category):
 
    ```clojure
    {:key "my-category/my-topic"
     :title "My Topic"
     :cover "./assets/cover.png"
     :demos ["./assets/demo.mp4"]
-    :content nil}  ; Or inline HTML
+    :content "<h2>Topic Title</h2><p>Content in HTML format</p>"}
    ```
 
-3. **Create Content** (`categories/{name}/{topic}.html`):
+3. **Add Chapters** (children of a topic, optional):
 
-   ```html
-   <h2>Topic Title</h2>
-   <p>Content in HTML format (converted from Markdown)</p>
-   <img src="./assets/screenshot.png" />
+   ```clojure
+   {:key "my-category/my-topic/chapter-1"
+    :title "Chapter 1: Basics"
+    :content "<h3>Getting started</h3>..."}
    ```
 
-4. **Add Assets** (`assets/`):
+4. **Add Popular Topics** (reference by key in root `:popular-topics`):
+
+   ```clojure
+   {:popular-topics ["my-category/my-topic" ...]
+    :children [...]}
+   ```
+
+5. **Add Assets** (`assets/`):
 
    - Images: PNG, JPG, GIF, WebP, SVG
    - Videos: MP4, WebM
    - Keep assets < 5 MB each for fast loading
-
-5. **Update Root** (`index.json`):
-
-   ```json
-   {
-     "categories": ["my-category", ...],
-     "popularTopics": ["my-category/my-topic", ...]
-   }
-   ```
+   - Reference with relative paths (e.g., `./assets/screenshot.png`); URLs are resolved to CDN at render time
 
 6. **Deploy**: Push to `handbooks.pages.dev` (Cloudflare Pages)
 
@@ -489,12 +485,12 @@ Shortcuts organized by functional area:
 
 ```clojure
 (defn inflate-content-assets-urls [content]
-  (if-let [matches (re-seq #"src=\"([^\"]+)\"" content)]
+  (if-let [matches (and (not (string/blank? content))
+                        (re-seq #"src=\"([^\"]+)\"" content))]
     (reduce
      (fn [content matched]
        (if-let [matched (second matched)]
-         (string/replace content matched (resolve-asset-url matched))
-         content))
+         (string/replace content matched (resolve-asset-url matched)) content))
      content matches)
     content))
 ```
@@ -507,17 +503,17 @@ Shortcuts organized by functional area:
 
 **Problem**: Users stuck, need help without leaving app
 
-**Solution**: Press **?** → Instant access to tutorials
+**Solution**: Open Help menu → **Handbook** → Instant access to tutorials
 
 **Example Workflow**:
 
 1. User confused about queries
-2. Press **?**
+2. Open Help → Handbook
 3. Search "query"
 4. Click **"Advanced Queries"** topic
 5. Watch demo video
 6. Read guide
-7. Close handbooks (**Esc**)
+7. Close handbooks (click X button)
 8. Apply knowledge immediately
 
 ### Onboarding
@@ -525,8 +521,7 @@ Shortcuts organized by functional area:
 **New User Flow**:
 
 1. Install Logseq
-2. App suggests: "Press **?** for Quick Start Guide"
-3. User opens handbooks
+2. User opens Help → Handbook
 4. Follows **"Quick Start"** topic (5 min tutorial)
 5. Creates first graph guided by handbook
 6. Returns to handbooks for **"First Steps"** topic
@@ -535,15 +530,15 @@ Shortcuts organized by functional area:
 
 ### Keyboard-Friendly
 
-**Navigation**:
+**Navigation within the handbooks panel**:
 
-- **?** — Open/close handbooks
-- **Esc** — Close modal
+- **Esc** — Close search or panel
 - **Tab** — Navigate between cards
 - **Enter** — Select card/topic
-- **←** / **→** — Previous/next chapter
+- **Up/Down arrows** — Navigate search results
+- **←** / **→** — Previous/next chapter (in topic detail view)
 
-**Goal**: Accessible without mouse
+**Goal**: Accessible without mouse once the panel is open
 
 ---
 
@@ -551,7 +546,7 @@ Shortcuts organized by functional area:
 
 | Feature    | Handbooks (In-App)      | External Docs                             |
 | ---------- | ----------------------- | ----------------------------------------- |
-| Access     | Press **?** (instant)   | Open browser, navigate to docs.logseq.com |
+| Access     | Help menu → Handbook    | Open browser, navigate to docs.logseq.com |
 | Context    | No context switch       | Leaves app                                |
 | Search     | Within handbooks only   | Global search                             |
 | Offline    | Requires internet (CDN) | Requires internet                         |
@@ -581,18 +576,16 @@ Shortcuts organized by functional area:
 
 ### Handbooks Won't Open
 
-**Problem**: Pressing **?** does nothing
+**Problem**: Clicking Handbook in Help menu does nothing
 
 **Possible Causes**:
 
-1. Keyboard shortcut conflict
-2. Modal already open (hidden behind)
-3. Network issue (CDN unreachable)
+1. Panel already open (hidden behind another window or off-screen)
+2. Network issue (CDN unreachable)
 
 **Solutions**:
 
-- Check keyboard shortcuts: Settings → Shortcuts → "Toggle handbooks"
-- Look for existing modal (press Esc first)
+- Look for existing handbook panel (it is a draggable popup that may have been moved off-screen)
 - Check internet connection
 - Restart Logseq
 
@@ -707,16 +700,17 @@ Shortcuts organized by functional area:
 
 ## Code Reference
 
-**Core Implementation**: [`src/main/frontend/extensions/handbooks/core.cljs`](../../src/main/frontend/extensions/handbooks/core.cljs) (661 lines)
+**Core Implementation**: [`src/main/frontend/extensions/handbooks/core.cljs`](../../src/main/frontend/extensions/handbooks/core.cljs) (660 lines)
 
 **Key Components**:
 
-- `pane-dashboard` (line 295-345) — Dashboard view with categories
-- `pane-category-topics` (line 116-128) — Category topic list
-- `pane-topic-detail` (line 174-280) — Topic content view with chapters
-- `media-render` (line 130-145) — Video/image rendering
-- `chapter-select` (line 147-172) — Chapter navigation dropdown
-- `topic-card` (line 104-114) — Topic card component
+- `topic-card` (line 83-94) — Topic card component
+- `pane-category-topics` (line 96-106) — Category topic list
+- `media-render` (line 108-121) — Video/image rendering
+- `chapter-select` (line 123-152) — Chapter navigation dropdown
+- `pane-topic-detail` (line 154-257) — Topic content view with chapters
+- `pane-dashboard` (line 259-306) — Dashboard view with categories
+- `content` (line 480-660) — Main component with state management and data loading
 
 **Dependencies**:
 
@@ -731,7 +725,7 @@ Shortcuts organized by functional area:
 
 ---
 
-**Last Updated**: January 2026  
+**Last Updated**: March 2026
 **Status**: 🟢 Stable (Handbooks mature feature)  
 **Feedback**: Report handbooks issues on [GitHub](https://github.com/logseq/logseq/issues) with `handbooks` label
 

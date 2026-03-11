@@ -1,5 +1,7 @@
 # Logseq Dynamic Variables: A Detective's Investigation Report
 
+> **Last revised:** 2026-03-10
+
 ## 🔍 Case Summary
 
 Dynamic variables in Logseq provide runtime template resolution for dates, page references, and contextual information. This investigation reveals a **unified, database-agnostic implementation** that works identically across both file-based and DB-based graphs.

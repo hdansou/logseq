@@ -1,6 +1,8 @@
 # The Case of the Git-Backed SQLite Database: A Detective's Investigation
 
-## 🔍 Case File: Logseq Database Mode Git Backup & Versioning System
+> **Last revised:** 2026-03-10
+
+## Case File: Logseq Database Mode Git Backup & Versioning System
 
 **Investigation Status:** SOLVED
 **Case Complexity:** High
@@ -101,10 +103,11 @@ electron.backup-file (The Safety Net)
   [& {:keys [succ-notification? force-save?]}]
   (when (util/electron?)
     (when-let [repo (state/get-current-repo)]
-      (when (or (and (config/db-based-graph? repo) (graph-has-changed? repo))
-                force-save?)
+      (when (or force-save?
+                (and (graph-has-changed? repo)
+                     (state/input-idle? repo :diff 5000)))
         (<export-db repo {})
-        (swap! *last-synced-graph->tx assoc repo (:max-tx (db/get-db repo)))))))
+        ...))))
 
 (defn run-export-periodically!
   []
@@ -133,6 +136,7 @@ electron.backup-file (The Safety Net)
 **Key Evidence:**
 
 - Export is **change-aware**: Only exports if `max-tx` has increased
+- Export also requires **input idle** for at least 5 seconds to avoid exporting during active editing
 - Uses IPC (Inter-Process Communication) between renderer and main process
 - Binary data passed directly (ArrayBuffer) for efficiency
 
@@ -314,7 +318,7 @@ diff --git a/logseq.sqlite b/logseq.sqlite
   [repo]
   (let [tx (@*last-synced-graph->tx repo)
         db (db/get-db repo)]
-    (or (nil? tx) (> tx (:max-tx db)))))
+    (or (nil? tx) (> (:max-tx db) tx))))
 ```
 
 **Evidence:**

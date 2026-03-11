@@ -1,5 +1,7 @@
 # Plugin API Documentation Task List
 
+> **Last revised:** 2026-03-10
+
 > **Goal**: Improve TypeDoc documentation coverage for Logseq Plugin APIs to enhance developer experience and ensure all methods appear properly on https://plugins-doc.logseq.com
 
 ## Current Status (Updated: October 26, 2025)
@@ -134,7 +136,7 @@ Each documented method includes:
 
 ## Notes
 
-- **File Updated**: `/libs/src/LSPlugin.ts` (3,800+ lines)
+- **File Updated**: `/libs/src/LSPlugin.ts` (~3,900 lines)
 - **Documentation Added**: ~2,500 lines of JSDoc comments
 - **TypeScript Compilation**: ✅ All checks pass, no errors
 - **Coverage Achieved**: 100% of public API methods
@@ -369,7 +371,7 @@ After documentation updates:
 
 ## Notes
 
-- **Current file**: `/libs/src/LSPlugin.ts` (32KB, 1223 lines)
+- **Current file**: `/libs/src/LSPlugin.ts` (~3,900 lines including JSDoc)
 - **Reference implementations**: Check `/src/main/logseq/api/` for ClojureScript implementations
 - **Test files**: `/clj-e2e/test/logseq/e2e/plugins_basic_test.clj` for usage examples
 - **Existing samples**: https://github.com/logseq/logseq-plugin-samples
