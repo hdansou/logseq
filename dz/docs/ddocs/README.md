@@ -192,14 +192,14 @@ Understand the system:
 
 ## Feature Coverage by Version
 
-| Feature           | Minimum Version   | Status          | Documentation                                               |
-| ----------------- | ----------------- | --------------- | ----------------------------------------------------------- |
-| Database Graphs   | v65.0             | 🟢 Stable       | [Schema Overview](reference/database/schema-overview.md)    |
-| RTC Sync          | v65.0+            | 🟡 Active Dev   | [Real-Time Sync](tutorials/collaboration/real-time-sync.md) |
-| E2EE              | v65.0+            | 🟡 Active Dev   | [E2EE Encryption](explanation/security/e2ee-encryption.md)  |
-| PDF Annotation    | All versions      | 🟠 Desktop Only | [PDF Annotations](reference/features/pdf-annotations.md)    |
-| Flashcards (FSRS) | v64.0+            | 🟢 Stable       | [Flashcards](reference/features/flashcards.md)              |
-| MCP Server        | v65.10+           | 🟢 Stable       | [MCP Reference](reference/api/mcp-server.md)                |
+| Feature           | Minimum Version | Status          | Documentation                                               |
+| ----------------- | --------------- | --------------- | ----------------------------------------------------------- |
+| Database Graphs   | v65.0           | 🟢 Stable       | [Schema Overview](reference/database/schema-overview.md)    |
+| RTC Sync          | v65.0+          | 🟡 Active Dev   | [Real-Time Sync](tutorials/collaboration/real-time-sync.md) |
+| E2EE              | v65.0+          | 🟡 Active Dev   | [E2EE Encryption](explanation/security/e2ee-encryption.md)  |
+| PDF Annotation    | All versions    | 🟠 Desktop Only | [PDF Annotations](reference/features/pdf-annotations.md)    |
+| Flashcards (FSRS) | v64.0+          | 🟢 Stable       | [Flashcards](reference/features/flashcards.md)              |
+| MCP Server        | v65.10+         | 🟢 Stable       | [MCP Reference](reference/api/mcp-server.md)                |
 
 ---
 
