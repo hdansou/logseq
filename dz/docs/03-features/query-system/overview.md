@@ -1,6 +1,6 @@
 # Query System
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-04-21
 
 ## Overview
 
@@ -178,6 +178,24 @@ Advanced queries use DataScript's Datalog syntax, providing direct access to the
  :where
  [?variable :attribute value]]
 ```
+
+Advanced queries are usually wrapped in a query map when used in Logseq blocks.
+That outer map is also where display options live:
+
+```clojure
+{:title "Query Title"
+ :query [:find (pull ?b [*])
+   :in $ %
+   :where (task ?b #{"Todo" "Doing"})]
+ :remove-block-children? false
+ :result-transform (fn [result] (take 20 result))
+ :view :table}
+```
+
+` :remove-block-children? ` defaults to `true`. When it is `true`, a matching child
+block is not returned as a separate result if its parent block is also in the
+result set. Set it to `false` on the query map when you want every matching
+child block to appear individually.
 
 ### Common Query Patterns
 
@@ -437,6 +455,9 @@ classDiagram
 **Post-Processing with :result-transform**
 
 The `:result-transform` option allows you to modify query results after execution. This works for both file-based and DB-based graphs.
+
+This is separate from `:remove-block-children?`, which controls whether matching
+child blocks are kept as separate results before display.
 
 Common operations:
 

@@ -1,6 +1,6 @@
 # Getting Started with :result-transform in Logseq
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-04-21
 
 **Transform your query results like a pro!**
 
@@ -545,6 +545,28 @@ Replace `:block/priority` with `:logseq.property/priority`
 
    Check the console to see what properties are actually available.
 
+### Problem: Matching Child Blocks Are Missing
+
+**Symptoms:** You know a child block matches the query, but only the parent block
+shows up as a separate result.
+
+**Cause:** Advanced query result rendering removes child matches by default when a
+parent block is also in the result set.
+
+**Solution:** Set `:remove-block-children? false` on the outer advanced query map.
+This is a per-query display option, not a `config.edn` setting.
+
+```clojure
+{:title "All Matching Task Blocks"
+ :query [:find (pull ?b [*])
+         :in $ %
+         :where (task ?b #{"Canceled" "Done" "In Review" "Doing" "Todo" "Backlog"})]
+ :remove-block-children? false}
+```
+
+**Default:** If you omit the option, Logseq behaves as if `:remove-block-children?`
+were set to `true`.
+
 ### Problem: Query Shows No Results After Adding Transform
 
 **Symptoms:** Query worked before, now shows nothing
@@ -626,6 +648,7 @@ Replace `:block/priority` with `:logseq.property/priority`
    ```
 
 3. **Use explicit case for priority:**
+
    ```clojure
    (sort-by #(case (:block/priority %)
                "A" 1
@@ -813,6 +836,21 @@ Transforms run every time your query updates. Keep them efficient:
 ### Q: Can I use transforms in advanced query tables?
 
 **A:** Yes! Transforms work with both list views and table views.
+
+### Q: Where do I set `:remove-block-children?`?
+
+**A:** Put it on the outer advanced query map, alongside `:query`, `:inputs`,
+`:result-transform`, and `:view`.
+
+```clojure
+{:query [:find (pull ?b [*])
+    :in $ %
+    :where (task ?b #{"Todo"})]
+ :remove-block-children? false}
+```
+
+It is not part of `:result-transform`, and it is not configured globally in
+`config.edn`.
 
 ### Q: What happens if my transform throws an error?
 

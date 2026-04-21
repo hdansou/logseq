@@ -2,7 +2,7 @@
 title: 'Advanced Queries'
 description: 'How to write advanced Datalog queries in Logseq'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-04-21'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -15,8 +15,7 @@ relatedDocs:
 
 # Advanced Queries
 
-> **Last revised:** 2026-03-10
-
+> **Last revised:** 2026-04-21
 > How to write powerful Datalog queries to search and analyze your graph.
 
 ## Query Basics
@@ -42,19 +41,46 @@ Advanced queries use Datalog syntax inside query blocks:
          :in $ ?input
          :where ...]
  :inputs [...]
+ :remove-block-children? true
  :result-transform ...
  :view ...
  :collapsed? false}
 ```
 
-| Key                 | Purpose           |
-| ------------------- | ----------------- |
-| `:title`            | Display title     |
-| `:query`            | Datalog query     |
-| `:inputs`           | Values to pass in |
-| `:result-transform` | Modify results    |
-| `:view`             | Custom display    |
-| `:collapsed?`       | Start collapsed   |
+| Key                       | Purpose                                                            |
+| ------------------------- | ------------------------------------------------------------------ |
+| `:title`                  | Display title                                                      |
+| `:query`                  | Datalog query                                                      |
+| `:inputs`                 | Values to pass in                                                  |
+| `:remove-block-children?` | Keep matching child blocks as separate results when set to `false` |
+| `:result-transform`       | Modify results                                                     |
+| `:view`                   | Custom display                                                     |
+| `:collapsed?`             | Start collapsed                                                    |
+
+### Control Child Block Results
+
+Set `:remove-block-children?` on the query map itself, at the same level as
+`:query`, `:inputs`, `:result-transform`, and `:view`. It is a per-query
+display option, not a `config.edn` setting.
+
+- Default value: `true`
+- When `true`: if both a parent block and one of its children match, Logseq only
+  returns the top-level parent as a separate result
+- When `false`: matching child blocks are also returned individually
+- Applies to block results
+
+Use this when you want every matching task block to appear separately in an
+advanced query result:
+
+```clojure
+#+BEGIN_QUERY
+{:title "All Matching Task Blocks"
+ :query [:find (pull ?b [*])
+         :in $ %
+         :where (task ?b #{"Canceled" "Done" "In Review" "Doing" "Todo" "Backlog"})]
+ :remove-block-children? false}
+#+END_QUERY
+```
 
 ---
 
@@ -399,7 +425,3 @@ Relative date-time inputs append a time suffix (e.g., `:-7d-ms`, `:-7d-start`, `
 
 - **Database Schema**: [schema-overview.md](../../reference/database/schema-overview.md)
 - **View Functions**: [view-types.md](../content/view-types.md)
-
----
-
-_Last updated: 2026-03-10_
