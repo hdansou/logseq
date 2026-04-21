@@ -4,14 +4,14 @@ Reference docs for the plugin SDK changes shipped in [logseq/logseq#12395](https
 
 ## What changed
 
-| # | Area | Doc |
-| --- | --- | --- |
-| 1 | Postmate transport rewrite using `MessageChannel` | [01-postmate-message-channel.md](./01-postmate-message-channel.md) |
-| 2 | New `registerHostedRenderer` experimental API | [02-hosted-renderer.md](./02-hosted-renderer.md) |
-| 3 | New `registerSidebarRenderer` experimental API | [03-sidebar-renderer.md](./03-sidebar-renderer.md) |
-| 4 | New `App.getCurrentRoute()` API | [04-app-get-current-route.md](./04-app-get-current-route.md) |
-| 5 | `Editor.getBlockProperties` now merges class default values | [05-block-properties-class-defaults.md](./05-block-properties-class-defaults.md) |
-| 6 | `helpers.ts` renamed to `common.ts` | [06-helpers-to-common-rename.md](./06-helpers-to-common-rename.md) |
+| #   | Area                                                        | Doc                                                                              |
+| --- | ----------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 1   | Postmate transport rewrite using `MessageChannel`           | [01-postmate-message-channel.md](./01-postmate-message-channel.md)               |
+| 2   | New `registerHostedRenderer` experimental API               | [02-hosted-renderer.md](./02-hosted-renderer.md)                                 |
+| 3   | New `registerSidebarRenderer` experimental API              | [03-sidebar-renderer.md](./03-sidebar-renderer.md)                               |
+| 4   | New `App.getCurrentRoute()` API                             | [04-app-get-current-route.md](./04-app-get-current-route.md)                     |
+| 5   | `Editor.getBlockProperties` now merges class default values | [05-block-properties-class-defaults.md](./05-block-properties-class-defaults.md) |
+| 6   | `helpers.ts` renamed to `common.ts`                         | [06-helpers-to-common-rename.md](./06-helpers-to-common-rename.md)               |
 
 ## Other items in the PR (not separately documented here)
 

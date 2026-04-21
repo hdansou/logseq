@@ -112,13 +112,13 @@ Done  │ ███████████████████████�
 
 ### How it works
 
-| Step | What it does |
-| ---- | ------------ |
-| `(partition 2 r)` | Re-pairs the flat result `("Todo" 5 "Doing" 2 …)` into `(["Todo" 5] ["Doing" 2] …)`. |
-| `max-cnt` | Finds the largest count so we can scale bars proportionally. |
-| `bar` | Builds a string of `█` characters proportional to the count, capped at `bar-max` (30). |
-| `pad` | Right-pads each label so the bar columns line up. |
-| `[:pre.code …]` | Hiccup vector for a `<pre>` block with the `code` class — preserves monospace alignment. |
+| Step              | What it does                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| `(partition 2 r)` | Re-pairs the flat result `("Todo" 5 "Doing" 2 …)` into `(["Todo" 5] ["Doing" 2] …)`.     |
+| `max-cnt`         | Finds the largest count so we can scale bars proportionally.                             |
+| `bar`             | Builds a string of `█` characters proportional to the count, capped at `bar-max` (30).   |
+| `pad`             | Right-pads each label so the bar columns line up.                                        |
+| `[:pre.code …]`   | Hiccup vector for a `<pre>` block with the `code` class — preserves monospace alignment. |
 
 ## Step 3: Build an SVG Line Chart
 
@@ -208,15 +208,15 @@ For this step you need a tagged page with some numeric properties. If you don't 
 
 ### How the SVG works
 
-| Component | Purpose |
-| --------- | ------- |
-| `[:svg {:width :height}]` | The SVG canvas. |
-| `[:text]` for title | Hand-positioned at `(w/2, 22)` with `text-anchor "middle"`. |
-| `(for [i (range 5)] …)` | Generates 5 horizontal gridlines and y-axis tick labels at evenly spaced fractions (0%, 25%, 50%, 75%, 100% of `max-v`). |
+| Component                               | Purpose                                                                                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `[:svg {:width :height}]`               | The SVG canvas.                                                                                                             |
+| `[:text]` for title                     | Hand-positioned at `(w/2, 22)` with `text-anchor "middle"`.                                                                 |
+| `(for [i (range 5)] …)`                 | Generates 5 horizontal gridlines and y-axis tick labels at evenly spaced fractions (0%, 25%, 50%, 75%, 100% of `max-v`).    |
 | `[:polyline {:points "x1,y1 x2,y2 …"}]` | Connects all data points for one series with straight line segments. The `:points` string is computed via the `pts` helper. |
-| `[:circle]` markers | One dot per data point per series — makes individual values readable. |
-| Bold value labels | Running labels go *above* the dot, walking *below*, so they don't collide when values cross. |
-| Legend `[:rect]` + `[:text]` | Hand-placed in the right margin (`pad-r 130` reserves the space). |
+| `[:circle]` markers                     | One dot per data point per series — makes individual values readable.                                                       |
+| Bold value labels                       | Running labels go _above_ the dot, walking _below_, so they don't collide when values cross.                                |
+| Legend `[:rect]` + `[:text]`            | Hand-placed in the right margin (`pad-r 130` reserves the space).                                                           |
 
 ## Step 4: Make Charts Reusable with `:query/views`
 
@@ -352,4 +352,4 @@ Use `?actual-number` in `:find`.
 
 ---
 
-*Last updated: 2026-04-21 | [Report an issue](https://github.com/logseq/logseq/issues)*
+_Last updated: 2026-04-21 | [Report an issue](https://github.com/logseq/logseq/issues)_

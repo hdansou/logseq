@@ -226,31 +226,31 @@ Priority values are ref entities: `"Low"`, `"Medium"`, `"High"`, `"Urgent"`.
 
 ### Built-in Inputs
 
-| Input             | Description                          |
-| ----------------- | ------------------------------------ |
-| `:today`          | Today's date (YYYYMMDD int)          |
-| `:yesterday`      | Yesterday                            |
-| `:tomorrow`       | Tomorrow                             |
-| `:current-page`   | Current page name                    |
-| `:query-page`     | Page where the query block lives     |
-| `:current-block`  | Current block's `:db/id`             |
-| `:parent-block`   | Parent of current block's `:db/id`   |
-| `:right-now-ms`   | Current time in epoch milliseconds   |
+| Input            | Description                        |
+| ---------------- | ---------------------------------- |
+| `:today`         | Today's date (YYYYMMDD int)        |
+| `:yesterday`     | Yesterday                          |
+| `:tomorrow`      | Tomorrow                           |
+| `:current-page`  | Current page name                  |
+| `:query-page`    | Page where the query block lives   |
+| `:current-block` | Current block's `:db/id`           |
+| `:parent-block`  | Parent of current block's `:db/id` |
+| `:right-now-ms`  | Current time in epoch milliseconds |
 
 ### Relative Date Inputs
 
 The modern format uses `:<direction><amount><unit>` (e.g., `:-7d`, `:+1m`):
 
-| Input     | Description          |
-| --------- | -------------------- |
-| `:-7d`    | 7 days ago           |
-| `:+7d`    | 7 days from now      |
-| `:-1w`    | 1 week ago           |
-| `:+1w`    | 1 week from now      |
-| `:-1m`    | 1 month ago          |
-| `:+1m`    | 1 month from now     |
-| `:-1y`    | 1 year ago           |
-| `:+1y`    | 1 year from now      |
+| Input  | Description      |
+| ------ | ---------------- |
+| `:-7d` | 7 days ago       |
+| `:+7d` | 7 days from now  |
+| `:-1w` | 1 week ago       |
+| `:+1w` | 1 week from now  |
+| `:-1m` | 1 month ago      |
+| `:+1m` | 1 month from now |
+| `:-1y` | 1 year ago       |
+| `:+1y` | 1 year from now  |
 
 Relative date-time inputs append a time suffix (e.g., `:-7d-ms`, `:-7d-start`, `:-7d-end`).
 

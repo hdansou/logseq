@@ -192,7 +192,7 @@ That outer map is also where display options live:
  :view :table}
 ```
 
-` :remove-block-children? ` defaults to `true`. When it is `true`, a matching child
+`:remove-block-children?` defaults to `true`. When it is `true`, a matching child
 block is not returned as a separate result if its parent block is also in the
 result set. Set it to `false` on the query map when you want every matching
 child block to appear individually.
