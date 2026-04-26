@@ -129,6 +129,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 - [Handbooks System](explanation/features/handbooks-system.md)
 - [How Embeddings Work](explanation/features/how-embeddings-work.md)
+- [How Publishing Works](explanation/features/how-publishing-works.md)
 
 #### [Security](explanation/security/)
 

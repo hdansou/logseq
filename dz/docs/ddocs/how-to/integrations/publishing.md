@@ -1,517 +1,268 @@
 ---
-title: 'Publishing Your Graph'
-status: 🟢
-since-version: 'N/A'
-quadrant: 'How-To'
-last-verified: '2026-03-10'
-platform: 'All'
-related-docs:
-  - 'reference/configuration/config-edn.md'
-  - 'how-to/integrations/cli-basic.md'
+title: 'Publish a Page'
+description: 'How to publish a page to the web and customize the published design with CSS and JavaScript'
+status: stable
+lastVerified: '2026-04-24'
+logseqVersion: '0.11.x'
+platforms: [desktop, web]
+graphType: [db]
+relatedDocs:
+  explanation:
+    - '[How Publishing Works](../../explanation/features/how-publishing-works.md)'
+  howTo:
+    - '[Custom CSS](custom-css.md)'
+    - '[Custom JavaScript](custom-js.md)'
 ---
 
-# Publishing Your Graph
+> **Last revised:** 2026-04-24
 
-> **Last revised:** 2026-03-10
+How to publish a page to the web, protect it with an optional password, and customize its public design with `logseq/publish.css` and `logseq/publish.js`.
 
-Learn how to publish your Logseq graph to the web, making selected pages publicly accessible.
+## Before You Start
 
-## Overview
+This guide covers the current **Publish page** workflow in the Logseq app.
 
-Logseq's publishing feature allows you to:
+It does **not** describe the older static export flow under `deps/publishing`.
 
-- Convert your private notes into a public website
-- Control which pages are published
-- Maintain links between published pages
-- Host on any static site hosting service
-- Keep the Logseq reading experience for visitors
+You will need:
 
-The published site is a single-page application (SPA) that embeds the graph database into a single `index.html` file, providing the same navigation experience as the desktop app.
+- a Logseq page you want to publish
+- a signed-in Logseq account
+- optional custom files at `logseq/publish.css` and `logseq/publish.js`
 
-## Prerequisites
+## Step 1: Open the Publish Dialog
 
-- Logseq database graph (recommended) or file-based graph
-- Pages you want to publish
-- Basic understanding of static site hosting (optional)
+You can open the publish dialog in either of these ways:
 
-## Step 1: Mark Pages for Publishing
+1. Open the page.
+2. Open the page menu.
+3. Select **Publish page**.
 
-### Using the Property
+Or use the keyboard shortcut:
 
-In a DB graph, set the built-in `publishing-public?` property to `true` on pages you want to publish. You can do this from the page's property editor in the UI.
+- macOS: `Cmd+M`
+- Windows/Linux: `Ctrl+M`
 
-In a file-based graph, add the property in markdown:
+The dialog lets you enter an optional password before publishing.
 
-```markdown
-- # My Public Page
+## Step 2: Publish the Page
 
-  public:: true
+1. Enter a password if you want the page to require one.
+2. Leave the password empty if the page should be public.
+3. Click **Publish**.
 
-  - This content will be published
-  - Links to other [[Public Pages]] work
-  - Links to private pages are removed
+After a successful publish, Logseq:
+
+- uploads the page snapshot
+- uploads referenced assets
+- uploads non-empty `logseq/publish.css` and `logseq/publish.js`
+- writes the returned URL back to the page as **Published URL**
+
+## Step 3: Open or Unpublish the Result
+
+Once the page is published, look at the page properties.
+
+You will see the built-in **Published URL** property with:
+
+- the public URL as a link
+- an **Unpublish** button
+
+Use that button when you want to remove the public page.
+
+## Step 4: Customize the Published Theme with CSS
+
+Create or edit this file in your graph:
+
+```text
+logseq/publish.css
 ```
 
-### All Pages Public
+When you publish, Logseq uploads this file and links it **after** the built-in publish stylesheet. That means your CSS overrides win by normal cascade order.
 
-Instead of marking individual pages, you can make all pages public at once:
+### Start with theme variables
 
-1. Open **Settings** (`Ctrl/Cmd + ,`)
-2. Navigate to the **Editor** section
-3. Toggle **"All pages public"** to enable
-
-Or set it directly in `config.edn`:
-
-```clojure
-:publishing/all-pages-public? true
-```
-
-When this is enabled, all pages are published except those explicitly marked with `publishing-public?` set to `false`.
-
-### Publishing Behavior
-
-When `:publishing/all-pages-public?` is `false` (the default), only pages explicitly marked with `publishing-public?` set to `true` are included. When it is `true`, all pages are included except those explicitly marked `false`.
-
-## Step 2: Export for Publishing
-
-### Using the Desktop App (Recommended)
-
-1. Go to the **Export** page (from the three-dot menu or `...` > **Export**)
-2. Click **"Export public pages"**
-3. Choose an output folder (Electron desktop app only)
-4. The export creates a static site in the chosen folder
-
-> **Note:** The "Export public pages" option is only available in the Electron desktop app, not in the browser version.
-
-### Using the Publishing Script
-
-The `deps/publishing` module provides a script for publishing from the command line. This requires building from source:
-
-```bash
-# From the logseq repository root
-cd deps/publishing
-
-# Run the publishing script (requires nbb)
-# Usage: STATIC-DIR GRAPH-DIR OUT-DIR
-npx nbb-logseq script/publishing.cljs <static-dir> <graph-dir> <output-dir>
-```
-
-The `static-dir` is the directory containing the built Logseq static assets (CSS, JS, fonts, etc.). The `graph-dir` is the path to your graph's database directory.
-
-### Using the CLI
-
-The Logseq CLI (`deps/cli`) supports exporting a graph as Markdown (not as a publishing site). To export as Markdown:
-
-```bash
-logseq export -g my-graph -f output.zip
-```
-
-This produces a zip of Markdown files, which is different from the HTML publishing export.
-
-### What Gets Exported
-
-The publishing export creates a single-page application:
-
-```
-output/
-├── index.html              # SPA with embedded database
-├── 404.html                # Redirect page for SPA routing
-├── assets/
-│   └── (graph assets)
-└── static/
-    ├── css/
-    │   ├── style.css
-    │   ├── custom.css
-    │   └── export.css
-    ├── fonts/
-    ├── icons/
-    ├── img/
-    └── js/
-        ├── main.js
-        ├── code-editor.js
-        ├── react.production.min.js
-        ├── react-dom.production.min.js
-        └── (other JS dependencies)
-```
-
-The entire graph database is serialized as transit data and embedded in `index.html`. The published site behaves as a single-page app with client-side routing.
-
-## Step 3: Configure Published Content
-
-### Homepage
-
-Set which page loads on startup using `:default-home` in `config.edn`:
-
-```clojure
-;; config.edn
-:default-home {:page "Welcome"}
-```
-
-You can also configure a sidebar page:
-
-```clojure
-:default-home {:page "Welcome", :sidebar "Contents"}
-```
-
-### Custom Styling
-
-The publishing export automatically picks up custom CSS and JS from your graph's `logseq/` directory:
-
-- `logseq/custom.css` - Custom CSS styles
-- `logseq/custom.js` - Custom JavaScript
-- `logseq/export.css` - Export-specific CSS overrides
-
-These files are copied into the published output automatically. No config.edn keys are needed.
-
-Example `logseq/custom.css`:
+The fastest way to change the published design is to override the built-in custom properties:
 
 ```css
-/* custom.css */
 :root {
-  --primary-color: #3b82f6;
-  --background-color: #ffffff;
+  --bg: #f6f3ea;
+  --surface: #fffaf0;
+  --ink: #1f1d1b;
+  --muted: #6d645b;
+  --border: #d8cbb8;
+  --action: #c04c2e;
+  --code-bg: #1e1d22;
 }
 
-.page-content {
-  max-width: 800px;
-  margin: 0 auto;
+[data-theme='dark'] {
+  --bg: #111111;
+  --surface: #1a1a1a;
+  --ink: #f0ede8;
+  --muted: #b7aea4;
+  --border: #3c3935;
+  --action: #f08a5d;
 }
 ```
 
-### Theme and Accent Color
+### Then target page structure
 
-When using the publishing script, you can specify theme and accent color programmatically:
+Useful selectors from the built-in publish theme include:
 
-```clojure
-;; Options passed to the publishing/export function
-{:ui/theme "dark"          ;; or "light"
- :ui/radix-color :cyan}    ;; accent color
+- `.wrap`
+- `.page-toolbar`
+- `.page-meta`
+- `.page-properties`
+- `.properties`
+- `.blocks`
+- `.block-content`
+- `.linked-refs`
+- `.tagged-pages`
+
+Example:
+
+```css
+.wrap {
+  max-width: 72rem;
+}
+
+.page-toolbar {
+  position: sticky;
+  top: 0;
+  backdrop-filter: blur(10px);
+}
+
+.linked-refs,
+.tagged-pages {
+  border-top: 2px solid var(--border);
+  padding-top: 2rem;
+}
 ```
 
-### Page Metadata
+## Step 5: Add Custom Behavior with JavaScript
 
-Add metadata properties to pages for organization:
+Create or edit this file in your graph:
 
-```markdown
-- # Blog Post Title
-  publishing-public?:: true
-  description:: A great article about knowledge management
-  tags:: #blog, #productivity
+```text
+logseq/publish.js
 ```
 
-## Step 4: Deploy Your Site
+This file is loaded **after** the built-in publish runtime. Use it to add small public-site behaviors such as banners, button actions, or layout tweaks that are easier in JavaScript than CSS.
 
-### Option 1: GitHub Pages
+Example:
 
-1. **Create repository:**
+```javascript
+document.addEventListener('DOMContentLoaded', () => {
+  const meta = document.querySelector('.page-meta')
+  if (!meta) return
 
-```bash
-gh repo create my-logseq-site --public
+  const badge = document.createElement('span')
+  badge.className = 'publish-badge'
+  badge.textContent = 'Public page'
+  meta.appendChild(badge)
+})
 ```
 
-2. **Push exported site:**
+With matching CSS in `logseq/publish.css`:
 
-```bash
-cd public
-git init
-git add .
-git commit -m "Initial publish"
-git branch -M main
-git remote add origin https://github.com/username/my-logseq-site.git
-git push -u origin main
+```css
+.publish-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--button-bg);
+  color: var(--ink);
+  font-size: 0.85rem;
+}
 ```
 
-3. **Enable GitHub Pages:**
+### What your custom publish JavaScript can rely on
 
-   - Go to repository **Settings > Pages**
-   - Source: Deploy from branch `main`
-   - Folder: `/ (root)`
-   - Click **Save**
+By the time your script runs, the published page already has:
 
-4. **Access your site:**
-   - `https://username.github.io/my-logseq-site`
+- its HTML rendered
+- the built-in theme toggle
+- the built-in search UI
+- block toggle handlers
+- math and code enhancement setup
 
-> **Note:** The published site includes a SPA redirect script compatible with GitHub Pages. The `404.html` file handles client-side routing.
+Use normal browser APIs. Do not assume the Logseq plugin SDK is available on the public page.
 
-### Option 2: Netlify
+## Step 6: Republish After Design Changes
 
-1. **Install Netlify CLI:**
+Changes to `logseq/publish.css` and `logseq/publish.js` are uploaded during publish.
 
-```bash
-npm install -g netlify-cli
+After editing either file:
+
+1. return to the page
+2. run **Publish page** again
+3. reload the public page
+
+If the old design still appears, do a hard refresh.
+
+## Common Patterns
+
+### Make the page feel more like a blog article
+
+```css
+.wrap {
+  max-width: 46rem;
+}
+
+.block-text {
+  font-size: 1.08rem;
+}
+
+.page-meta {
+  margin-bottom: 2rem;
+}
 ```
 
-2. **Deploy:**
+### Restyle the toolbar buttons
 
-```bash
-cd public
-netlify deploy --prod
+```css
+.toolbar-btn,
+.publish-search-toggle,
+.theme-toggle {
+  border-radius: 12px;
+}
 ```
 
-3. **Follow prompts:**
-   - Authorize Netlify
-   - Choose site name
-   - Set publish directory: `.`
+### Change dark mode independently from light mode
 
-### Option 3: Vercel
+```css
+[data-theme='light'] .wrap {
+  background: rgba(255, 255, 255, 0.5);
+}
 
-1. **Install Vercel CLI:**
-
-```bash
-npm install -g vercel
+[data-theme='dark'] .wrap {
+  background: rgba(20, 20, 20, 0.75);
+}
 ```
-
-2. **Deploy:**
-
-```bash
-cd public
-vercel --prod
-```
-
-### Option 4: Custom Server
-
-Upload the output folder to any web server:
-
-```bash
-# Via SCP
-scp -r public/* user@server:/var/www/html/
-
-# Via FTP
-# Use FileZilla or similar tool
-```
-
-## Publishing Workflow
-
-### Regular Updates
-
-Automate with a script (using the desktop app export):
-
-```bash
-#!/bin/bash
-# publish.sh
-
-# After exporting from the desktop app to ./public:
-
-# Deploy to GitHub Pages
-cd public
-git add .
-git commit -m "Update: $(date +%Y-%m-%d)"
-git push
-
-cd ..
-echo "Published successfully!"
-```
-
-Make executable:
-
-```bash
-chmod +x publish.sh
-./publish.sh
-```
-
-### Custom Domain
-
-**GitHub Pages:**
-
-1. Add `CNAME` file to published site:
-
-```
-www.yourdomain.com
-```
-
-2. Configure DNS:
-
-```
-Type: CNAME
-Name: www
-Value: username.github.io
-```
-
-**Netlify/Vercel:**
-
-- Follow their custom domain setup guides
-- Usually automatic DNS configuration
 
 ## Troubleshooting
 
-### Links Not Working
+### My custom CSS or JS does not appear
 
-**Problem:** Internal links broken after publishing
+Check these first:
 
-**Solution:**
+1. The file path is exactly `logseq/publish.css` or `logseq/publish.js`.
+2. The file is not empty.
+3. You republished the page after editing it.
+4. You reloaded the public page.
 
-- Ensure linked pages have `publishing-public?` set to `true`
-- Private page links are automatically removed during export
-- Check for typos in page names
+### The published page still shows old styling
 
-### Images Not Showing
+The public page uses cached assets and HTML. Republish first, then hard-refresh the public page.
 
-**Problem:** Images don't load on published site
+### My custom JavaScript broke the page
 
-**Solution:**
+Remove the problematic code from `logseq/publish.js`, republish the page, and reload.
 
-- Assets referenced by published pages are automatically included in the export
-- Verify the assets exist in your graph's assets directory
-- Check that the asset file names match what the pages reference
+### I expected `publishing-public?` to publish the page
 
-### Page Not Updated
+That property belongs to the separate static export code path. The current in-app public-page workflow uses **Publish page** from the page menu instead.
 
-**Problem:** Changes don't appear on published site
+## Next Step
 
-**Solution:**
-
-1. Re-export the graph from the desktop app
-2. Clear browser cache
-3. Check deployment completed successfully
-
-### Large Graph Export Fails
-
-**Problem:** Export times out or crashes
-
-**Solution:**
-
-- Publish fewer pages initially (set specific pages to public instead of all)
-- Increase system memory
-- Use the desktop app's Electron version for better performance
-
-## Best Practices
-
-### 1. Organize Public Content
-
-Create a clear structure:
-
-```markdown
-- # Public Home
-
-  publishing-public?:: true
-
-  - ## Published Sections
-    - [[Blog]] - Articles and tutorials
-    - [[Projects]] - Portfolio items
-    - [[Resources]] - Shared knowledge
-```
-
-### 2. Review Before Publishing
-
-Always preview locally:
-
-```bash
-# After exporting to a local folder
-cd preview
-python -m http.server 8000
-
-# Open browser: http://localhost:8000
-```
-
-### 3. Separate Public/Private
-
-Use namespaces:
-
-```markdown
-- [[Public/Blog Post 1]]
-- [[Public/About Me]]
-- [[Private/Personal Notes]]
-```
-
-### 4. Use Templates
-
-Create publishing template:
-
-```markdown
-- # Publishing Template
-  template:: public-page
-  publishing-public?:: true
-  description::
-  tags::
-```
-
-Apply to new pages:
-
-1. Type `/template`
-2. Select `public-page`
-
-## Security Considerations
-
-### What Not to Publish
-
-Never publish:
-
-- Personal information (passwords, API keys)
-- Private meeting notes
-- Financial information
-- Unpublished work (respect copyright)
-- Others' private information
-
-### Content Review
-
-Before publishing:
-
-1. Search for sensitive keywords
-2. Review all marked pages
-3. Check linked pages are intended to be public
-4. Verify no private block references
-
-### Access Control
-
-Published sites are **publicly accessible**:
-
-- No built-in authentication
-- Anyone with URL can access
-- Search engines will index
-- Use private hosting for sensitive content
-
-## Examples
-
-### Personal Blog
-
-```markdown
-- # Blog Home
-
-  publishing-public?:: true
-
-  - Recent Posts:
-    - [[Post: Getting Started with Logseq]]
-    - [[Post: Building a Second Brain]]
-    - [[Post: PKM Best Practices]]
-```
-
-### Documentation Site
-
-```markdown
-- # API Documentation
-
-  publishing-public?:: true
-
-  - ## Getting Started
-
-    - [[Installation]]
-    - [[Quick Start]]
-    - [[Authentication]]
-
-  - ## API Reference
-    - [[Users API]]
-    - [[Posts API]]
-    - [[Comments API]]
-```
-
-### Portfolio
-
-```markdown
-- # Portfolio
-
-  publishing-public?:: true
-  description:: My work and projects
-
-  - ## Projects
-    - [[Project: E-commerce Platform]]
-      tech:: React, Node.js, PostgreSQL
-      url:: https://example.com
-    - [[Project: Mobile App]]
-      tech:: React Native
-```
-
-## See Also
-
-- [CLI Basic Usage](cli-basic.md) - Using Logseq from command line
-- [Configuration Reference](../../reference/configuration/config-edn.md) - All config options
-- [Export Guide](../../how-to/backup/backup-restore.md) - Other export formats
+If you want the architectural view of the same feature, read [How Publishing Works](../../explanation/features/how-publishing-works.md).
