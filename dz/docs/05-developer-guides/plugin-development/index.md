@@ -103,25 +103,31 @@ if (isDbGraph) {
 
 ### Language-Specific Guides
 
-3. **[ClojureScript Plugin SDK Guide](./clojurescript-guide.md)**
+1. **[ClojureScript Plugin SDK Guide](./clojurescript-guide.md)**
 
    - Complete API reference for ClojureScript developers
    - Idiomatic ClojureScript patterns
    - Works with both graph types
 
-4. **[ClojureScript Plugin SDK: Detective Guide](./clojurescript-detective.md)**
+2. **[ClojureScript Plugin SDK: Detective Guide](./clojurescript-detective.md)**
    - Deep dive into SDK internals
    - Code generation system
    - Advanced topics
 
+### Tutorials
+
+1. **[Tutorial: Build a Schedule Today Command for Logseq DB Graphs](./tutorial-schedule-task-today.md)**
+
+Build a custom plugin command that sets the current block's `Scheduled` property to today in a DB graph.
+
 ### Additional Resources
 
-5. **Library and Namespace User Guide** (see architecture docs)
+1. **Library and Namespace User Guide** (see architecture docs)
 
    - Namespace organization in DB graphs
    - Page hierarchies
 
-6. **Graph Validation Developer Guide** (see architecture docs)
+2. **Graph Validation Developer Guide** (see architecture docs)
    - Validation patterns
    - Error handling
 
