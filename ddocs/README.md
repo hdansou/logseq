@@ -8,8 +8,6 @@ merged-from:
   - 'dz/docs/ddocs/'
 ---
 
-# Logseq Documentation (Diátaxis)
-
 This is the merged documentation index for Logseq, organized by the Diátaxis framework.
 
 ## Tutorials
@@ -36,6 +34,7 @@ This is the merged documentation index for Logseq, organized by the Diátaxis fr
 - [Backup & Restore](how-to/backup/backup-restore.md)
 - [Quick Capture](how-to/content/quick-capture.md)
 - [Favorites & Recent](how-to/content/favorites-recent.md)
+- [Hide Tags from a Node](how-to/content/hide-tags-from-node.md)
 - [Create Flashcard Deck](how-to/content/create-flashcard-deck.md)
 - [View Types](how-to/content/view-types.md)
 - [CLI Basics](how-to/integrations/cli-basic.md)
@@ -48,6 +47,7 @@ This is the merged documentation index for Logseq, organized by the Diátaxis fr
 - [Asset Management](how-to/multimedia/asset-management.md)
 - [Video Embedding](how-to/multimedia/video-embed.md)
 - [Advanced Queries](how-to/queries/advanced-queries.md)
+- [Stop Task Time Tracking in DB Graphs](how-to/tasks/disable-task-time-tracking.md)
 - [Repeating Tasks](how-to/tasks/repeating-tasks.md)
 - [Performance Optimization](how-to/optimization/performance-optimization.md)
 - [Backup Strategies](how-to/organization/backup-strategies.md)
