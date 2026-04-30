@@ -1,883 +1,190 @@
 ---
 title: 'Properties Reference'
 status: 🟢 Stable
-version: 'Logseq v0.10.9 | Schema v65.16'
 quadrant: 'Reference'
+last-verified: '2026-04-28'
 platform: 'Desktop + Mobile'
 related-docs:
-  - '[Schema System](../../explanation/developer/schema-system.md)'
-  - '[Query Patterns](../advanced/query-patterns.md)'
-  - '[Block Editing](../../tutorials/getting-started/block-editing.md)'
-tags: ['properties', 'metadata', 'schema', 'reference']
+  - '[Database Graph Schema Reference](../database/schema-overview.md)'
+  - '[Stop Task Time Tracking in DB Graphs](../../how-to/tasks/disable-task-time-tracking.md)'
+tags: ['properties', 'db-graphs', 'schema', 'reference']
 ---
 
-# Properties Reference
+This page documents the 109 built-in DB-graph properties currently declared in `deps/db/src/logseq/db/frontend/property.cljs`.
 
-Complete reference for properties in Logseq. Properties add structured metadata to pages and blocks, enabling powerful queries, filtering, and organization.
+## Scope
 
-**Quick Reference:** `property-name:: value` or `property-name:: [[Page Link]]`
+- This is a DB-graph reference. It describes the built-in property definitions from the DB schema, not the older file-graph property drawer syntax.
+- `Type` comes from `:schema :type`.
+- `Card.` is `many` only when `:cardinality :many` is set; otherwise it is `one`.
+- `Visibility` is derived from `:public?` and `:hide?`.
+- `Definition` only includes code-backed descriptions, backing attributes, defaults, closed values, restricted classes, or queryability.
 
----
+## Property Definition Metadata
 
-## Table of Contents
+| Ident                                          | Title                            | Type       | Card.  | Visibility       | Definition                                                                                            |
+| ---------------------------------------------- | -------------------------------- | ---------- | ------ | ---------------- | ----------------------------------------------------------------------------------------------------- |
+| `:logseq.property/type`                        | Property type                    | `keyword`  | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/hide?`                       | Hide this property or page       | `checkbox` | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/public?`                     | Property public?                 | `checkbox` | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/view-context`                | Property view context            | `keyword`  | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/ui-position`                 | Property position                | `keyword`  | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/classes`                     | Property classes                 | `entity`   | `many` | internal, hidden | -                                                                                                     |
+| `:logseq.property/value`                       | Property value                   | `any`      | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/description`                 | Description                      | `default`  | `one`  | public           | -                                                                                                     |
+| `:logseq.property/default-value`               | Default value                    | `entity`   | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/scalar-default-value`        | Non ref type default value       | `any`      | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/hide-empty-value`            | Hide empty value                 | `checkbox` | `one`  | public           | Hides a property's value on any node when empty e.g. when a property appears on a node through a tag. |
+| `:logseq.property/query`                       | Query                            | `default`  | `one`  | public, hidden   | -                                                                                                     |
+| `:logseq.property/created-from-property`       | Created from property            | `entity`   | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/built-in?`                   | Built in?                        | `checkbox` | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/asset`                       | Asset                            | `entity`   | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/ls-type`                     | -                                | `keyword`  | `one`  | internal, hidden | -                                                                                                     |
+| `:logseq.property/choice-checkbox-state`       | Choice checkbox state            | `checkbox` | `one`  | internal, hidden | Not queryable.                                                                                        |
+| `:logseq.property/choice-classes`              | Choice classes                   | `class`    | `many` | internal, hidden | Not queryable.                                                                                        |
+| `:logseq.property/choice-exclusions`           | Choice exclusions                | `node`     | `many` | internal, hidden | Not queryable.                                                                                        |
+| `:logseq.property/checkbox-display-properties` | Properties displayed as checkbox | `property` | `many` | internal, hidden | Not queryable.                                                                                        |
+| `:logseq.property/enable-history?`             | Enable property history          | `checkbox` | `one`  | public           | Records history anytime a property's value changes on a node.                                         |
 
-1. [Property Basics](#property-basics)
-2. [Built-in Properties](#built-in-properties)
-3. [Task Properties](#task-properties)
-4. [Common Custom Properties](#common-custom-properties)
-5. [Property Types](#property-types)
-6. [Database Properties](#database-properties)
-7. [Property Queries](#property-queries)
-8. [Best Practices](#best-practices)
+## Block-backed Core Properties
 
----
+| Ident                          | Title                 | Type         | Card.  | Visibility       | Definition                                |
+| ------------------------------ | --------------------- | ------------ | ------ | ---------------- | ----------------------------------------- |
+| `:block/alias`                 | Alias                 | `page`       | `many` | public           | Backed by `:block/alias`.                 |
+| `:block/tags`                  | Tags                  | `class`      | `many` | public           | Backed by `:block/tags`.                  |
+| `:block/parent`                | Node parent           | `entity`     | `one`  | internal, hidden | Backed by `:block/parent`.                |
+| `:block/order`                 | Node order            | `string`     | `one`  | internal, hidden | Backed by `:block/order`.                 |
+| `:block/collapsed?`            | Node collapsed?       | `checkbox`   | `one`  | internal, hidden | Backed by `:block/collapsed?`.            |
+| `:block/page`                  | Node page             | `entity`     | `one`  | internal, hidden | Backed by `:block/page`.                  |
+| `:block/refs`                  | Node references       | `entity`     | `many` | internal, hidden | Backed by `:block/refs`.                  |
+| `:block/link`                  | Node links to         | `entity`     | `one`  | internal, hidden | Backed by `:block/link`.                  |
+| `:block/title`                 | Node title            | `string`     | `one`  | internal, hidden | Backed by `:block/title`.                 |
+| `:block/closed-value-property` | Closed value property | `entity`     | `one`  | internal, hidden | Backed by `:block/closed-value-property`. |
+| `:block/journal-day`           | Journal date          | `raw-number` | `one`  | internal, hidden | Backed by `:block/journal-day`.           |
+| `:block/created-at`            | Node created at       | `datetime`   | `one`  | internal, hidden | Backed by `:block/created-at`.            |
+| `:block/updated-at`            | Node updated at       | `datetime`   | `one`  | internal, hidden | Backed by `:block/updated-at`.            |
 
-## Property Basics
+## Class and Tag Properties
 
-### Syntax
+| Ident                                                 | Title                           | Type       | Card.  | Visibility | Definition                                                                                   |
+| ----------------------------------------------------- | ------------------------------- | ---------- | ------ | ---------- | -------------------------------------------------------------------------------------------- |
+| `:logseq.property.class/extends`                      | Extends                         | `class`    | `many` | public     | This enables tags to inherit properties from other tags                                      |
+| `:logseq.property.class/properties`                   | Tag Properties                  | `property` | `many` | public     | -                                                                                            |
+| `:logseq.property.class/bidirectional-property-title` | Bidirectional property title    | `string`   | `one`  | public     | -                                                                                            |
+| `:logseq.property.class/enable-bidirectional?`        | Enable bidirectional properties | `checkbox` | `one`  | public     | When enabled, this tag will show reverse nodes that link to the current node via properties. |
+| `:logseq.property.class/hide-from-node`               | Hide from Node                  | `checkbox` | `one`  | public     | -                                                                                            |
 
-**Basic Property:**
+## Page, Node, and Presentation Properties
 
-```markdown
-property-name:: value
-```
+| Ident                                      | Title                     | Type       | Card.  | Visibility       | Definition                                                                               |
+| ------------------------------------------ | ------------------------- | ---------- | ------ | ---------------- | ---------------------------------------------------------------------------------------- |
+| `:logseq.property.node/display-type`       | Node Display Type         | `keyword`  | `one`  | internal, hidden | Queryable.                                                                               |
+| `:logseq.property.code/lang`               | Code Mode                 | `string`   | `one`  | internal, hidden | Queryable.                                                                               |
+| `:logseq.property/page-tags`               | Page Tags                 | `page`     | `many` | public           | Provides a way for a page to associate to another page i.e. backward compatible tagging. |
+| `:logseq.property/background-color`        | Background color          | `default`  | `one`  | internal, hidden | -                                                                                        |
+| `:logseq.property/heading`                 | Heading                   | `any`      | `one`  | internal, hidden | Queryable.                                                                               |
+| `:logseq.property/order-list-type`         | List type                 | `default`  | `one`  | internal, hidden | -                                                                                        |
+| `:logseq.property.journal/title-format`    | Title Format              | `string`   | `one`  | internal         | -                                                                                        |
+| `:logseq.property/icon`                    | Icon                      | `map`      | `one`  | internal         | -                                                                                        |
+| `:logseq.property/publishing-public?`      | Publishing Public?        | `checkbox` | `one`  | public, hidden   | -                                                                                        |
+| `:logseq.property.publish/published-url`   | Published URL             | `url`      | `one`  | public           | -                                                                                        |
+| `:logseq.property/exclude-from-graph-view` | Excluded from Graph view? | `checkbox` | `one`  | public, hidden   | -                                                                                        |
+| `:logseq.property/used-template`           | Used template             | `node`     | `one`  | internal, hidden | Restricted classes: `#{:logseq.class/Template}`.                                         |
+| `:logseq.property/template-applied-to`     | Apply template to tags    | `class`    | `many` | public           | Queryable.                                                                               |
 
-**With Page Link:**
+## PDF Annotation Properties
 
-```markdown
-property-name:: [[Page Name]]
-```
-
-**Multiple Values:**
-
-```markdown
-property-name:: [[Value 1]], [[Value 2]], [[Value 3]]
-```
-
-**Multi-line Property:**
-
-```markdown
-property-name::
-
-- Line 1
-- Line 2
-- Line 3
-```
-
-### Property Location
-
-**Block Property:**
-
-```markdown
-- Block content here
-  property:: value
-  another-property:: [[Link]]
-```
-
-**Page Property (Frontmatter):**
-
-```markdown
-title:: Page Title
-tags:: [[Tag1]], [[Tag2]]
-status:: active
-
----
-
-Page content starts here
-```
-
-### Naming Rules
-
-**Valid Names:**
-
-```markdown
-✅ lowercase-with-dashes
-✅ camelCase
-✅ snake_case
-✅ with-numbers-123
-
-❌ Spaces not allowed
-❌ Special chars (@, #, $, etc.)
-```
-
----
-
-## Built-in Properties
-
-### System Properties
-
-**Automatic (Read-Only):**
-
-| Property     | Type      | Description     | Example         |
-| ------------ | --------- | --------------- | --------------- |
-| `uuid`       | UUID      | Unique block ID | `abc-123-def`   |
-| `created-at` | Timestamp | Creation time   | `1737504000000` |
-| `updated-at` | Timestamp | Last modified   | `1737590400000` |
-| `page`       | Reference | Parent page     | Page ID         |
-| `parent`     | Reference | Parent block    | Block ID        |
-
-**Example:**
-
-```markdown
-- Block content
-  uuid:: abc-123-def-456
-  created-at:: 1737504000000
-  updated-at:: 1737590400000
-```
-
-### Core Properties
-
-**User-Facing:**
-
-| Property                    | Type      | Description       | Example              |
-| --------------------------- | --------- | ----------------- | -------------------- |
-| `title`                     | Text      | Page title        | `My Project`         |
-| `alias`                     | Text/List | Alternative names | `[[Project-A]]`      |
-| `tags`                      | List      | Page tags         | `[[Tag1]], [[Tag2]]` |
-| `icon`                      | Emoji     | Page icon         | `📊`                 |
-| `template`                  | Text      | Template name     | `meeting-notes`      |
-| `template-including-parent` | Boolean   | Include parent    | `true`               |
-
-**Example:**
-
-```markdown
-title:: Project Alpha
-alias:: [[Alpha]], [[Project-A]]
-tags:: [[Project]], [[Work]], [[Client/Acme]]
-icon:: 📊
-```
-
-### Display Properties
-
-**Visual Configuration:**
-
-| Property    | Type    | Description    | Values       |
-| ----------- | ------- | -------------- | ------------ |
-| `collapsed` | Boolean | Collapse block | `true/false` |
-| `heading`   | Number  | Heading level  | `1-6`        |
-| `public`    | Boolean | Public page    | `true/false` |
-
-**Example:**
-
-```markdown
-- Section header
-  heading:: 2
-  collapsed:: true
-  - Child content (collapsed by default)
-```
-
----
+| Ident                           | Title            | Type         | Card. | Visibility       | Definition                                                 |
+| ------------------------------- | ---------------- | ------------ | ----- | ---------------- | ---------------------------------------------------------- |
+| `:logseq.property.pdf/hl-type`  | Annotation type  | `keyword`    | `one` | internal, hidden | -                                                          |
+| `:logseq.property.pdf/hl-color` | Annotation color | `default`    | `one` | internal, hidden | Closed values: `yellow`, `red`, `green`, `blue`, `purple`. |
+| `:logseq.property.pdf/hl-page`  | Annotation page  | `raw-number` | `one` | internal, hidden | -                                                          |
+| `:logseq.property.pdf/hl-image` | Annotation image | `entity`     | `one` | internal, hidden | -                                                          |
+| `:logseq.property.pdf/hl-value` | Annotation data  | `map`        | `one` | internal, hidden | -                                                          |
 
 ## Task Properties
 
-### Markers
-
-**Task State:**
-
-```markdown
-- TODO Task description
-  marker:: TODO
-
-States: TODO, DOING, DONE, WAITING, LATER, NOW, CANCELLED
-```
-
-### Scheduling
-
-**SCHEDULED:**
-
-```markdown
-- TODO Start working on task
-  SCHEDULED: <2026-01-22 Wed>
-```
-
-**DEADLINE:**
-
-```markdown
-- TODO Complete by deadline
-  DEADLINE: <2026-01-30 Wed>
-```
-
-**Repeating:**
-
-```markdown
-- TODO Weekly review
-  SCHEDULED: <2026-01-22 Wed +1w>
-
-Intervals:
-+1d → Daily
-+1w → Weekly
-+1m → Monthly
-+1y → Yearly
-```
-
-### Priority
-
-**Priority Levels:**
-
-```markdown
-- TODO [#A] High priority
-  priority:: A
-
-- TODO [#B] Medium priority
-  priority:: B
-
-- TODO [#C] Low priority
-  priority:: C
-```
-
----
-
-## Common Custom Properties
-
-### Project Management
-
-**Project Properties:**
-
-```markdown
-project:: [[Project Alpha]]
-status:: active
-priority:: high
-deadline:: [[2026-03-01]]
-owner:: [[Person/Sarah]]
-team:: [[Person/John]], [[Person/Alice]]
-budget:: $50000
-progress:: 60%
-phase:: implementation
-risk-level:: medium
-```
-
-**Example:**
-
-```markdown
-- Complete API integration
-  project:: [[Projects/Mobile App]]
-  status:: in-progress
-  owner:: [[Person/Sarah]]
-  deadline:: [[2026-02-15]]
-  priority:: high
-  depends-on:: ((design-task-ref))
-```
-
-### Work Context
-
-**Context Properties:**
-
-```markdown
-context:: [[Work]], [[Office]]
-client:: [[Client/Acme Corp]]
-department:: [[Engineering]]
-category:: [[Development]]
-type:: [[Feature]]
-environment:: [[Production]]
-platform:: [[iOS]], [[Android]]
-```
-
-### Time Management
-
-**Time Properties:**
-
-```markdown
-time-estimate:: 2h
-time-spent:: 1.5h
-time-remaining:: 0.5h
-duration:: 30min
-start-time:: 09:00
-end-time:: 17:00
-```
-
-### Status Tracking
-
-**Status Properties:**
-
-```markdown
-status:: active
-stage:: development
-phase:: implementation
-state:: in-review
-progress:: 75%
-completion:: [[2026-01-22]]
-blocked-by:: [[Issue/123]]
-waiting-for:: [[Person/Manager]] approval
-```
-
-### Metadata
-
-**Information Properties:**
-
-```markdown
-source:: [[Book/Title]]
-author:: [[Person/Name]]
-date:: [[2026-01-22]]
-url:: https://example.com
-isbn:: 978-0-123456-78-9
-doi:: 10.1000/xyz123
-version:: 1.2.3
-license:: MIT
-```
-
-### Learning & Research
-
-**Research Properties:**
-
-```markdown
-topic:: [[Machine Learning]]
-difficulty:: intermediate
-confidence:: 8/10
-resource-type:: [[Article]]
-rating:: ⭐⭐⭐⭐⭐
-reviewed:: [[2026-01-22]]
-key-concept:: true
-literature-note:: true
-```
-
-### Personal
-
-**Personal Properties:**
-
-```markdown
-mood:: 😊
-energy:: high
-health:: good
-sleep:: 7h
-exercise:: 30min
-gratitude:: [[Thing I'm grateful for]]
-habit:: morning-routine
-streak:: 7 days
-```
-
----
-
-## Property Types
-
-### Text Properties
-
-**Simple Text:**
-
-```markdown
-description:: Simple text value
-note:: Some notes here
-comment:: Additional comments
-```
-
-### Number Properties
-
-**Numeric Values:**
-
-```markdown
-count:: 42
-score:: 95
-percentage:: 75%
-amount:: 1000
-quantity:: 5
-```
-
-### Boolean Properties
-
-**True/False:**
-
-```markdown
-completed:: true
-archived:: false
-important:: true
-public:: false
-enabled:: true
-```
-
-### Date Properties
-
-**Date Values:**
-
-```markdown
-date:: [[2026-01-22]]
-start-date:: [[2026-01-01]]
-end-date:: [[2026-12-31]]
-reviewed-date:: [[2026-01-15]]
-```
-
-### Link Properties
-
-**Page References:**
-
-```markdown
-project:: [[Project Alpha]]
-person:: [[Person/Sarah]]
-tag:: [[Tag Name]]
-related:: [[Related Page]]
-```
-
-**Multiple Links:**
-
-```markdown
-tags:: [[Tag1]], [[Tag2]], [[Tag3]]
-team-members:: [[Sarah]], [[John]], [[Alice]]
-references:: [[Book/A]], [[Article/B]]
-```
-
-### List Properties
-
-**Multiple Values:**
-
-```markdown
-keywords:: programming, tutorial, beginner
-tools:: Logseq, Obsidian, Notion
-languages:: JavaScript, Python, Go
-```
-
-### Block Reference Properties
-
-**Reference Blocks:**
-
-```markdown
-decision:: ((decision-block-ref))
-depends-on:: ((prerequisite-block-ref))
-see-also:: ((related-block-ref))
-```
-
----
-
-## Database Properties
-
-### Schema v65.16
-
-**Built-in Database Properties:**
-
-| Property     | Type | Cardinality | Description     |
-| ------------ | ---- | ----------- | --------------- |
-| `tags`       | Ref  | Many        | Page tags       |
-| `icon`       | Text | One         | Page icon emoji |
-| `type`       | Text | One         | Entity type     |
-| `status`     | Text | One         | Status value    |
-| `priority`   | Text | One         | Priority level  |
-| `start-date` | Date | One         | Start date      |
-| `end-date`   | Date | One         | End date        |
-
-### Property Classes
-
-**Typed Properties (Database Graphs):**
-
-```markdown
-Class: Task
-Properties:
-
-- assignee (Person reference)
-- due-date (Date)
-- priority (Text: high/medium/low)
-
-Example:
-
-- TODO Complete feature
-  class:: [[Task]]
-  assignee:: [[Person/Sarah]]
-  due-date:: [[2026-01-30]]
-  priority:: high
-```
-
-### Property Constraints
-
-**Database Graph Validation:**
-
-```markdown
-Property: priority
-Type: Text
-Allowed values: high, medium, low
-Cardinality: One (single value only)
-
-Invalid:
-priority:: high, medium ❌ (multiple values)
-
-Valid:
-priority:: high ✅
-```
-
----
-
-## Property Queries
-
-### Basic Property Query
-
-**Has Property:**
-
-```clojure
-#+BEGIN_QUERY
-{:title "Blocks with 'status' property"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/properties ?props]
-         [(get ?props :status)]]}
-#+END_QUERY
-```
-
-### Property Value Query
-
-**Property Equals Value:**
-
-```clojure
-#+BEGIN_QUERY
-{:title "Status = 'active'"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/properties ?props]
-         [(get ?props :status) "active"]]}
-#+END_QUERY
-```
-
-### Multiple Property Query
-
-**Multiple Conditions:**
-
-```clojure
-#+BEGIN_QUERY
-{:title "High Priority Active Items"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/properties ?props]
-         [(get ?props :status) "active"]
-         [(get ?props :priority) "high"]]}
-#+END_QUERY
-```
-
-### Property with Page Link
-
-**Reference Query:**
-
-```clojure
-#+BEGIN_QUERY
-{:title "Tasks for Project Alpha"
- :query [:find (pull ?b [*])
-         :in $ ?project
-         :where
-         [?b :block/refs ?p]
-         [?p :block/name ?project]]
- :inputs ["projects/alpha"]}
-#+END_QUERY
-```
-
-### Property Aggregation
-
-**Count by Property:**
-
-```clojure
-#+BEGIN_QUERY
-{:title "Count by Status"
- :query [:find ?status (count ?b)
-         :where
-         [?b :block/properties ?props]
-         [(get ?props :status) ?status]]
- :view (fn [rows]
-         [:table
-          [:thead [:tr [:th "Status"] [:th "Count"]]]
-          [:tbody
-           (for [[status count] rows]
-             [:tr [:td status] [:td count]])]])}
-#+END_QUERY
-```
-
----
-
-## Best Practices
-
-### Naming Conventions
-
-**Consistency:**
-
-```markdown
-✅ Good (consistent):
-project:: [[Projects/Alpha]]
-start-date:: [[2026-01-01]]
-team-member:: [[Person/Sarah]]
-
-❌ Bad (inconsistent):
-Project:: [[Projects/Alpha]]
-startDate:: [[2026-01-01]]
-TeamMember:: [[Person/Sarah]]
-```
-
-**Recommendations:**
-
-```markdown
-1. Use lowercase with dashes: project-name
-2. Be descriptive: owner not o
-3. Use prefixes for groups: date-created, date-modified
-4. Avoid abbreviations unless common: url ok, prj not ok
-```
-
-### Property Organization
-
-**Group Related Properties:**
-
-```markdown
-- Task description
-
-  ## Project Info
-
-  project:: [[Project Alpha]]
-  owner:: [[Person/Sarah]]
-  team:: [[Person/John]], [[Person/Alice]]
-
-  ## Scheduling
-
-  SCHEDULED: <2026-01-22 Wed>
-  DEADLINE: <2026-01-30 Wed>
-
-  ## Metadata
-
-  status:: in-progress
-  priority:: high
-  progress:: 60%
-```
-
-### Use Page Links for Values
-
-**Structured References:**
-
-```markdown
-✅ Use page links for:
-
-- People: owner:: [[Person/Sarah]]
-- Projects: project:: [[Projects/Alpha]]
-- Categories: category:: [[Development]]
-- Tags: tags:: [[Important]], [[Urgent]]
-
-Benefits:
-
-- Queryable
-- Create backlinks
-- Build graph connections
-```
-
-### Avoid Over-Propertizing
-
-**Balance:**
-
-```markdown
-❌ Too many properties:
-
-- Simple note
-  author:: [[John]]
-  date:: [[2026-01-22]]
-  time:: 14:30
-  location:: Office
-  weather:: Sunny
-  mood:: Good
-  coffee:: 2 cups
-
-✅ Essential properties only:
-
-- Simple note
-  author:: [[John]]
-  date:: [[2026-01-22]]
-```
-
-### Property Templates
-
-**Standardize with Templates:**
-
-```markdown
-template:: task-template
-
-- TODO Task description
-  project:: [[Projects/]]
-  owner:: [[Person/]]
-  DEADLINE: <date>
-  priority::
-  status:: not-started
-```
-
-### Reserved Properties
-
-**Avoid Conflicts:**
-
-```markdown
-⚠️ Reserved by Logseq:
-
-- title
-- tags
-- alias
-- public
-- icon
-- template
-- collapsed
-- heading
-
-Use with original meaning or prefix custom:
-my-title:: instead of title::
-```
-
----
-
-## Property Examples by Use Case
-
-### Project Task
-
-```markdown
-- TODO Implement user authentication
-  project:: [[Projects/Mobile App]]
-  owner:: [[Person/Sarah]]
-  team:: [[Person/John]], [[Person/Alice]]
-  DEADLINE: <2026-02-15 Thu>
-  priority:: [#A]
-  status:: in-progress
-  progress:: 40%
-  depends-on:: ((api-design-ref))
-  time-estimate:: 8h
-  context:: [[Work]], [[Backend]]
-  tags:: [[Feature]], [[Security]]
-```
-
-### Meeting Note
-
-```markdown
-- Meeting: Project Kickoff
-  type:: [[Meeting]]
-  date:: [[2026-01-22]]
-  time:: 14:00-15:00
-  attendees:: [[Person/Sarah]], [[Person/John]]
-  project:: [[Projects/Alpha]]
-  location:: Conference Room A
-  agenda:: Initial planning
-  decisions:: ((decision-block-ref))
-  action-items:: ((action-items-ref))
-  next-meeting:: [[2026-01-29]]
-```
-
-### Literature Note
-
-```markdown
-- [[Book/Thinking Fast and Slow]]
-  type:: [[Literature Note]]
-  author:: [[Person/Daniel Kahneman]]
-  topic:: [[Psychology]], [[Decision Making]]
-  rating:: ⭐⭐⭐⭐⭐
-  read-date:: [[2026-01-15]]
-  source-type:: Book
-  isbn:: 978-0374533557
-  key-concepts:: [[System 1]], [[System 2]], [[Cognitive Bias]]
-  recommended-by:: [[Person/Alice]]
-```
-
-### Personal Journal
-
-```markdown
-- Daily Reflection
-  date:: [[2026-01-22]]
-  mood:: 😊 positive
-  energy:: high
-  sleep:: 7.5h
-  exercise:: 30min morning run
-  gratitude:: Team support on project
-  learning:: New React patterns
-  challenges:: Time management
-  wins:: Completed feature ahead of schedule
-```
-
----
-
-## Common Property Sets
-
-### GTD Properties
-
-```markdown
-gtd-category:: [[GTD/Next Actions]]
-context:: [[Context/Office]]
-time-estimate:: 30min
-energy:: medium
-```
-
-### PARA Properties
-
-```markdown
-para-type:: [[Projects]]
-area:: [[Areas/Career]]
-resource:: [[Resources/Programming]]
-archived:: false
-```
-
-### Zettelkasten Properties
-
-```markdown
-zettel-type:: [[Permanent Note]]
-sources:: [[Literature/Book]]
-related-zettels:: [[Note/123]], [[Note/456]]
-confidence:: 8/10
-```
-
----
-
-## Property Shortcuts
-
-### Quick Property Entry
-
-```markdown
-Slash command: /property or /prop
-
-1. Type /property
-2. Enter property name
-3. Press Tab
-4. Enter value
-```
-
-### Property Autocomplete
-
-```markdown
-Typing property-name:: triggers:
-
-- Autocomplete for known properties
-- Recent values for that property
-- Page links if property typically uses them
-```
-
----
-
-## Troubleshooting
-
-**Property not appearing in query:**
-
-```markdown
-✓ Check spelling (case-sensitive)
-✓ Verify syntax: property:: value
-✓ Ensure proper indentation
-✓ Re-index graph if needed
-```
-
-**Multiple values not working:**
-
-```markdown
-✓ Use comma separation: [[A]], [[B]]
-✓ Or list format:
-tags::
-
-- [[Tag1]]
-- [[Tag2]]
-```
-
-**Property showing as plain text:**
-
-```markdown
-❌ Wrong: property: value (single colon)
-✅ Right: property:: value (double colon)
-
-❌ Wrong: property ::value (space before ::)
-✅ Right: property:: value
-```
-
----
-
-## Next Steps
-
-**Master Properties:**
-
-1. Learn basic syntax
-2. Use common properties consistently
-3. Create property templates
-4. Build queries using properties
-5. Develop your property schema
-
-**Related:**
-
-- [Schema System](../../explanation/developer/schema-system.md)
-- [Query Patterns](../advanced/query-patterns.md)
-- [Task Management](../../how-to/workflows/task-management-workflows.md)
-
----
-
-**Questions?** Join [Logseq Discord](https://discord.gg/KpN4eHY) or visit [discuss.logseq.com](https://discuss.logseq.com).
+| Ident                        | Title     | Type       | Card. | Visibility | Definition                                                                                                           |
+| ---------------------------- | --------- | ---------- | ----- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| `:logseq.property/status`    | Status    | `default`  | `one` | public     | Default: `:logseq.property/status.todo`. Closed values: `Backlog`, `Todo`, `Doing`, `In Review`, `Done`, `Canceled`. |
+| `:logseq.property/priority`  | Priority  | `default`  | `one` | public     | Closed values: `Low`, `Medium`, `High`, `Urgent`.                                                                    |
+| `:logseq.property/deadline`  | Deadline  | `datetime` | `one` | public     | Use it to finish something at a specific date(time).                                                                 |
+| `:logseq.property/scheduled` | Scheduled | `datetime` | `one` | public     | Use it to plan something to start at a specific date(time).                                                          |
+
+## Repeating Task Properties
+
+| Ident                                       | Title                       | Type       | Card. | Visibility       | Definition                                                                                                          |
+| ------------------------------------------- | --------------------------- | ---------- | ----- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `:logseq.property.repeat/recur-frequency`   | Repeating recur frequency   | `number`   | `one` | internal         | Default: `1`.                                                                                                       |
+| `:logseq.property.repeat/recur-unit`        | Repeating recur unit        | `default`  | `one` | internal         | Default: `:logseq.property.repeat/recur-unit.day`. Closed values: `Minute`, `Hour`, `Day`, `Week`, `Month`, `Year`. |
+| `:logseq.property.repeat/repeated?`         | Node Repeats?               | `checkbox` | `one` | internal, hidden | Queryable.                                                                                                          |
+| `:logseq.property.repeat/temporal-property` | Repeating Temporal Property | `property` | `one` | internal, hidden | -                                                                                                                   |
+| `:logseq.property.repeat/checked-property`  | Repeating Checked Property  | `property` | `one` | internal, hidden | -                                                                                                                   |
+
+## View and Linked Reference Properties
+
+| Ident                                           | Title                     | Type       | Card.  | Visibility       | Definition                                                                                             |
+| ----------------------------------------------- | ------------------------- | ---------- | ------ | ---------------- | ------------------------------------------------------------------------------------------------------ |
+| `:logseq.property.linked-references/includes`   | Included references       | `node`     | `many` | internal, hidden | -                                                                                                      |
+| `:logseq.property.linked-references/excludes`   | Excluded references       | `node`     | `many` | internal, hidden | -                                                                                                      |
+| `:logseq.property.view/type`                    | View Type                 | `default`  | `one`  | internal, hidden | Default: `:logseq.property.view/type.table`. Closed values: `Table View`, `List View`, `Gallery View`. |
+| `:logseq.property.view/feature-type`            | View Feature Type         | `keyword`  | `one`  | internal, hidden | Not queryable.                                                                                         |
+| `:logseq.property.view/group-by-property`       | View group by property    | `property` | `one`  | internal, hidden | Queryable.                                                                                             |
+| `:logseq.property.view/sort-groups-by-property` | View sort groups by       | `property` | `one`  | internal, hidden | -                                                                                                      |
+| `:logseq.property.view/sort-groups-desc?`       | View sort groups DESC     | `checkbox` | `one`  | internal, hidden | Scalar default: `true`.                                                                                |
+| `:logseq.property.table/sorting`                | View sorting              | `coll`     | `one`  | internal, hidden | -                                                                                                      |
+| `:logseq.property.table/filters`                | View filters              | `map`      | `one`  | internal, hidden | -                                                                                                      |
+| `:logseq.property.table/hidden-columns`         | View hidden columns       | `keyword`  | `many` | internal, hidden | -                                                                                                      |
+| `:logseq.property.table/ordered-columns`        | View ordered columns      | `coll`     | `one`  | internal, hidden | -                                                                                                      |
+| `:logseq.property.table/sized-columns`          | View columns settings     | `map`      | `one`  | internal, hidden | -                                                                                                      |
+| `:logseq.property.table/pinned-columns`         | Table view pinned columns | `property` | `many` | internal, hidden | -                                                                                                      |
+| `:logseq.property/view-for`                     | This view belongs to      | `node`     | `one`  | internal, hidden | -                                                                                                      |
+
+## Asset Properties
+
+| Ident                                       | Title                 | Type         | Card. | Visibility       | Definition                          |
+| ------------------------------------------- | --------------------- | ------------ | ----- | ---------------- | ----------------------------------- |
+| `:logseq.property.asset/type`               | File Type             | `string`     | `one` | internal, hidden | Queryable.                          |
+| `:logseq.property.asset/external-url`       | External URL          | `string`     | `one` | public           | Queryable.                          |
+| `:logseq.property.asset/external-file-name` | External file name    | `string`     | `one` | internal, hidden | Not queryable.                      |
+| `:logseq.property.asset/size`               | File Size             | `raw-number` | `one` | internal, hidden | Queryable.                          |
+| `:logseq.property.asset/width`              | Image width           | `raw-number` | `one` | internal, hidden | Queryable.                          |
+| `:logseq.property.asset/height`             | Image height          | `raw-number` | `one` | internal, hidden | Queryable.                          |
+| `:logseq.property.asset/checksum`           | File checksum         | `string`     | `one` | internal, hidden | -                                   |
+| `:logseq.property.asset/last-visit-page`    | Last visit page       | `raw-number` | `one` | internal, hidden | -                                   |
+| `:logseq.property.asset/remote-metadata`    | File remote metadata  | `map`        | `one` | internal, hidden | Metadata of asset in remote storage |
+| `:logseq.property.asset/resize-metadata`    | Asset resize metadata | `map`        | `one` | internal, hidden | -                                   |
+| `:logseq.property.asset/align`              | Asset alignment       | `keyword`    | `one` | internal, hidden | Not queryable.                      |
+
+## FSRS Properties
+
+| Ident                         | Title | Type       | Card. | Visibility | Definition |
+| ----------------------------- | ----- | ---------- | ----- | ---------- | ---------- |
+| `:logseq.property.fsrs/due`   | Due   | `datetime` | `one` | internal   | -          |
+| `:logseq.property.fsrs/state` | State | `map`      | `one` | internal   | -          |
+
+## User Profile Properties
+
+| Ident                          | Title       | Type     | Card. | Visibility | Definition |
+| ------------------------------ | ----------- | -------- | ----- | ---------- | ---------- |
+| `:logseq.property.user/name`   | User Name   | `string` | `one` | public     | -          |
+| `:logseq.property.user/email`  | User Email  | `string` | `one` | public     | -          |
+| `:logseq.property.user/avatar` | User Avatar | `string` | `one` | public     | -          |
+
+## History, Lifecycle, Recycle, Reaction, and Sync Properties
+
+| Ident                                      | Title                                                          | Type       | Card. | Visibility       | Definition |
+| ------------------------------------------ | -------------------------------------------------------------- | ---------- | ----- | ---------------- | ---------- |
+| `:logseq.property.history/block`           | History block                                                  | `entity`   | `one` | internal, hidden | -          |
+| `:logseq.property.history/property`        | History property                                               | `property` | `one` | internal, hidden | -          |
+| `:logseq.property.history/ref-value`       | History value                                                  | `entity`   | `one` | internal, hidden | -          |
+| `:logseq.property.history/scalar-value`    | History scalar value                                           | `any`      | `one` | internal, hidden | -          |
+| `:logseq.property/created-by-ref`          | Node created by                                                | `entity`   | `one` | internal, hidden | Queryable. |
+| `:logseq.property/deleted-at`              | Deleted at                                                     | `datetime` | `one` | internal, hidden | -          |
+| `:logseq.property/deleted-by-ref`          | Deleted by                                                     | `entity`   | `one` | internal, hidden | -          |
+| `:logseq.property.recycle/original-parent` | Recycle original parent                                        | `node`     | `one` | internal, hidden | -          |
+| `:logseq.property.recycle/original-page`   | Recycle original page                                          | `node`     | `one` | internal, hidden | -          |
+| `:logseq.property.recycle/original-order`  | Recycle original order                                         | `string`   | `one` | internal, hidden | -          |
+| `:logseq.property.reaction/emoji-id`       | Reaction emoji                                                 | `string`   | `one` | internal, hidden | -          |
+| `:logseq.property.reaction/target`         | Reaction target                                                | `node`     | `one` | internal, hidden | -          |
+| `:logseq.property.sync/large-title-object` | Reference to large block title stored in remote object storage | `map`      | `one` | internal, hidden | -          |
