@@ -1,0 +1,7 @@
+# Author normalization map for changelog contributor lists.
+# Format: original=canonical  (one per line, # for comments)
+# Used by changelog-extend.sh to dedupe `git log --pretty=%an` output.
+# Add new mappings as you spot duplicates.
+
+charlie=Charlie
+megayu=Mega Yu

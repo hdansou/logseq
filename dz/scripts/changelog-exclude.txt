@@ -1,0 +1,22 @@
+# Commit-message regex patterns to exclude from the community changelog.
+# Each non-comment line is an ERE (extended regex) matched against the commit subject.
+# Lines starting with # are comments.
+#
+# Add a new pattern when you find noise leaking into the categorized changelog.
+# See dz/changelog/STYLE.md → "Always skip" for the reasoning.
+
+# Internal agent skill workflow (collapse to one summary bullet by hand if useful)
+^enhance\(skill\):
+^Update logseq task-on-lambda
+
+# Debug-log workflow chatter
+^add download debug log
+^chore: remove debug log
+
+# Lint auto-fix
+^fix lint$
+^Fix lint$
+
+# Copilot Autofix and codex auto-rebase
+^Potential fix for pull request finding
+^\[codex\] [Pp]otential
