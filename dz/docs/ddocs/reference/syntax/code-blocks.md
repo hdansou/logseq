@@ -3,18 +3,19 @@ title: 'Code Blocks Reference'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Reference'
-last-verified: '2026-01-11'
+last-verified: '2026-09-09'
+verified-against: 'be800f1711'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/03-basic-editing.md'
   - 'reference/syntax/markdown.md'
 ---
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 # Code Blocks Reference
 
-Complete reference for working with code blocks in Logseq, powered by CodeMirror 5.
+Complete reference for working with code blocks in Logseq, powered by CodeMirror 5 (pinned at `5.65.18` in `package.json:161`).
 
 ## Basic Syntax
 
@@ -44,7 +45,7 @@ function greet(name) {
 
 ## Supported Languages
 
-Logseq imports ~120 CodeMirror mode files, which collectively support many language names and MIME types. Language resolution uses `CodeMirror.findModeByName`, so some languages (e.g., TypeScript, Kotlin, Scala) are handled by shared modes (`javascript`, `clike`) rather than dedicated ones.
+Logseq imports 122 CodeMirror mode files (`src/main/frontend/extensions/code.cljs`), which collectively support many language names and MIME types. Language resolution goes through `text->cm-mode`, which lower-cases the language identifier and calls `CodeMirror.findModeByName` — falling back to the raw string when nothing matches (`src/main/frontend/extensions/code.cljs:374-389`). Some languages (e.g., TypeScript, Kotlin, Scala) are therefore handled by shared modes (`javascript`, `clike`) rather than dedicated ones.
 
 ### Popular Languages
 
@@ -86,7 +87,7 @@ Logseq imports ~120 CodeMirror mode files, which collectively support many langu
 
 | Language         | Identifier       | Notes                                       |
 | ---------------- | ---------------- | ------------------------------------------- |
-| Markdown         | `markdown`, `md` | Dedicated mode via `gfm` (GitHub Flavored)  |
+| Markdown         | `markdown`, `md` | Dedicated `markdown` mode (`gfm` is imported too) |
 | reStructuredText | `rst`            | Dedicated `rst` mode                        |
 | LaTeX            | `latex`, `tex`   | Via `stex` mode                             |
 
@@ -167,49 +168,44 @@ Line numbers are displayed automatically for all code blocks.
 
 ### Bracket Matching
 
-CodeMirror highlights matching brackets/parentheses when cursor is near them.
+Bracket matching is **not** on for every language. `:matchBrackets` is set to `lisp-like?`, which is true only when the resolved mode is one of `scheme`, `lisp`, `clojure` or `edn` (`src/main/frontend/extensions/code.cljs:422` and `:428`). In every other language the editor still auto-closes brackets and quotes (`:autoCloseBrackets true`) but does not highlight the matching partner.
 
-### Code Folding
+> **Removed:** this page previously said "CodeMirror highlights matching brackets/parentheses when cursor is near them" without qualification, and listed a **Code Folding** feature ("Long code blocks can be collapsed/expanded"). Neither CodeMirror's `addon/fold/*` nor a `foldGutter` option appears anywhere in the frontend source, so in-editor code folding is not available. The outliner's own block collapse still applies to the block containing the code.
 
-Long code blocks can be collapsed/expanded (varies by platform).
+### Active Line
+
+`:styleActiveLine true` highlights the line the cursor is on (`src/main/frontend/extensions/code.cljs:429`).
+
+### Read-only in Published Graphs
+
+When `config/publishing?` is true, the editor is created with `:readOnly true` and a disabled cursor blink (`src/main/frontend/extensions/code.cljs:443-445`).
+
+### Custom CodeMirror Options
+
+`:editor/extra-codemirror-options` in `logseq/config.edn` is merged into the editor options, so any CodeMirror 5 option can be set graph-wide. The one exception is the `config.edn` editor itself, where a user-set `:readOnly` is stripped so the file stays editable (`src/main/frontend/extensions/code.cljs:370-372`, `430-433`).
 
 ## Creating Code Blocks
 
 ### Method 1: Slash Command
 
-1. Type `/code`
-2. Select language from dropdown
-3. Start typing code
+Type `/` and pick **Code block** (`src/main/frontend/commands.cljs:246-249`; label from `src/resources/dicts/en.edn:522-523`). This runs `code-block-steps`, which converts the current block into a code block (`src/main/frontend/commands.cljs:134-138`).
 
-### Method 2: Manual Triple Backticks
+There is no language dropdown in the slash command. The new block is created with the **last language you used**, read from the `:logseq.kv/latest-code-lang` key-value entry (`src/main/frontend/handler/events.cljs:374-378`, `399-407`). Change it from the language selector on the rendered code block.
 
-````markdown
-```language-name
-code here
-```
-````
+### Method 2: Triple Backticks
 
-### Method 3: Keyboard Shortcut
+Type three backticks in an empty block. Backticks auto-pair, so three keystrokes produce six characters, and Logseq watches for exactly `` `````` `` to convert the block into a code block with an empty title (`src/main/frontend/handler/editor.cljs:3405-3407`, `3559-3564`).
 
-- **Windows/Linux:** `Ctrl + Shift + C`
-- **macOS:** `Cmd + Shift + C`
+> **Removed:** this page previously listed a third method, a `Ctrl/Cmd + Shift + C` keyboard shortcut. In `src/main/frontend/modules/shortcut/config.cljs:229` that binding is `:editor/copy-text`; no shortcut in the config creates a code block.
 
 ## Code Block Properties
 
-Add metadata to code blocks using properties:
+A code block is an ordinary block, so you can add your own properties to it alongside the two the system sets:
 
-````markdown
-- ```python
-  def hello():
-      print("Hello, World!")
-  ```
-````
+- `:logseq.property.node/display-type` — `:code`
+- `:logseq.property.code/lang` — the language identifier, titled **Code Mode** in the UI (`deps/db/src/logseq/db/frontend/property.cljs:148-153`)
 
-language:: python
-purpose:: Example function
-source:: [[Tutorial]]
-
-`````
+Both are `:public? false` and `:hide? true`, so they do not show in the properties area; `:logseq.property.code/lang` is `:queryable? true`, which is what makes the query below work.
 
 ## Practical Examples
 
@@ -361,11 +357,15 @@ Logseq stores code blocks as `:logseq.class/Code-block` entities:
 
 ````clojure
 {:db/id 123
- :block/title "```javascript\ncode\n```"
+ :block/title "const x = 1;"          ; raw code, no ``` fences
  :block/tags [:logseq.class/Code-block]
  :logseq.property.code/lang "javascript"
  :logseq.property.node/display-type :code}
 ````
+
+> **Removed:** this example previously showed `:block/title "```javascript\ncode\n```"`. In a DB graph the fences are not stored — `:block/title` holds the raw code text. See the importer, which builds exactly this shape from a parsed fence (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:2052-2061`), and the editor path, which sets `:block/title ""` when converting a block (`src/main/frontend/handler/editor.cljs:3559-3563`).
+
+The class and the display type are two views of the same fact: `:code` ↔ `:logseq.class/Code-block` is a fixed mapping in `deps/db/src/logseq/db/frontend/db.cljs:113-129`. The class declares both properties in its schema (`deps/db/src/logseq/db/frontend/class.cljs:76-79`).
 
 ## Querying Code Blocks
 
@@ -458,7 +458,11 @@ Code blocks are static. Changes require manual editing.
 
 ### Limited Autocompletion
 
-Basic bracket/quote completion only. No language-specific autocompletion.
+Basic bracket/quote completion only (`:autoCloseBrackets true`). No language-specific autocompletion — with one exception: the `logseq/config.edn` editor gets a hint-based completer bound to `:` and `Ctrl-Space` (`src/main/frontend/extensions/code.cljs:440-442`, `446-447`).
+
+### Tab Is Not Captured
+
+`:tabIndex -1` is set so Tab stays bound globally rather than indenting inside the code editor (`src/main/frontend/extensions/code.cljs:435`). Press `Esc` to leave the editor and save (`src/main/frontend/extensions/code.cljs:436-439`).
 
 ## Alternative: Inline Code
 
@@ -467,6 +471,17 @@ For short snippets, use inline code:
 ```markdown
 Use `Array.map()` to transform arrays, or `filter()` to select items.
 ```
+
+## Findings: New Capabilities
+
+Verified against `be800f1711`:
+
+- **Code blocks remember your last language.** Creating one via `/Code block` applies `:logseq.kv/latest-code-lang` rather than defaulting to plain text (`src/main/frontend/handler/events.cljs:374-378`, `399-407`).
+- **Advanced queries are themselves code blocks.** The `/Query` slash command sets `:logseq.property.node/display-type :code` and `:logseq.property.code/lang "clojure"` on the query property's value block, which is why an advanced query renders with Clojure highlighting (`src/main/frontend/commands.cljs:125-132`).
+- **`:editor/extra-codemirror-options` is a supported config.edn escape hatch** for any CodeMirror 5 option (`src/main/frontend/extensions/code.cljs:370-372`, `430-433`).
+- **`calc` is a special mode**, given `:viewportMargin js/Infinity` and reachable from its own **Calculator** slash command (`src/main/frontend/extensions/code.cljs:449-450`; `src/main/frontend/commands.cljs:119-123`, `331-333`).
+
+---
 
 ## Related Features
 

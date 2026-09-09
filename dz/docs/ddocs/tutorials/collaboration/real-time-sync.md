@@ -4,6 +4,8 @@ status: '🟡 Active Development'
 version: 'Since v0.9.0'
 quadrant: 'Tutorial'
 platform: 'Desktop (macOS/Windows/Linux)'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 related-docs:
   - '../../explanation/security/e2ee-encryption.md'
   - '../../reference/features/user-profiles.md'
@@ -12,7 +14,7 @@ related-docs:
 
 # Getting Started with Real-Time Collaboration
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09
 
 ## What You'll Learn
 
@@ -524,6 +526,6 @@ Server → Client:   {"type": "pong"}
 
 ---
 
-**Last Updated**: 2026-05-30  
+**Last Updated**: 2026-09-09  
 **Status**: 🟡 Active Development (RTC features evolving rapidly)  
 **Feedback**: Join [Logseq Discord](https://discord.gg/logseq) `#rtc-feedback` channel

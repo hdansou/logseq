@@ -3,7 +3,8 @@ title: 'Project Planning'
 description: 'Learn to plan and track larger projects with Logseq'
 type: tutorial
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -19,9 +20,15 @@ relatedDocs:
 
 # Project Planning
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Learn to plan, organize, and track larger projects in Logseq.
+
+> **Note on syntax:** The markdown snippets in Steps 1-3, 6 and 7 use file-graph syntax
+> (`TODO`/`DONE` markers, `[#A]` priorities, `SCHEDULED:`/`DEADLINE:` lines, `key:: value`
+> properties). In a **DB graph** none of those are text: you set the built-in **Status**,
+> **Priority**, **Scheduled** and **Deadline** properties on the block instead — see
+> [Todo Basics](todo-basics.md). The dashboard queries in Steps 5-7 are DB-graph queries.
 
 ## What You'll Learn
 
@@ -74,9 +81,13 @@ A brief description of what this project is about.
 
 Save this as a template for reuse:
 
-1. Select the blocks you want to save as a template
-2. Use the slash command `/Template` to insert or create a template
-3. Name it "Project Template"
+1. Create the blocks you want to reuse under a single parent block
+2. Tag that parent with `#Template` to turn it into a template
+3. Later, use the slash command `/Template` ("Insert a created template here") to drop a
+   copy wherever you need it
+
+> **Removed:** The file-graph "right-click -> Make template" menu item. There is no such
+> command in the current source; templates are created by tagging a node with `#Template`.
 
 ---
 
@@ -185,13 +196,13 @@ Create a query-based dashboard to track progress:
          :in $ ?project
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
-                [?b :block/tags ?task-tag]
-                [?task-tag :db/ident :logseq.class/Task]
+                [?b :block/tags :logseq.class/Task]
                 [?b :logseq.property/status ?s]
+                [?s :db/ident ?status]
                 [(contains? #{:logseq.property/status.todo
-                              :logseq.property/status.doing} (:db/ident ?s))]
+                              :logseq.property/status.doing} ?status)]
                 [?b :logseq.property/priority ?pr]
-                [(= :logseq.property/priority.high (:db/ident ?pr))]]
+                [?pr :db/ident :logseq.property/priority.high]]
  :inputs ["project alpha"]}
 #+END_QUERY
 
@@ -203,7 +214,7 @@ Create a query-based dashboard to track progress:
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
                 [?b :logseq.property/status ?s]
-                [(= :logseq.property/status.doing (:db/ident ?s))]]
+                [?s :db/ident :logseq.property/status.doing]]
  :inputs ["project alpha"]}
 #+END_QUERY
 
@@ -211,20 +222,33 @@ Create a query-based dashboard to track progress:
 #+BEGIN_QUERY
 {:title "Done This Week"
  :query [:find (pull ?b [*])
-         :in $ ?project
+         :in $ ?project ?week-ago
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
                 [?b :logseq.property/status ?s]
-                [(= :logseq.property/status.done (:db/ident ?s))]]
- :inputs ["project alpha"]}
+                [?s :db/ident :logseq.property/status.done]
+                [?b :block/updated-at ?updated]
+                [(>= ?updated ?week-ago)]]
+ :inputs ["project alpha" :-7d-ms]}
 #+END_QUERY
 ```
 
-> **Note:** These queries use the DB graph property model introduced in Logseq 0.11.x.
-> Tasks are tagged with `:logseq.class/Task` and use `:logseq.property/status`
-> (with values like `status.todo`, `status.doing`, `status.done`) and
-> `:logseq.property/priority` (with values like `priority.high`, `priority.medium`,
-> `priority.low`) instead of the legacy `:block/marker` and `:block/priority` attributes.
+> **Note:** These queries use the DB graph property model. Tasks are tagged with
+> `:logseq.class/Task` and use `:logseq.property/status` (closed values
+> `status.backlog`, `status.todo`, `status.doing`, `status.in-review`, `status.done`,
+> `status.canceled`) and `:logseq.property/priority` (`priority.low`, `priority.medium`,
+> `priority.high`, `priority.urgent`) instead of the legacy `:block/marker` and
+> `:block/priority` attributes.
+>
+> Status and priority values are **references** to closed-value entities, so a query
+> binds an entity id, not a keyword. Match the identity with a datom pattern
+> (`[?s :db/ident :logseq.property/status.done]`) rather than calling `(:db/ident ?s)`
+> inside a predicate — a predicate receives the raw entity id, so keyword lookup on it
+> returns `nil` and the clause never matches.
+>
+> Simpler alternative: the built-in `task` and `priority` rules are injected into
+> advanced queries automatically, so `(task ?b #{"Todo" "Doing"})` and
+> `(priority ?b #{"High"})` also work and are easier to read.
 
 ---
 
@@ -263,14 +287,20 @@ Show upcoming deadlines:
 #+BEGIN_QUERY
 {:title "📅 Upcoming Deadlines"
  :query [:find (pull ?b [*])
-         :in $ ?today ?project
+         :in $ ?today-ms ?project
          :where [?b :block/refs ?p]
                 [?p :block/name ?project]
                 [?b :logseq.property/deadline ?d]
-                [(>= ?d ?today)]]
- :inputs [:today "project alpha"]}
+                [(>= ?d ?today-ms)]]
+ :inputs [:start-of-today-ms "project alpha"]}
 #+END_QUERY
 ```
+
+> **Note:** `Deadline` and `Scheduled` are `:datetime` properties, stored as epoch
+> milliseconds directly on the block. Compare them against a millisecond input such as
+> `:start-of-today-ms`, `:end-of-today-ms` or a relative form like `:+7d-end`.
+> The plain `:today` input resolves to a `YYYYMMDD` integer (for journal-day
+> comparisons), so comparing it against a datetime property silently matches everything.
 
 ---
 
@@ -298,11 +328,11 @@ Create a page for each team member showing their tasks:
 {:title "Assigned to Alice"
  :query [:find (pull ?b [*])
          :in $ ?assignee-name
-         :where [?b :block/tags ?task-tag]
-                [?task-tag :db/ident :logseq.class/Task]
+         :where [?b :block/tags :logseq.class/Task]
                 [?b :logseq.property/status ?s]
+                [?s :db/ident ?status]
                 [(contains? #{:logseq.property/status.todo
-                              :logseq.property/status.doing} (:db/ident ?s))]
+                              :logseq.property/status.doing} ?status)]
                 [?b :user.property/assignee ?person]
                 [?person :block/title ?assignee-name]]
  :inputs ["Alice"]}
@@ -410,4 +440,4 @@ Organize related pages with namespaces:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-09-09_

@@ -2,7 +2,8 @@
 title: 'Plugin API Reference'
 description: "Complete reference for Logseq's Plugin SDK APIs for extension development"
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
@@ -18,7 +19,7 @@ relatedDocs:
 
 # Plugin API Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Complete reference for the Logseq Plugin SDK, enabling developers to extend Logseq with custom functionality, commands, and UI elements.
 
@@ -36,14 +37,16 @@ The Plugin API provides programmatic access to Logseq through the global `logseq
 
 ## Quick Reference
 
-| Namespace       | Purpose              | Key Methods                                       |
-| --------------- | -------------------- | ------------------------------------------------- |
-| `logseq.App`    | App-level operations | `registerCommand`, `pushState`, `getCurrentGraph` |
-| `logseq.Editor` | Content manipulation | `insertBlock`, `getPage`, `createPage`            |
-| `logseq.DB`     | Database queries     | `q`, `datascriptQuery`, `onChanged`               |
-| `logseq.UI`     | User interface       | `showMsg`, `closeMsg`                             |
-| `logseq.Assets` | File management      | `listFilesOfCurrentGraph`                         |
-| `logseq.Git`    | Version control      | `execCommand`                                     |
+| Namespace         | Purpose              | Key Methods                                       | Interface (`libs/src/LSPlugin.ts`) |
+| ----------------- | -------------------- | ------------------------------------------------- | ---------------------------------- |
+| `logseq.App`      | App-level operations | `registerCommand`, `pushState`, `getCurrentGraph` | `IAppProxy` (404)                  |
+| `logseq.Commands` | Unified command bus  | `register`, `execute`                             | `ICommandsProxy` (615)             |
+| `logseq.Editor`   | Content manipulation | `insertBlock`, `getPage`, `createPage`            | `IEditorProxy` (642)               |
+| `logseq.DB`       | Database queries     | `q`, `datascriptQuery`, `onChanged`               | `IDBProxy` (956)                   |
+| `logseq.Git`      | Version control      | `execCommand`                                     | `IGitProxy` (1010)                 |
+| `logseq.UI`       | User interface       | `showMsg`, `closeMsg`                             | `IUIProxy` (1032)                  |
+| `logseq.Utils`    | SDK helpers          | `toJs`                                            | `IUtilsProxy` (1045)               |
+| `logseq.Assets`   | File management      | `listFilesOfCurrentGraph`                         | `IAssetsProxy` (1052)              |
 
 ---
 
@@ -88,6 +91,49 @@ logseq.ready(
 ## logseq.App
 
 Application-level operations and registrations.
+Interface: `libs/src/LSPlugin.ts:404-610` (`IAppProxy`).
+
+### App Info
+
+#### getInfo
+
+Get Logseq application information. Cached after the first call
+(`libs/src/LSPlugin.user.ts:402-407`).
+
+```typescript
+getInfo(key?: keyof AppInfo): Promise<AppInfo | any>
+
+// AppInfo: { version: string; supportDb: boolean }
+// -- src/main/logseq/api/app.cljs:46-52
+```
+
+> `getInfo` is implemented in the JS SDK, not as a host export. It is therefore
+> **not** reachable over the HTTP API; use `logseq.App.getAppInfo` there.
+
+#### getUserInfo
+
+Get the signed-in user (Logseq Sync / cloud). Resolves `null` when not signed in.
+
+```typescript
+getUserInfo(): Promise<AppUserInfo | null>
+```
+
+#### checkCurrentIsDbGraph
+
+Whether the active graph is a DB graph.
+
+```typescript
+checkCurrentIsDbGraph(): Promise<Boolean>
+```
+
+#### getStateFromStore / setStateFromStore
+
+Read and write paths of the frontend state atom.
+
+```typescript
+getStateFromStore<T = any>(path: string | Array<string>): Promise<T>
+setStateFromStore(path: string | Array<string>, value: any): Promise<void>
+```
 
 ### Command Registration
 
@@ -269,6 +315,58 @@ Update graph configuration.
 ```typescript
 setCurrentGraphConfigs(configs: Record<string, any>): Promise<void>
 ```
+
+#### getCurrentGraphFavorites / getCurrentGraphRecent / getCurrentGraphTemplates
+
+```typescript
+getCurrentGraphFavorites(): Promise<Array<string | PageEntity> | null>
+getCurrentGraphRecent(): Promise<Array<string | PageEntity> | null>
+getCurrentGraphTemplates(): Promise<Record<string, BlockEntity> | null>
+```
+
+### External Commands & Plugins
+
+#### invokeExternalCommand
+
+Invoke any registered palette command by id.
+
+```typescript
+invokeExternalCommand(type: ExternalCommandType, ...args: Array<any>): Promise<void>
+```
+
+#### invokeExternalPlugin
+
+Call a command or model exposed by another plugin.
+
+```typescript
+// type: `xx-plugin-id.commands.xx-key` or `xx-plugin-id.models.xx-key`
+invokeExternalPlugin(type: string, ...args: Array<any>): Promise<unknown>
+```
+
+#### getExternalPlugin
+
+Look up another installed plugin by id; resolves `null` if absent.
+
+```typescript
+getExternalPlugin(pid: string): Promise<{} | null>
+```
+
+### System Operations
+
+```typescript
+relaunch(): Promise<void>
+quit(): Promise<void>
+openExternalLink(url: string): Promise<void>
+
+setZoomFactor(factor: number): void
+setFullScreen(flag: boolean | 'toggle'): void
+setLeftSidebarVisible(flag: boolean | 'toggle'): void
+setRightSidebarVisible(flag: boolean | 'toggle'): void
+clearRightSidebarBlocks(opts?: { close: boolean }): void
+```
+
+> `openExternalLink` silently ignores anything that is not an `http`/`https`
+> URL (`src/main/logseq/api/app.cljs:116-119`).
 
 ### User Preferences
 
@@ -526,26 +624,30 @@ await logseq.Editor.insertBatchBlock(
 
 ### Block Properties
 
+Signatures below are from `libs/src/LSPlugin.ts:918-930`.
+
 #### getBlockProperty
 
 Get a block property value.
 
 ```typescript
 getBlockProperty(
-  block: BlockUUID | BlockId,
+  block: BlockIdentity | EntityID,
   key: string
-): Promise<any>
+): Promise<BlockEntity | null>
 ```
 
-#### setBlockProperty
+#### upsertBlockProperty
 
-Set a block property.
+Insert or update a block property. There is no `setBlockProperty`; the host
+export is `upsert_block_property` (`src/main/logseq/api.cljs:141`).
 
 ```typescript
-setBlockProperty(
-  block: BlockUUID | BlockId,
+upsertBlockProperty(
+  block: BlockIdentity | EntityID,
   key: string,
-  value: any
+  value: any,
+  options?: Partial<{ reset: boolean }>
 ): Promise<void>
 ```
 
@@ -555,7 +657,7 @@ Remove a block property.
 
 ```typescript
 removeBlockProperty(
-  block: BlockUUID | BlockId,
+  block: BlockIdentity | EntityID,
   key: string
 ): Promise<void>
 ```
@@ -566,8 +668,16 @@ Get all properties of a block.
 
 ```typescript
 getBlockProperties(
-  block: BlockUUID | BlockId
-): Promise<Record<string, any>>
+  block: BlockIdentity | EntityID
+): Promise<Record<string, any> | null>
+```
+
+#### getPageProperties
+
+```typescript
+getPageProperties(
+  page: PageIdentity | EntityID
+): Promise<Record<string, any> | null>
 ```
 
 ### Page Operations
@@ -1206,6 +1316,152 @@ try {
 
 ---
 
+## Key Type Definitions
+
+Transcribed from `libs/src/LSPlugin.ts`.
+
+### BlockEntity
+
+`libs/src/LSPlugin.ts:187-214`
+
+```typescript
+export interface BlockEntity {
+  id: EntityID // db id
+  uuid: BlockUUID
+  order: string
+  format: 'markdown' | 'org'
+  parent: IEntityID
+  title: string
+  fullTitle: string // block refs replaced with their title text
+  content?: string // @deprecated -- use title
+  page: IEntityID // owner page
+  createdAt: number
+  updatedAt: number
+  ident?: string // ident for a property block
+  properties?: Record<string, any>
+  'collapsed?': boolean
+
+  // optional fields on a dummy page
+  anchor?: string
+  body?: any
+  children?: Array<BlockEntity | BlockUUIDTuple>
+  container?: string
+  file?: IEntityID
+  level?: number
+  meta?: { timestamps: any; properties: any; startPos: number; endPos: number }
+  marker?: string
+
+  [key: string]: unknown
+}
+```
+
+### PageEntity
+
+`libs/src/LSPlugin.ts:219-239`. A page is a block with some specific fields.
+
+```typescript
+export interface PageEntity {
+  id: EntityID
+  uuid: BlockUUID
+  name: string
+  format: 'markdown' | 'org'
+  type: 'page' | 'journal' | 'whiteboard' | 'class' | 'property' | 'hidden'
+  updatedAt: number
+  createdAt: number
+  'journal?': boolean
+
+  title?: string
+  file?: IEntityID
+  originalName?: string
+  namespace?: IEntityID
+  children?: Array<PageEntity>
+  properties?: Record<string, any>
+  journalDay?: number // YYYYMMDD
+  ident?: string
+
+  [key: string]: unknown
+}
+```
+
+### PropertySchema
+
+`libs/src/LSPlugin.ts:366-371`
+
+```typescript
+export type PropertySchema = {
+  type: 'default' | 'number' | 'node' | 'date' | 'checkbox' | 'url' | string
+  cardinality: 'many' | 'one'
+  hide: boolean
+  public: boolean
+}
+```
+
+---
+
+## Findings: New Capabilities
+
+Present in the SDK at `be800f1711` but not yet given full sections above.
+
+### logseq.Commands -- unified command bus
+
+`libs/src/LSPlugin.ts:615-637`. Wraps palette commands, shortcuts, slash
+commands and context-menu entries behind one registration call. `when` is
+stored as command metadata for future host-side evaluation.
+
+```typescript
+register(
+  id: string,
+  options: CommandRegisterOptions,
+  action?: CommandCallback | BlockCommandCallback | Array<SlashCommandAction>
+): CommandUnregister | false
+
+// Built-in commands use `logseq.*` ids; plugin commands can be addressed as
+// `plugin-id/key`, `plugin-id.commands.key`, or a local command key.
+execute(id: string, ...args: Array<any>): Promise<unknown>
+```
+
+### DB-graph property and tag entity APIs
+
+On `logseq.Editor` (`libs/src/LSPlugin.ts:849-915`), backed by
+`src/main/logseq/api.cljs:206-224`. These operate on property and tag
+*entities*, which only exist in DB graphs.
+
+```typescript
+// properties
+getProperty(key: string): Promise<BlockEntity | null>
+upsertProperty(key: string, schema?: Partial<PropertySchema>, opts?: { name?: string }): Promise<IEntityID>
+removeProperty(key: string): Promise<void>
+getAllProperties(): Promise<PageEntity[] | null>
+addPropertyValueChoices(propertyId: BlockIdentity, choices: Array<BlockIdentity>): Promise<void>
+
+// tags (classes)
+getAllTags(): Promise<PageEntity[] | null>
+getTag(nameOrIdent: string | EntityID): Promise<PageEntity | null>
+getTagsByName(tagName: string): Promise<Array<PageEntity> | null>
+getTagObjects(nameOrIdent: string): Promise<BlockEntity[] | null>
+createTag(...): Promise<PageEntity | null>
+addTagProperty(tagId: BlockIdentity, propertyIdOrName: BlockIdentity): Promise<void>
+removeTagProperty(tagId: BlockIdentity, propertyIdOrName: BlockIdentity): Promise<void>
+addTagExtends(tagId: BlockIdentity, parentTagIdOrName: BlockIdentity): Promise<void>
+removeTagExtends(tagId: BlockIdentity, parentTagIdOrName: BlockIdentity): Promise<void>
+addBlockTag(blockId: BlockIdentity, tagId: BlockIdentity): Promise<void>
+removeBlockTag(blockId: BlockIdentity, tagId: BlockIdentity): Promise<void>
+setBlockIcon(blockId: BlockIdentity, iconType: 'tabler-icon' | 'emoji', iconName: string): Promise<void>
+```
+
+### App hooks not documented above
+
+`libs/src/LSPlugin.ts:561-605`: `onGraphAfterIndexed`, `onThemeChanged`,
+`onTodayJournalCreated`, `onBeforeCommandInvoked`, `onAfterCommandInvoked`,
+`onPageHeadActionsSlotted`, `onSidebarVisibleChanged`.
+
+### Template APIs
+
+`libs/src/LSPlugin.ts:532-541`: `getTemplate`, `existTemplate`,
+`createTemplate`, `removeTemplate`, `insertTemplate`.
+
+---
+
 ## Best Practices
 
 1. **Always check return values** - Methods may return `null`
@@ -1225,4 +1481,4 @@ try {
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

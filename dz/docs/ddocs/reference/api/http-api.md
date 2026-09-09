@@ -152,7 +152,7 @@ curl -X POST http://127.0.0.1:12315/api \
 
 The HTTP API does not expose the whole Plugin SDK. A request's `method` is
 resolved by lower-casing the namespace and snake-casing the method name
-(`electron/server.cljs:69-77`), then looked up on the host:
+(`electron/server.cljs:73-80`), then looked up on the host:
 
 - `logseq.App.*`, `logseq.Editor.*`, `logseq.DB.*` and `logseq.CLI.*` resolve
   against the flat exports of `src/main/logseq/api.cljs`.
@@ -176,7 +176,7 @@ Verified methods by namespace:
 | `getUserConfigs`         | Get user configuration | -                                |
 | `getAppInfo`             | Get app info           | -                                |
 | `getCurrentRoute`        | Get current route      | -                                |
-| `getCurrentGraphConfigs` | Get graph config       | `path?`                          |
+| `getCurrentGraphConfigs` | Get graph config       | `...keys?` (key path)            |
 | `pushState`              | Navigate to route      | `route`, `params?`, `query?`     |
 | `replaceState`           | Replace current route  | `route`, `params?`, `query?`     |
 | `setLeftSidebarVisible`  | Toggle left sidebar    | `visible` (bool or `"toggle"`)   |
@@ -373,7 +373,7 @@ curl -X POST http://127.0.0.1:12315/api \
 ### Method Not Found
 
 - Check method name spelling. The namespace segment is case-insensitive (it is
-  lower-cased in `electron/server.cljs:73`), but the method name is converted
+  lower-cased in `electron/server.cljs:78`), but the method name is converted
   with `csk/->snake_case`, so `getAllPages` and `get_all_pages` both work while
   `getallpages` does not.
 - Verify the method actually has a host export (see "Available API Methods").

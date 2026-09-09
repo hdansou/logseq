@@ -3,7 +3,8 @@ title: 'Todo Basics'
 description: "Learn to manage tasks effectively with Logseq's task management system"
 type: tutorial
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -19,7 +20,7 @@ relatedDocs:
 
 # Todo Basics
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Learn to create, organize, and track tasks in Logseq.
 
@@ -70,8 +71,11 @@ In DB graphs, tasks use the built-in **Status** property with these values:
 
 **Option 1: Click the status indicator**
 
-- Click once on a Todo block -> Doing
-- Click again -> Done
+- Clicking the status indicator on the left of the block opens a picker listing all six
+  statuses; choose the one you want.
+- If Status has been configured to display as a checkbox, the indicator becomes a
+  checkbox instead: checking it sets **Done**, unchecking it sets **Todo**. (Only Todo
+  and Done have a checkbox state, so a checkbox cannot select Doing.)
 
 **Option 2: Keyboard**
 
@@ -83,7 +87,7 @@ In DB graphs, tasks use the built-in **Status** property with these values:
 
 ### Try It
 
-Create a block, then use `Cmd/Ctrl+Enter` to set it to Todo. Click the status indicator to cycle it to Doing, then click again for Done.
+Create a block, then press `Cmd/Ctrl+Enter` to set it to Todo. Press it again for Doing, and once more for Done. (A fourth press clears the status.)
 
 ---
 
@@ -126,12 +130,16 @@ Organize related tasks by nesting blocks. Set each child block's Status property
 2. Add child blocks (indent with `Tab`)
 3. Set each child block's status using `Cmd/Ctrl+Enter` or the slash command
 
-### Calculate Progress
+### Track Progress
 
-Your parent task can show progress of children:
+To see how far along a nested task list is, query its children by status, for example:
 
-- 1/5 complete
-- Visual progress bar (in some views)
+```clojure
+{{query (and (task Done) [[Weekend Project]])}}
+```
+
+> **Removed:** An automatic "1/5 complete" counter and progress bar on the parent block.
+> No such parent-task progress rollup exists in the current source.
 
 ---
 
@@ -155,7 +163,7 @@ You can also query by priority:
 
 ### Advanced Query
 
-For more complex queries, use the slash command `/Advanced query` which creates a tagged Query block. For example, to find all high-priority Todo tasks, set the query property to:
+For more complex queries, use the slash command `/Advanced Query` which creates a tagged Query block. For example, to find all high-priority Todo tasks, set the query property to:
 
 ```clojure
 [:find (pull ?b [*])
@@ -241,4 +249,4 @@ Use the Scheduled property with a specific time for focused work blocks. Type `/
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-09-09_

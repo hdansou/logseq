@@ -3,7 +3,8 @@ title: 'Flashcards Basics'
 description: "Learn to create and study flashcards with Logseq's spaced repetition system"
 type: tutorial
 status: stable
-lastVerified: '2026-05-30'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -19,7 +20,7 @@ relatedDocs:
 
 # Flashcards Basics
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09
 
 > Learn to create flashcards and use spaced repetition for effective learning.
 
@@ -28,6 +29,7 @@ relatedDocs:
 - Creating flashcards
 - The spaced repetition system (FSRS)
 - Studying your cards
+- Tracking what is due
 - Best practices
 
 **Time:** ~15 minutes
@@ -61,7 +63,7 @@ Paris
 The text before `#Card` becomes the **front** (question).
 Child blocks become the **back** (answer).
 
-You can also select one or more blocks, right-click, and choose "Make a flashcard" from the context menu.
+You can also select one or more blocks, right-click, and choose **Make a Flashcard** from the context menu.
 
 ### Try It Now
 
@@ -114,6 +116,11 @@ You can use multiple cloze deletions in a single card:
 
 All clozes are revealed together as part of a single card.
 
+> **Removed:** Numbered clozes (`{{c1 ...}}`, `{{c2 ...}}`) that split one block into
+> several cards, and reversed cards (`#card #reversed`). Neither exists in the current
+> source: cloze detection is a plain `{{cloze ` substring test, and there is no
+> `reversed` tag or generated inverse card.
+
 ---
 
 ## Step 3: Study Your Cards
@@ -128,11 +135,16 @@ All clozes are revealed together as part of a single card.
 
 - Press `g` then `f`, or `t` then `c` (go to flashcards)
 
+> **Removed:** The `t f` shortcut, a `/Flashcards` slash command, and
+> `Cmd/Ctrl+Shift+C` for creating a card. The flashcard shortcut is `g f` / `t c`;
+> `Cmd/Ctrl+Shift+C` is bound to Copy text. The only flashcard-related slash command
+> is `/Cloze`.
+
 ### Study Session
 
 1. A card appears showing the front (question)
 2. Think of the answer
-3. Click `Show answer` (or press `s`)
+3. Click **Show answers** (or press `s`)
 4. Rate how well you remembered:
    - **Again** (press `1`) - Forgot completely
    - **Hard** (press `2`) - Struggled but got it
@@ -156,6 +168,20 @@ When studying, a dropdown at the top lets you switch between "All cards" and any
 ### Creating a Cards Query
 
 Click the "+" button in the study view to create a new Cards query block. This lets you define custom filtered sets of cards to study.
+
+### Tracking What Is Due
+
+- The study view shows a position counter next to the selector, in the form
+  `current/total` for the cards due in the selected set.
+- The **Flashcards** entry in the left sidebar carries a badge with the total number of
+  cards due across the graph. It is hidden when nothing is due.
+- When the selected set has no due cards left, the view shows a "you've reviewed all the
+  cards for this query" message.
+
+> **Removed:** Per-card status labels (New / Learning / Review / Due) and a statistics
+> panel with review forecast, retention rate and streak. The FSRS state is stored on the
+> block as `:logseq.property.fsrs/state` and `:logseq.property.fsrs/due`, but no such
+> status labels or statistics view are surfaced in the UI.
 
 ---
 
@@ -269,7 +295,11 @@ If a card keeps failing, rewrite it simpler or break into smaller cards.
 
 ## Settings
 
-In **Settings**, you can enable or disable the flashcards feature with the **Enable flashcards** toggle.
+Flashcards have a single setting: **Settings -> Features -> Flashcards**, a toggle that
+enables or disables the feature for the current graph.
+
+> **Removed:** A per-deck settings table (new cards/day, reviews/day, card order). No such
+> scheduling settings exist; FSRS schedules every card from its own review history.
 
 ---
 
@@ -295,7 +325,8 @@ In **Settings**, you can enable or disable the flashcards feature with the **Ena
 - Studied and rated cards
 - Understood the FSRS algorithm
 - Organized cards with Cards queries
+- Tracked due cards with the sidebar badge and the study-view counter
 
 ---
 
-_Last updated: 2026-05-30_
+_Last updated: 2026-09-09_

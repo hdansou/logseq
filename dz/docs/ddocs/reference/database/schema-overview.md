@@ -2,7 +2,8 @@
 title: 'Database Graph Schema Reference'
 description: "Complete reference for Logseq's database graph schema, property types, and built-in classes"
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, mobile]
 graphType: [db]
@@ -17,7 +18,7 @@ relatedDocs:
 
 # Database Graph Schema Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Complete reference for the database graph schema architecture, including entity types, property system, and built-in classes.
 
@@ -29,7 +30,7 @@ Database graphs use a structured schema with three layers:
 2. **Malli Validation Layer**: Schema validation for data integrity
 3. **SQLite Persistence Layer**: Long-term storage
 
-**Current Schema Version**: 65.22
+**Current Schema Version**: 65.33 (`deps/db/src/logseq/db/frontend/schema.cljs:33`)
 
 ---
 
@@ -37,10 +38,12 @@ Database graphs use a structured schema with three layers:
 
 | Concept             | Count | Description                 |
 | ------------------- | ----- | --------------------------- |
-| Built-in Properties | ~87   | Core metadata system        |
-| Built-in Classes    | 16    | Entity classification       |
-| Property Types      | 18    | Value type definitions      |
+| Built-in Properties | 118   | Core metadata system        |
+| Built-in Classes    | 18    | Entity classification       |
+| Property Types      | 19    | Value type definitions      |
 | Entity Types        | 10+   | Pages, blocks, assets, etc. |
+
+Of the 118 entries in `built-in-properties` (`deps/db/src/logseq/db/frontend/property.cljs:20-705`), 105 are `:logseq.*` idents and 13 are DataScript attribute properties (`:block/alias`, `:block/tags`, `:block/parent`, `:block/order`, `:block/collapsed?`, `:block/page`, `:block/refs`, `:block/link`, `:block/title`, `:block/closed-value-property`, `:block/journal-day`, `:block/created-at`, `:block/updated-at`). Only 26 are marked `:public? true`, i.e. visible to users in the UI.
 
 ---
 
@@ -95,7 +98,7 @@ Properties can store different types of values:
 
 ### User Property Types
 
-Available when creating custom properties:
+Available when creating custom properties (`user-built-in-property-types`, `deps/db/src/logseq/db/frontend/property/type.cljs:19-21`):
 
 | Type        | Description            | Example               |
 | ----------- | ---------------------- | --------------------- |
@@ -106,10 +109,11 @@ Available when creating custom properties:
 | `:checkbox` | Boolean                | true/false            |
 | `:url`      | Web link               | "https://example.com" |
 | `:node`     | Page/block reference   | [[Page Name]]         |
+| `:asset`    | Asset reference        | An uploaded file      |
 
 ### Internal Property Types
 
-Used by built-in properties only:
+Used by built-in properties only (`internal-built-in-property-types`, `deps/db/src/logseq/db/frontend/property/type.cljs:15-17`). Of these, `:map`, `:json` and `:string` are also allowed for user-stored values created via EDN or the API (`type.cljs:23-26`):
 
 | Type          | Description        | Used By             |
 | ------------- | ------------------ | ------------------- |
@@ -136,6 +140,9 @@ Used by built-in properties only:
 | `:checkbox` | Scalar     | One         | ❌            |
 | `:url`      | Reference  | One/Many    | ✅            |
 | `:node`     | Reference  | One/Many    | ❌            |
+| `:asset`    | Reference  | One/Many    | ❌            |
+
+Source: `cardinality-property-types`, `closed-value-property-types` and `user-ref-property-types` in `deps/db/src/logseq/db/frontend/property/type.cljs:30-66`.
 
 ---
 
@@ -157,7 +164,7 @@ Classes (tags) provide object-oriented classification with inheritance.
 | Class                      | Extends | Purpose      |
 | -------------------------- | ------- | ------------ |
 | `:logseq.class/Journal`    | Page    | Daily notes  |
-| `:logseq.class/Whiteboard` | Page    | Canvas pages (deprecated) |
+| `:logseq.class/Whiteboard` | Page    | Canvas pages (marked deprecated in `deps/db/src/logseq/db/frontend/class.cljs:35`) |
 
 ### Block Classes
 
@@ -172,7 +179,11 @@ Classes (tags) provide object-oriented classification with inheritance.
 | `:logseq.class/Quote-block`     | display-type                          | Block quotes        |
 | `:logseq.class/Math-block`      | display-type                          | Math expressions    |
 | `:logseq.class/Pdf-annotation`  | hl-color, hl-page, hl-value, etc.    | PDF annotations     |
+| `:logseq.class/Comments`        | comments/blocks                       | Comment container   |
+| `:logseq.class/Comment`         | (none)                                | A single comment    |
 | `:logseq.class/Template`        | template-applied-to                   | Block templates     |
+
+`Comments` and `Comment` were added since the last revision (`deps/db/src/logseq/db/frontend/class.cljs:44-52`); both are hidden from the node view via `:logseq.property.class/hide-from-node`.
 
 ### Class Hierarchy
 
@@ -192,8 +203,12 @@ Root
 ├── Quote-block
 ├── Math-block
 ├── Pdf-annotation
+├── Comments
+├── Comment
 └── Template
 ```
+
+Every built-in class except `:logseq.class/Root` gets `:logseq.property.class/extends :logseq.class/Root` by default unless it declares its own parent (`deps/db/src/logseq/db/sqlite/util.cljs:98-100`).
 
 ### Class Inheritance
 
@@ -388,7 +403,7 @@ The DataScript schema defines attribute constraints:
 
 ## Schema Migrations
 
-Schema versions follow major.minor format (e.g., 65.22).
+Schema versions follow major.minor format (e.g., 65.33).
 
 Migrations are defined in:
 
@@ -406,4 +421,4 @@ When adding properties to `built-in-properties`, add corresponding migration.
 
 ---
 
-_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

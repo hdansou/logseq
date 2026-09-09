@@ -3,7 +3,8 @@ title: 'Setting Up Repeating Tasks'
 status: 🟢
 since-version: 'v65.0'
 quadrant: 'How-To'
-last-verified: '2026-01-11'
+last-verified: '2026-09-09'
+verified-against: 'be800f1711'
 platform: 'All'
 related-docs:
   - 'tutorials/task-management/todo-basics.md'
@@ -13,7 +14,7 @@ related-docs:
 
 # Setting Up Repeating Tasks
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09 (verified against `be800f1711`)
 
 Learn how to create tasks that automatically repeat on a schedule, perfect for recurring activities, habits, and regular reviews.
 
@@ -29,6 +30,7 @@ Repeating tasks in Logseq automatically reschedule themselves when completed. Th
 ## Findings: New Capabilities
 
 - `repeat/repeat-type` is a first-class setting with three behaviors: `dotted-plus` advances from completion, `plus` advances from the original scheduled date, and `double-plus` advances from the scheduled date while skipping forward to the next future occurrence.
+- `repeat/repeat-type` defaults to `double-plus`, both as the property default value ([property.cljs:392](../../deps/db/src/logseq/db/frontend/property.cljs#L392)) and as the runtime fallback when the property is absent ([commands.cljs:201-202](../../src/main/frontend/worker/commands.cljs#L201-L202)).
 - `repeat/checked-property` lets a repeating task use a property other than `status` as its completion toggle.
 - Repeat properties are preserved by the graph parser/exporter round-trip for repeated timestamps.
 
@@ -74,12 +76,12 @@ To enable repeating on a task through the interface, open the scheduled or deadl
 | `repeat/recur-unit`        | Choice   | Minute, Hour, Day, Week, Month, Year | Time unit                       |
 | `repeat/repeat-type`       | Choice   | dotted-plus, plus, double-plus       | How the next occurrence is computed |
 | `repeat/repeated?`         | Checkbox | true/false                           | Marks as repeating task         |
-| `repeat/temporal-property` | Property | deadline or scheduled                | Which date to update            |
+| `repeat/temporal-property` | Property | deadline or scheduled                | Which date to advance first; when unset, every date property present on the task is advanced |
 | `repeat/checked-property`  | Property | (defaults to status)                 | Which property marks completion |
 
 ### Property Details
 
-**From code ([property.cljs:368-405](../../deps/db/src/logseq/db/frontend/property.cljs#L368-L405)):**
+**From code ([property.cljs:354-399](../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399)):**
 
 ```clojure
 :logseq.property.repeat/recur-frequency
@@ -109,6 +111,18 @@ To enable repeating on a task through the interface, open the scheduled or deadl
 :logseq.property.repeat/repeated?
 {:title "Node Repeats?"
  :schema {:type :checkbox :hide? true}
+ :queryable? true}
+
+:logseq.property.repeat/repeat-type
+{:title "Repeating type"
+ :schema {:type :default :public? false}
+ :closed-values (mapv (fn [[db-ident value]]
+                        {:db-ident db-ident :value value ...})
+                      [[:logseq.property.repeat/repeat-type.dotted-plus "Advance from completion"]
+                       [:logseq.property.repeat/repeat-type.plus "Advance from scheduled"]
+                       [:logseq.property.repeat/repeat-type.double-plus "Advance from scheduled, skip to future"]])
+ :properties {:logseq.property/hide-empty-value true
+              :logseq.property/default-value :logseq.property.repeat/repeat-type.double-plus}
  :queryable? true}
 
 :logseq.property.repeat/temporal-property
@@ -152,7 +166,7 @@ To enable repeating on a task through the interface, open the scheduled or deadl
 
 - Repeats every Monday (if Jan 13 is Monday)
 - Completion advances the scheduled date to next Monday
-- Preserves the day of week (the code adjusts if the day-of-week drifts)
+- Day of week is preserved by construction: `cljs-time` arithmetic is UTC, so adding whole weeks never drifts and no fix-up is applied (`commands.cljs:123-126`)
 
 ### Monthly Bill Payment
 
@@ -221,22 +235,43 @@ Create separate tasks for different aspects:
 
 ### Both Scheduled and Deadline
 
-When a task has both `scheduled` and `deadline` properties, completion reschedules all temporal properties, not just the one specified in `repeat/temporal-property`. The `temporal-property` determines the primary date to advance, and the other date properties are also updated accordingly.
+When a task has both `scheduled` and `deadline` properties, completion reschedules both, not just the one named by `repeat/temporal-property`. Two cases:
 
-**From code ([commands.cljs:184-198](../../src/main/frontend/worker/commands.cljs#L184-L198)):**
+- **`temporal-property` is set** -- that property is advanced first, and the other of scheduled/deadline is also advanced if the task has it.
+- **`temporal-property` is not set** -- every one of `scheduled`/`deadline` that is present on the task is advanced. It does *not* silently default to `scheduled`.
+
+**From code ([commands.cljs:224-249](../../src/main/frontend/worker/commands.cljs#L224-L249)):**
 
 ```clojure
+(def ^:private repeat-temporal-property-idents
+  [:logseq.property/scheduled :logseq.property/deadline])
+
+(defn- existing-repeat-temporal-property-idents
+  [entity]
+  (filterv #(some? (get entity %)) repeat-temporal-property-idents))
+
+(defn- reschedule-property-idents
+  [entity]
+  (let [explicit-property-ident (:db/ident (:logseq.property.repeat/temporal-property entity))]
+    (if explicit-property-ident
+      (let [other-property-idents (case explicit-property-ident
+                                    :logseq.property/scheduled
+                                    (when (:logseq.property/deadline entity)
+                                      [:logseq.property/deadline])
+
+                                    :logseq.property/deadline
+                                    (when (:logseq.property/scheduled entity)
+                                      [:logseq.property/scheduled])
+
+                                    nil)]
+        (distinct (cons explicit-property-ident other-property-idents)))
+      (existing-repeat-temporal-property-idents entity))))
+
 (defmethod handle-command :reschedule [_ db entity _datoms]
-  (let [property-ident (or (:db/ident (:logseq.property.repeat/temporal-property entity))
-                           :logseq.property/scheduled)
-        other-property-idents (cond
-                                (and (= property-ident :logseq.property/scheduled)
-                                     (:logseq.property/deadline entity))
-                                [:logseq.property/deadline]
-                                ...)]
-    (mapcat #(compute-reschedule-property-tx db entity %)
-            (distinct (cons property-ident other-property-idents)))))
+  (mapcat #(compute-reschedule-property-tx db entity %) (reschedule-property-idents entity)))
 ```
+
+If neither `scheduled` nor `deadline` is present, nothing is rescheduled -- `compute-reschedule-property-tx` returns nothing without a current date value ([commands.cljs:209](../../src/main/frontend/worker/commands.cljs#L209)).
 
 ## Managing Repeating Tasks
 
@@ -381,7 +416,7 @@ Combine for flexible scheduling:
   repeat/temporal-property:: scheduled
 ```
 
-When `temporal-property` is set to `scheduled`, the scheduled date is the primary date advanced, but the deadline is also rescheduled when present. If `temporal-property` is not set, it defaults to `scheduled`.
+When `temporal-property` is set to `scheduled`, the scheduled date is the primary date advanced, but the deadline is also rescheduled when present. If `temporal-property` is not set, every date property present on the task (`scheduled` and/or `deadline`) is advanced ([commands.cljs:231-246](../../src/main/frontend/worker/commands.cljs#L231-L246)).
 
 ### With Task Properties
 
@@ -420,7 +455,7 @@ Property history is enabled per-property, not per-task. To track changes to a pr
 
 **Solution:**
 
-- Verify `repeat/temporal-property` is set to the correct property (scheduled or deadline). If unset, it defaults to scheduled.
+- Verify `repeat/temporal-property` is set to the correct property (scheduled or deadline). If unset, whichever of scheduled/deadline the task actually has is advanced.
 - Verify `repeat/repeat-type` matches the intended timing rule.
 - Check frequency/unit combination
 - Ensure the temporal property has a date value on the task

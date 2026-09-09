@@ -2,7 +2,8 @@
 title: 'MCP Server Reference'
 description: "Reference for Logseq's Model Context Protocol (MCP) server for AI assistant integration"
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [db]
@@ -16,7 +17,7 @@ relatedDocs:
 
 # MCP Server Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Reference for Logseq's Model Context Protocol (MCP) server, enabling AI assistants to interact with your knowledge graph.
 
@@ -29,7 +30,14 @@ The **MCP Server** implements the [Model Context Protocol](https://modelcontextp
 - **Search** your knowledge base for matching blocks
 - **Query** structured data (tags, properties)
 
-**Endpoint**: `http://127.0.0.1:12315/mcp`
+**Endpoint**: `http://127.0.0.1:12315/mcp` (Streamable HTTP, served by the
+desktop app's HTTP API server -- `src/electron/electron/server.cljs:144-154`)
+
+> **Removed:** The standalone `logseq mcp-server` CLI command and its stdio
+> transport were removed with the old `deps/cli` package in commit `52398ac7aa`
+> ("chore: remove old cli", 2026-05-28). At `be800f1711` the MCP server exists
+> **only** as the desktop app's `/mcp` routes. The current (OCaml) CLI under
+> `cli/` has no MCP command.
 
 ---
 
@@ -56,24 +64,16 @@ The **MCP Server** implements the [Model Context Protocol](https://modelcontextp
 4. **Configure Token**: Click API icon -> "Authorization tokens" -> Add token
 5. **Verify**: Visit `http://127.0.0.1:12315/mcp` in browser
 
+Toggling MCP Server writes `:server/mcp-enabled?` to the Electron config and
+restarts the API server if it is running (`src/main/frontend/components/settings.cljs:1412-1441`).
+The `/mcp` routes are registered at server start only when that flag is set
+(`src/electron/electron/server.cljs:178-179`), so the server must be restarted
+after enabling.
+
 ### Enable via CLI
 
-```bash
-# Navigate to CLI directory
-cd /path/to/logseq/deps/cli
-
-# Run with local graph (HTTP Streamable transport, default port 12315)
-logseq mcp-server -g /path/to/your/graph
-
-# Run with custom port
-logseq mcp-server -g /path/to/graph --port 3000
-
-# Run with stdio transport (for Claude Desktop)
-logseq mcp-server -g /path/to/graph --stdio
-
-# Run against the in-app graph via API server token
-logseq mcp-server -a YOUR_API_TOKEN
-```
+> **Removed:** There is no CLI entry point for the MCP server at `be800f1711`.
+> See the note above.
 
 ---
 
@@ -89,16 +89,17 @@ The MCP Server shares the HTTP API server's host and port settings.
 | Host       | `127.0.0.1` | HTTP API server host (shared with MCP)                    |
 | Port       | `12315`     | HTTP API server port (shared with MCP)                    |
 
-### CLI Options
+### Transport
 
-| Option                    | Description                                          |
-| ------------------------- | ---------------------------------------------------- |
-| `-g, --graph <path>`      | Path to local graph directory                        |
-| `-a, --api-server-token`  | API server token to connect to current in-app graph  |
-| `-p, --port <number>`     | HTTP port (default: 12315)                           |
-| `--host <address>`        | Host address (default: 127.0.0.1)                    |
-| `-s, --stdio`             | Use stdio transport instead of HTTP Streamable       |
-| `-t, --debug-tool <name>` | Debug a specific MCP tool with direct invocation     |
+| Request       | Behaviour                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| `POST /mcp`   | Initialize a session (no `mcp-session-id` header) or dispatch to an existing one              |
+| `GET /mcp`    | SSE stream for an existing session; requires the `mcp-session-id` header                      |
+| `DELETE /mcp` | Close a session; requires the `mcp-session-id` header                                         |
+
+DNS-rebinding protection is enabled and the allowed host list is exactly
+`<host>:<port>` from the server settings (`src/electron/electron/mcp_server.cljs:29-32`),
+so connect using the configured host and port verbatim.
 
 ---
 
@@ -171,7 +172,7 @@ Note: Properties and tags are also pages. You can use `getPage` to retrieve thei
 
 ### searchBlocks
 
-Search for blocks containing specific text. This tool is only available when connecting to the in-app graph via the API server (not available in local CLI mode).
+Search for blocks containing specific text. Implemented by calling `logseq.app.search` with `{:enable-snippet? false}` (`src/electron/electron/mcp_server.cljs:114-116`).
 
 **Input**:
 | Parameter    | Type   | Required | Description            |
@@ -305,24 +306,16 @@ List all properties defined in the graph.
 
 ### Claude Desktop
 
-Add to `claude_desktop_config.json`:
+Logseq exposes only a Streamable HTTP endpoint that requires a bearer token; it
+has no stdio transport. Point a client that supports remote MCP servers at:
 
-```json
-{
-  "mcpServers": {
-    "logseq": {
-      "command": "node",
-      "args": [
-        "/path/to/logseq/deps/cli/cli.mjs",
-        "mcp-server",
-        "-g",
-        "/path/to/your/graph",
-        "--stdio"
-      ]
-    }
-  }
-}
 ```
+URL:     http://127.0.0.1:12315/mcp
+Header:  Authorization: Bearer YOUR_TOKEN
+```
+
+Clients that can only launch stdio subprocesses need a generic remote-MCP bridge
+in front of that URL. Logseq does not ship one.
 
 ### Cline (VS Code)
 
@@ -388,7 +381,7 @@ Note: When connecting to the desktop app's MCP endpoint, requests must include a
 
 - Verify page name is correct and page exists in graph
 - Use `dry-run` option with `upsertNodes` to validate operations before committing
-- Use `--debug-tool` CLI option to test individual tools directly
+- Watch the Electron main-process log: every `/mcp` request is logged (`src/electron/electron/mcp_server.cljs:21`)
 
 ---
 
@@ -400,4 +393,4 @@ Note: When connecting to the desktop app's MCP endpoint, requests must include a
 
 ---
 
-_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

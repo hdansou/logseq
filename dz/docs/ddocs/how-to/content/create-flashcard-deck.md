@@ -2,7 +2,8 @@
 title: 'Create a Flashcard Deck'
 description: 'How to organize flashcards into focused study decks'
 status: stable
-lastVerified: '2026-05-30'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -15,7 +16,7 @@ relatedDocs:
 
 # Create a Flashcard Deck
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09 (verified against `be800f1711`)
 
 > How to organize flashcards into focused study decks for efficient learning.
 
@@ -65,7 +66,7 @@ Access the flashcard review modal in one of these ways:
 2. Use the keyboard shortcut `g f` or `t c`
 3. On mobile, open the Flashcards tab
 
-The viewer shows due cards and lets you rate recall with **Again** (1), **Hard** (2), **Good** (3), or **Easy** (4).
+The viewer shows due cards and lets you rate recall with **Again** (1), **Hard** (2), **Good** (3), or **Easy** (4). Press `s` to toggle answers/clozes ([shortcut/config.cljs:82-95](../../src/main/frontend/modules/shortcut/config.cljs#L82-L95)).
 
 > **Note:** Flashcards must be enabled in **Settings > Features > Enable Flashcards** (controlled by `:feature/enable-flashcards?` in config).
 
@@ -105,6 +106,8 @@ When was World War II? #Card #history
 ```
 
 Then create a `Cards` object with query `[[chemistry]]` to study only chemistry cards.
+
+> **Removed:** The old page-based, tag-based and namespace-based deck recipes built on a `{{cards [[Some Page]]}}` macro. That macro is not registered in DB graphs -- only `{{cloze}}` is, and `{{cards ...}}` remains a commented-out TODO ([fsrs.cljs:473-482](../../src/main/frontend/extensions/fsrs.cljs#L473-L482)). Use `Cards` objects instead.
 
 ---
 
@@ -236,4 +239,4 @@ For multiple decks:
 
 ---
 
-_Last updated: 2026-05-30_
+_Last updated: 2026-09-09_
