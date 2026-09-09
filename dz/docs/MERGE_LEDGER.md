@@ -62,6 +62,19 @@ No content decisions; `git mv` plus a source-link depth fix (`../../../` → `..
 - [x] `tutorials/integrations/mcp-integration.md`
 - [x] `tutorials/plugins/first-plugin.md`
 
+
+### Progress
+
+| Tranche | Files | State |
+|---|---|---|
+| 2a — audited copy taken after section comparison | 15 | done (`11de47c960`) |
+| identical templates | 5 | done |
+| 2b — semantic-search rewrites + today's two edits | 5 | done (`90193bb255`) |
+| 2c — subsystem-batched sub-agents | 26 | running |
+| README index merge | 1 | Stage 4 |
+
+Link check after 2b: 488 resolved, 0 broken by the merge, 254 pre-existing.
+
 ## Stage 2 — content merges (47), smallest diff first
 
 | ✔ | Δ lines | A lines | A date | B lines | B date | File |
@@ -82,7 +95,7 @@ No content decisions; `git mv` plus a source-link depth fix (`../../../` → `..
 | [ ] | 108 | 245 | 2026-01-29 | 255 | 2026-05-30 | `how-to/content/quick-capture.md` |
 | [x] | 116 | 291 | 2026-01-29 | 316 | 2026-05-30 | `explanation/concepts/file-vs-db.md` |
 | [x] | 125 | 227 | — | 229 | — | `tutorials/getting-started/02-first-graph.md` |
-| [ ] | 130 | 310 | 2026-09-09 | 312 | 2026-05-30 | `how-to/integrations/x-callback-url.md` |
+| [x] | 130 | 310 | 2026-09-09 | 312 | 2026-05-30 | `how-to/integrations/x-callback-url.md` |
 | [x] | 133 | 350 | 2026-01-29 | 377 | 2026-05-30 | `how-to/integrations/custom-js.md` |
 | [ ] | 156 | 395 | 2026-01-29 | 410 | 2026-03-10 | `reference/database/schema-overview.md` |
 | [x] | 179 | 368 | 2026-01-29 | 414 | 2026-05-30 | `explanation/architecture/data-architecture.md` |
@@ -92,7 +105,7 @@ No content decisions; `git mv` plus a source-link depth fix (`../../../` → `..
 | [x] | 281 | 453 | — | 404 | — | `how-to/content/favorites-recent.md` |
 | [x] | 283 | 376 | 2026-01-29 | 451 | 2026-05-30 | `how-to/queries/advanced-queries.md` |
 | [ ] | 291 | 305 | 2026-01-29 | 231 | 2026-05-30 | `how-to/backup/backup-restore.md` |
-| [ ] | 299 | 760 | 2026-09-09 | 889 | — | `how-to/multimedia/asset-management.md` |
+| [x] | 299 | 760 | 2026-09-09 | 889 | — | `how-to/multimedia/asset-management.md` |
 | [ ] | 313 | 305 | 2026-01-29 | 245 | 2026-03-10 | `tutorials/task-management/todo-basics.md` |
 | [ ] | 314 | 364 | 2026-01-29 | 302 | 2026-05-30 | `tutorials/knowledge-management/flashcards-basics.md` |
 | [ ] | 342 | 121 | — | 229 | — | `README.md` |
@@ -106,11 +119,11 @@ No content decisions; `git mv` plus a source-link depth fix (`../../../` → `..
 | [ ] | 425 | 533 | — | 596 | — | `how-to/integrations/zotero.md` |
 | [ ] | 462 | 314 | 2026-01-29 | 198 | 2026-05-30 | `how-to/integrations/cli-basic.md` |
 | [ ] | 497 | 433 | 2026-01-29 | 404 | 2026-03-10 | `reference/api/mcp-server.md` |
-| [ ] | 502 | 161 | 2026-09-06 | 360 | 2026-05-30 | `explanation/features/how-embeddings-work.md` |
-| [ ] | 512 | 149 | 2026-09-06 | 382 | 2026-05-30 | `tutorials/getting-started/semantic-search.md` |
+| [x] | 502 | 161 | 2026-09-06 | 360 | 2026-05-30 | `explanation/features/how-embeddings-work.md` |
+| [x] | 512 | 149 | 2026-09-06 | 382 | 2026-05-30 | `tutorials/getting-started/semantic-search.md` |
 | [ ] | 593 | 620 | — | 267 | — | `reference/features/user-profiles.md` |
 | [ ] | 643 | 741 | — | 453 | — | `explanation/features/handbooks-system.md` |
-| [ ] | 803 | 352 | 2026-09-06 | 485 | 2026-03-10 | `reference/api/semantic-search-api.md` |
+| [x] | 803 | 352 | 2026-09-06 | 485 | 2026-03-10 | `reference/api/semantic-search-api.md` |
 | [ ] | 822 | 579 | — | 273 | 2026-04-24 | `how-to/integrations/publishing.md` |
 | [ ] | 2147 | 1138 | 2026-01-29 | 1229 | 2026-03-10 | `reference/api/plugin-api.md` |
 
