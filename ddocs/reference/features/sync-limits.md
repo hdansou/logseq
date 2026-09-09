@@ -14,6 +14,7 @@ relatedDocs:
     - '[RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md)'
   reference:
     - '[db-worker HTTP API](../api/db-worker-http-api.md)'
+    - '[Assets: Link Syntax, File Types, and Sync](asset-sync.md)'
 ---
 
 # Sync Limits, Throttles, and Batch Sizes
@@ -33,6 +34,8 @@ The single most important fact on this page: **there is no server-side graph-cou
 | Graph not ready for use | — (snapshot upload in progress) | `handler/sync.cljs` | `409 graph not ready` |
 | Semantic API on E2EE graph | disallowed | `dispatch.cljs:97` | `409 semantic-api-unavailable-for-e2ee` |
 | Worker CPU per invocation | 300,000 ms | `deps/db-sync/worker/wrangler.toml [limits] cpu_ms` | platform |
+
+These are size limits only — there is no file-type restriction anywhere in the sync path; see [Assets: Link Syntax, File Types, and Sync](asset-sync.md).
 
 The client also checks the 100 MiB asset ceiling before uploading (`src/main/frontend/worker/sync/assets.cljs:19`) and logs `:rtc.asset.log/asset-too-large` instead of sending. Note the client does **not** know about the 200 MiB E2EE allowance — it rejects at 100 MiB regardless.
 

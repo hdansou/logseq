@@ -1,0 +1,66 @@
+;; Declaration of the enumerable facts in ddocs/reference/features/asset-sync.md.
+;;
+;; That page's central claim is an absence — no extension allowlist in the sync
+;; path — which no gate can check. What a gate *can* check is the set of things
+;; the page enumerates: the rendering format sets, the server's content-type
+;; map, and the external-link protocol allowlist. If any of those grows or loses
+;; a member, the page's tables are wrong and this file fails.
+;;
+;; The link-syntax table is NOT covered here — it depends on mldoc's parse and on
+;; branch structure in components/block.cljs, neither of which this gate can read.
+;;
+;; Same runner and entry shapes as sync-limits.edn:
+;;
+;;   check_sync_limits.clj --root <logseq-checkout> --declaration asset-sync.edn
+
+[;; ---- rendering format sets (decide inline player vs file link) ---------
+ {:symbol image-formats
+  :file "src/main/frontend/config.cljs"
+  :expected #{:png :jpg :jpeg :bmp :gif :webp :svg :heic :avif :cr2}
+  :doc "config/image-formats (alias-directory autocomplete only)"}
+ {:symbol audio-formats
+  :file "src/main/frontend/config.cljs"
+  :expected #{:mp3 :ogg :mpeg :wav :m4a :flac :wma :aac}
+  :doc "config/audio-formats"}
+ {:symbol video-formats
+  :file "src/main/frontend/config.cljs"
+  :expected #{:mp4 :webm :mov :flv :avi :mkv}
+  :doc "config/video-formats"}
+ {:symbol doc-formats
+  :file "src/main/frontend/config.cljs"
+  :expected #{:doc :docx :xls :xlsx :ppt :pptx :one :pdf :epub}
+  :doc "config/doc-formats (half of the mobile share-sheet allowlist)"}
+
+ ;; img-formats is a (defn …) not a (def …), so it needs a regex.
+ {:regex "\\(defn img-formats\\s*\\[\\]\\s*(#\\{[^}]*\\})"
+  :file "deps/common/src/logseq/common/config.cljs"
+  :expected "#{:gif :svg :jpeg :ico :png :jpg :bmp :webp :avif :cr2}"
+  :doc "common-config/img-formats — the set rendering and media-formats use"}
+
+ ;; ---- server response content types (NOT an upload filter) --------------
+ {:symbol asset-type->content-type
+  :file "deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs"
+  :expected {"png" "image/png"
+             "jpg" "image/jpeg"
+             "jpeg" "image/jpeg"
+             "gif" "image/gif"
+             "webp" "image/webp"
+             "bmp" "image/bmp"
+             "svg" "image/svg+xml"
+             "ico" "image/x-icon"
+             "pdf" "application/pdf"}
+  :doc "types with a specific Content-Type on GET; everything else is octet-stream"}
+
+ ;; ---- external-link protocol allowlist ----------------------------------
+ ;; Gates what an <a target="_blank"> may open. "assets:" is deliberately absent,
+ ;; which is why [t](assets://…) without the "!" throws "illegal protocol".
+ {:regex "ALLOWED_EXTERNAL_PROTOCOLS\\s*=\\s*(\\[[^\\]]*\\])"
+  :file "resources/js/preload.js"
+  :expected "['https:', 'http:', 'mailto:', 'zotero:', 'file:']"
+  :doc "protocols openExternal will follow"}
+
+ ;; ---- ingest / sync size ceilings referenced by the page ----------------
+ {:symbol max-asset-size
+  :file "src/main/frontend/worker/sync/assets.cljs"
+  :expected 104857600
+  :doc "client sync-op asset ceiling (100 MiB)"}]

@@ -5,6 +5,7 @@ version: 'Since v0.5.0'
 quadrant: 'How-To Guide'
 platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
 related-docs:
+  - '../../reference/features/asset-sync.md'
   - '../multimedia/video-embed.md'
   - '../../reference/database/schema-overview.md'
   - '../../tutorials/getting-started/03-basic-editing.md'
@@ -196,6 +197,8 @@ Assets stored as `:logseq.class/Asset` blocks with properties:
 - `:logseq.property.asset/external-url` — Original URL for web links
 
 ### Remote Graphs (RTC Sync)
+
+> Sync replicates **every** file type — there is no extension allowlist. What it will not do is pick up a file copied into `assets/` by hand: sync reads asset *entities*, never the directory. See [Assets: Link Syntax, File Types, and Sync](../../reference/features/asset-sync.md).
 
 **Encrypted Upload**:
 
