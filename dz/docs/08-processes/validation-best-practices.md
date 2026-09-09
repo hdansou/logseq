@@ -1,879 +1,242 @@
 # Validation Best Practices
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 **Document Type:** Process Guide
-**Last Updated:** December 28, 2025
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
 
 ## Overview
 
-Logseq uses a **dual validation system** combining DataScript schema validation (structural constraints) with Malli schema validation (business logic rules). Understanding when and how to use each system is critical for maintaining data integrity.
+This page is validated against the current Logseq source in `src/`, `deps/`, and `packages/` as of 2026-05-30.
 
-**Key Principle:** Validation should be strict enough to prevent invalid data but flexible enough to handle edge cases and migrations.
+For DB graphs, Logseq still uses a dual validation model:
 
----
+- DataScript schema enforces low-level structural constraints such as refs, cardinality, uniqueness, and indexing.
+- Malli schemas validate graph entities and property values against higher-level graph rules.
+- Worker-side validation can also repair known invalid states when you explicitly run graph validation.
 
-## Table of Contents
-
-1. [Dual Validation Architecture](#dual-validation-architecture)
-2. [DataScript Validation](#datascript-validation)
-3. [Malli Validation](#malli-validation)
-4. [Entity Type Dispatch](#entity-type-dispatch)
-5. [Adding Validation Rules](#adding-validation-rules)
-6. [Property Value Validation](#property-value-validation)
-7. [Performance Considerations](#performance-considerations)
-8. [Error Handling](#error-handling)
-9. [Fixing Invalid Data](#fixing-invalid-data)
-10. [Testing Validation](#testing-validation)
+The most important current detail is that transaction-time validation is no longer best described as a post-commit audit. For normal DB-graph writes, Logseq computes a tentative `db-after` with `d/with`, validates that result, and only then commits it.
 
 ---
 
 ## Dual Validation Architecture
 
-### Why Two Systems?
+| Layer                   | Purpose                                               | Current source of truth                            |
+| ----------------------- | ----------------------------------------------------- | -------------------------------------------------- |
+| DataScript schema       | Structural constraints for DB attributes              | `deps/db/src/logseq/db/frontend/schema.cljs`       |
+| Malli entity schemas    | Entity shape and graph rule validation                | `deps/db/src/logseq/db/frontend/malli_schema.cljs` |
+| Malli execution helpers | Validate changed entities, full DBs, and local DBs    | `deps/db/src/logseq/db/frontend/validate.cljs`     |
+| Worker repair flow      | Validate full graphs and apply built-in fixes         | `src/main/frontend/worker/db/validate.cljs`        |
+| Transaction gate        | Runs validation before accepting most DB-graph writes | `deps/db/src/logseq/db.cljs`                       |
 
-Logseq uses two complementary validation approaches:
+### Current transaction flow
 
-| Aspect          | DataScript Schema                                                      | Malli Schema                                                                                 |
-| --------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| **When**        | During transaction                                                     | After transaction                                                                            |
-| **What**        | Structural constraints                                                 | Business logic rules                                                                         |
-| **Enforces**    | Types, cardinality, uniqueness, refs                                   | Required fields, formats, relationships                                                      |
-| **Performance** | Fast (built-in)                                                        | Slower (runs on every entity)                                                                |
-| **Flexibility** | Limited                                                                | Highly flexible                                                                              |
-| **Location**    | [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs) | [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
+For normal DB-graph writes through `logseq.db/transact!`:
 
-### When to Use Each
+1. Logseq builds a tentative transaction result with `d/with`.
+2. It runs `validate-tx-report` against the resulting `db-after` and changed entities.
+3. If validation passes, it updates the connection and runs callbacks.
+4. If validation fails, it throws `ex-info` with debug data and does not commit the write.
 
-**Use DataScript schema when:**
+Validation is skipped only for specific controlled paths such as initial DB setup, graph download/reset flows, or callers that explicitly set `:skip-validate-db?` in transaction metadata or on the connection.
 
-- Defining attribute types (`:db.type/ref`, `:db.type/string`)
-- Setting cardinality (`:db.cardinality/one`, `:db.cardinality/many`)
-- Enforcing uniqueness (`:db/unique :db.unique/identity`)
-- Indexing attributes (`:db/index true`)
-
-**Use Malli schema when:**
-
-- Validating property values match expected format
-- Enforcing required fields on entity types
-- Checking relationships between properties
-- Custom validation logic
-- Generating helpful error messages
-
-### Validation Flow
-
-```
-Transaction Submitted
-       ↓
-┌──────────────────┐
-│ DataScript       │  ← Structural validation (type, cardinality, refs)
-│ Schema Check     │
-└─────┬────────────┘
-      │ (if valid)
-      ↓
-┌──────────────────┐
-│ Transaction      │
-│ Applied to DB    │
-└─────┬────────────┘
-      │
-      ↓
-┌──────────────────┐
-│ Malli            │  ← Business logic validation
-│ Schema Check     │
-└─────┬────────────┘
-      │
-      ↓
-┌──────────────────┐
-│ Valid or         │
-│ Error Report     │
-└──────────────────┘
-```
+> **Removed:** The older "Malli validation runs after transaction" description is stale. The current DB-graph write path validates the tentative `db-after` before committing it.
 
 ---
 
 ## DataScript Validation
 
-### Schema Definition Location
+DataScript schema remains the first line of defense for DB graphs. The base schema lives in `deps/db/src/logseq/db/frontend/schema.cljs` and currently includes the canonical structural attributes such as:
 
-[deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
+- `:db/ident` as a unique identity
+- `:block/uuid` as a unique identity
+- ref attributes like `:block/parent`, `:block/page`, `:block/refs`, and `:block/tags`
+- file attributes such as `:file/path`, `:file/content`, and timestamps
 
-### Common DataScript Schema Attributes
+Use DataScript schema when the rule is inherently structural:
 
-```clojure
-;; Basic attribute definition
-{:db/ident :block/content
- :db/valueType :db.type/string
- :db/cardinality :db.cardinality/one
- :db/index true}
+- attribute type
+- cardinality
+- uniqueness
+- index presence
 
-;; Reference attribute
-{:db/ident :block/parent
- :db/valueType :db.type/ref
- :db/cardinality :db.cardinality/one
- :db/index true}
-
-;; Many-valued attribute
-{:db/ident :block/tags
- :db/valueType :db.type/ref
- :db/cardinality :db.cardinality/many
- :db/index true}
-
-;; Unique identity
-{:db/ident :block/uuid
- :db/valueType :db.type/uuid
- :db/cardinality :db.cardinality/one
- :db/unique :db.unique/identity}
-```
-
-### DataScript Value Types
-
-```clojure
-:db.type/ref        ; Reference to another entity
-:db.type/keyword    ; Clojure keyword
-:db.type/string     ; String value
-:db.type/boolean    ; Boolean (true/false)
-:db.type/long       ; Long integer
-:db.type/bigint     ; Arbitrary precision integer
-:db.type/float      ; Floating point number
-:db.type/double     ; Double precision float
-:db.type/bigdec     ; Arbitrary precision decimal
-:db.type/instant    ; Timestamp
-:db.type/uuid       ; UUID
-:db.type/uri        ; URI
-:db.type/symbol     ; Clojure symbol
-```
-
-### Cardinality
-
-```clojure
-;; Single value (default)
-:db.cardinality/one
-
-;; Multiple values (set semantics)
-:db.cardinality/many
-```
-
-### Adding DataScript Attribute
-
-When adding a property that needs DataScript validation:
-
-```clojure
-;; In deps/db/src/logseq/db/frontend/schema.cljs
-
-;; 1. Add to schema definition
-(def db-attribute-properties
-  #{:block/uuid
-    :block/parent
-    :block/left
-    ;; ... existing attributes ...
-    :block/my-new-attribute})  ; Add here
-
-;; 2. Define schema
-(def schema
-  {:block/my-new-attribute
-   {:db/valueType :db.type/string
-    :db/cardinality :db.cardinality/one
-    :db/index true}})
-```
+Do not use DataScript schema for domain rules that depend on graph semantics, entity kind, or property type. Those belong in Malli validation.
 
 ---
 
 ## Malli Validation
 
-### Validation Entry Point
+Malli validation is now split across two files with clearer responsibilities:
 
-**Location:** [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
+- `deps/db/src/logseq/db/frontend/malli_schema.cljs` defines the DB-wide Malli schemas, entity dispatch, and property tuple validation.
+- `deps/db/src/logseq/db/frontend/validate.cljs` compiles validators and explainers, then applies them to tx reports or whole DBs.
 
-### Core Validation Functions
+### Current public entry points
 
-```clojure
-;; Validate entities changed in transaction
-(defn validate-tx-report
-  "Validates only entities that changed in transaction"
-  [db tx-report]
-  ;; Returns [valid? error-data]
-  )
+- `validate-tx-report`
+  Validates only entities touched by a transaction.
+- `validate-db`
+  Validates all entities in a DB and returns grouped errors and graph counts.
+- `validate-local-db!`
+  Validates a local non-RTC DB with options tailored for CLI, importer, and tests.
 
-;; Validate entire database
-(defn validate-db!
-  "Validates all entities in database"
-  [db]
-  ;; Returns validation report grouped by entity
-  )
-```
+`validate-local-db!` also supports `:open-schema` and `:verbose`, which makes it the current best entry point for offline verification workflows.
 
-### When Validation Runs
+> **Removed:** `validate-db!` is not a current function in `deps/db/src/logseq/db/frontend/validate.cljs`. Use `validate-db` or `validate-local-db!` instead.
 
-**Transaction Validation:**
+### How validation is enabled or skipped now
 
-- Runs after every `d/transact!` call
-- Only validates changed entities
-- Fast, suitable for interactive use
-- Controlled by `*validate-db?*` flag
+Transaction-time validation is not controlled by a global dynamic flag. The current gates live in `deps/db/src/logseq/db.cljs` and look at transaction metadata and connection state.
 
-**Full DB Validation:**
+Relevant skip paths include:
 
-- Run manually via `validate-db!`
-- Validates all entities
-- Slower, used for integrity checks
-- Used during import, migration testing
+- `:rtc-download-graph?`
+- `:reset-conn!`
+- `:initial-db?`
+- `:skip-validate-db?` in tx metadata
+- `:skip-validate-db?` on the connection
+- `:logseq.graph-parser.exporter/new-graph?`
 
-### Enabling/Disabling Validation
-
-```clojure
-;; In code
-(binding [validate/*validate-db?* false]
-  ;; Bulk operations without validation
-  (d/transact! conn large-tx-data))
-
-;; Normal operation (validation enabled)
-(d/transact! conn tx-data)  ; Validates by default
-```
-
-**When to disable:**
-
-- Large bulk imports (performance)
-- Initial graph creation (bootstrap)
-- Migration operations (fixed data)
-- Testing with intentionally invalid data
-
-**Always re-enable after bulk operation!**
+> **Removed:** The dynamic flag `*validate-db?*` described in older docs is no longer part of the current codebase.
 
 ---
 
-## Entity Type Dispatch
+## Entity Dispatch
 
-### Multi-Method Dispatch System
+Current entity dispatch is data-driven, not a `defmulti` over entity schemas. `deps/db/src/logseq/db/frontend/malli_schema.cljs` uses `entity-dispatch-key` to route an entity into the DB Malli schema.
 
-Malli validation uses a multi-method to dispatch entity validation based on entity type:
+Current dispatch keys include:
 
-```clojure
-(defmulti entity-schema
-  "Dispatch entity validation based on type"
-  (fn [db entity] (entity-type db entity))
-  :default :default)
-```
+- `:reaction-entity`
+- `:property`
+- `:class`
+- `:hidden`
+- `:normal-page`
+- `:asset-block`
+- `:file-block`
+- `:property-history-block`
+- `:closed-value-block`
+- `:property-value-block`
+- `:property-value-placeholder`
+- `:block`
+- `:db-ident-key-value`
 
-### Entity Type Precedence (Critical!)
+Order still matters. Property and class pages are more specific than generic pages, and specialized block types are checked before generic blocks.
 
-**Location:** [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
-
-```clojure
-(defn entity-type
-  "Determine entity type for validation dispatch.
-   ORDER MATTERS! First match wins."
-  [db entity]
-  (cond
-    (property-entity? entity) :property
-    (class-entity? entity) :class
-    (hidden-page? entity) :hidden
-    (page? entity) :normal-page
-    (asset-block? entity) :asset-block
-    (file-block? entity) :file-block
-    (property-history-block? entity) :property-history-block
-    (closed-value-block? entity) :closed-value-block
-    (property-value-block? entity) :property-value-block
-    (block? entity) :block
-    (kv-entity? entity) :logseq.kv
-    (property-value-placeholder? entity) :property-value-placeholder
-    :else :default))
-```
-
-**Why order matters:**
-
-- Properties are also pages, but need different validation
-- Classes are also pages with specific rules
-- Must check specific types before general types
-
-### Entity Type Predicates
-
-```clojure
-;; Check if entity is a property
-(defn property-entity? [entity]
-  (contains? (:block/type entity) "property"))
-
-;; Check if entity is a class/tag
-(defn class-entity? [entity]
-  (and (page? entity)
-       (or (contains? (:block/tags entity) :logseq.class/Tag)
-           (= (:db/ident entity) :logseq.class/Root))))
-
-;; Check if entity is a page
-(defn page? [entity]
-  (= "page" (:block/type entity)))
-
-;; Check if entity is a block
-(defn block? [entity]
-  (and (some? (:block/parent entity))
-       (not (page? entity))))
-```
-
----
-
-## Adding Validation Rules
-
-### Step-by-Step Process
-
-#### Step 1: Identify Entity Type
-
-Determine which entity type needs validation:
-
-- Property page: `:property`
-- Class/tag page: `:class`
-- Normal page: `:normal-page`
-- Block: `:block`
-- Property value: `:property-value-block`
-
-#### Step 2: Add Entity Schema
-
-**Location:** [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
-
-```clojure
-;; Example: Add validation for property entities
-(defmethod entity-schema :property
-  [db entity]
-  [:map {:closed true}  ; Closed schema - only listed keys allowed
-   [:db/id :int]
-   [:block/uuid uuid?]
-   [:block/type [:= "page"]]
-   [:block/original-name :string]
-   [:block/created-at :int]
-   [:block/updated-at :int]
-   ;; Property-specific validations
-   [:logseq.property/type {:optional true}
-    [:enum :default :number :date :datetime :checkbox :url :node]]
-   [:logseq.property/hide? {:optional true} :boolean]])
-```
-
-#### Step 3: Define Custom Validators (If Needed)
-
-```clojure
-;; Custom validator for specific format
-(def email-regex #"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-
-(defmethod property-value-schema :logseq.property/email
-  [_property db property-value]
-  [:and
-   [:string {:error/message "Email must be a string"}]
-   [:re {:error/message "Invalid email format"} email-regex]])
-```
-
-#### Step 4: Test Validation
-
-```clojure
-(deftest test-email-validation
-  (testing "Valid email passes"
-    (is (valid-property-value? db :logseq.property/email "user@example.com")))
-
-  (testing "Invalid email fails"
-    (is (not (valid-property-value? db :logseq.property/email "not-an-email"))))
-
-  (testing "Error message is clear"
-    (let [[valid? errors] (validate-property-value db :logseq.property/email "bad")]
-      (is (false? valid?))
-      (is (str/includes? (first errors) "Invalid email format")))))
-```
-
-### Validation Schema Syntax
-
-**Malli schema types:**
-
-```clojure
-;; Basic types
-:string        ; String value
-:int           ; Integer
-:boolean       ; Boolean
-:keyword       ; Clojure keyword
-[:enum ...]    ; One of specified values
-
-;; Composite types
-[:map ...]     ; Map with specific keys
-[:vector ...]  ; Vector of values
-[:set ...]     ; Set of values
-[:tuple ...]   ; Fixed-size sequence
-
-;; Predicates
-uuid?          ; UUID predicate
-pos-int?       ; Positive integer
-[:fn pred]     ; Custom predicate function
-
-;; Combinators
-[:and ...]     ; All schemas must pass
-[:or ...]      ; Any schema must pass
-[:not ...]     ; Schema must fail
-
-;; Modifiers
-{:optional true}     ; Key is optional
-{:closed true}       ; No extra keys allowed
-{:error/message ""}  ; Custom error message
-```
-
-### Common Validation Patterns
-
-#### Required String Field
-
-```clojure
-[:block/name :string]
-```
-
-#### Optional Field
-
-```clojure
-[:logseq.property/description {:optional true} :string]
-```
-
-#### Enum Values
-
-```clojure
-[:logseq.property/status [:enum :todo :doing :done]]
-```
-
-#### Nested Map
-
-```clojure
-[:block/schema [:map
-                [:type :keyword]
-                [:cardinality [:enum :one :many]]]]
-```
-
-#### Custom Predicate
-
-```clojure
-[:block/order [:fn {:error/message "Order must be positive"}
-               #(and (number? %) (pos? %))]]
-```
-
-#### Reference Validation
-
-```clojure
-[:block/parent [:fn {:error/message "Parent must be valid entity"}
-                #(and (map? %) (contains? % :db/id))]]
-```
+> **Removed:** The older `defmulti entity-schema` examples no longer match the current implementation. The current code builds a Malli `[:multi ...]` schema named `Data` and dispatches through `entity-dispatch-key`.
 
 ---
 
 ## Property Value Validation
 
-Property values have specialized validation based on property type.
+Property value validation is now centered on built-in type schemas in `deps/db/src/logseq/db/frontend/property/type.cljs` plus helper logic in `deps/db/src/logseq/db/frontend/malli_schema.cljs`.
 
-### Property Value Multi-Dispatch
+The current built-in validation schema map covers these shipped property types:
 
-```clojure
-(defmulti property-value-schema
-  "Validate property value based on property type"
-  (fn [property db property-value] (:logseq.property/type property))
-  :default :default)
-```
+- `:default`
+- `:number`
+- `:date`
+- `:datetime`
+- `:checkbox`
+- `:url`
+- `:node`
+- `:asset`
+- internal validation-backed types such as `:entity`, `:class`, `:property`, `:page`, `:keyword`, `:map`, `:coll`, and `:any`
 
-### Adding Property-Specific Validation
+`validate-property-value` now does more than simple type checks:
 
-```clojure
-;; Example: URL property validation
-(defmethod property-value-schema :url
-  [_property db property-value]
-  [:and
-   [:string {:error/message "URL must be a string"}]
-   [:fn {:error/message "Must be valid URL"}
-    (fn [s]
-      (try
-        (when (string? s)
-          (let [url (js/URL. s)]
-            (contains? #{"http:" "https:"} (.-protocol url))))
-        (catch js/Error _ false)))]])
+- adapts validation based on whether a property type needs DB access
+- respects property cardinality
+- allows the empty-placeholder sentinel when appropriate
+- can enforce closed values when `*closed-values-validate?*` is bound to `true`
 
-;; Example: Number property validation
-(defmethod property-value-schema :number
-  [_property db property-value]
-  [:or
-   [:int {:error/message "Must be an integer"}]
-   [:double {:error/message "Must be a number"}]])
+> **Removed:** Older examples based on `defmulti property-value-schema` no longer reflect the current structure. Property-type validation is now assembled from `built-in-validation-schemas` and composed into the DB Malli schema.
 
-;; Example: Date property validation
-(defmethod property-value-schema :date
-  [_property db property-value]
-  [:and
-   [:int {:error/message "Date must be integer (journal day)"}]
-   [:fn {:error/message "Must be valid journal day (YYYYMMDD)"}
-    (fn [n]
-      (and (>= n 19700101)
-           (<= n 21000101)))]])
-```
+---
 
-### Property Value Entity Schema
+## Error Handling And Repair
 
-Property values are stored as separate entities:
+There are now two materially different validation modes:
 
-```clojure
-(defmethod entity-schema :property-value-block
-  [db entity]
-  [:map {:closed true}
-   [:db/id :int]
-   [:block/uuid uuid?]
-   [:block/type [:= "property-value"]]
-   [:block/schema [:map
-                   [:type :keyword]
-                   [:cardinality [:enum :one :many]]]]
-   ;; Value stored in :block/title or :block/schema-value
-   [:block/title {:optional true} :string]
-   [:block/schema-value {:optional true} :any]
-   [:block/created-at :int]
-   [:block/updated-at :int]])
-```
+### Transaction-time rejection
+
+`deps/db/src/logseq/db.cljs` rejects invalid DB-graph writes by throwing `ex-info` with debug data when `validate-tx-report` fails.
+
+Use this path to prevent new invalid data from entering the graph.
+
+### Full-graph validation with optional repair
+
+`src/main/frontend/worker/db/validate.cljs` runs a full-graph validation pass and, by default, attempts to repair known invalid states before reporting final errors.
+
+Current worker-side pre-fixes include:
+
+- `fix-extends-cardinality!`
+- `fix-icon-wrong-type!`
+- `db-migrate/ensure-built-in-data-exists!`
+- `fix-non-closed-values!`
+- `fix-num-prefix-db-idents!`
+
+If errors remain, the worker loops through `fix-invalid-blocks!` until no more built-in fixes apply.
+
+Tests in `src/test/frontend/worker/db_validate_test.cljs` verify current repair behavior, including:
+
+- filling missing block UUIDs
+- repairing invalid pages, properties, and classes
+
+> **Removed:** The old guide placed `fix-invalid-blocks!` under `deps/db/src/logseq/db/frontend/validate.cljs`. Current repair logic lives in `src/main/frontend/worker/db/validate.cljs`.
 
 ---
 
 ## Performance Considerations
 
-### Validation Overhead
+The current source supports these practical performance guidelines:
 
-Malli validation adds overhead to every transaction:
+- Prefer transaction-time validation for normal interactive writes because it only validates changed entities.
+- Use `validate-local-db!` or worker-side `validate-db` for offline verification, import validation, export validation, or test assertions.
+- Skip validation only in tightly controlled flows that already set explicit transaction metadata or connection flags.
+- Revalidate after migrations, imports, or repair passes instead of relying on speculative performance shortcuts.
 
-- **Small transactions:** ~1-5ms overhead
-- **Medium transactions:** ~10-50ms overhead
-- **Large imports:** Can double transaction time
-
-### Optimization Strategies
-
-#### 1. Disable During Bulk Operations
-
-```clojure
-(defn import-large-graph [data]
-  (binding [validate/*validate-db?* false]
-    ;; Fast bulk import without validation
-    (doseq [batch (partition-all 1000 data)]
-      (d/transact! conn batch)))
-  ;; Validate once at the end
-  (when-let [errors (validate-db! @conn)]
-    (log/error "Validation errors after import:" errors)))
-```
-
-#### 2. Validate Only Changed Entities
-
-```clojure
-;; validate-tx-report only checks changed entities
-(let [tx-report (d/transact! conn tx-data)
-      [valid? errors] (validate-tx-report @conn tx-report)]
-  (when-not valid?
-    (handle-validation-errors errors)))
-```
-
-#### 3. Cache Validation Schemas
-
-```clojure
-;; Malli automatically caches compiled schemas
-;; But you can help by reusing schema definitions
-(def common-block-schema
-  [:map
-   [:db/id :int]
-   [:block/uuid uuid?]
-   [:block/type :string]])
-
-;; Reuse in multiple entity schemas
-(defmethod entity-schema :block [db entity]
-  [:merge common-block-schema
-   [:map
-    [:block/content :string]
-    [:block/parent :any]]])
-```
-
-#### 4. Lazy Validation for Large Datasets
-
-```clojure
-(defn validate-entities-lazy [db entity-ids]
-  "Validate entities lazily, reporting errors as found"
-  (->> entity-ids
-       (map #(d/entity db %))
-       (keep (fn [entity]
-               (let [[valid? errors] (validate-entity db entity)]
-                 (when-not valid?
-                   {:entity entity :errors errors}))))
-       (take 100)))  ; Limit error count
-```
-
-### Performance Benchmarks
-
-**Typical transaction validation times:**
-
-- 1 entity: ~1ms
-- 10 entities: ~5ms
-- 100 entities: ~30ms
-- 1000 entities: ~200ms
-
-**Full DB validation times:**
-
-- Small graph (1000 entities): ~1s
-- Medium graph (10000 entities): ~10s
-- Large graph (100000 entities): ~2min
-
----
-
-## Error Handling
-
-### Validation Error Structure
-
-```clojure
-{:entity-id 123
- :entity-type :block
- :errors [{:path [:block/content]
-           :message "block/content is required"
-           :schema [:string]
-           :value nil}
-          {:path [:block/uuid]
-           :message "block/uuid must be a UUID"
-           :schema uuid?
-           :value "not-a-uuid"}]}
-```
-
-### Handling Validation Errors
-
-#### Option 1: Fail Transaction
-
-```clojure
-(let [tx-report (d/transact! conn tx-data)
-      [valid? errors] (validate-tx-report @conn tx-report)]
-  (if valid?
-    tx-report
-    (throw (ex-info "Validation failed"
-                    {:type :validation-error
-                     :errors errors}))))
-```
-
-#### Option 2: Log and Continue
-
-```clojure
-(let [tx-report (d/transact! conn tx-data)
-      [valid? errors] (validate-tx-report @conn tx-report)]
-  (when-not valid?
-    (log/warn "Validation errors (non-fatal):" errors))
-  tx-report)
-```
-
-#### Option 3: Auto-Fix
-
-```clojure
-(let [tx-report (d/transact! conn tx-data)
-      [valid? errors] (validate-tx-report @conn tx-report)]
-  (if valid?
-    tx-report
-    (let [fix-tx (generate-fix-tx errors)]
-      (log/info "Auto-fixing validation errors")
-      (d/transact! conn fix-tx))))
-```
-
-### Custom Error Messages
-
-```clojure
-;; Add error messages to schema
-[:block/order [:and
-               [:int {:error/message "Order must be an integer"}]
-               [:fn {:error/message "Order must be positive"}
-                #(pos? %)]]]
-
-;; Error message includes context
-{:path [:block/order]
- :message "Order must be positive"
- :value -5}
-```
-
-### User-Facing Error Messages
-
-```clojure
-(defn format-validation-error-for-user [error]
-  (let [{:keys [path message value]} error]
-    (str "Invalid value for " (name (last path)) ": "
-         message
-         (when value (str " (got: " (pr-str value) ")")))))
-
-;; Example output:
-;; "Invalid value for order: Order must be positive (got: -5)"
-```
-
----
-
-## Fixing Invalid Data
-
-### Fix Function Pattern
-
-**Location:** [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
-
-```clojure
-(defn fix-invalid-blocks!
-  "Attempt to fix common validation errors"
-  [conn validation-report]
-  (let [fix-tx (->> validation-report
-                    (mapcat generate-fix-tx-for-entity)
-                    vec)]
-    (when (seq fix-tx)
-      (log/info "Applying fixes for" (count fix-tx) "issues")
-      (d/transact! conn fix-tx))))
-```
-
-### Common Fix Patterns
-
-#### 1. Retract Invalid Attribute
-
-```clojure
-(defn fix-invalid-attribute [entity-id attr]
-  [:db/retract entity-id attr])
-```
-
-#### 2. Set Default Value
-
-```clojure
-(defn fix-missing-required-field [entity-id attr default]
-  {:db/id entity-id
-   attr default})
-```
-
-#### 3. Convert to Valid Type
-
-```clojure
-(defn fix-type-mismatch [entity-id attr value expected-type]
-  (let [converted (convert-to-type value expected-type)]
-    (if converted
-      {:db/id entity-id attr converted}
-      [:db/retract entity-id attr])))  ; Can't convert, remove it
-```
-
-#### 4. Remove Invalid Entity
-
-```clojure
-(defn fix-invalid-entity [entity-id]
-  [:db/retractEntity entity-id])
-```
-
-### Fix Strategy Decision Tree
-
-```
-Validation Error
-       ↓
-   ┌───┴───┐
-   │       │
-Missing  Invalid Value
-   │       │
-   │       ↓
-   │   ┌───┴───┐
-   │   │       │
-   │  Can    Cannot
-   │ Convert Convert
-   │   │       │
-   ↓   ↓       ↓
- Set Convert Retract
-Default Value  Attr
-```
-
-### Implementing Fix Function
-
-```clojure
-(defn generate-fix-tx-for-entity
-  "Generate transaction data to fix validation errors on one entity"
-  [{:keys [entity-id entity-type errors]}]
-  (keep (fn [{:keys [path value]}]
-          (let [attr (last path)]
-            (cond
-              ;; Missing required field - set default
-              (nil? value)
-              (when-let [default (default-value entity-type attr)]
-                {:db/id entity-id attr default})
-
-              ;; Invalid type - try to convert
-              (type-mismatch? value attr)
-              (if-let [converted (convert-type value attr)]
-                {:db/id entity-id attr converted}
-                [:db/retract entity-id attr])
-
-              ;; Invalid format - retract
-              :else
-              [:db/retract entity-id attr])))
-        errors))
-```
+> **Removed:** The previous millisecond and minute benchmark tables were removed. They were not backed by source or test artifacts in the current repository.
 
 ---
 
 ## Testing Validation
 
-### Test Structure
+Current validation behavior is exercised from multiple sides of the codebase:
 
-```clojure
-(deftest test-block-validation
-  (testing "Valid block passes validation"
-    (let [valid-block {:db/id -1
-                       :block/uuid (d/squuid)
-                       :block/type "block"
-                       :block/content "Valid content"
-                       :block/parent {:db/id 2}
-                       :block/created-at 123456
-                       :block/updated-at 123456}]
-      (is (valid-entity? db valid-block))))
+- `src/test/frontend/worker/db_validate_test.cljs` covers worker-side repair and validation loops.
+- `deps/db/test/logseq/db/sqlite/create_graph_test.cljs` and `deps/db/test/logseq/db/sqlite/export_test.cljs` use `validate-local-db!` for DB integrity assertions.
+- `deps/graph-parser/test/logseq/graph_parser/exporter_test.cljs` validates imported/exported graphs with `validate-local-db!`.
+- `src/test/frontend/worker/db_sync_test.cljs` uses `validate-local-db!` in sync-heavy scenarios.
 
-  (testing "Missing required field fails"
-    (let [invalid-block {:db/id -1
-                         :block/uuid (d/squuid)
-                         :block/type "block"}]
-      (is (not (valid-entity? db invalid-block)))
-      (is (validation-error-contains? invalid-block "content is required"))))
+When adding or changing validation logic, prefer tests that cover both:
 
-  (testing "Invalid type fails"
-    (let [invalid-block {:db/id -1
-                         :block/uuid "not-a-uuid"  ; Should be UUID
-                         :block/type "block"
-                         :block/content "Content"}]
-      (is (not (valid-entity? db invalid-block)))
-      (is (validation-error-contains? invalid-block "must be a UUID")))))
-```
-
-### Test Helpers
-
-```clojure
-(defn valid-entity? [db entity]
-  (let [[valid? _] (validate-entity db entity)]
-    valid?))
-
-(defn validation-error-contains? [entity substring]
-  (let [[_ errors] (validate-entity db entity)]
-    (some #(str/includes? (:message %) substring) errors)))
-
-(defn validation-errors [entity]
-  (let [[_ errors] (validate-entity db entity)]
-    errors))
-```
-
-### Testing Checklist
-
-- [ ] Test valid data passes
-- [ ] Test missing required fields fail
-- [ ] Test invalid types fail
-- [ ] Test invalid formats fail
-- [ ] Test error messages are clear
-- [ ] Test fix functions work correctly
-- [ ] Test edge cases (nil, empty, special characters)
-- [ ] Test performance with large datasets
+- transaction-time rejection for newly introduced invalid writes
+- offline or worker-side full-graph validation for existing or migrated data
 
 ---
 
-## Quick Reference
+## Findings: New Capabilities
 
-### Adding New Validation Rule
+These capabilities were missing or underspecified in the previous version of this document:
 
-1. Identify entity type in [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
-2. Add/modify `defmethod entity-schema` for that type
-3. Use Malli schema syntax
-4. Add custom error messages
-5. Write tests (valid + invalid cases)
-6. Test fix function if applicable
+1. `validate-local-db!` now provides a dedicated local/offline validation path with `:open-schema` and `:verbose` options for CLI, importer, and tests.
+2. Worker-side graph validation can actively repair known invalid data, not just report it.
+3. The CLI exposes that repair flow through `logseq graph validate --fix`.
+4. The worker thread exposes `:thread-api/validate-db`, and frontend developer flows route through that API rather than calling low-level validation helpers directly.
 
-### Common Validation Tasks
+---
 
-| Task                    | Function                          | Location                                                      |
-| ----------------------- | --------------------------------- | ------------------------------------------------------------- |
-| Validate transaction    | `validate-tx-report`              | [validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
-| Validate full DB        | `validate-db!`                    | [validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
-| Fix invalid data        | `fix-invalid-blocks!`             | [validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
-| Add entity schema       | `defmethod entity-schema`         | [validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
-| Add property validation | `defmethod property-value-schema` | [validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) |
+## Best Practices Summary
+
+- Put structural rules in DataScript schema and semantic graph rules in Malli.
+- Treat `malli_schema.cljs` as the source of truth for entity and property-value validation shape.
+- Treat `validate.cljs` as the execution layer for tx-report, full-DB, and local-DB checks.
+- Use transaction metadata such as `:skip-validate-db?` for controlled bypasses instead of introducing new global switches.
+- Use worker or CLI validation when you need repair behavior or whole-graph verification.
+- Add tests for both rejection and repair when changing validation rules.
 
 ---
 

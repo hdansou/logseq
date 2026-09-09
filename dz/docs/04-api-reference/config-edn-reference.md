@@ -1,6 +1,6 @@
 # Logseq config.edn Reference Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 A comprehensive reference for all configuration options available in Logseq's `config.edn` file. This file is located in your graph's `logseq/` directory.
 
@@ -47,6 +47,7 @@ A comprehensive reference for all configuration options available in Logseq's `c
       - [`:logbook/settings` Sub-keys](#logbooksettings-sub-keys)
   - [19. Spaced Repetition (SRS) - File Graphs Only](#19-spaced-repetition-srs---file-graphs-only)
   - [20. Deprecated Options](#20-deprecated-options)
+  - [Findings: New Capabilities](#findings-new-capabilities)
   - [21. Example Configuration](#21-example-configuration)
   - [Source References](#source-references)
 
@@ -101,7 +102,7 @@ Enable or disable major Logseq features.
 | Key                                              | Type      | Default | Description                                                                                                 |
 | ------------------------------------------------ | --------- | ------- | ----------------------------------------------------------------------------------------------------------- |
 | `:feature/enable-search-remove-accents?`         | `boolean` | `true`  | Ignore accent marks when searching. **Note:** After changing, rebuild the search index with `Ctrl+C Ctrl+S` |
-| `:feature/enable-journals?`                      | `boolean` | `true`  | Enable the journals feature                                                                                 |
+| `:feature/enable-journals?`                      | `boolean` | `true`  | Legacy toggle. Accepted in config schema/template, but journals are currently always enabled in runtime     |
 | `:feature/enable-flashcards?`                    | `boolean` | `true`  | Enable flashcards and spaced repetition                                                                     |
 | `:feature/disable-scheduled-and-deadline-query?` | `boolean` | `false` | Disable the built-in "Scheduled tasks and deadlines" query on journal pages                                 |
 | `:feature/enable-grammarly?`                     | `boolean` | `false` | Enable Grammarly integration in the editor                                                                  |
@@ -389,42 +390,7 @@ Configure outliner behavior.
 
 ## 14. Graph View
 
-Configure the graph visualization.
-
-| Key                    | Type  | Default | Description                             |
-| ---------------------- | ----- | ------- | --------------------------------------- |
-| `:graph/settings`      | `map` | `nil`   | Graph view display settings             |
-| `:graph/forcesettings` | `map` | `nil`   | Graph physics/force simulation settings |
-
-### `:graph/settings` Sub-keys
-
-| Sub-key            | Type      | Default | Description                |
-| ------------------ | --------- | ------- | -------------------------- |
-| `:orphan-pages?`   | `boolean` | `true`  | Show pages with no links   |
-| `:builtin-pages?`  | `boolean` | `false` | Show built-in system pages |
-| `:excluded-pages?` | `boolean` | `false` | Show excluded pages        |
-| `:journal?`        | `boolean` | `false` | Show journal pages         |
-
-### `:graph/forcesettings` Sub-keys
-
-| Sub-key            | Type  | Default | Description                                      |
-| ------------------ | ----- | ------- | ------------------------------------------------ |
-| `:link-dist`       | `int` | `180`   | Distance between linked nodes                    |
-| `:charge-strength` | `int` | `-600`  | Repulsion force between nodes (negative = repel) |
-| `:charge-range`    | `int` | `600`   | Maximum distance for charge force                |
-
-**Example:**
-
-```clojure
-{:graph/settings {:orphan-pages? true
-                  :builtin-pages? false
-                  :excluded-pages? false
-                  :journal? false}
-
- :graph/forcesettings {:link-dist 180
-                       :charge-strength -600
-                       :charge-range 600}}
-```
+> **Removed:** `:graph/settings` and `:graph/forcesettings` are no longer documented in the active config schema/template (`src/main/frontend/schema/handler/common_config.cljc`, `deps/common/resources/templates/config.edn`). Graph UI settings are now handled outside `config.edn`.
 
 ---
 
@@ -488,11 +454,14 @@ Configure quick capture behavior for receiving content from other apps.
 
 ### `:quick-capture-options` Sub-keys
 
-| Sub-key           | Type      | Default           | Description                              |
-| ----------------- | --------- | ----------------- | ---------------------------------------- |
-| `:insert-today?`  | `boolean` | `true`            | Insert at end of today's journal         |
-| `:redirect-page?` | `boolean` | `false`           | Redirect to capture page after capturing |
-| `:default-page`   | `string`  | `"quick capture"` | Default page if `insert-today?` is false |
+| Sub-key           | Type      | Default           | Description                                                                                  |
+| ----------------- | --------- | ----------------- | -------------------------------------------------------------------------------------------- |
+| `:insert-today?`  | `boolean` | `true`            | Insert at end of today's journal                                                             |
+| `:redirect-page?` | `boolean` | `false`           | Redirect to capture page after capturing                                                     |
+| `:default-page`   | `string`  | `"quick capture"` | Default page if `insert-today?` is false                                                     |
+| `:prettify-url?`  | `boolean` | `true`            | Convert supported URLs (e.g., YouTube/X) to rich macros (`{{video ...}}`, `{{twitter ...}}`) |
+
+> **Note:** `:prettify-url?` is present in the schema/template, but current quick-capture runtime reads `[:quick-capture-option :prettify-url?]` (singular namespace key), so behavior may differ until that lookup is aligned.
 
 **Example:**
 
@@ -511,33 +480,7 @@ Configure quick capture behavior for receiving content from other apps.
 
 ## 17. DWIM Settings (Do What I Mean)
 
-Configure context-aware Enter key behavior. When enabled, pressing Enter has different outcomes based on context (e.g., creating a new list item in a list, opening a block reference).
-
-| Key              | Type  | Default | Description                 |
-| ---------------- | ----- | ------- | --------------------------- |
-| `:dwim/settings` | `map` | `nil`   | DWIM behavior configuration |
-
-### `:dwim/settings` Sub-keys
-
-| Sub-key            | Type      | Default | Description                                               |
-| ------------------ | --------- | ------- | --------------------------------------------------------- |
-| `:admonition&src?` | `boolean` | `true`  | Enable DWIM in admonitions and source blocks              |
-| `:markup?`         | `boolean` | `false` | Enable DWIM for markup formatting                         |
-| `:block-ref?`      | `boolean` | `true`  | Enable DWIM for block references (opens referenced block) |
-| `:page-ref?`       | `boolean` | `true`  | Enable DWIM for page references                           |
-| `:properties?`     | `boolean` | `true`  | Enable DWIM for properties                                |
-| `:list?`           | `boolean` | `false` | Enable DWIM for lists (creates new list item)             |
-
-**Example:**
-
-```clojure
-{:dwim/settings {:admonition&src? true
-                 :markup? false
-                 :block-ref? true
-                 :page-ref? true
-                 :properties? true
-                 :list? false}}
-```
+> **Removed:** `:dwim/settings` is no longer part of the active config schema/template and is not supported as a documented `config.edn` option in current source.
 
 ---
 
@@ -648,6 +591,12 @@ These options are deprecated and may be removed in future versions:
 
 ---
 
+## Findings: New Capabilities
+
+- `:quick-capture-options/:prettify-url?` is present in current schema/template and was missing from this reference.
+
+---
+
 ## 21. Example Configuration
 
 Here's a complete example `config.edn` with commonly used settings:
@@ -748,4 +697,4 @@ This documentation was compiled from:
 
 ---
 
-_Last updated: March 2026_
+_Last updated: 2026-05-29_

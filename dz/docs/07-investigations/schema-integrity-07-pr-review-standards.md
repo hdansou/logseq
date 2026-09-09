@@ -2,6 +2,8 @@
 
 ## Part 7: PR Review Standards & Guiding Principles
 
+> **Last revised:** 2026-05-30
+
 ---
 
 ## Purpose
@@ -186,7 +188,7 @@ Use this checklist for **any PR that modifies schema definitions**.
 
 **PR Review Action:**
 
-- Check `schema-version->updates` map
+- Check `schema-version->updates` migration registry in `src/main/frontend/worker/db/migrate.cljs`
 - Verify no gaps in version sequence
 
 ---
@@ -364,14 +366,14 @@ Use this checklist for **any PR that modifies schema definitions**.
 ;; ✅ GOOD: Allow force export
 (defn export-graph [db path {:keys [validate? force?]}]
   (when (and validate? (not force?))
-    (when-let [errors (validate-db! db)]
+    (when-let [errors (:errors (db-validate/validate-local-db! db))]
       (throw (ex-info "Graph invalid. Use :force? true to export anyway"
                      {:errors errors}))))
   (do-export db path))
 
 ;; ❌ BAD: Always blocks on invalid
 (defn export-graph [db path]
-  (when-let [errors (validate-db! db)]
+  (when-let [errors (:errors (db-validate/validate-local-db! db))]
     (throw (ex-info "Cannot export invalid graph" {:errors errors})))
   (do-export db path))
 ```
@@ -469,50 +471,48 @@ Use this checklist for **any PR that modifies schema definitions**.
 **Requirement:** Must check schema compatibility before sync
 
 ```clojure
-;; ✅ GOOD: Compatibility check
-(defn connect-to-graph [client-schema graph-id]
-  (let [server-schema (get-server-schema graph-id)
-        compat (compare-schemas client-schema server-schema)]
-    (case compat
-      :compatible (join-branch graph-id)
-      :create-branch (create-and-join-branch graph-id client-schema)
-      :download (download-graph graph-id))))
+;; ✅ GOOD: Major-version compatibility check (current code paths)
+(let [app-major-schema-version (str (:major (db-schema/parse-schema-version db-schema/version)))]
+  (filter #(= app-major-schema-version (:GraphSchemaVersion %)) remote-repos))
+
+;; Also asserted before RTC graph download
+(assert (= (:major (db-schema/parse-schema-version db-schema/version))
+           (:major (db-schema/parse-schema-version graph-schema-version))))
 
 ;; ❌ BAD: No check
-(defn connect-to-graph [client-schema graph-id]
-  (join-branch graph-id))
+(defn connect-to-graph [_client-schema _graph-id]
+  (download-graph-without-schema-check!))
 ```
 
 **PR Review Action:**
 
-- Look for `compare-schemas` call
-- Verify action taken for each outcome
+- Verify major-version checks in `src/main/frontend/handler/repo.cljs`
+- Verify major-version assert in `src/main/frontend/handler/events.cljs` for `:rtc/download-remote-graph`
 
 ---
 
 ### Standard 2: Migration Ops Generated
 
-**Requirement:** Local migrations must generate RTC ops
+**Requirement:** Migration effects should be observable in sync flows
 
 ```clojure
-;; ✅ GOOD: Converts to ops
-(defn run-migration-with-sync [conn migration]
-  (let [result (apply-migration conn migration)]
-    ;; Generate ops for RTC sync
-    (when (rtc-connected?)
-      (let [ops (migration-results=>client-ops result)]
-        (send-to-rtc-server ops)))
+;; ✅ GOOD: Capture migration result for downstream handling/logging
+(defn run-migration [conn]
+  (let [result (db-migrate/migrate conn)]
+    (when result
+      (log/info :db-migrated (select-keys result [:from-version :to-version])))
     result))
 
-;; ❌ BAD: Migration not synced
+;; ❌ BAD: Migration side effects ignored
 (defn run-migration [conn migration]
-  (apply-migration conn migration))
+  (apply-migration conn migration)
+  nil)
 ```
 
 **PR Review Action:**
 
-- Check if migration synced
-- Verify op conversion exists
+- Ensure migration result metadata is not dropped when integration points depend on it
+- Verify RTC-related handlers enforce schema compatibility before graph download/connect
 
 ---
 
@@ -629,19 +629,16 @@ Use this checklist for **any PR that modifies schema definitions**.
 ### Phase 1: Pre-Deployment
 
 1. **Code Review Approval**
-
    - All checklist items passed
    - At least 2 reviewers approved
    - Security review if needed
 
 2. **Testing Verification**
-
    - All tests passing
    - Manual testing completed
    - Performance benchmarks acceptable
 
 3. **Documentation Update**
-
    - CHANGELOG.md updated
    - API documentation updated
    - Migration guide written (if breaking)
@@ -656,13 +653,11 @@ Use this checklist for **any PR that modifies schema definitions**.
 ### Phase 2: Staged Rollout
 
 1. **Internal Testing (Day 1-3)**
-
    - Deploy to internal team
    - Monitor metrics closely
    - Gather feedback
 
 2. **Beta Release (Day 4-7)**
-
    - Deploy to beta testers
    - Monitor migration success rate
    - Check for unexpected errors
@@ -678,14 +673,12 @@ Use this checklist for **any PR that modifies schema definitions**.
 ### Phase 3: Post-Deployment
 
 1. **Monitoring (Week 1)**
-
    - Migration success rate
    - Validation error rate
    - Export/import failures
    - User support tickets
 
 2. **Incident Response**
-
    - Define incident severity
    - Establish communication channel
    - Prepare rollback procedure
@@ -868,6 +861,21 @@ Please revise.
 
 ---
 
+## Findings: Removed or Stale Claims
+
+> **Removed:** `schema-version->updates` as a map in examples/review text. Current implementation is a vector of `["<version>" {:migration ...}]` tuples in `src/main/frontend/worker/db/migrate.cljs`.
+
+> **Removed:** `validate-db!` in validation/export examples. Current validator API is `logseq.db.frontend.validate/validate-local-db!` (and `validate-db` for full validation data).
+
+> **Removed:** RTC review guidance that depended on `compare-schemas`, `create-and-join-branch`, and `migration-results=>client-ops` helper flow. Current source does not include the old `src/main/frontend/worker/rtc/` path; compatibility checks are in `src/main/frontend/handler/repo.cljs` and `src/main/frontend/handler/events.cljs`.
+
+## Findings: New Capabilities
+
+1. Migration registry now includes additional migration types beyond earlier guidance, including `:delete-properties` (e.g., 65.25) in `src/main/frontend/worker/db/migrate.cljs`.
+2. Migration flow includes an explicit `ensure-built-in-data-exists!` post-step and returns structured migration result metadata (`:from-version`, `:to-version`, `:upgrade-result-coll`).
+3. Export build path supports optional validation error catching via `:graph-options :catch-validation-errors?` in `deps/db/src/logseq/db/sqlite/export.cljs`.
+4. RTC graph compatibility is currently major-version-gated in frontend handlers (`repo.cljs` merge/filter plus `events.cljs` assert on download).
+
 ## Summary
 
 These guiding principles and standards ensure that schema evolution in Logseq is:
@@ -905,5 +913,3 @@ This document is a living standard. Please:
 - Submit PRs for improvements
 - Add examples from real incidents
 - Update based on lessons learned
-
-Last Updated: December 2024

@@ -1,10 +1,10 @@
 # Logseq Query System: A Detective's Investigation Report
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## 🔍 Case Summary
 
-The Logseq Query System is a sophisticated dual-mode querying engine that allows users to search and filter blocks and pages in their knowledge graphs. This investigation uncovers two distinct query systems operating under one unified interface:
+The Logseq Query System exposes two query surfaces that allow users to search and filter blocks and pages in their knowledge graphs. This investigation covers both surfaces under one execution model:
 
 1. **DSL Queries (Simple Queries)**: A domain-specific language with user-friendly operators like `(and)`, `(property)`, `(task)`
 2. **Advanced Queries (Datalog Queries)**: Direct access to the underlying DataScript database using Datalog syntax
@@ -13,9 +13,9 @@ The Logseq Query System is a sophisticated dual-mode querying engine that allows
 
 **Key Discovery Highlights**:
 
-- 🔍 Two complete graph implementations (file-based and DB-based) share 80% of the same query code
-- ⚡ Reactive query engine with automatic caching and component dependency tracking
-- 🎯 Performance optimization through idle-based execution for custom queries
+- 🔍 The active query parser in `src/main/frontend/db/query_dsl.cljs` is DB-centric and feeds a shared reactive execution layer
+- ⚡ Reactive query execution still uses cache keys, component dependency tracking, and idle-time scheduling for custom queries
+- 🎯 Built-in queries are detected both from explicit flags and from `:title-key` matches in configured journal queries
 - 🔒 Query result isolation prevents infinite recursion when query blocks appear in query results
 
 ---
@@ -26,7 +26,7 @@ The Logseq Query System is a sophisticated dual-mode querying engine that allows
 2. [The Crime Scene Map](#the-crime-scene-map)
 3. [Evidence #1: Query DSL Parser](#evidence-1-query-dsl-parser)
 4. [Evidence #2: Reactive Query Engine](#evidence-2-reactive-query-engine)
-5. [Evidence #3: File vs DB Graph Differences](#evidence-3-file-vs-db-graph-differences)
+5. [Evidence #3: Current DB Query Semantics](#evidence-3-current-db-query-semantics)
 6. [Evidence #4: Query Builder System](#evidence-4-query-builder-system)
 7. [Evidence #5: Datalog Rules System](#evidence-5-datalog-rules-system)
 8. [Key Witnesses (Main Files)](#key-witnesses-main-files)
@@ -46,7 +46,7 @@ The Logseq Query System is a sophisticated dual-mode querying engine that allows
 
 The Logseq Query System operates as a multi-layered pipeline that transforms user-friendly query syntax into optimized Datalog queries, executes them reactively, and renders results with automatic updates.
 
-```
+```text
 ┌─────────────┐
 │  User Input │  "(and (task todo) [[project]])"
 └──────┬──────┘
@@ -167,13 +167,13 @@ graph TB
 
 ## Evidence #1: Query DSL Parser
 
-### The Witness Files
+### Witness Files (Reactive Engine)
 
 **Primary**: `src/main/frontend/db/query_dsl.cljs` (850 lines)
 
 **Role**: Transforms human-readable query syntax into Datalog queries
 
-### The Investigation
+### Investigation (Reactive Engine)
 
 #### 1.1 Pre-Transformation Phase
 
@@ -340,7 +340,6 @@ The `build-query` function is the heart of the DSL parser. It's a recursive func
 The `between` filter has two modes:
 
 1. **Journal Mode** (2 args): `(between -7d +7d)`
-
    - Filters journal pages by their journal-day integer
    - Uses `:between` rule
 
@@ -466,7 +465,7 @@ sequenceDiagram
 
 **Role**: Executes queries reactively with automatic caching and component updates
 
-### The Investigation
+### Investigation (Current DB Query Semantics)
 
 #### 2.1 The Query State Management System
 
@@ -697,52 +696,15 @@ sequenceDiagram
 
 ---
 
-## Evidence #3: File vs DB Graph Differences
+## Evidence #3: Current DB Query Semantics
 
 ### The Investigation
 
-The query system supports two fundamentally different graph architectures. This is one of the most complex aspects of the codebase.
+The current query parser and builder are DB-centric. The live source path uses property entities, DB idents, and `logseq.db.frontend.rules`; I could not verify a parallel file-graph rules file or file-graph-only filter path from the current repo state.
 
 #### 3.1 Property Handling
 
-##### File Graphs
-
-**Location**: `src/main/frontend/db/query_dsl.cljs:289-302`
-
-```clojure
-(defn ->file-property-value
-  "Parses property values for file graphs and handles non-string values or any page-ref like values"
-  [v*]
-  (if (some? v*)
-    (let [v (str v*)
-          result (if-some [res (text/parse-non-string-property-value v)]
-                   res
-                   (if (string/starts-with? v "#")
-                     (subs v 1)
-                     (or (page-ref/get-page-name v) v)))]
-      (if (string? result)
-        (or (parse-double result) (string/trim result))
-        result))
-    v*))
-
-(defn- ->file-keyword-property
-  "Case-insensitive property names for file graphs"
-  [property-name]
-  (-> (string/replace (name property-name) "_" "-")
-      string/lower-case
-      keyword))
-```
-
-**Characteristics**:
-
-- Properties stored as `:block/properties` map on blocks
-- Property names are case-insensitive (converted to lowercase keywords)
-- Property values can be strings, numbers, booleans, or page references
-- No schema enforcement
-
-##### DB Graphs
-
-**Location**: `src/main/frontend/db/query_dsl.cljs:304-337`
+**Location**: `src/main/frontend/db/query_dsl.cljs:284-354`
 
 ```clojure
 (defn ->db-property-value
@@ -776,107 +738,62 @@ The query system supports two fundamentally different graph architectures. This 
 **Characteristics**:
 
 - Properties are first-class entities with their own blocks
-- Property names use qualified keywords (`:user.property/prop-name`)
-- Properties have types (`:default`, `:checkbox`, `:node`, etc.)
-- Properties can have default values defined on classes
-- Property names are case-sensitive
+- Property names resolve to qualified keywords such as `:user.property/prop-name`
+- The parser distinguishes scalar vs ref properties
+- Queries can match class-provided default values
+- Property names are case-sensitive unless the caller supplies the exact property title and lets `->db-keyword-property` resolve it
 
-#### 3.2 Rule Differences
+#### 3.2 Rules and Inheritance
 
-##### File Graph Rules
+**Location**: `deps/db/src/logseq/db/frontend/rules.cljc`
 
-**Location**: `deps/db/src/logseq/db/file_based/rules.cljc`
+The current rules file defines DB query semantics for:
 
-File graphs have rules for:
-
-- `:namespace` - Page namespace filtering
-- `:page-property` - Page-level properties
-- `:page-tags` - Tags on pages
-- `:all-page-tags` - All pages with any tags
-
-##### DB Graph Rules
-
-**Location**: `deps/db/src/logseq/db/frontend/rules.cljc:84-248`
-
-DB graphs have sophisticated rules for:
-
-- `:simple-query-property` - Property queries with default value support
-- `:property-value` - Resolves actual or default property values
-- `:object-has-class-property` - Checks if a block's class defines a property
-- `:class-extends` - Recursive class inheritance
-- `:task` - Task status (uses `:logseq.property/status`)
-- `:priority` - Priority levels (uses `:logseq.property/priority`)
-- `:tags` - Block tags (different from file graph page tags)
+- `:page-ref` and `:has-ref` for block/page references
+- `:task` and `:priority` through `ref-property-with-default`
+- `:tags` through tag resolution plus `class-extends`
+- `:has-simple-query-property` and `:has-private-simple-query-property`
+- `:scalar-property(-with-default)` and `:ref-property(-with-default)`
+- `:object-has-class-property` and `:class-extends`
 
 🔍 **Critical Discovery**: DB graphs support property inheritance through classes:
 
-**Location**: `deps/db/src/logseq/db/frontend/rules.cljc:139-149`
+**Location**: `deps/db/src/logseq/db/frontend/rules.cljc`
 
 ```clojure
-:property-value
-'[[(property-value ?b ?prop-e ?val)
-   [?prop-e :db/ident ?prop]
-   (existing-property-value ?b ?prop ?val)]
-  [(property-value ?b ?prop-e ?val)
-   (or
-    (and
-     [(missing? $ ?prop-e :db/valueType)]
-     (property-scalar-default-value ?b ?prop-e :logseq.property/scalar-default-value ?val))
-    (and
-     [?prop-e :db/valueType :db.type/ref]
-     (property-default-value ?b ?prop-e :logseq.property/default-value ?val)))]]
+:ref-property-with-default
+'[[(ref-property-with-default ?b ?prop ?val)
+  [?prop-e :db/ident ?prop]
+  (ref-property-value ?b ?prop-e ?val)
+  (or
+   [(missing? $ ?prop-e :logseq.property/public?)]
+   [?prop-e :logseq.property/public? true])]
+  [(ref-property-with-default ?b ?prop ?val)
+  [?prop-e :db/ident ?prop]
+  (ref-property-value-with-default ?b ?prop-e ?val)
+  (or
+   [(missing? $ ?prop-e :logseq.property/public?)]
+   [?prop-e :logseq.property/public? true])]]
 ```
 
-This means if a block has a class with a default property value, queries will find it even if the block doesn't explicitly set that property!
+This means current property, task, and priority matching can still succeed when a block inherits a default value through its class/tag hierarchy.
 
-#### 3.3 Query Filter Availability
+#### 3.3 Filters Present in the Current Parser
 
-| Filter             | File Graphs | DB Graphs | Notes                         |
-| ------------------ | ----------- | --------- | ----------------------------- |
-| `property`         | ✅          | ✅        | Different implementations     |
-| `task`             | ✅          | ✅        | Different marker formats      |
-| `priority`         | ✅          | ✅        | Different formats (A vs High) |
-| `page`             | ✅          | ✅        | Same                          |
-| `between`          | ✅          | ✅        | Journal + property timestamps |
-| `page-ref`         | ✅          | ✅        | Same                          |
-| `block-content`    | ✅          | ✅        | Full-text search              |
-| `sample`           | ✅          | ✅        | Limit results                 |
-| `sort-by`          | ✅          | ❌        | File graphs only              |
-| `namespace`        | ✅          | ❌        | File graphs only              |
-| `page-property`    | ✅          | ❌        | File graphs only              |
-| `page-tags`        | ✅          | ❌        | File graphs only              |
-| `all-page-tags`    | ✅          | ❌        | File graphs only              |
-| `tags`             | ❌          | ✅        | DB graphs only (block tags)   |
-| `private-property` | ❌          | ✅        | DB graphs only                |
+The current `build-query` implementation explicitly recognizes these DSL filters and operators:
 
-⚠️ **Gotcha**: The test suite handles this with smart queries:
+- Boolean operators: `and`, `or`, `not`
+- Filters: `between`, `property`, `private-property`, `task`/`todo`, `priority`, `page`, `tags`, `sample`
+- Structural inputs: page references such as `[[project]]`
+- Raw datalog clauses and string full-text search
 
-**Location**: `src/test/frontend/db/query_dsl_test.cljs:66-72`
+Notably absent from the current parser and builder are `namespace`, `page-property`, `page-tags`, `all-page-tags`, and `sort-by`.
 
-```clojure
-(defn- ->smart-query
-  "Updates to file version if js/process.env.DB_GRAPH is not set"
-  [query]
-  (if js/process.env.DB_GRAPH
-    (some-> query
-            (string/replace "(page-tags" "(tags"))
-    query))
-```
-
-### File vs DB Comparison Diagram
+### Current Query Semantics Diagram
 
 ```mermaid
 graph LR
-    subgraph "File Graph"
-        FP[Properties as Maps]
-        FP --> FK[":prop-name (lowercase)"]
-        FK --> FV["Any value type"]
-        FN[Namespace Support]
-        FPT[Page Tags]
-        FPP[Page Properties]
-    end
-
-    subgraph "DB Graph"
+    subgraph "DB Query Path"
         DP[Properties as Entities]
         DP --> DK[":user.property/prop-name"]
         DK --> DT[Typed Properties]
@@ -894,7 +811,6 @@ graph LR
         S5[Boolean Operators]
     end
 
-    style FP fill:#e1f5ff
     style DP fill:#ffe1e1
     style S1 fill:#e1ffe1
 ```
@@ -903,13 +819,13 @@ graph LR
 
 ## Evidence #4: Query Builder System
 
-### The Witness Files
+### Witness Files (Query Builder)
 
 **Primary**: `src/main/frontend/handler/query/builder.cljs` (212 lines)
 
 **Role**: Visual query builder UI and DSL↔Internal format conversion
 
-### The Investigation
+### Investigation (Query Builder)
 
 #### 4.1 Internal Representation Format
 
@@ -1047,21 +963,6 @@ The builder provides functional tree manipulation:
 (def operators [:and :or :not])
 (def operators-set (set operators))
 
-(def page-filters ["all page tags"
-                   "namespace"
-                   "tags"
-                   "property"
-                   "sample"])
-
-(def block-filters ["page reference"
-                    "property"
-                    "task"
-                    "priority"
-                    "page"
-                    "full text search"
-                    "between"
-                    "sample"])
-
 (def db-based-block-filters
   ["tags"
    "page reference"
@@ -1074,76 +975,59 @@ The builder provides functional tree manipulation:
    "sample"])
 ```
 
-These definitions drive the UI dropdown menus in the visual query builder.
+The current builder UI wires only `db-based-block-filters` into `frontend.components.query.builder`.
 
 ---
 
 ## Evidence #5: Datalog Rules System
 
-### The Witness Files
+### Witness Files (Datalog Rules)
 
 **Primary**: `deps/db/src/logseq/db/frontend/rules.cljc` (267 lines)
 
 **Role**: Defines reusable Datalog rules for complex query patterns
 
-### The Investigation
+### Investigation (Datalog Rules)
 
 #### 5.1 Rule Architecture
 
 Rules are defined as maps where keys are rule names and values are rule clauses:
 
-```clojure
+````clojure
 (def db-query-dsl-rules
-  {:property
-   '[(property ?b ?prop ?val)
-     [?prop-e :db/ident ?prop]
-     [?prop-e :block/tags :logseq.class/Property]
-     (or
-      [(missing? $ ?prop-e :logseq.property/public?)]
-      [?prop-e :logseq.property/public? true])
-     [?b ?prop ?pv]
-     (or
-      ;; non-ref value
-      (and
-       [(missing? $ ?prop-e :db/valueType)]
-       [?b ?prop ?val])
-      ;; ref value
-      (and
-       [?prop-e :db/valueType :db.type/ref]
-       (or [?pv :block/title ?val]
-           [?pv :logseq.property/value ?val])))]
+  {:page-ref
+   '[(page-ref ?b ?ref)
+     (has-ref ?b ?ref)]
 
    :task
    '[(task ?b ?statuses)
-     (and (simple-query-property ?b :logseq.property/status ?val)
-          [(contains? ?statuses ?val)])]
+     (ref-property-with-default ?b :logseq.property/status ?val)
+     [(contains? ?statuses ?val)]]
 
    :priority
    '[(priority ?b ?priorities)
-     (and (simple-query-property ?b :logseq.property/priority ?priority)
-          [(contains? ?priorities ?priority)])]})
-```
+     (ref-property-with-default ?b :logseq.property/priority ?priority)
+     [(contains? ?priorities ?priority)]})
+```text
 
 #### 5.2 Rule Dependencies
 
-**Location**: `deps/db/src/logseq/db/frontend/rules.cljc:250-267`
+**Location**: `deps/db/src/logseq/db/frontend/rules.cljc`
 
 ```clojure
 (def rules-dependencies
   "For db graphs, a map of rule names and the rules they depend on"
   {:has-ref #{:parent}
    :page-ref #{:has-ref}
-   :task #{:simple-query-property}
-   :priority #{:simple-query-property}
-   :property-missing-value #{:object-has-class-property}
+   :task #{:ref-property-with-default}
+   :priority #{:ref-property-with-default}
+   :tags #{:class-extends}
    :has-property-or-object-property #{:object-has-class-property}
    :object-has-class-property #{:class-extends}
    :has-simple-query-property #{:has-property-or-object-property}
-   :property-default-value #{:existing-property-value :property-missing-value}
-   :property-scalar-default-value #{:existing-property-value :property-missing-value}
-   :property-value #{:property-default-value :property-scalar-default-value}
-   :simple-query-property #{:property-value}
-   :private-simple-query-property #{:property-value}})
+   :has-private-simple-query-property #{:has-property-or-object-property}
+   :scalar-property-with-default #{:property-missing-value}
+   :ref-property-with-default #{:property-missing-value}})
 
 (defn extract-rules
   "Given a rules map and the rule names to extract, returns a vector of rules"
@@ -1155,61 +1039,16 @@ Rules are defined as maps where keys are rule names and values are rule clauses:
       (mapcat #(let [val (rules-m %)]
                  (if (vector? (first val)) val [val]))
               rules-with-deps)))))
-```
+````
 
-🔍 **Critical Finding**: Rules are automatically resolved with their dependencies. If you use `:task`, the system automatically includes `:simple-query-property` → `:property-value` → `:property-default-value` + `:property-scalar-default-value` → `:existing-property-value` + `:property-missing-value` → `:object-has-class-property` → `:class-extends`.
+🔍 **Critical Finding**: Rules are automatically resolved with their dependencies. If you use `:task` or `:priority`, the system now pulls in `:ref-property-with-default`, which in turn depends on the class/property default-value chain.
 
-#### 5.3 Sophisticated Rules: Property with Default Values
+#### 5.3 Sophisticated Rules: Property Defaults and Tag Expansion
 
-This is the most complex rule in the system:
+Two current capabilities are easy to miss:
 
-**Location**: `deps/db/src/logseq/db/frontend/rules.cljc:138-149`
-
-```clojure
-:property-value
-'[[(property-value ?b ?prop-e ?val)
-   [?prop-e :db/ident ?prop]
-   (existing-property-value ?b ?prop ?val)]
-  [(property-value ?b ?prop-e ?val)
-   (or
-    (and
-     [(missing? $ ?prop-e :db/valueType)]
-     (property-scalar-default-value ?b ?prop-e :logseq.property/scalar-default-value ?val))
-    (and
-     [?prop-e :db/valueType :db.type/ref]
-     (property-default-value ?b ?prop-e :logseq.property/default-value ?val)))]]
-
-:property-scalar-default-value
-'[(property-scalar-default-value ?b ?prop-e ?default-p ?val)
-  (property-missing-value ?b ?prop-e ?default-p ?default-v)
-  [(missing? $ ?prop-e :db/valueType)]
-  [?prop-e ?default-p ?val]]
-
-:property-missing-value
-'[(property-missing-value ?b ?prop-e ?default-p ?default-v)
-  [?t :logseq.property.class/properties ?prop-e]
-  [?prop-e :db/ident ?prop]
-  (object-has-class-property? ?b ?prop)
-  [(get-else $ ?b ?prop "N/A") ?prop-v]
-  [(= ?prop-v "N/A")]
-  [?prop-e ?default-p ?default-v]]
-
-:object-has-class-property
-'[(object-has-class-property? ?b ?prop)
-  [?prop-e :db/ident ?prop]
-  [?t :logseq.property.class/properties ?prop-e]
-  [?b :block/tags ?tc]
-  (or
-   [(= ?t ?tc)]
-   (class-extends ?t ?tc))]
-```
-
-This implements a sophisticated cascade:
-
-1. First try to find the actual property value on the block
-2. If not found, check if the block has a class that defines this property
-3. If yes, return the default value from the class
-4. Handle both scalar (number/string) and ref (page/entity) default values
+1. Property-like filters can match inherited default values supplied by classes.
+2. `(tags ...)` expands each requested tag to the tag itself plus all structured descendants before handing the set to the `:tags` rule.
 
 #### 5.4 Recursive Rules
 
@@ -1237,29 +1076,21 @@ This implements a sophisticated cascade:
 
 ```mermaid
 graph TD
-    SQP[simple-query-property]
-    PV[property-value]
-    PDV[property-default-value]
-    PSDV[property-scalar-default-value]
-    EPV[existing-property-value]
+    RPD[ref-property-with-default]
+    SPD[scalar-property-with-default]
     PMV[property-missing-value]
     OHCP[object-has-class-property]
     CE[class-extends]
 
-    SQP --> PV
-    PV --> PDV
-    PV --> PSDV
-    PDV --> EPV
-    PDV --> PMV
-    PSDV --> EPV
-    PSDV --> PMV
+    RPD --> PMV
+    SPD --> PMV
     PMV --> OHCP
     OHCP --> CE
 
-    TASK[task] --> SQP
-    PRIORITY[priority] --> SQP
+    TASK[task] --> RPD
+    PRIORITY[priority] --> RPD
 
-    style SQP fill:#e1f5ff
+    style RPD fill:#e1f5ff
     style TASK fill:#ffe1e1
     style PRIORITY fill:#ffe1e1
     style CE fill:#e1ffe1
@@ -1269,96 +1100,30 @@ graph TD
 
 ## Key Witnesses (Main Files)
 
-| File Path                                      | Lines | Role                       | Complexity  |
-| ---------------------------------------------- | ----- | -------------------------- | ----------- |
-| `src/main/frontend/db/query_dsl.cljs`          | 850   | DSL Parser & Query Builder | ⚠️⚠️⚠️ High |
-| `src/main/frontend/db/query_react.cljs`        | 117   | Query Execution Wrapper    | ⚠️ Medium   |
-| `src/main/frontend/db/react.cljs`              | 227   | Reactive Query Engine      | ⚠️⚠️⚠️ High |
-| `src/main/frontend/db/query_custom.cljs`       | 86    | Advanced Query Handler     | ⚠️ Low      |
-| `src/main/frontend/handler/query/builder.cljs` | 212   | Query Builder Logic        | ⚠️⚠️ Medium |
-| `src/main/frontend/components/query.cljs`      | 233   | Query UI Component         | ⚠️⚠️ Medium |
-| `deps/db/src/logseq/db/frontend/rules.cljc`    | 267   | Datalog Rules (DB)         | ⚠️⚠️⚠️ High |
-| `deps/db/src/logseq/db/file_based/rules.cljc`  | ~150  | Datalog Rules (File)       | ⚠️⚠️ Medium |
-| `src/test/frontend/db/query_dsl_test.cljs`     | 831   | Comprehensive Tests        | ⚠️ Low      |
+| File Path                                      | Role                            | Complexity  |
+| ---------------------------------------------- | ------------------------------- | ----------- |
+| `src/main/frontend/db/query_dsl.cljs`          | DSL parser and query builder    | ⚠️⚠️⚠️ High |
+| `src/main/frontend/db/query_react.cljs`        | Input resolution and query key  | ⚠️ Medium   |
+| `src/main/frontend/db/react.cljs`              | Reactive cache and refresh loop | ⚠️⚠️⚠️ High |
+| `src/main/frontend/db/query_custom.cljs`       | Advanced-query dispatch         | ⚠️ Low      |
+| `src/main/frontend/handler/query/builder.cljs` | Builder conversion logic        | ⚠️⚠️ Medium |
+| `src/main/frontend/components/query.cljs`      | Query UI and built-in handling  | ⚠️⚠️ Medium |
+| `deps/db/src/logseq/db/frontend/rules.cljc`    | Datalog rules and dependencies  | ⚠️⚠️⚠️ High |
+| `src/test/frontend/db/query_dsl_test.cljs`     | Parser and execution coverage   | ⚠️ Low      |
 
 ---
 
 ## Critical Findings
 
-### 1. 🔍 Dual Graph Support is Deeply Embedded
+### 1. 🎯 Property Queries Can Match Inherited Defaults
 
-**Evidence**: Throughout query_dsl.cljs, almost every function checks `db-graph?` and branches:
+The current DB rules let `property`, `task`, and `priority` resolve through class-backed default values, not just explicit block attributes.
 
-- Line 219: `(config/db-based-graph?)`
-- Line 275: `(if db-graph? ...)`
-- Line 341: `(if db-graph? ...)`
+### 2. ⚡ Built-in Queries Have Two Detection Paths
 
-**Impact**: Adding new features requires implementing them for BOTH graph types, essentially doubling the work.
+Built-in query behavior is no longer driven only by an explicit `:built-in-query?` flag. `frontend.components.query/resolve-built-in-query?` also recognizes journal built-ins by matching `:title-key` against `[:default-queries :journals]` in config.
 
-**Severity**: ⚠️⚠️ Medium - This is by design, but makes the codebase harder to maintain.
-
----
-
-### 2. ⚡ Query Caching Can Cause Stale Results
-
-**Evidence**: `src/main/frontend/db/react.cljs:88-94`
-
-```clojure
-(defn get-query-cached-result
-  [k]
-  (when-let [result (get @*query-state k)]
-    (when (satisfies? IWithMeta @(:result result))
-      (set! (.-state (:result result))
-            @(:result result)))
-    (:result result)))
-```
-
-**Issue**: The cache uses query key `[repo :custom query-string inputs]`. If inputs contain page references and a page is renamed, the cache key changes but old results might still be used.
-
-**Severity**: ⚠️ Low - Rare edge case, but can confuse users.
-
----
-
-### 3. 🎯 Property Queries with Default Values are Non-Obvious
-
-**Evidence**: DB graph property queries can match blocks that don't explicitly have the property.
-
-**Example**:
-
-```clojure
-;; Given:
-;; - Class "Task" has property "status" with default value "Todo"
-;; - Block "my task" is tagged with "Task" but has no status property
-
-;; This query WILL match "my task":
-(property status "Todo")
-
-;; Because the rule resolves the default value from the class
-```
-
-**Impact**: Users expect queries to match only explicit property values.
-
-**Severity**: ⚠️⚠️ Medium - Can cause confusion, needs better documentation.
-
----
-
-### 4. ❌ Error Messages Don't Show Query Source Location
-
-**Evidence**: When a query fails, the error shows the generated Datalog, not the original DSL:
-
-```javascript
-// User writes: (and (task todo) (propertyyy typo-value))
-// Error shows: "Query failed: execution error in datalog query..."
-// But doesn't point to "propertyyy" in the original query
-```
-
-**Impact**: Debugging syntax errors is difficult for users.
-
-**Severity**: ⚠️⚠️⚠️ High - Major usability issue.
-
----
-
-### 5. 🔒 Recursive Query Blocks are Prevented
+### 3. 🔒 Recursive Query Blocks are Prevented
 
 **Evidence**: `src/main/frontend/components/query.cljs:165-167`
 
@@ -1377,7 +1142,7 @@ graph TD
 
 ---
 
-### 6. ⚡ Built-in Queries are Delayed to Improve Performance
+### 4. ⚡ Built-in Queries are Delayed to Improve Performance
 
 **Evidence**: `src/main/frontend/db/react.cljs:103-106`
 
@@ -1396,41 +1161,29 @@ graph TD
 
 ---
 
-### 7. 🐛 Boolean Operator Nesting Can Be Confusing
+### 5. 🧩 The DSL Accepts Raw Datalog Clauses
 
-**Evidence**: The simplify-query function removes single-clause operators, but this can cause unexpected behavior:
+`build-query` treats clause-shaped vectors and function clauses as already-valid datalog and passes them through. The current DSL is therefore a hybrid: named filters plus inline datalog when needed.
 
-```clojure
-(and (property status "Done"))
-→ (property status "Done")
+## Findings: New Capabilities
 
-(or (task todo))
-→ (task todo)
-```
+### 1. Tag Queries Expand Descendants
 
-**Issue**: Users might write `(and ...)` intending to add more clauses later, but the query works differently than expected.
+`(tags ...)` does more than match the direct tag. `build-tags` resolves each requested tag/class to the entity id and all structured descendants before invoking the `:tags` rule.
 
-**Severity**: ⚠️ Low - Minor UX issue, but can confuse beginners.
+### 2. Built-in Query Detection Can Be Config-Driven
 
----
+Built-in behavior can now come from `:title-key` matches against configured default journal queries, which means some queries inherit built-in scheduling and UI behavior without the caller setting `:built-in-query?` directly.
 
-### 8. 📊 No Query Performance Metrics Exposed
+### 3. Raw Datalog and DSL Can Mix
 
-**Evidence**: The code profiles query execution but doesn't expose metrics to users:
-
-```clojure
-(util/profile "refresh!" ...)
-```
-
-**Impact**: Users can't tell if a slow query is due to query complexity or data size.
-
-**Severity**: ⚠️⚠️ Medium - Makes optimization difficult for users.
+The parser accepts already-shaped datalog clauses, so advanced query authors can combine named DSL filters with inline datalog fragments in one query form.
 
 ---
 
 ## Known Limitations
 
-### 1. ❌ Dynamic Conjunction Not Supported
+### 1. ❌ Dynamic Conjunction Still Not Supported
 
 **Description**: You cannot query "blocks that have ALL of these tags" where the tag list is dynamic.
 
@@ -1491,35 +1244,15 @@ graph TD
 
 ---
 
-### 5. ⚠️ Sort-by Not Supported in DB Graphs
+### 5. ⚠️ `sort-by` Is Not Implemented in the Current Parser
 
-**Evidence**: `src/main/frontend/db/query_dsl.cljs:528-529`
-
-```clojure
-(defn- build-file-query
-  [e fe {:keys [sort-by]}]
-  (cond
-    ;; ... sort-by only appears in file-graph code path
-    (= 'sort-by fe)
-    (build-sort-by e sort-by)))
-```
-
-**Impact**: DB graph users cannot sort query results by property values.
-
-**Severity**: ⚠️⚠️⚠️ High - Major feature gap.
+The live `build-query` dispatcher in `query_dsl.cljs` does not recognize a `sort-by` filter, even though older versions of this guide described it.
 
 ---
 
-### 6. ⚠️ Page-Level Queries Not Supported in DB Graphs
+### 6. ⚠️ Page-Level Filters Documented in Older Guides Are Absent Here
 
-**Limitations**:
-
-- ❌ `(namespace ...)` - File graphs only
-- ❌ `(page-property ...)` - File graphs only
-- ❌ `(page-tags ...)` - File graphs only
-- ❌ `(all-page-tags)` - File graphs only
-
-**Severity**: ⚠️⚠️⚠️ High - Limits DB graph query expressiveness.
+The current parser and builder do not expose `namespace`, `page-property`, `page-tags`, or `all-page-tags`.
 
 ---
 
@@ -1558,10 +1291,10 @@ graph TD
 
 ```clojure
 (defn parse-query
-  ([q] (parse-query q {}))
-  ([q options]
+  ([q db] (parse-query q db {}))
+  ([q db options]
    (let [q' (template/resolve-dynamic-template! q)]
-     (parse q' (merge {:db-graph? (config/db-based-graph? (state/get-current-repo))} options)))))
+     (parse q' db options))))
 ```
 
 **Purpose**: Parses a DSL query string into a Datalog query.
@@ -1569,8 +1302,8 @@ graph TD
 **Parameters**:
 
 - `q` (string): The query string, e.g. `"(and (task todo) [[project]])"`
+- `db`: DataScript database value used for parsing and property/tag resolution
 - `options` (map, optional):
-  - `:db-graph?` (boolean): Force file or DB graph parsing
   - `:cards?` (boolean): Filter to card entities only
 
 **Returns**: Map with:
@@ -1584,7 +1317,7 @@ graph TD
 **Example**:
 
 ```clojure
-(query-dsl/parse-query "(and (task todo) [[project]])")
+(query-dsl/parse-query "(and (task todo) [[project]])" db)
 ;; => {:query [:find (pull ?b [...]) :where ...]
 ;;     :rules [[...]]
 ;;     :sort-by nil
@@ -1614,9 +1347,8 @@ graph TD
 - `query-string` (string): DSL query
 - `query-opts` (map, optional):
   - `:cards?` (boolean): Filter to cards only
-  - `:transform-fn` (fn): Transform results
-  - `:current-page-fn` (fn): Resolve :current-page input
-  - `:current-block-uuid` (uuid): Resolve :current-block input
+  - `:transform-fn` (fn): Optional result transformation
+  - `:built-in-query?` (boolean): Delay execution to avoid blocking journal render
 
 **Returns**: Atom containing vector of block/page maps
 
@@ -1663,7 +1395,7 @@ graph TD
 
 #### `query-react/react-query`
 
-**Location**: `src/main/frontend/db/query_react.cljs:95-117`
+**Location**: `src/main/frontend/db/query_react.cljs:72-88`
 
 ```clojure
 (defn react-query
@@ -1682,8 +1414,9 @@ graph TD
   - `:query-string` (optional): Original query string for debugging
 - `query-opts` (map):
   - `:transform-fn` (fn): Transform results
-  - `:current-page-fn` (fn): Resolve `:current-page`
+  - `:current-page-fn` (fn): Override current-page resolution
   - `:current-block-uuid` (uuid): Resolve `:current-block`
+  - `:today-query?` (boolean): Part of the reactive cache key for built-in today queries
 
 **Returns**: `[query-key result-atom]` tuple
 
@@ -1735,7 +1468,8 @@ graph TD
 
 ;; Datalog query
 (custom-query {:query '[:find (pull ?b [*])
-                        :where [?b :block/marker "TODO"]]
+         :where [?b :block/page _]
+           [?b :block/title _]]
                :inputs []}
               {})
 ```
@@ -1818,9 +1552,7 @@ graph TD
 - `(property key value)` - Blocks with property=value
 - `(property key)` - Blocks with property (any value)
 
-**File Graphs**: Case-insensitive property names
-
-**DB Graphs**: Case-sensitive, supports qualified keywords, includes default values from classes
+**Current parser behavior**: Property names resolve through DB property entities, support qualified keywords, and can include default values inherited from classes.
 
 **Example**:
 
@@ -1852,9 +1584,7 @@ graph TD
 - `(task marker1 marker2 ...)` - ORed markers
 - `(task [marker1 marker2])` - Vector notation
 
-**File Graphs**: Markers like `TODO`, `DONE`, `LATER`, `NOW`
-
-**DB Graphs**: Markers like `Todo`, `Done`, `Doing`
+**Current parser behavior**: Marker names are capitalized before matching, so `(task todo doing)` becomes a set like `#{"Todo" "Doing"}`.
 
 **Example**:
 
@@ -1872,9 +1602,7 @@ graph TD
 - `(priority level1 level2 ...)` - ORed priorities
 - `(priority [level1 level2])` - Vector notation
 
-**File Graphs**: Priority levels `A`, `B`, `C`
-
-**DB Graphs**: Priority levels `High`, `Medium`, `Low`
+**Current parser behavior**: Priority names are capitalized before matching, so `(priority high)` resolves to `"High"`.
 
 **Example**:
 
@@ -1944,12 +1672,7 @@ graph TD
 
 #### `(tags tag1 tag2 ...)`
 
-**Availability**:
-
-- File graphs: Page tags (use `page-tags` instead)
-- DB graphs: Block tags
-
-**Description**: Blocks/pages with specific tags
+**Description**: Blocks with specific tags or classes, including structured descendants resolved by the parser.
 
 **Example**:
 
@@ -1962,58 +1685,25 @@ graph TD
 
 #### `(page-property key value)` / `(page-property key)`
 
-**Availability**: File graphs only
-
-**Description**: Pages with property=value
-
-**Example**:
-
-```clojure
-(page-property type "book")
-(page-property author)  ;; Any page with "author" property
-```
+**Status**: Removed from this guide because the current parser and builder do not expose it.
 
 ---
 
 #### `(page-tags tag1 tag2 ...)`
 
-**Availability**: File graphs only
-
-**Description**: Pages with specific tags
-
-**Example**:
-
-```clojure
-(page-tags project reference)  ;; Pages tagged "project" or "reference"
-```
+**Status**: Removed from this guide because the current parser and builder do not expose it.
 
 ---
 
 #### `(all-page-tags)`
 
-**Availability**: File graphs only
-
-**Description**: All pages that have any tags
-
-**Example**:
-
-```clojure
-(and (all-page-tags) (page-property type "article"))
-```
+**Status**: Removed from this guide because the current parser and builder do not expose it.
 
 ---
 
 #### `(namespace namespace-name)`
 
-**Availability**: File graphs only
-
-**Description**: Pages in a namespace
-
-**Example**:
-
-```clojure
-(namespace "work")  ;; Pages like "work/project1", "work/project2"
-```
+**Status**: Removed from this guide because the current parser and builder do not expose it.
 
 ---
 
@@ -2048,20 +1738,7 @@ graph TD
 
 #### `(sort-by property)` / `(sort-by property asc)` / `(sort-by property desc)`
 
-**Availability**: File graphs only
-
-**Syntax**:
-
-- `(sort-by property)` - Default descending
-- `(sort-by property asc)` - Ascending
-- `(sort-by property desc)` - Descending
-
-**Example**:
-
-```clojure
-(and (task done) (sort-by created-at desc))
-(and (page-property rating) (sort-by rating asc))
-```
+**Status**: Removed from the supported filter list. The current `build-query` dispatcher does not implement `sort-by`.
 
 ---
 
@@ -2121,15 +1798,7 @@ sequenceDiagram
     QC-->>U: Updated display
 ```
 
-**Timing**:
-
-- Parse: ~1-5ms
-- Cache lookup: ~0.1ms
-- Query execution: 5-100ms (depends on query complexity)
-- Result transformation: ~1-10ms
-- Component render: ~5-20ms
-
-**Total**: 10-150ms for typical queries
+The exact timings from the previous revision were removed because they were not backed by a reproducible benchmark in the current repo.
 
 ---
 
@@ -2146,7 +1815,7 @@ sequenceDiagram
     participant R as react.cljs
     participant DS as DataScript
 
-    U->>AQ: {:query [:find (pull ?b [*])<br/>:where [?b :block/marker "TODO"]]}
+    U->>AQ: {:query [:find (pull ?b [*])<br/>:where [?b :block/page _] [?b :block/title _]]}
     AQ->>QC: Render advanced query
     QC->>QCust: custom-query(repo, query-map, opts)
 
@@ -2329,7 +1998,7 @@ time elapsed: 23.45ms
 ;; => ({:block/title "TODO Task 1", ...})
 
 ;; See parsed query structure:
-(query-dsl/parse-query "(and (task todo) [[project]])")
+(query-dsl/parse-query "(and (task todo) [[project]])" db)
 ;; => {:query [...], :rules [...], :blocks? true, :sort-by nil}
 ```
 
@@ -2454,8 +2123,9 @@ time elapsed: 23.45ms
 ;; Instead of:
 (task todo)
 
-;; Use direct Datalog to bypass rules:
-[?b :logseq.property/status "Todo"]
+;; Use direct Datalog to bypass simple-query helpers:
+[?b :logseq.property/status ?status]
+[?status :block/title "Todo"]
 
 ;; This helps identify if the issue is in the rule or the query
 ```
@@ -2473,8 +2143,8 @@ time elapsed: 23.45ms
 ;; Output:
 ;; {:block/uuid #uuid "...",
 ;;  :block/title "TODO Task",
-;;  :block/properties {:status "Todo"},
 ;;  :block/page {:db/id 123, :block/name "page1"},
+;;  :block/tags [...],
 ;;  ...}
 ```
 
@@ -2491,281 +2161,15 @@ time elapsed: 23.45ms
 
 ## Performance Benchmarks
 
-### Test Environment
+The previous revision included specific timing and memory numbers, but this repository no longer contains a reproducible benchmark harness or source-backed dataset description for those values. Those figures were removed rather than carried forward as stale documentation.
 
-- MacBook Pro M1, 16GB RAM
-- Test database: 10,000 blocks, 500 pages
-- DataScript in-memory database
-- Measurements averaged over 10 runs
-
-### Query Performance
-
-| Query Type               | Complexity | Avg Time | P95 Time | Notes                            |
-| ------------------------ | ---------- | -------- | -------- | -------------------------------- |
-| Simple page-ref          | Low        | 12ms     | 18ms     | `[[page-name]]`                  |
-| Task query               | Low        | 15ms     | 22ms     | `(task todo)`                    |
-| Property query (file)    | Low        | 18ms     | 28ms     | `(property key value)`           |
-| Property query (DB)      | Medium     | 25ms     | 40ms     | With default value resolution    |
-| AND query (2 clauses)    | Medium     | 30ms     | 50ms     | `(and (task todo) [[page]])`     |
-| OR query (2 clauses)     | Medium     | 35ms     | 55ms     | `(or [[page1]] [[page2]])`       |
-| NOT query                | High       | 45ms     | 80ms     | `(not [[page]])`                 |
-| Between query (journal)  | Low        | 20ms     | 32ms     | `(between -7d today)`            |
-| Between query (property) | Medium     | 35ms     | 60ms     | `(between created-at -7d today)` |
-| Full-text search         | High       | 50ms     | 120ms    | `"search text"`                  |
-| Complex nested query     | Very High  | 80ms     | 180ms    | `(and (or ...) (not (and ...)))` |
-
-### Cache Performance
-
-| Operation                    | Time     |
-| ---------------------------- | -------- |
-| Cache hit                    | 0.1ms    |
-| Cache miss (execute + store) | 15-80ms  |
-| Query invalidation           | 1-5ms    |
-| Bulk refresh (10 queries)    | 50-200ms |
-
-### Scalability
-
-**Database Size Impact**:
-
-| Database Size | Simple Query | Complex Query | Full-Text Search |
-| ------------- | ------------ | ------------- | ---------------- |
-| 1K blocks     | 8ms          | 40ms          | 25ms             |
-| 10K blocks    | 15ms         | 80ms          | 50ms             |
-| 50K blocks    | 40ms         | 200ms         | 180ms            |
-| 100K blocks   | 80ms         | 450ms         | 400ms            |
-
-🔍 **Critical Finding**: Query performance degrades linearly with database size for most queries, but NOT queries and full-text search degrade super-linearly.
-
-### Memory Usage
-
-| Operation                  | Memory |
-| -------------------------- | ------ |
-| Query cache entry          | ~5KB   |
-| Query result (100 blocks)  | ~50KB  |
-| Query result (1000 blocks) | ~500KB |
-| Total cache (50 queries)   | ~2.5MB |
-
-### Recommendations
-
-⚡ **Performance Tips**:
-
-1. **Use specific filters first**:
-
-   ```clojure
-   ;; Good:
-   (and (page "project-x") (task todo))
-
-   ;; Bad:
-   (and (task todo) (page "project-x"))  ;; Binds more blocks first
-   ```
-
-2. **Avoid NOT at query start**:
-
-   ```clojure
-   ;; Good:
-   (and (task todo) (not [[archived]]))
-
-   ;; Bad:
-   (not [[archived]])  ;; Scans all blocks
-   ```
-
-3. **Use sample for exploration**:
-
-   ```clojure
-   (and (task todo) (sample 20))  ;; Faster than returning all results
-   ```
-
-4. **Cache-friendly queries**:
-
-   - Use consistent query strings
-   - Avoid dynamic timestamps like `now` (use `today` instead)
-
-5. **Leverage built-in query delay**:
-   - Built-in queries are delayed by 100ms, so prioritize critical queries
+For current performance behavior, the source-backed points are the ones documented above: custom queries are scheduled through an idle-time channel, built-in queries are delayed by 100ms, and the reactive cache is keyed by `[repo :custom query-like today? inputs]`.
 
 ---
 
 ## Future Improvements
 
-### 1. ⚡ Query Compilation/Optimization
-
-**Current**: Queries are parsed and executed on every run, even identical queries.
-
-**Proposal**: Compile queries to optimized execution plans and cache them.
-
-**Benefits**:
-
-- 50-80% faster query execution
-- Reduced memory allocations
-- Better error messages at compile time
-
-**Complexity**: ⚠️⚠️⚠️ High - Requires significant refactoring
-
----
-
-### 2. 🎯 Query Debugging UI
-
-**Current**: Users must open DevTools to see generated queries.
-
-**Proposal**: Add a "Debug Query" button that shows:
-
-- Generated Datalog query
-- Execution plan
-- Per-clause execution time
-- Result counts at each step
-
-**Benefits**:
-
-- Much easier query optimization
-- Better error messages
-- Educational for users learning queries
-
-**Complexity**: ⚠️⚠️ Medium
-
----
-
-### 3. 📊 Query Performance Metrics
-
-**Current**: No exposed performance metrics.
-
-**Proposal**: Show query execution time and result count in UI.
-
-**Benefits**:
-
-- Users can identify slow queries
-- Encourages query optimization
-
-**Complexity**: ⚠️ Low - Data already collected, just needs UI
-
----
-
-### 4. 🔍 Incremental Query Results
-
-**Current**: All results loaded immediately.
-
-**Proposal**: Load results incrementally (lazy evaluation).
-
-**Benefits**:
-
-- Faster initial render for large result sets
-- Lower memory usage
-- Better UX for slow queries
-
-**Complexity**: ⚠️⚠️⚠️ High - Requires changes to DataScript query execution
-
----
-
-### 5. 🎨 Query Composition/Reuse
-
-**Current**: No way to reuse query fragments.
-
-**Proposal**: Allow named queries and composition:
-
-```clojure
-;; Define reusable queries:
-{{query my-tasks}}
-(and (task todo) (priority high))
-{{/query}}
-
-;; Reuse:
-(and my-tasks [[project-x]])
-```
-
-**Benefits**:
-
-- DRY principle
-- Easier to maintain complex queries
-- Shareable query libraries
-
-**Complexity**: ⚠️⚠️ Medium
-
----
-
-### 6. ✅ Sort-by Support for DB Graphs
-
-**Current**: `(sort-by ...)` only works in file graphs.
-
-**Proposal**: Implement sorting for DB graphs.
-
-**Challenge**: DB graph results are entity IDs (`:db/id`), properties must be pulled separately.
-
-**Complexity**: ⚠️⚠️ Medium
-
----
-
-### 7. 🔧 Page-Level Queries for DB Graphs
-
-**Current**: `(namespace ...)`, `(page-property ...)`, `(page-tags ...)` only work in file graphs.
-
-**Proposal**: Implement equivalents for DB graphs:
-
-- `(namespace ...)` → Check page hierarchies
-- `(page-property ...)` → Page-level properties
-- `(page-tags ...)` → Tags on pages (vs blocks)
-
-**Complexity**: ⚠️⚠️ Medium
-
----
-
-### 8. 📝 Better Error Messages
-
-**Current**: Cryptic Datalog execution errors.
-
-**Proposal**: Parse errors and provide helpful suggestions:
-
-```
-Error in query: "(and (task todoo) [[project]])"
-                             ^^^^^
-Unknown task marker "todoo". Did you mean "todo"?
-Valid markers: todo, doing, done, later, now
-```
-
-**Benefits**:
-
-- Dramatically better UX
-- Faster learning curve
-
-**Complexity**: ⚠️⚠️⚠️ High - Requires error recovery and suggestion system
-
----
-
-### 9. 🧪 Query Testing Framework
-
-**Current**: Users can't easily test queries with sample data.
-
-**Proposal**: Add a query playground with:
-
-- Sample data sets
-- Query editor with syntax highlighting
-- Live result preview
-- Performance profiling
-
-**Benefits**:
-
-- Learn queries faster
-- Test before adding to graph
-- Share query examples
-
-**Complexity**: ⚠️⚠️ Medium
-
----
-
-### 10. 🚀 Query Result Caching Strategy Improvements
-
-**Current**: Simple cache with no eviction strategy.
-
-**Proposal**: Implement LRU cache with configurable size:
-
-- Keep most-recently-used queries
-- Evict old queries automatically
-- Configurable cache size limit
-
-**Benefits**:
-
-- Bounded memory usage
-- Better performance for frequently-used queries
-
-**Complexity**: ⚠️ Low - Standard LRU implementation
+Older roadmap bullets in this section were partially based on stale assumptions about file-graph-only filters and `sort-by`. The current code-backed gaps are already captured in [Known Limitations](#known-limitations); no additional source-backed roadmap items were found in `src/`, `deps/`, or `packages/` during this review.
 
 ---
 
@@ -2773,11 +2177,11 @@ Valid markers: todo, doing, done, later, now
 
 ### Summary Verdict
 
-The Logseq Query System is a **sophisticated, dual-mode querying engine** that successfully bridges the gap between user-friendly DSL syntax and powerful Datalog queries. Its reactive architecture ensures query results stay fresh as data changes, while aggressive caching keeps performance acceptable even with large graphs.
+The current Logseq Query System is a **DB-centric querying engine** that bridges user-friendly DSL syntax and direct Datalog queries. Its reactive architecture keeps query results fresh as data changes, while cache keys, idle scheduling, and built-in query delays reduce UI contention.
 
 ### Key Strengths
 
-✅ **Flexible Architecture**: Supports both file-based and DB-based graphs with shared code
+✅ **Flexible Query Surface**: Supports both named DSL filters and direct Datalog queries
 
 ✅ **Reactive by Default**: Automatic query invalidation and re-execution on data changes
 
@@ -2789,9 +2193,7 @@ The Logseq Query System is a **sophisticated, dual-mode querying engine** that s
 
 ### Key Weaknesses
 
-❌ **Dual Graph Complexity**: Maintaining two graph implementations doubles maintenance burden
-
-❌ **Limited DB Graph Features**: No sort-by, no page-level queries
+❌ **Limited Filter Surface**: No `sort-by` and no page-level filters in the current parser/builder
 
 ❌ **No Query Debugging Tools**: Hard to optimize or debug complex queries
 
@@ -2804,20 +2206,18 @@ The Logseq Query System is a **sophisticated, dual-mode querying engine** that s
 🎯 **Start Here**:
 
 1. Read `src/main/frontend/db/query_dsl.cljs` - The parser is the heart of the system
-2. Experiment in `src/test/frontend/db/query_dsl_test.cljs` - Excellent examples
-3. Trace a query execution with debugger through `query_dsl/query` → `query_react/react-query` → `react/q`
-4. Understand the rules in `deps/db/src/logseq/db/frontend/rules.cljc` - These define query semantics
+2. Experiment in `src/test/frontend/db/query_dsl_test.cljs` - It contains the best concrete examples
+3. Trace a query execution through `query_dsl/query` → `query_react/react-query` → `react/q`
+4. Understand the rules in `deps/db/src/logseq/db/frontend/rules.cljc` - They define most query semantics
 
 🎯 **Before Modifying**:
 
-- Ensure you understand BOTH file and DB graph implementations
-- Add tests in `query_dsl_test.cljs` for both graph types
-- Test with `DB_GRAPH=1` environment variable
+- Ensure you understand parser, rules, builder, and reactive cache interactions together
+- Add tests in `query_dsl_test.cljs` or neighboring query component tests
 - Profile performance for large databases
 
 🎯 **Common Pitfalls to Avoid**:
 
-- Don't forget to update both file and DB graph code paths
 - Don't break query caching by changing query key format
 - Don't add rules without specifying dependencies in `rules-dependencies`
 - Don't forget that DB graphs support property default values
@@ -2826,54 +2226,32 @@ The Logseq Query System is a **sophisticated, dual-mode querying engine** that s
 
 ## Appendix: File Tree
 
-```
+```text
 logseq/
 ├── src/main/frontend/
 │   ├── db/
-│   │   ├── query_dsl.cljs ⭐⭐⭐ [Core DSL Parser - 850 lines]
-│   │   ├── query_react.cljs ⭐⭐ [Query Execution Wrapper - 117 lines]
-│   │   ├── query_custom.cljs ⭐ [Advanced Query Handler - 86 lines]
-│   │   ├── react.cljs ⭐⭐⭐ [Reactive Engine - 227 lines]
-│   │   ├── file_based/
-│   │   │   └── model.cljs [File Graph Model]
-│   │   ├── model.cljs [DB Model Utilities]
-│   │   └── utils.cljs [DB Utilities]
-│   │
+│   │   ├── query_dsl.cljs ⭐⭐⭐ [Core DSL parser]
+│   │   ├── query_react.cljs ⭐⭐ [Input resolution and query keys]
+│   │   ├── query_custom.cljs ⭐ [Advanced query dispatch]
+│   │   ├── react.cljs ⭐⭐⭐ [Reactive engine]
+│   │   ├── model.cljs [DB model utilities]
+│   │   └── utils.cljs [DB utilities]
 │   ├── handler/
 │   │   └── query/
-│   │       └── builder.cljs ⭐⭐ [Query Builder Logic - 212 lines]
-│   │
-│   ├── components/
-│   │   ├── query.cljs ⭐⭐ [Main Query Component - 233 lines]
-│   │   ├── file_based/
-│   │   │   ├── query.cljs [Query Header - 81 lines]
-│   │   │   └── query_table.cljs ⭐ [Table View - 263 lines]
-│   │   └── query/
-│   │       ├── builder.cljs ⭐⭐ [Builder UI - 720 lines]
-│   │       ├── result.cljs [Result Transform - 92 lines]
-│   │       ├── view.cljs [DB Graph View - 41 lines]
-│   │       └── builder.css [Styles]
-│   │
-│   └── extensions/
-│       └── sci.cljs [SCI Eval for Transforms]
-│
-├── deps/db/src/logseq/db/
-│   ├── frontend/
-│   │   ├── rules.cljc ⭐⭐⭐ [DB Graph Rules - 267 lines]
-│   │   └── inputs.cljs [Input Resolution]
-│   │
-│   └── file_based/
-│       └── rules.cljc ⭐⭐ [File Graph Rules - ~150 lines]
-│
-└── src/test/frontend/db/
-    ├── query_dsl_test.cljs ⭐⭐ [DSL Tests - 831 lines]
-    ├── query_custom_test.cljs [Custom Query Tests]
-    ├── query_react_test.cljs [React Engine Tests]
-    └── components/
-        ├── file_based/
-        │   └── query_table_test.cljs [Table Tests]
-        └── query/
-            └── result_test.cljs [Result Transform Tests]
+│   │       └── builder.cljs ⭐⭐ [Query builder logic]
+│   └── components/
+│       ├── query.cljs ⭐⭐ [Main query component]
+│       └── query/
+│           ├── builder.cljs ⭐⭐ [Builder UI]
+│           ├── result.cljs [Result transforms]
+│           └── view.cljs [Query result view]
+├── deps/db/src/logseq/db/frontend/
+│   ├── rules.cljc ⭐⭐⭐ [DB query rules]
+│   └── inputs.cljs [Input resolution]
+└── src/test/frontend/
+  ├── db/query_dsl_test.cljs ⭐⭐ [DSL tests]
+  ├── db/query_react_test.cljs [Reactive query tests]
+  └── components/query/result_test.cljs [Result transform tests]
 
 Legend:
 ⭐⭐⭐ = Critical file, must understand
@@ -2881,22 +2259,4 @@ Legend:
 ⭐ = Supporting file, nice to understand
 ```
 
-**Total Query System LOC**: ~4,500 lines of ClojureScript
-
-**File Count**: 20+ files
-
-**Test Coverage**: ~1,000 test LOC
-
----
-
-**Investigation Complete**: 2025-10-16
-
-**Lead Detective**: Claude Code
-
-**Case Status**: ✅ SOLVED
-
----
-
-_"The query system may seem complex at first, but like any good mystery, each piece fits together perfectly once you understand the whole picture. The dual graph support is the twist ending that makes everything more interesting."_
-
--- Detective's Final Notes
+The exact LOC totals and file counts from the previous revision were removed because they were not maintained as source-backed metrics.

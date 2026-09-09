@@ -1,6 +1,6 @@
 # Logseq Plugin API: A Detective's Investigation Report
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## Case Summary
 
@@ -11,9 +11,11 @@ The Logseq Plugin API is a sophisticated system that allows third-party develope
 - Dual-mode architecture (iframe/shadow) for plugin isolation
 - Bidirectional IPC communication using Postmate
 - Comprehensive API covering App, Editor, DB, Git, UI, and Assets
-- Marketplace integration with automatic updates
+- Marketplace integration with install/update checks and event-driven update flow
 - Theme support with hot-swapping capabilities
 - Settings schema system for plugin configuration
+
+> **Removed:** "Marketplace integration with automatic updates". Current flow supports update checking (`:only-check`) and explicit install/update actions via `install-or-update!`.
 
 ## 📋 Table of Contents
 
@@ -1266,12 +1268,14 @@ For web platform (no Electron), plugins are loaded from CDN:
 ### Critical Findings
 
 🔍 **Version Enforcement**: Plugin versions are force-overwritten during install (plugin.cljs:170)
-✅ **Atomic Updates**: Old plugin is unloaded before new version loads
-⚠️ **No Rollback**: Failed updates cannot be automatically rolled back
-⚠️ **Rate Limiting**: GitHub API may rate-limit marketplace requests
-🔍 **CDN Fallback**: Two GitHub API endpoints with fallback (plugin.cljs:22-36)
-✅ **Incremental Checks**: Auto-update checks only 16 plugins at a time
-❌ **No Signatures**: Plugin .zip files are not cryptographically signed
+
+> **Removed:** "Automatic updates" as a guaranteed behavior. The current Electron path exposes check-only mode and emits update events; installation/update remains action-driven.
+> ✅ **Atomic Updates**: Old plugin is unloaded before new version loads
+> ⚠️ **No Rollback**: Failed updates cannot be automatically rolled back
+> ⚠️ **Rate Limiting**: GitHub API may rate-limit marketplace requests
+> 🔍 **CDN Fallback**: Two GitHub API endpoints with fallback (plugin.cljs:22-36)
+> ✅ **Incremental Checks**: Auto-update checks only 16 plugins at a time
+> ❌ **No Signatures**: Plugin .zip files are not cryptographically signed
 
 ---
 
@@ -1430,18 +1434,37 @@ Downloaded .zip files are not verified with cryptographic signatures.
 
 ```typescript
 // actors GC
-syncGCTimer = setInterval(() => {
-  if (syncActors.size > 100) {
-    for (const [k, v] of syncActors) {
-      if (v.settled) {
-        syncActors.delete(k)
+syncGCTimer = setInterval(
+  () => {
+    if (syncActors.size > 100) {
+      for (const [k, v] of syncActors) {
+        if (v.settled) {
+          syncActors.delete(k)
+        }
       }
     }
-  }
-}, 1000 * 60 * 30) // Every 30 minutes
+  },
+  1000 * 60 * 30
+) // Every 30 minutes
 ```
 
 **Impact**: Prevents memory leaks from abandoned async calls
+
+---
+
+## Findings: New Capabilities
+
+Validated against current source exports in `src/main/logseq/api.cljs` and plugin install/update flow in `src/electron/electron/plugin.cljs`:
+
+- Unified update-check mode is explicitly supported through `install-or-update!` with `:only-check`, which emits structured `:lsp-updates` events for frontend handlers.
+- DB-graph plugin APIs now include richer property/tag surfaces exposed to plugins:
+  - `get_property`, `upsert_property`, `remove_property`
+  - `get_all_tags`, `get_all_properties`, `get_tag_objects`, `create_tag`, `get_tag`, `get_tags_by_name`
+  - `add_tag_extends`, `remove_tag_extends`, `add_block_tag`, `remove_block_tag`
+  - `add_tag_property`, `remove_tag_property`, `set_block_icon`, `remove_block_icon`, `add_property_value_choices`, `set_property_node_tags`
+- Editor export surface includes `open_pdf_viewer` for plugin-driven PDF opening.
+
+These capabilities are available in current source but were underrepresented or absent in the prior overview narrative.
 
 ---
 
@@ -2350,9 +2373,11 @@ The Logseq Plugin API is a **well-architected, comprehensive system** that succe
 ✅ **Robust lifecycle management** with proper state transitions
 ✅ **Comprehensive API** covering app, editor, DB, UI, assets, and git
 ✅ **Bidirectional communication** with sync/async support
-✅ **Marketplace integration** with automatic updates
+✅ **Marketplace integration** with install/update checks and IPC update events
 ✅ **Theme support** with hot-swapping
 ✅ **Settings persistence** with schema validation
+
+> **Removed:** "automatic updates" from strengths summary. Update checks are automated in specific paths, but plugin updates are not represented as unconditional background auto-updates in current source.
 
 ### Areas for Improvement
 

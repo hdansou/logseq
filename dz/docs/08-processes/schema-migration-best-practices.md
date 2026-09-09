@@ -1,967 +1,305 @@
 # Schema Migration Best Practices
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 **Document Type:** Process Guide
-**Last Updated:** December 28, 2025
+**Validated Against:** `src/`, `deps/`, and `packages/` on 2026-05-30
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
 
 ## Overview
 
-This guide provides comprehensive best practices for managing schema migrations in Logseq. Schema migrations are necessary when:
+This guide reflects the current DB-graph migration path implemented in:
 
-- Adding new built-in properties
-- Modifying existing property definitions
-- Changing schema structure or constraints
-- Updating validation rules
-- Modifying bootstrap initialization
+- [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs)
+- [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs)
+- [deps/db/src/logseq/db/sqlite/create_graph.cljs](../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)
+- [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs)
+- [src/test/frontend/worker/migrate_test.cljs](../../../src/test/frontend/worker/migrate_test.cljs)
 
-**Critical Rule:** Every schema change that affects stored data MUST include a migration entry.
+As of this revision, the current frontend DB schema version is `65.33`.
 
----
-
-## Table of Contents
-
-1. [Adding New Properties](#adding-new-properties)
-2. [Changing Property Types](#changing-property-types)
-3. [Property Renaming](#property-renaming)
-4. [Schema Version Management](#schema-version-management)
-5. [Migration Patterns](#migration-patterns)
-6. [Bootstrap Considerations](#bootstrap-considerations)
-7. [Testing Requirements](#testing-requirements)
-8. [Common Mistakes](#common-mistakes)
+**Critical rule:** if a change affects persisted DB-graph data, update the built-in definition, add or adjust the migration entry, and bump `db-schema/version` together.
 
 ---
 
-## Adding New Properties
+## Current Workflow
 
-### Required Steps
+### 1. Define the schema entity
 
-Every new built-in property requires updates in multiple locations:
+Add new built-in properties in [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs) and new built-in classes in [deps/db/src/logseq/db/frontend/class.cljs](../../../deps/db/src/logseq/db/frontend/class.cljs).
 
-#### Step 1: Define Property
-
-**Location:** [deps/db/src/logseq/db/frontend/property.cljs](deps/db/src/logseq/db/frontend/property.cljs)
-
-**Add to `built-in-properties` map:**
+For a new property, the live source still centers the definition on:
 
 ```clojure
-;; Example: Adding a new asset property
-{:db/ident :logseq.property.asset/my-new-property
- :title "My New Property"
+{:db/ident :logseq.property.example/my-property
+ :title "My Property"
  :schema {:type :default
           :cardinality :one
           :public? true
           :hide? false
-          :view-context :page
-          :ui-position :properties}
- :queryable? true
- :rtc {:rtc/ignore-attr-when-init-upload true
-       :rtc/ignore-attr-when-init-download true
-       :rtc/ignore-attr-when-syncing true}}
+          :view-context :page}
+ :queryable? true}
 ```
 
-**Key Decisions:**
+Use the current user-facing property types from `logseq.db.frontend.property.type/user-built-in-property-types`:
 
-- **Namespace:** Use appropriate prefix (`logseq.property.*`, `logseq.property.asset.*`, etc.)
-- **Type:** Choose from `:default`, `:number`, `:date`, `:datetime`, `:checkbox`, `:url`, `:node`
-- **Cardinality:** `:one` (single value) or `:many` (multiple values)
-- **Visibility:** Set `public?` and `hide?` appropriately
-- **RTC Behavior:** Explicitly configure sync behavior (see [RTC/Sync Considerations](./rtc-sync-schema-changes.md))
+- `:default`
+- `:number`
+- `:date`
+- `:datetime`
+- `:checkbox`
+- `:url`
+- `:node`
+- `:asset`
 
-#### Step 2: Add Migration Entry
+Internal-only types still exist, but they are not the normal path for user-visible schema additions.
 
-**Location:** [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
+### 2. Add a migration entry
 
-**Add to `schema-version->updates` vector:**
+Add an entry to `schema-version->updates` in [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs).
+
+The current handwritten source supports these migration map keys:
 
 ```clojure
-(def schema-version->updates
-  [;; ... existing migrations ...
-   ["65.17" {:properties [:logseq.property.asset/my-new-property]}]])
+["65.X" {:properties [:logseq.property.example/my-property]
+         :classes [:logseq.class/Example]
+         :fix some-fix-fn
+         :delete-properties [:legacy/property]}]
 ```
 
-**Migration Entry Structure:**
+What each key does today:
+
+- `:properties`: creates built-in property pages from `built-in-properties`
+- `:classes`: creates built-in classes from `built-in-classes`
+- `:fix`: runs a function of `[db]` that returns tx-data
+- `:delete-properties`: removes obsolete properties and their stored values
+
+### 3. Bump the schema version
+
+Update `version` in [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs):
 
 ```clojure
-["VERSION" MIGRATION-MAP]
-
-;; MIGRATION-MAP can have keys:
-;; :properties - Vector of property idents to add
-;; :classes - Vector of class idents to add
-;; :rename-db-idents - Map of old ident to new ident
-;; :fix - Function to apply custom data transformations
+(def version (parse-schema-version "65.33"))
 ```
 
-#### Step 3: Bump Schema Version
+The migration entry and `db-schema/version` must advance together.
 
-**Location:** [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
+### 4. Update validation only where the live code validates it
 
-**Update version constant:**
+Graph-wide validation still lives in [deps/db/src/logseq/db/frontend/validate.cljs](../../../deps/db/src/logseq/db/frontend/validate.cljs), but property-value validation for edits is currently built through:
 
-```clojure
-;; Before
-(def version (parse-schema-version "65.16"))
+- [deps/outliner/src/logseq/outliner/property.cljs](../../../deps/outliner/src/logseq/outliner/property.cljs)
+- [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
+- [deps/db/src/logseq/db/frontend/property/type.cljs](../../../deps/db/src/logseq/db/frontend/property/type.cljs)
 
-;; After
-(def version (parse-schema-version "65.17"))
-```
+If a new property needs custom value semantics, confirm the change in the outliner/property validation path, not only in `frontend/validate.cljs`.
 
-**Version Numbering:**
+### 5. Add focused tests
 
-- **Minor bump** (65.16 → 65.17): Adding properties, non-breaking changes
-- **Major bump** (65.x → 66.0): Breaking changes, major restructuring
+Target the migration slice you changed. Current repo examples live in [src/test/frontend/worker/migrate_test.cljs](../../../src/test/frontend/worker/migrate_test.cljs).
 
-#### Step 4: Add Validation Rules (If Needed)
+Typical checks:
 
-**Location:** [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
-
-**If property needs custom validation:**
-
-```clojure
-;; Add to appropriate entity schema or property value schema
-(defmethod property-value-schema :logseq.property.asset/my-new-property
-  [_property db property-value]
-  [:and
-   [:string {:error/message "Must be a string"}]
-   [:re {:error/message "Must match pattern"} #"^[a-z]+$"]])
-```
-
-#### Step 5: Update Tests
-
-**Add migration test:**
-
-```clojure
-(deftest test-migration-65-17
-  (let [db (create-test-db-with-schema "65.16")
-        migrated-db (migrate-db-graph db "65.17")]
-    (testing "New property exists after migration"
-      (is (d/entity migrated-db :logseq.property.asset/my-new-property)))
-    (testing "Property has correct schema"
-      (is (= :default (get-in (d/entity migrated-db :logseq.property.asset/my-new-property)
-                               [:block/schema :type]))))))
-```
-
-### Property Definition Template
-
-```clojure
-{:db/ident :logseq.property.NAMESPACE/property-name
- :title "Human Readable Name"
-
- ;; Optional: If DataScript attribute differs from ident
- :attribute :block/attribute-name
-
- :schema {:type :default  ; or :number, :date, :datetime, :checkbox, :url, :node
-          :cardinality :one  ; or :many
-          :public? true  ; User-visible in UI
-          :hide? false  ; Hidden from property lists
-          :view-context :page  ; Where to show: :page, :block, :class, :property, :never
-          :ui-position :properties}  ; UI placement
-
- :queryable? true  ; Usable in query builder
-
- ;; Optional: For choice properties
- :closed-values [{:uuid (d/squuid)
-                  :value "Option 1"}
-                 {:uuid (d/squuid)
-                  :value "Option 2"}]
-
- ;; Optional: Meta-properties
- :properties {:logseq.property/description "Property description"
-              :logseq.property/schema-classes #{:logseq.class/SomeClass}}
-
- ;; Required: RTC sync configuration
- :rtc {:rtc/ignore-attr-when-init-upload true
-       :rtc/ignore-attr-when-init-download true
-       :rtc/ignore-attr-when-syncing true}}
-```
-
-### Property Naming Conventions
-
-**Namespace Prefixes:**
-
-- `logseq.property.*` - Core application properties
-- `logseq.property.asset.*` - Asset-related properties
-- `logseq.property.embedding.*` - Embedding/AI properties
-- `logseq.property.tldraw.*` - Whiteboard properties
-- `user.property.*` - User-defined properties
-- `plugin.property.*` - Plugin-defined properties
-
-**Naming Style:**
-
-- Use kebab-case: `:my-property-name`
-- Be descriptive but concise
-- Include namespace context
-- Avoid abbreviations unless standard
-
-**Examples:**
-
-- ✅ `:logseq.property.asset/external-file-name`
-- ✅ `:logseq.property/background-color`
-- ❌ `:logseq.property/bgc` (too abbreviated)
-- ❌ `:my-prop` (missing namespace)
+- migrated schema version updated correctly
+- new property or class exists after migration
+- deleted properties are actually removed when using `:delete-properties`
+- fix-function data changes are preserved
 
 ---
 
-## Changing Property Types
+## Version Management
 
-### ⚠️ Critical Warning
+Schema versions are parsed and stored as maps such as `{:major 65 :minor 33}`, not as plain strings in the DB.
 
-**DO NOT change the type of an existing property that has user data.** This will cause:
+Relevant kv entities currently include:
 
-- Data loss during migration
-- Validation failures
-- Type errors when accessing values
-- Sync conflicts in RTC
+- `:logseq.kv/schema-version`
+- `:logseq.kv/graph-initial-schema-version`
+- `:logseq.kv/remote-schema-version`
 
-### Correct Approach: Create New Property
+`migrate` in [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs) applies every migration newer than the graph version and not newer than the requested target version, then runs `ensure-built-in-data-exists!` as a final repair pass.
 
-Instead of changing type:
+Compatibility rules that are directly visible in source today:
 
-1. **Create new property with new type**
-2. **Add migration to transform data**
-3. **Deprecate old property**
-4. **Update UI/query references**
-
-### Example: Changing Text Property to Number
-
-```clojure
-;; Step 1: Add new property with correct type
-{:db/ident :logseq.property/my-property-v2
- :title "My Property"
- :schema {:type :number
-          :cardinality :one
-          :public? true}
- :rtc {:rtc/ignore-attr-when-syncing false}}
-
-;; Step 2: Add migration with fix function
-["65.17" {:properties [:logseq.property/my-property-v2]
-          :fix migrate-my-property-to-number}]
-
-;; Step 3: Implement migration function
-(defn migrate-my-property-to-number
-  [db]
-  (let [old-prop-ident :logseq.property/my-property
-        new-prop-ident :logseq.property/my-property-v2
-        old-values (q '[:find ?e ?v
-                        :where
-                        [?e :logseq.property/my-property ?v]]
-                      db)]
-    (->> old-values
-         (keep (fn [[entity-id old-value]]
-                 (when-let [parsed (parse-number old-value)]
-                   {:db/id entity-id
-                    new-prop-ident parsed
-                    old-prop-ident nil})))  ; Retract old value
-         vec)))
-
-;; Step 4: Mark old property as deprecated
-{:db/ident :logseq.property/my-property
- :title "My Property (Deprecated)"
- :schema {:type :default
-          :cardinality :one
-          :public? false  ; Hide from UI
-          :deprecated true}
- :properties {:logseq.property/description "Deprecated. Use :logseq.property/my-property-v2"}}
-```
-
-### Type Change Checklist
-
-- [ ] Create new property with new type and versioned name
-- [ ] Add migration entry with `:fix` function
-- [ ] Implement data transformation function
-- [ ] Handle parsing errors gracefully (log, skip, or use default)
-- [ ] Mark old property as deprecated
-- [ ] Update all UI components referencing property
-- [ ] Update all query code
-- [ ] Test migration on graphs with actual data
-- [ ] Document breaking change in release notes
-- [ ] Plan deprecation timeline (when to remove old property)
+- newer app versions can migrate older graphs forward
+- an older client is blocked from editing a graph with a newer schema version
+- RTC tracks `:logseq.kv/remote-schema-version`, and its kv doc states RTC will not start when major schema versions differ
 
 ---
 
-## Property Renaming
+## Migration Patterns In Current Source
 
-Renaming properties requires special handling to maintain data continuity.
-
-### Using `:rename-db-idents`
+### Simple property addition
 
 ```clojure
-;; Example: Renaming a property
-["65.15" {:rename-db-idents
-          {:logseq.property.tldraw/camera :logseq.property.whiteboard/camera
-           :logseq.property.tldraw/zoom :logseq.property.whiteboard/zoom}}]
+["65.X" {:properties [:logseq.property.example/my-property]}]
 ```
 
-### Renaming Process
+Use this when the entity can be created entirely from the built-in definition.
 
-1. **Add new property definition** with new ident
-2. **Add migration entry** with `:rename-db-idents` map
-3. **Remove old property definition** from `built-in-properties`
-4. **Update all code references** to use new ident
-5. **Bump schema version**
-
-### Rename Migration Template
+### Class and property addition together
 
 ```clojure
-;; Step 1: Define new property
-{:db/ident :logseq.property.new-namespace/property-name
- :title "Property Name"
- :schema {:type :default
-          :cardinality :one
-          :public? true}
- :rtc {:rtc/ignore-attr-when-syncing false}}
-
-;; Step 2: Add migration
-["65.X" {:rename-db-idents
-         {:logseq.property.old-namespace/property-name
-          :logseq.property.new-namespace/property-name}}]
-
-;; Step 3: Bump version
-(def version (parse-schema-version "65.X"))
+["65.X" {:classes [:logseq.class/Example]
+         :properties [:logseq.property.example/items]}]
 ```
 
-### Renaming Checklist
+This matches the current migration mechanism, which can build both in one version step.
 
-- [ ] Add new property with new ident
-- [ ] Add `:rename-db-idents` migration entry
-- [ ] Remove old property definition
-- [ ] Search codebase for old ident references
-- [ ] Update all namespaced keywords in code
-- [ ] Update tests
-- [ ] Update documentation
-- [ ] Test migration path
-- [ ] Verify export/import compatibility
+### Fix-only migration
+
+```clojure
+["65.X" {:fix repair-existing-data}]
+
+(defn repair-existing-data [db]
+  [[:db/retract entity-id :bad/attr bad-value]])
+```
+
+Best practices for `:fix` functions in the current codebase:
+
+- take `[db]`
+- return tx-data
+- do not transact directly
+- tolerate partial or legacy data
+- stay idempotent when practical
+
+### Property deletion
+
+```clojure
+["65.X" {:delete-properties [:legacy/property]}]
+```
+
+This is now a first-class migration capability. The live example is `65.25` in [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs).
 
 ---
 
-## Schema Version Management
+## Property Changes
 
-### Version Format
+### Adding a new property
 
-Schema versions use **major.minor** format:
+Use this checklist:
 
-- Format: `"MAJOR.MINOR"`
-- Example: `"65.16"`
+- add the definition to `built-in-properties`
+- add a `schema-version->updates` entry
+- bump `db-schema/version`
+- add focused tests for the touched migration step
+- verify any edit-time validation path if the property has special value rules
 
-### When to Bump Versions
+### Changing a property type
 
-**Minor Version Bump (65.16 → 65.17):**
+The current outliner update path still rejects type changes when existing data is present. Treat type changes as migrations to a new property rather than in-place mutation.
 
-- Adding new properties
-- Adding new validation rules
-- Non-breaking schema additions
-- Fix functions that don't change structure
+Preferred pattern:
 
-**Major Version Bump (65.x → 66.0):**
+1. Add a new property with the new type.
+2. Use a `:fix` function to copy or transform old data.
+3. Update call sites to the new ident.
+4. Remove the old property later with `:delete-properties` once the graph no longer depends on it.
 
-- Removing properties (rare)
-- Changing fundamental schema structure
-- Breaking changes to entity model
-- Incompatible with previous versions
+### RTC notes
 
-### Version Comparison
+Do not assume every new property needs a three-key RTC config. In current handwritten source, the shared helper in [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs) only sets `:rtc/ignore-attr-when-syncing`, and source-level sync filtering in [src/main/frontend/worker/sync/const.cljs](../../../src/main/frontend/worker/sync/const.cljs) also keys off `:rtc/ignore-attr-when-syncing`.
 
-**Location:** [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
-
-```clojure
-(defn compatible-schema-version?
-  "Check if graph schema version is compatible with app version"
-  [graph-version app-version]
-  (and graph-version
-       app-version
-       (= (major graph-version) (major app-version))
-       (<= (minor graph-version) (minor app-version))))
-```
-
-**Compatibility Rules:**
-
-- Same major version required
-- Graph minor version ≤ app minor version
-- App can read older minor versions (forward compatible)
-- App cannot read newer minor versions (not backward compatible)
-
-### Version Storage
-
-Schema versions are stored in multiple key-value entities:
-
-```clojure
-;; Current graph schema version
-:logseq.kv/schema-version "65.16"
-
-;; Schema version when graph was first created
-:logseq.kv/graph-initial-schema-version "65.10"
-
-;; Remote schema version (for RTC)
-:logseq.kv/remote-schema-version "65.16"
-```
-
-### Migration Triggers
-
-Migrations run automatically when:
-
-- Graph schema version < app schema version
-- User opens graph in newer app version
-- During graph import
-
-**Migration Runner Location:** [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
-
-```clojure
-(defn migrate-db-graph
-  "Migrate database from its current schema version to target version"
-  [conn repo target-version]
-  ;; 1. Check current version
-  ;; 2. Find applicable migrations
-  ;; 3. Apply migrations sequentially
-  ;; 4. Update schema version after each
-  ;; 5. Validate after completion
-  )
-```
-
----
-
-## Migration Patterns
-
-### Pattern 1: Simple Property Addition
-
-**Use when:** Adding new property that doesn't require data transformation
-
-```clojure
-;; Migration entry
-["65.17" {:properties [:logseq.property/new-property]}]
-```
-
-**What it does:**
-
-- Creates property page entity
-- Adds property to `#Property` class
-- Sets property as built-in
-- No data transformation needed
-
-### Pattern 2: Multiple Properties
-
-**Use when:** Adding several related properties in one version
-
-```clojure
-["65.17" {:properties [:logseq.property/prop-one
-                       :logseq.property/prop-two
-                       :logseq.property/prop-three]}]
-```
-
-### Pattern 3: Property with Fix Function
-
-**Use when:** Need to transform existing data or create initial values
-
-```clojure
-["65.17" {:properties [:logseq.property/new-property]
-          :fix add-default-values-to-property}]
-
-(defn add-default-values-to-property
-  "Add default value to all pages missing the property"
-  [db]
-  (let [property-ident :logseq.property/new-property
-        pages-without-prop (q '[:find [?e ...]
-                                :where
-                                [?e :block/type "page"]
-                                (not [?e :logseq.property/new-property])]
-                              db)]
-    (mapv (fn [page-id]
-            {:db/id page-id
-             property-ident "default-value"})
-          pages-without-prop)))
-```
-
-### Pattern 4: Pure Fix Function
-
-**Use when:** Fixing data inconsistencies without adding properties
-
-```clojure
-["65.11" {:fix remove-block-path-refs}]
-
-(defn remove-block-path-refs
-  "Remove invalid :block/path-refs from entities"
-  [db]
-  (->> (d/datoms db :aevt :block/path-refs)
-       (map (fn [datom]
-              [:db/retract (:e datom) :block/path-refs (:v datom)]))
-       vec))
-```
-
-### Pattern 5: Renaming Properties
-
-**Use when:** Changing property ident without losing data
-
-```clojure
-["65.15" {:rename-db-idents
-          {:old/property-ident :new/property-ident}}]
-```
-
-### Pattern 6: Complex Multi-Step Migration
-
-**Use when:** Need multiple operations in sequence
-
-```clojure
-["65.17" {:properties [:logseq.property/new-property]
-          :rename-db-idents {:old/ident :new/ident}
-          :fix multi-step-migration}]
-
-(defn multi-step-migration
-  [db]
-  (let [;; Step 1: Transform old data
-        old-data-tx (transform-old-data db)
-        ;; Step 2: Create new structures
-        new-data-tx (create-new-structures db)
-        ;; Step 3: Clean up
-        cleanup-tx (cleanup-obsolete-data db)]
-    ;; Combine all transaction data
-    (concat old-data-tx new-data-tx cleanup-tx)))
-```
-
-### Fix Function Guidelines
-
-**Function signature:**
-
-```clojure
-(defn migration-fix-fn
-  "Description of what this migration does"
-  [db]  ; db is current database value
-  ;; Return transaction data (vector of maps/datoms)
-  [{:db/id entity-id
-    :attribute value}
-   [:db/retract entity-id :attribute old-value]])
-```
-
-**Best Practices:**
-
-- Return transaction data, don't call transact
-- Handle nil/missing data gracefully
-- Log warnings for problematic data
-- Use query to find affected entities
-- Test with realistic data volumes
-- Consider performance (large graphs)
-- Be idempotent (can run multiple times safely)
+Match nearby built-ins and the specific sync path you are changing instead of cargo-culting a larger RTC map.
 
 ---
 
 ## Bootstrap Considerations
 
-### What is Bootstrap?
+Bootstrap still matters because migrations and new-graph creation must agree on the same built-in shape.
 
-Bootstrap is the initialization process that creates a new graph from scratch. It must resolve circular dependencies:
+The live order in [deps/db/src/logseq/db/sqlite/create_graph.cljs](../../../deps/db/src/logseq/db/sqlite/create_graph.cljs) is:
 
-- Properties need to be tagged `#Property`
-- `#Property` class needs properties
-- Some properties need themselves as properties
+1. bootstrap class ids for `Root`, `Property`, `Tag`, `Page`, and `Template`
+2. initial kv data, including schema-version markers and `:logseq.property/empty-placeholder`
+3. initial properties, with four bootstrap properties handled specially
+4. remaining built-in classes
+5. initial files
+6. default built-in pages
+7. hidden pages
 
-### Bootstrap Order (Critical!)
+The current bootstrap properties are:
 
-**Location:** [deps/db/src/logseq/db/sqlite/create_graph.cljs](deps/db/src/logseq/db/sqlite/create_graph.cljs)
+- `:logseq.property/type`
+- `:logseq.property/hide?`
+- `:logseq.property/built-in?`
+- `:logseq.property/created-from-property`
 
-**Initialization sequence (DO NOT CHANGE ORDER!):**
+New graphs currently also include these built-in files:
 
-```clojure
-;; 1. Bootstrap class :db/idents only (no properties yet)
-;;    - Root, Tag, Property, Template
+- `logseq/config.edn`
+- `logseq/custom.css`
+- `logseq/custom.js`
+- `logseq/publish.css`
+- `logseq/publish.js`
 
-;; 2. Key-value pairs
-;;    - Schema version, DB type, metadata
+And these hidden/built-in pages are created in bootstrap:
 
-;; 3. Bootstrap properties (4 properties)
-;;    - :logseq.property/type
-;;    - :logseq.property/hide?
-;;    - :logseq.property/built-in?
-;;    - :logseq.property/created-from-property
+- `Views`
+- `Favorites`
+- `Recycle`
 
-;; 4. All other properties (100+ built-in properties)
-
-;; 5. Add bootstrap properties to themselves
-;;    (Now safe because properties exist)
-
-;; 6. Mark all properties as built-in
-
-;; 7. Complete bootstrap classes
-;;    (Add properties to classes)
-
-;; 8. All other classes
-
-;; 9. Initial files (config.edn, custom.css, custom.js)
-
-;; 10. Built-in pages (Library, Contents, Quick Add)
-
-;; 11. Hidden pages (Views, Favorites)
-```
-
-### Why Order Matters
-
-**Problem:** Circular dependency
-
-```
-Property entity ─needs─> #Property tag ─needs─> properties ─needs─> Property entity
-```
-
-**Solution:** Multi-stage creation
-
-1. Create Property class stub (no properties)
-2. Create property entities (tag them #Property)
-3. Add properties to Property class
-4. Add properties to property entities themselves
-
-### Bootstrap Classes
-
-**The four bootstrap classes:**
-
-```clojure
-;; 1. Root - Base class for all classes
-{:db/ident :logseq.class/Root
- :title "Root"}
-
-;; 2. Tag - Base class for tags
-{:db/ident :logseq.class/Tag
- :title "Tag"
- :extends #{:logseq.class/Root}}
-
-;; 3. Property - Class for properties
-{:db/ident :logseq.class/Property
- :title "Property"
- :extends #{:logseq.class/Tag}}
-
-;; 4. Template - Class for templates
-{:db/ident :logseq.class/Template
- :title "Template"
- :extends #{:logseq.class/Tag}}
-```
-
-### Bootstrap Properties
-
-**The four properties needed for bootstrap:**
-
-```clojure
-;; 1. type - Property type
-:logseq.property/type
-
-;; 2. hide? - Hidden from UI
-:logseq.property/hide?
-
-;; 3. built-in? - Marks built-in properties
-:logseq.property/built-in?
-
-;; 4. created-from-property - Tracks property creation source
-:logseq.property/created-from-property
-```
-
-### Modifying Bootstrap
-
-**⚠️ EXTREME CAUTION REQUIRED**
-
-Changes to bootstrap code are extremely risky:
-
-- Can break graph creation completely
-- Hard to debug (happens during initialization)
-- Affects all new graphs
-- Circular dependency issues are subtle
-
-**If you must modify bootstrap:**
-
-1. Understand current order completely
-2. Diagram dependencies before changes
-3. Add extensive tests
-4. Test with clean graph creation
-5. Test import of bootstrapped graph
-6. Review with senior developer
-7. Plan rollback strategy
-
-**Common bootstrap failures:**
-
-- "Property class not found" - Bootstrap classes not created first
-- "Property not found" - Property used before creation
-- "Circular reference error" - Dependency cycle not resolved
+If you change bootstrap order or the built-in sets, validate both new-graph creation and forward migration behavior.
 
 ---
 
-## Testing Requirements
+## Testing Guidance
 
-Every migration must be tested before release.
+Use the existing migration tests in [src/test/frontend/worker/migrate_test.cljs](../../../src/test/frontend/worker/migrate_test.cljs) as the first pattern, then validate graph integrity with the DB validator when needed.
 
-### Required Tests
+Useful current validation surfaces:
 
-#### 1. Migration Path Test
+- migration-specific assertions in `src/test/frontend/worker/migrate_test.cljs`
+- create-graph and export/import validation tests under `deps/db/test/`
+- graph-wide validation via `validate-local-db!` in [deps/db/src/logseq/db/frontend/validate.cljs](../../../deps/db/src/logseq/db/frontend/validate.cljs)
 
-```clojure
-(deftest test-migration-from-previous-version
-  (testing "Migrate from 65.16 to 65.17"
-    (let [db (create-test-db-with-schema "65.16")
-          migrated-db (migrate-db-graph db "65.17")]
-      (is (= "65.17" (get-schema-version migrated-db)))
-      (is (d/entity migrated-db :logseq.property/new-property))
-      (validate-db! migrated-db))))  ; No validation errors
-```
+Minimum expectation for a schema migration change:
 
-#### 2. Data Preservation Test
-
-```clojure
-(deftest test-migration-preserves-data
-  (testing "User data preserved after migration"
-    (let [db (create-test-db-with-data "65.16"
-                                       {:pages 100
-                                        :blocks 1000
-                                        :properties 50})
-          migrated-db (migrate-db-graph db "65.17")
-          original-page-count (count-pages db)
-          migrated-page-count (count-pages migrated-db)]
-      (is (= original-page-count migrated-page-count))
-      (is (no-data-loss? db migrated-db)))))
-```
-
-#### 3. Fix Function Test
-
-```clojure
-(deftest test-fix-function
-  (testing "Fix function handles edge cases"
-    (let [db (create-db-with-invalid-data)
-          fixed-db (migrate-db-graph db "65.17")]
-      (is (zero? (count-invalid-entities fixed-db)))
-      (is (validate-db! fixed-db)))))
-```
-
-#### 4. Performance Test
-
-```clojure
-(deftest test-migration-performance
-  (testing "Migration completes in reasonable time"
-    (let [large-db (create-test-db-with-data "65.16"
-                                             {:pages 10000
-                                              :blocks 100000})
-          start-time (js/Date.now)
-          migrated-db (migrate-db-graph large-db "65.17")
-          duration (- (js/Date.now) start-time)]
-      (is (< duration 30000) "Migration should complete in < 30 seconds"))))
-```
-
-### Manual Testing Checklist
-
-Before releasing schema change:
-
-- [ ] Create new graph with new schema version
-- [ ] Open existing graph with previous version (should auto-migrate)
-- [ ] Verify no validation errors after migration
-- [ ] Check all properties visible in UI
-- [ ] Test property values can be set/read
-- [ ] Export graph after migration
-- [ ] Import exported graph in clean environment
-- [ ] Test RTC sync between old and new versions
-- [ ] Check large graph migration time
-- [ ] Verify no console errors during migration
+- test the exact version boundary you changed
+- test the newly created or deleted entities
+- test preservation of existing user data affected by the migration
 
 ---
 
-## Common Mistakes
+## Findings: New Capabilities
 
-### Mistake 1: Missing Migration Entry
+Compared with the older process document, the current source adds or clearly exposes these capabilities:
 
-**Symptom:** Validation errors after upgrade
+- `:delete-properties` is now a supported migration primitive in `schema-version->updates`
+- `ensure-built-in-data-exists!` runs after normal version upgrades to repair missing built-in entities without overwriting preserved kv data such as graph creation metadata
+- bootstrap now creates `publish.css` and `publish.js` for new DB graphs
+- bootstrap now explicitly creates `Recycle` alongside `Views` and `Favorites`
+- migration coverage in [src/test/frontend/worker/migrate_test.cljs](../../../src/test/frontend/worker/migrate_test.cljs) includes deletion and repair scenarios, not only additive upgrades
 
-**Code:**
+---
 
-```clojure
-;; Added to built-in-properties
-{:db/ident :logseq.property/new-prop ...}
+## Removed Or Stale Guidance
 
-;; ❌ FORGOT migration entry!
-;; ❌ FORGOT schema version bump!
-```
-
-**Fix:**
-
-```clojure
-;; Add migration
-["65.17" {:properties [:logseq.property/new-prop]}]
-
-;; Bump version
-(def version (parse-schema-version "65.17"))
-```
-
-### Mistake 2: Wrong Version in Migration
-
-**Symptom:** Migration doesn't run
-
-**Code:**
-
-```clojure
-(def version (parse-schema-version "65.17"))
-
-;; ❌ Version mismatch!
-["65.16" {:properties [:logseq.property/new-prop]}]
-```
-
-**Fix:**
-
-```clojure
-;; Match version
-["65.17" {:properties [:logseq.property/new-prop]}]
-```
-
-### Mistake 3: Changing Existing Property Type
-
-**Symptom:** Data loss, validation errors
-
-**Code:**
-
-```clojure
-;; ❌ Changed type from :default to :number
-{:db/ident :logseq.property/my-prop
- :schema {:type :number}}  ; Was :default
-```
-
-**Fix:**
-
-```clojure
-;; Create new property, migrate data
-{:db/ident :logseq.property/my-prop-v2
- :schema {:type :number}}
-
-["65.17" {:properties [:logseq.property/my-prop-v2]
-          :fix migrate-my-prop-to-number}]
-```
-
-### Mistake 4: Missing RTC Configuration
-
-**Symptom:** Property doesn't sync between devices
-
-**Code:**
-
-```clojure
-;; ❌ No :rtc configuration
-{:db/ident :logseq.property/new-prop
- :schema {:type :default}}
-```
-
-**Fix:**
-
-```clojure
-;; Always specify RTC behavior
-{:db/ident :logseq.property/new-prop
- :schema {:type :default}
- :rtc {:rtc/ignore-attr-when-syncing false}}
-```
-
-### Mistake 5: Fix Function Calls Transact
-
-**Symptom:** Migration fails or runs twice
-
-**Code:**
-
-```clojure
-;; ❌ Fix function should not transact!
-(defn bad-fix-fn [db]
-  (d/transact! conn [...]))  ; WRONG!
-```
-
-**Fix:**
-
-```clojure
-;; Return transaction data
-(defn good-fix-fn [db]
-  [{:db/id entity-id
-    :attribute value}])
-```
-
-### Mistake 6: Modifying Bootstrap Order
-
-**Symptom:** New graphs fail to create
-
-**Code:**
-
-```clojure
-;; ❌ Changed bootstrap order
-;; Now creating properties before classes!
-```
-
-**Fix:**
-
-```clojure
-;; Restore original order (see Bootstrap Considerations)
-;; Do not modify without extreme caution
-```
-
-### Mistake 7: No Tests for Migration
-
-**Symptom:** Migration breaks in production
-
-**Code:**
-
-```clojure
-;; ❌ No tests written
-```
-
-**Fix:**
-
-```clojure
-;; Add comprehensive tests
-(deftest test-migration-65-17 ...)
-```
+> **Removed:** `:rename-db-idents` is not part of the current handwritten migration implementation in [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs). The supported path today is add new property or class, migrate data with `:fix`, then optionally remove old properties later with `:delete-properties`.
+> **Removed:** the example migration runner named `migrate-db-graph` does not exist in current source. The live entry point is `migrate` in [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs).
+> **Removed:** the old `compatible-schema-version?` example is not present in current handwritten source. Current compatibility behavior is enforced through `parse-schema-version`, `compare-schema-version`, and the guard logic inside `migrate`.
+> **Removed:** the previous document’s claim that migrations end with a validation pass is too strong for the current implementation. `migrate` applies version updates and then `ensure-built-in-data-exists!`; it does not call a final graph validator itself.
+> **Removed:** the earlier "always add explicit three-key RTC config" rule is not an accurate description of the current source path. Confirm the actual sync behavior you need instead of assuming all three RTC keys are required in handwritten source.
+> **Removed:** property-specific validation is not primarily extended through `defmethod property-value-schema` in [deps/db/src/logseq/db/frontend/validate.cljs](../../../deps/db/src/logseq/db/frontend/validate.cljs). Current property-value validation is assembled through the outliner and malli-schema path described above.
 
 ---
 
 ## Quick Reference Checklist
 
-Use this checklist for every schema change:
-
-### Property Addition Checklist
-
-- [ ] Add property to `built-in-properties` in [deps/db/src/logseq/db/frontend/property.cljs](deps/db/src/logseq/db/frontend/property.cljs)
-- [ ] Add migration entry to `schema-version->updates` in [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
-- [ ] Bump `version` in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
-- [ ] Version in migration matches version in schema.cljs
-- [ ] Configure `:rtc` behavior explicitly
-- [ ] Add validation rules if needed in [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
-- [ ] Write migration test
-- [ ] Write property usage test
-- [ ] Test migration on sample graph
-- [ ] Test import/export compatibility
-- [ ] Update documentation
-- [ ] Review [PR Review Checklist](./schema-change-pr-checklist.md)
-
-### Property Type Change Checklist
-
-- [ ] Create new property with new type (versioned name)
-- [ ] Add migration with `:fix` function
-- [ ] Implement data transformation function
-- [ ] Handle parsing errors gracefully
-- [ ] Mark old property as deprecated
-- [ ] Update UI component references
-- [ ] Update query code
-- [ ] Write transformation tests
-- [ ] Test on graphs with real data
-- [ ] Document breaking change
-- [ ] Plan deprecation timeline
-
-### Schema Version Bump Checklist
-
-- [ ] Determine bump type (minor vs major)
-- [ ] Update version in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
-- [ ] Ensure all migrations have matching version
-- [ ] Update CHANGELOG.md
-- [ ] Test migration from previous versions
-- [ ] Verify compatibility checks work correctly
-
----
-
-## Related Documentation
-
-- [Investigation Overview](../07-investigations/schema-evolution-and-data-migration.md)
-- [Validation Guidelines](./validation-best-practices.md)
-- [Import/Export Best Practices](./import-export-best-practices.md)
-- [RTC/Sync Considerations](./rtc-sync-schema-changes.md)
-- [PR Review Checklist](./schema-change-pr-checklist.md)
-- [Testing Strategies](./schema-change-testing.md)
-- [Database Schema Guide](../03-features/database-graphs/schema-guide.md)
+- add or adjust the built-in definition
+- add the migration entry using only currently supported keys
+- bump `db-schema/version`
+- update validation only on the live validation path you touched
+- write a focused migration test
+- confirm new-graph bootstrap still matches the migrated built-in shape when relevant
 
 ---
 
 ## Changelog
 
-| Date       | Changes                                         |
-| ---------- | ----------------------------------------------- |
-| 2025-12-28 | Initial version based on investigation findings |
+| Date       | Changes                                                                                                                                                                |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-05-30 | Revalidated against current `src/`, `deps/`, and `packages/`; removed stale rename and validation guidance; added current deletion, repair, and bootstrap capabilities; updated user property-type list to include `:asset` |
+| 2025-12-28 | Initial version based on investigation findings                                                                                                                        |

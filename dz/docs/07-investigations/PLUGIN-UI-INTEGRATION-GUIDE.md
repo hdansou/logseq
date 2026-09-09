@@ -1,8 +1,20 @@
 # Logseq Plugin UI Integration Guide
 
-**Investigation Date:** December 15, 2025  
-**Version:** 1.0  
+**Investigation Date:** December 15, 2025
+
+> **Last revised:** 2026-05-30
+
+**Version:** 1.2  
 **Purpose:** Comprehensive guide to Logseq's CSS and DOM structure for plugins that need to integrate into the UI
+
+---
+
+## Canonical Docs First
+
+- For API-level plugin interfaces, use `dz/docs/ddocs/reference/api/plugin-api.md` as the canonical reference.
+- For theme/token implementation guidance, use `libs/guides/custom_theme_guide.md`.
+- This page is an advanced investigation reference for DOM structure and integration internals.
+- File/symbol references are source-of-truth; line ranges can drift as code evolves.
 
 ---
 
@@ -11,20 +23,17 @@
 ### Key Findings
 
 1. **Three Main UI Integration Methods:**
-
    - `provideUI()` - Inject custom HTML/CSS into specific DOM locations via slots or selectors
    - `registerUIItem()` - Add buttons to toolbar or pagebar with predefined slots
    - `provideStyle()` - Inject global CSS styles into the application
 
 2. **Four Primary Integration Points:**
-
    - **Toolbar** (`data-type="toolbar"`) - Top horizontal bar with plugin buttons
    - **Pagebar** (`data-type="pagebar"`) - Page-specific action bar
    - **Block Slots** - Macro renderer and block-specific UI hooks
    - **Floating UI** - Draggable/resizable modal containers
 
 3. **CSS Architecture:**
-
    - CSS custom properties (CSS variables) with `--ls-` prefix for theming
    - Plugin-specific classes: `.lsp-*` (Logseq Plugin)
    - Injected UI marked with `[data-injected-ui]` attribute
@@ -34,6 +43,11 @@
    - 🟡 **Medium Risk:** Direct DOM manipulation can conflict with React rendering
    - 🟡 **Medium Risk:** Plugin CSS can override core styles if not scoped properly
    - 🟢 **Low Risk:** Well-sandboxed with DOMPurify sanitization
+
+## Findings: New Capabilities
+
+- `provideStyle()` supports keyed updates via `StyleOptions` (`{ key, style }`), enabling idempotent style replacement instead of adding duplicate style tags.
+- Unified command APIs are now exposed through `logseq.Commands.register()` / `logseq.Commands.execute()`, with placement-based registration (`palette`, `shortcut`, `slash`, context menus) that complements UI integration workflows.
 
 ### Quick Reference for Developers
 
@@ -68,7 +82,7 @@ logseq.provideStyle(`
 
 #### 1.1 `provideUI()` - Primary UI Injection Method
 
-**Location:** [libs/src/LSPlugin.user.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/LSPlugin.user.ts#L596-L600)
+**Location:** [libs/src/LSPlugin.user.ts](../../../libs/src/LSPlugin.user.ts#L596-L600)
 
 **Purpose:** Inject custom HTML templates into specific locations in the Logseq UI
 
@@ -108,13 +122,13 @@ type UIPathIdentity = {
 
 **HTML Template Processing:**
 
-- **Location:** [libs/src/helpers.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/helpers.ts#L291-L380)
+- **Location:** [libs/src/common.ts](../../../libs/src/common.ts)
 - Templates are sanitized using **DOMPurify** to prevent XSS attacks
 - Allowed tags include `<iframe>` with restricted attributes
 - Event handlers use `data-on-{event}` attributes, not inline `onclick`
 
 ```typescript
-// Sanitization (helpers.ts:330-340)
+// Sanitization (common.ts)
 ui.template = DOMPurify.sanitize(ui.template, {
   ADD_TAGS: ['iframe'],
   ALLOW_UNKNOWN_PROTOCOLS: true,
@@ -136,7 +150,7 @@ ui.template = DOMPurify.sanitize(ui.template, {
 - Event handlers are defined in `provideModel()` and called via IPC
 
 ```typescript
-// Event delegation (helpers.ts:441-459)
+// Event delegation (common.ts)
 ;['click', 'focus', 'blur', 'keyup' /* ... */].forEach((type) => {
   el.addEventListener(type, (e) => {
     const trigger = target.closest(`[data-on-${type}]`)
@@ -152,7 +166,7 @@ ui.template = DOMPurify.sanitize(ui.template, {
 
 #### 1.2 `registerUIItem()` - Toolbar/Pagebar Integration
 
-**Location:** [libs/src/LSPlugin.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/LSPlugin.ts#L1316-L1320)
+**Location:** [libs/src/LSPlugin.ts](../../../libs/src/LSPlugin.ts#L1316-L1320)
 
 **Purpose:** Add custom buttons/widgets to predefined UI areas (toolbar or pagebar)
 
@@ -192,7 +206,7 @@ registerUIItem: (
 
 **Implementation Details:**
 
-- **Renderer Location:** [src/main/frontend/components/plugins.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.cljs#L1169-L1188)
+- **Renderer Location:** [src/main/frontend/components/plugins.cljs](../../../src/main/frontend/components/plugins.cljs#L1169-L1188)
 - Items are rendered dynamically when plugins are enabled
 - Toolbar items can be pinned by users (stored in `:plugin/preferences`)
 
@@ -221,7 +235,7 @@ registerUIItem: (
 
 #### 1.3 `provideStyle()` - Global CSS Injection
 
-**Location:** [libs/src/LSPlugin.core.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/LSPlugin.core.ts#L293-L309)
+**Location:** [libs/src/LSPlugin.core.ts](../../../libs/src/LSPlugin.core.ts#L293-L309)
 
 **Purpose:** Inject custom CSS styles that apply globally to Logseq
 
@@ -263,21 +277,21 @@ pluginLocal.on(_('style'), (style: StyleString | StyleOptions) => {
 **Toolbar Slot**
 
 - **Location:** Top of the application, right side
-- **Component:** [src/main/frontend/components/header.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/header.cljs#L451)
+- **Component:** [src/main/frontend/components/header.cljs](../../../src/main/frontend/components/header.cljs#L451)
 - **Hook:** `hook-ui-items :toolbar`
 - **CSS Container:** `.ui-items-container[data-type="toolbar"]`
 
 **Pagebar Slot**
 
 - **Location:** Below page title, right side
-- **Component:** [src/main/frontend/components/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/page.cljs#L556)
+- **Component:** [src/main/frontend/components/page.cljs](../../../src/main/frontend/components/page.cljs#L556)
 - **Hook:** `hook-ui-items :pagebar`
 - **CSS Container:** `.ui-items-container[data-type="pagebar"]`
 
 **Page Head Actions Slot**
 
 - **Hook:** `onPageHeadActionsSlotted`
-- **Component:** [src/main/frontend/components/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/page.cljs#L555)
+- **Component:** [src/main/frontend/components/page.cljs](../../../src/main/frontend/components/page.cljs#L555)
 - **Purpose:** Add custom actions to page headers
 
 ```typescript
@@ -294,7 +308,7 @@ logseq.App.onPageHeadActionsSlotted(({ slot }) => {
 **Macro Renderer Slot**
 
 - **Hook:** `onMacroRendererSlotted`
-- **Component:** [src/main/frontend/components/block.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/block.cljs#L1955)
+- **Component:** [src/main/frontend/components/block.cljs](../../../src/main/frontend/components/block.cljs#L1955)
 - **Purpose:** Render custom UI for `{{renderer ...}}` macros
 
 ```typescript
@@ -315,7 +329,7 @@ logseq.App.onMacroRendererSlotted(({ slot, payload }) => {
 
 - **Hook:** `onBlockRendererSlotted(uuid, callback)`
 - **Purpose:** Inject UI into specific blocks by UUID
-- **Implementation:** [libs/src/LSPlugin.user.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/LSPlugin.user.ts#L221-L233)
+- **Implementation:** [libs/src/LSPlugin.user.ts](../../../libs/src/LSPlugin.user.ts#L221-L233)
 
 ---
 
@@ -338,7 +352,7 @@ Callback invoked with {type, slot, payload}
     ↓
 Plugin calls provideUI({ slot, template })
     ↓
-setupInjectedUI creates DOM element (helpers.ts:296)
+setupInjectedUI creates DOM element (common.ts)
     ↓
 UI appears in slot
 ```
@@ -368,16 +382,16 @@ Logseq uses CSS custom properties for theming. Plugins should use these instead 
 **Core Theme Variables:**
 
 ```css
-/* Primary colors - resources/css/shui.css */
+/* Primary colors - packages/ui/src/vars-classic.css + packages/ui/src/colors.css */
 --ls-primary-background-color: hsl(var(--background));
 --ls-secondary-background-color: var(--rx-gray-01);
 --ls-tertiary-background-color: var(--rx-gray-03);
 --ls-quaternary-background-color: var(--rx-gray-05);
 
---ls-primary-text-color: /* Inherited from theme */
---ls-link-text-color: /* Link colors */
---ls-link-text-hover-color: /* Link hover */
---ls-border-color: var(--lx-gray-06);
+--ls-primary-text-color: /* Inherited from theme */ --ls-link-text-color:
+  /* Link colors */
+  --ls-link-text-hover-color: /* Link hover */
+  --ls-border-color: var(--lx-gray-06);
 
 /* Block specific */
 --ls-block-bullet-color: var(--rx-gray-08);
@@ -385,11 +399,8 @@ Logseq uses CSS custom properties for theming. Plugins should use these instead 
 --ls-block-left-color: var(--rx-logseq-11);
 
 /* Z-index layers */
---ls-z-index-level-1: /* Base level */
---ls-z-index-level-5: /* Modals/popups */
-
-/* Draggable UI */
---ls-draggable-handle-height: 30px;
+--ls-z-index-level-1: /* Base level */ --ls-z-index-level-5: /* Modals/popups */
+  /* Draggable UI */ --ls-draggable-handle-height: 30px;
 ```
 
 **Usage in Plugin CSS:**
@@ -421,15 +432,15 @@ Logseq uses CSS custom properties for theming. Plugins should use these instead 
 
 **Key Classes:**
 
-| Class                       | Purpose                             | Location                                                                                                          |
-| --------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `.lsp-hook-ui-slot`         | Container for slot-based UI         | [plugins.css:927](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L927) |
-| `.lsp-ui-float-container`   | Draggable floating UI               | [plugins.css:776](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L776) |
-| `.lsp-iframe-sandbox`       | Iframe plugin container             | [plugins.css:643](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L643) |
-| `.lsp-shadow-sandbox`       | Shadow DOM plugin container         | [plugins.css:643](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L643) |
-| `.injected-ui-item-toolbar` | Toolbar UI item wrapper             | [plugins.css:799](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L799) |
-| `.injected-ui-item-pagebar` | Pagebar UI item wrapper             | [plugins.css:807](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L807) |
-| `.ui-items-container`       | Container for toolbar/pagebar items | [plugins.css:790](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L790) |
+| Class                       | Purpose                             | Location                                                                  |
+| --------------------------- | ----------------------------------- | ------------------------------------------------------------------------- |
+| `.lsp-hook-ui-slot`         | Container for slot-based UI         | [plugins.css:927](../../../src/main/frontend/components/plugins.css#L927) |
+| `.lsp-ui-float-container`   | Draggable floating UI               | [plugins.css:776](../../../src/main/frontend/components/plugins.css#L776) |
+| `.lsp-iframe-sandbox`       | Iframe plugin container             | [plugins.css:643](../../../src/main/frontend/components/plugins.css#L643) |
+| `.lsp-shadow-sandbox`       | Shadow DOM plugin container         | [plugins.css:643](../../../src/main/frontend/components/plugins.css#L643) |
+| `.injected-ui-item-toolbar` | Toolbar UI item wrapper             | [plugins.css:799](../../../src/main/frontend/components/plugins.css#L799) |
+| `.injected-ui-item-pagebar` | Pagebar UI item wrapper             | [plugins.css:807](../../../src/main/frontend/components/plugins.css#L807) |
+| `.ui-items-container`       | Container for toolbar/pagebar items | [plugins.css:790](../../../src/main/frontend/components/plugins.css#L790) |
 
 ---
 
@@ -584,7 +595,7 @@ html[data-theme='dark'] .my-plugin-card {
 </div>
 ```
 
-**Injection Point:** [components/header.cljs:451](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/header.cljs#L451)
+**Injection Point:** [components/header.cljs:451](../../../src/main/frontend/components/header.cljs#L451)
 
 ---
 
@@ -610,7 +621,7 @@ html[data-theme='dark'] .my-plugin-card {
 </div>
 ```
 
-**Injection Point:** [components/page.cljs:556](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/page.cljs#L556)
+**Injection Point:** [components/page.cljs:556](../../../src/main/frontend/components/page.cljs#L556)
 
 ---
 
@@ -649,7 +660,7 @@ html[data-theme='dark'] .my-plugin-card {
 </body>
 ```
 
-**CSS Styling:** [plugins.css:776-788](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css#L776)
+**CSS Styling:** [plugins.css:776-788](../../../src/main/frontend/components/plugins.css#L776)
 
 ---
 
@@ -672,7 +683,7 @@ html[data-theme='dark'] .my-plugin-card {
 </div>
 ```
 
-**Component:** [plugins.cljs:1137-1163](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.cljs#L1137)
+**Component:** [plugins.cljs:1137-1163](../../../src/main/frontend/components/plugins.cljs#L1137)
 
 ---
 
@@ -712,7 +723,7 @@ logseq.provideUI({
 
 #### 5.2 Supported Events
 
-**Full Event List:** [helpers.ts:442-445](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/helpers.ts#L442)
+**Full Event List:** [common.ts event bindings](../../../libs/src/common.ts)
 
 - `click`
 - `dblclick`
@@ -729,7 +740,7 @@ logseq.provideUI({
 Events are transformed to plain objects before being sent to plugins:
 
 ```typescript
-// Event transformation (helpers.ts:497-526)
+// Event transformation (common.ts)
 export function transformableEvent(target: HTMLElement, e: Event) {
   const obj: any = {}
 
@@ -873,7 +884,7 @@ Plugin Enabled
     ↓
 provideUI() called
     ↓
-setupInjectedUI() (helpers.ts:296)
+setupInjectedUI() (common.ts)
     ↓
 DOM element created and appended
     ↓
@@ -912,7 +923,7 @@ logseq.provideUI({
 2. **Plugin Unloaded:** `cleanInjectedScripts()` called
 3. **Slot Unmounted:** React useEffect cleanup in `hook-ui-slot`
 
-**Cleanup Implementation:** [helpers.ts:495-502](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/helpers.ts#L495)
+**Cleanup Implementation:** [common.ts cleanup helpers](../../../libs/src/common.ts)
 
 ```typescript
 export function cleanInjectedUI(id: string) {
@@ -964,7 +975,7 @@ Provider Handler (LSPlugin.core.ts:310-325)
     | setupInjectedUI.call(pluginLocal, ui, attrs, callback)
     |
     v
-setupInjectedUI() (helpers.ts:296-474)
+setupInjectedUI() (common.ts)
     |
     | 1. Determine target (slot ID or CSS selector)
     | 2. Sanitize template with DOMPurify
@@ -987,7 +998,7 @@ UI Visible in Logseq
 User Clicks Button
     |
     v
-Event Listener (helpers.ts:442-459)
+Event Listener (common.ts)
     |
     | 1. Event bubbles to injected element
     | 2. Find closest [data-on-click] element
@@ -1042,12 +1053,12 @@ Toolbar Button Rendered
 
 ### UI Integration Methods
 
-| Method             | Use Case                       | Target                | Cleanup        | Complexity |
-| ------------------ | ------------------------------ | --------------------- | -------------- | ---------- |
-| `provideUI()`      | Custom HTML/CSS anywhere       | Slot or CSS selector  | Manual or auto | Medium     |
-| `registerUIItem()` | Simple toolbar/pagebar buttons | Predefined areas only | Automatic      | Low        |
-| `provideStyle()`   | Global CSS theming             | Entire app            | Automatic      | Low        |
-| `provideTheme()`   | Complete theme                 | Entire app            | Manual         | High       |
+| Method             | Use Case                       | Target                | Cleanup             | Complexity |
+| ------------------ | ------------------------------ | --------------------- | ------------------- | ---------- |
+| `provideUI()`      | Custom HTML/CSS anywhere       | Slot or CSS selector  | Manual or auto      | Medium     |
+| `registerUIItem()` | Simple toolbar/pagebar buttons | Predefined areas only | Automatic           | Low        |
+| `provideStyle()`   | Global CSS theming             | Entire app            | Automatic           | Low        |
+| `provideTheme()`   | Complete theme                 | Entire app            | Automatic on unload | High       |
 
 ---
 
@@ -1214,32 +1225,33 @@ logseq.App.onMacroRendererSlotted(({ slot, payload }) => {
 
 ### TypeScript/JavaScript Files
 
-| File                                                                                                    | Purpose            | Key Functions/Classes                       |
-| ------------------------------------------------------------------------------------------------------- | ------------------ | ------------------------------------------- |
-| [libs/src/LSPlugin.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/LSPlugin.ts)           | Type definitions   | `UIOptions`, `IAppProxy`, `IEditorProxy`    |
-| [libs/src/LSPlugin.user.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/LSPlugin.user.ts) | Plugin user API    | `LSPluginUser`, `provideUI`, `provideStyle` |
-| [libs/src/LSPlugin.core.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/LSPlugin.core.ts) | Plugin core system | `LSPluginCore`, provider handlers           |
-| [libs/src/helpers.ts](file:///Users/dzu/Projects/src/github.com/logseq/libs/src/helpers.ts#L253-L561)   | UI injection logic | `setupInjectedUI`, `cleanInjectedUI`        |
+| File                                                            | Purpose            | Key Functions/Classes                       |
+| --------------------------------------------------------------- | ------------------ | ------------------------------------------- |
+| [libs/src/LSPlugin.ts](../../../libs/src/LSPlugin.ts)           | Type definitions   | `UIOptions`, `IAppProxy`, `IEditorProxy`    |
+| [libs/src/LSPlugin.user.ts](../../../libs/src/LSPlugin.user.ts) | Plugin user API    | `LSPluginUser`, `provideUI`, `provideStyle` |
+| [libs/src/LSPlugin.core.ts](../../../libs/src/LSPlugin.core.ts) | Plugin core system | `LSPluginCore`, provider handlers           |
+| [libs/src/common.ts](../../../libs/src/common.ts)               | UI injection logic | `setupInjectedUI`, `cleanInjectedUI`        |
 
 ---
 
 ### ClojureScript Files
 
-| File                                                                                                                                        | Purpose               | Key Components                                      |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------- |
-| [src/main/frontend/components/plugins.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.cljs)     | Plugin UI components  | `hook-ui-slot`, `hook-ui-items`, `ui-item-renderer` |
-| [src/main/frontend/handler/plugin.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/handler/plugin.cljs)             | Plugin event handlers | `hook-plugin-app`, `hook-plugin-block-slot`         |
-| [src/main/frontend/components/header.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/header.cljs#L451)  | Toolbar integration   | Toolbar `hook-ui-items`                             |
-| [src/main/frontend/components/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/page.cljs#L555-L556) | Pagebar integration   | Pagebar `hook-ui-items`                             |
+| File                                                                                                | Purpose               | Key Components                                      |
+| --------------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------- |
+| [src/main/frontend/components/plugins.cljs](../../../src/main/frontend/components/plugins.cljs)     | Plugin UI components  | `hook-ui-slot`, `hook-ui-items`, `ui-item-renderer` |
+| [src/main/frontend/handler/plugin.cljs](../../../src/main/frontend/handler/plugin.cljs)             | Plugin event handlers | `hook-plugin-app`, `hook-plugin-block-slot`         |
+| [src/main/frontend/components/header.cljs](../../../src/main/frontend/components/header.cljs#L451)  | Toolbar integration   | Toolbar `hook-ui-items`                             |
+| [src/main/frontend/components/page.cljs](../../../src/main/frontend/components/page.cljs#L555-L556) | Pagebar integration   | Pagebar `hook-ui-items`                             |
 
 ---
 
 ### CSS Files
 
-| File                                                                                                                                  | Purpose          | Lines of Interest     |
-| ------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | --------------------- |
-| [src/main/frontend/components/plugins.css](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/plugins.css) | Plugin UI styles | Full file (969 lines) |
-| [resources/css/shui.css](file:///Users/dzu/Projects/src/github.com/logseq/resources/css/shui.css)                                     | Theme variables  | CSS custom properties |
+| File                                                                                          | Purpose          | Lines of Interest          |
+| --------------------------------------------------------------------------------------------- | ---------------- | -------------------------- |
+| [src/main/frontend/components/plugins.css](../../../src/main/frontend/components/plugins.css) | Plugin UI styles | Full file                  |
+| [packages/ui/src/vars-classic.css](../../../packages/ui/src/vars-classic.css)                 | Theme variables  | `--ls-*` variable contract |
+| [packages/ui/src/colors.css](../../../packages/ui/src/colors.css)                             | Color tokens     | `--rx-*` / `--lx-*` scales |
 
 ---
 
@@ -1250,12 +1262,10 @@ logseq.App.onMacroRendererSlotted(({ slot, payload }) => {
 **Best Practices:**
 
 1. **Pin Important Toolbar Items:**
-
    - Right-click toolbar items → Pin to keep visible
    - Unpinned items appear in overflow menu
 
 2. **Manage Plugin UI:**
-
    - Too many toolbar items? Use the toolbar manager dropdown
    - Disable plugins you don't actively use
 
@@ -1486,13 +1496,11 @@ test('renders toolbar button', () => {
 **Unit Test Scenarios:**
 
 1. **UI Injection:**
-
    - ✅ Verify `provideUI` called with correct parameters
    - ✅ Check template contains expected elements
    - ✅ Validate CSS variables used (not hardcoded colors)
 
 2. **Event Handlers:**
-
    - ✅ Verify `provideModel` registers handlers
    - ✅ Test handler invocation with mock events
    - ✅ Check error handling in handlers
@@ -1505,13 +1513,11 @@ test('renders toolbar button', () => {
 **Integration Test Scenarios:**
 
 1. **Toolbar Integration:**
-
    - ✅ Plugin button appears in toolbar
    - ✅ Button click triggers correct handler
    - ✅ Button can be pinned/unpinned
 
 2. **Slot-Based UI:**
-
    - ✅ Macro renderer creates UI in block
    - ✅ Multiple macros create separate UI instances
    - ✅ UI removed when block deleted
@@ -1525,7 +1531,6 @@ test('renders toolbar button', () => {
 **E2E Test Scenarios:**
 
 1. **Full User Workflow:**
-
    - Install plugin
    - Enable plugin
    - Interact with plugin UI
@@ -1781,6 +1786,8 @@ logseq.UI.registerIcon('my-icon', '<svg>...</svg>')
 logseq.UI.showMsg('Hello')
 ```
 
+> **Removed:** `logseq.UI.registerIcon()` is not present in the current plugin runtime sources. Use `provideUI()` / `registerUIItem()` for icon/button injection.
+
 **New API (Current):**
 
 ```typescript
@@ -1805,21 +1812,22 @@ logseq.UI.showMsg('Hello', 'success')
 
 **Internal Documentation:**
 
-- [AGENTS.md](file:///Users/dzu/Projects/src/github.com/logseq/AGENTS.md) - Repository guidelines
-- [CONTRIBUTING.md](file:///Users/dzu/Projects/src/github.com/logseq/CONTRIBUTING.md) - Contribution guide
-- [prompts/review.md](file:///Users/dzu/Projects/src/github.com/logseq/prompts/review.md) - Code review checklist
+- [AGENTS.md](../../../AGENTS.md) - Repository guidelines
+- [CONTRIBUTING.md](../../../CONTRIBUTING.md) - Contribution guide
+- [prompts/review.md](../../../prompts/review.md) - Code review checklist
 
 **Investigation Template:**
 
-- [code-detective-investigation.prompt.md](file:///Users/dzu/Projects/src/github.com/logseq/.github/prompts/code-detective-investigation.prompt.md)
+- [code-detective-investigation.prompt.md](../../../.github/prompts/code-detective-investigation.prompt.md)
 
 ---
 
 ### H. Change History
 
-| Version | Date       | Changes                     |
-| ------- | ---------- | --------------------------- |
-| 1.0     | 2025-12-15 | Initial comprehensive guide |
+| Version | Date       | Changes                                                                                                                                     |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.0     | 2025-12-15 | Initial comprehensive guide                                                                                                                 |
+| 1.2     | 2026-05-30 | Revalidated against current sources; updated stale paths/symbol notes; documented removed `registerIcon` and new style/command capabilities |
 
 ---
 

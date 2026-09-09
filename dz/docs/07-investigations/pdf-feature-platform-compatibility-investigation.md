@@ -4,20 +4,29 @@
 **Investigator:** GitHub Copilot  
 **Version:** 1.0
 
-["A35JR1JBJR"]---
+> **Last revised:** 2026-05-30
+
+---
 
 ## Executive Summary
 
 ### Key Findings
 
 1. **PDF Feature Implementation**: Logseq has a full-featured PDF viewer with annotation capabilities built using PDF.js
-2. **Database Mode Support**: ✅ **YES** - The PDF feature works with database mode (db-based graphs)
-3. **Browser Support**: ✅ **YES** - The PDF feature is web-based and works in browsers (with known bugs)
+2. **Database Mode Support**: ✅ **YES** - PDF annotations and state persistence are DB-based in current source
+3. **Browser Support**: ✅ **YES** - The PDF feature is web-based and runs in browser environments
 4. **Desktop Support**: ✅ **YES** - Full support on Electron desktop app
-5. **iOS/iPadOS Native App Support**: ❌ **NO** - Known issue where PDFs don't open on iOS mobile app
-6. **Android Support**: ❌ **NO** - Similar to iOS - Mobile platforms have limitations
-7. **Local PDFs**: ✅ **YES** - Stored in `assets/` folder
-8. **Remote PDFs**: ✅ **YES** - External URLs supported
+5. **iOS/iPadOS/Android Native App Support**: ⚠️ **UNVERIFIED IN SOURCE** - no explicit native fallback implementation found in PDF extension code
+6. **Local PDFs**: ✅ **YES** - resolved as local assets, referenced by asset UUID in DB flows
+7. **Remote PDFs**: ✅ **YES** - external URLs supported (`:logseq.property.asset/external-url`)
+
+## Findings: New Capabilities
+
+- PDF toolbar settings include viewer theme switching (`light`, `warm`, `dark`), dashed area-toggle, block-color highlighting toggle, and auto-open context menu toggle.
+- PDF metadata modal is available from toolbar settings.
+- PDF open behavior supports switching between in-app and system window contexts.
+- Zotero URI handling is implemented for PDF asset resolution (`zotero-link://`, `zotero-path://`, and `zotero://` flows).
+- Last visited page and scale persistence is wired through asset property/storage updates.
 
 ---
 
@@ -46,22 +55,19 @@
 #### Core Components
 
 1. **PDF Viewer** (`core.cljs`)
-
    - Built on top of **PDF.js** library (`js/pdfjsViewer.PDFViewer`)
    - Text selection and highlighting
    - Area-based highlighting (screenshot regions)
    - Zoom, navigation, search functionality
-   - Support for both file-based and database-based graphs
+   - DB-based annotation persistence and loading in current implementation
 
 2. **Asset Management** (`assets.cljs`)
-
    - Handles PDF file inflation and URL resolution
    - Manages PDF annotations as blocks
    - Stores highlights in different formats based on graph mode
    - Supports both local and remote PDFs
 
 3. **Toolbar** (`toolbar.cljs`)
-
    - Navigation controls
    - Highlight mode toggle
    - Area selection mode
@@ -69,15 +75,15 @@
    - Document metadata display
 
 4. **Utilities** (`utils.cljs`, `utils.js`)
-
    - Zoom controls
    - Scroll to highlight
    - Coordinate transformations
    - PDF.js helper functions
 
 5. **Window Management** (`windows.cljs`)
-   - External window support (Desktop only)
-   - System window integration
+
+- External/system window support via `window.open` flow
+- System window integration
 
 ---
 
@@ -85,27 +91,23 @@
 
 ### ✅ Database Mode Support
 
-**Evidence:** `core.cljs:928-947`
+**Evidence:** `core.cljs` + `assets.cljs`
 
 ```clojure
 (rum/defc ^:large-vars/data-var pdf-loader
   [{:keys [url hls-file identity filename block] :as pdf-current}]
-  (let [repo           (state/get-current-repo)
-        db-based?      (config/db-based-graph?)
-        file-based?    (not db-based?)
+  (let [*doc-ref       (rum/use-ref nil)
         ;; ... initialization code ...
         set-hls-extra! (fn [extra]
-                         (if db-based?
-                           (when block
-                             (debounce-set-last-visit-scale! (:block pdf-current) (:scale extra))
-                             (debounce-set-last-visit-page! (:block pdf-current) (:page extra)))
-                           (set-hls-state! #(merge % {:extra extra}))))]
+                         (when block
+                           (debounce-set-last-visit-scale! (:block pdf-current) (:scale extra))
+                           (debounce-set-last-visit-page! (:block pdf-current) (:page extra))))]
 ```
 
 **How it works:**
 
-- **File-based graphs**: Highlights stored in `.edn` files under `assets/`
-- **Database graphs**: Highlights stored as `:logseq.class/Pdf-annotation` blocks with properties like `:logseq.property.pdf/hl-value`
+- Highlights are stored as `:logseq.class/Pdf-annotation` blocks with properties like `:logseq.property.pdf/hl-value`.
+- Area highlight images are saved as assets and linked by `:logseq.property.pdf/hl-image`.
 
 ### ✅ Desktop Support (Electron)
 
@@ -144,10 +146,7 @@
 - Web browser (test.logseq.com)
 - Can open PDFs in system windows or embedded viewer
 
-**Known Issues:**
-
-- Annotation block creation may fail (see issue #7)
-- Some browser-specific rendering issues
+> **Removed:** Source-only validation no longer supports the specific browser bug claims in this section.
 
 ### ✅ Local PDF Support
 
@@ -155,9 +154,9 @@
 
 **How it works:**
 
-- PDFs stored in `assets/` folder of the graph
-- File path: `assets/{filename}.pdf`
-- Highlights stored alongside (`.edn` for file-based, database blocks for db-based)
+- Local PDFs are resolved through normalized asset URLs.
+- DB flow references local PDFs by asset UUID path (e.g. `../assets/{asset-uuid}.pdf`).
+- Highlights are stored in DB annotation blocks.
 
 **Code Reference:** `assets.cljs:44-73`
 
@@ -205,10 +204,9 @@
 
 ### ⚠️ iOS/iPadOS/Android Mobile Support
 
-**Status:** **NOT WORKING** - PDF viewer doesn't open on iOS/Android native apps
+> **Removed:** The previous mobile failure claim was based on backlog issues, not current source in `src/`, `deps/`, or `packages/`.
 
-**Evidence:**  
-Issue report in product backlog: `dz/docs/product-report/issues_page1.json:226`
+**Current source-based status:** No mobile-specific fallback viewer path is implemented in the PDF extension code.
 
 ```json
 {
@@ -295,6 +293,8 @@ The PDF feature relies on web technologies (PDF.js, DOM manipulation) that may h
 ### Annotation Storage
 
 #### File-Based Mode
+
+> **Removed:** File-based persistence paths (`file-based-persist-hls-data$`, `.edn` persistence in PDF extension) are not present in current source.
 
 `assets.cljs:194-217`
 
@@ -614,21 +614,17 @@ PDF URL provided
 
 ## 6. Comparison: File-Based vs Database Mode
 
-| Aspect                 | File-Based Mode                            | Database Mode                                    |
-| ---------------------- | ------------------------------------------ | ------------------------------------------------ |
-| **Highlights Storage** | `.edn` file in `assets/`                   | Database blocks with properties                  |
-| **File Location**      | `assets/{filename}.edn`                    | N/A - in database                                |
-| **Annotation Blocks**  | Created in `hls__{filename}` page          | Created as children of asset block in Asset page |
-| **Area Images**        | `assets/{key}/{page}_{id}_{timestamp}.png` | Asset block reference via UUID                   |
-| **Page Metadata**      | Stored in `.edn` `:extra` map              | Properties on PDF asset block                    |
-| **Last Visited Page**  | In `.edn` file                             | `:logseq.property.asset/last-visit-page`         |
-| **Last Zoom Scale**    | In `.edn` file                             | LocalStorage: `pdf-last-visit-scale/{asset-id}`  |
-| **Query Support**      | Limited (file-based search)                | Full Datalog queries                             |
-| **Sync**               | File sync                                  | Block-level sync + RTC                           |
-| **Migration**          | Can import annotations from `.edn`         | Can export to `.edn`                             |
-| **External URLs**      | Stored in page properties                  | `:logseq.property.asset/external-url`            |
-| **Performance**        | File I/O overhead                          | Database query overhead                          |
-| **Backup**             | Files in git/sync                          | Database backup                                  |
+> **Removed:** File-based vs DB comparison below is stale for current PDF extension implementation.
+
+### Current Model (Validated)
+
+| Aspect                 | Current Behavior                                          |
+| ---------------------- | --------------------------------------------------------- |
+| Highlight storage      | DB blocks tagged `:logseq.class/Pdf-annotation`           |
+| Area image storage     | Asset block reference via `:logseq.property.pdf/hl-image` |
+| Last page persistence  | `:logseq.property.asset/last-visit-page`                  |
+| Last scale persistence | Storage key `pdf-last-visit-scale/{asset-id}`             |
+| Remote PDF support     | `:logseq.property.asset/external-url`                     |
 
 ---
 
@@ -638,47 +634,21 @@ PDF URL provided
 
 #### 1. Mobile Platform Support (iOS/iPadOS/Android)
 
-**Status:** PDF viewer doesn't open on native mobile apps  
-**Impact:** Users cannot view/annotate PDFs on mobile  
-**Platforms:** iOS, iPadOS, Android native apps  
-**Workaround:** None currently  
-**Issue Reference:** `dz/docs/product-report/issues_page1.json:226`
+> **Removed:** Prior issue-based severity/impact statements are not source-validated in this pass.
 
-**Details:**
-
-- PDFs can be added to graph but won't open when clicked
-- No error message shown to user
-- Affects both local and remote PDFs
-- Affects both file-based and db-based graphs
-
-**Technical Reason:**
-
-- PDF.js requires full browser environment
-- Mobile WebView has limitations
-- No native PDF viewer fallback implemented
+Current source evidence only supports: no dedicated mobile-native fallback in the PDF extension implementation.
 
 #### 2. PDF Annotation Block Creation Issue (DB Mode, Browser)
 
-**Status:** Highlighting doesn't create annotation blocks  
-**Impact:** Users lose annotation data  
-**Platforms:** Browser (test.logseq.com)  
-**Workaround:** Use desktop app  
-**Issue Reference:** `dz/docs/product-report/issues_page1.json:10131`
+> **Removed:** Prior browser annotation-loss claim is not validated from current source.
 
-**Details:**
-
-- User can highlight text/area
-- No `#PDF Annotation` block created
-- Highlights may not persist after reload
-- Affects both text and area highlights
+No direct failing code path is apparent in `src/main/frontend/extensions/pdf/` for normal DB annotation creation.
 
 ### ⚠️ Medium Priority Issues
 
-#### 3. External Window Support Desktop Only
+#### 3. External Window Support
 
-**Limitation:** Cannot open PDFs in separate windows on web/mobile  
-**Platforms:** Web browser, mobile  
-**Reason:** `window.open()` blocked by browser policies or unavailable
+`window.open`-based system-window flow exists in current source; behavior depends on runtime/browser popup policy.
 
 #### 4. Large PDF Performance
 
@@ -705,33 +675,35 @@ PDF URL provided
 
 ### Platform Support Matrix
 
-| Platform               | PDF Viewing | Text Highlight | Area Highlight | Navigation | Search | External Window | Local PDF | Remote PDF |
-| ---------------------- | ----------- | -------------- | -------------- | ---------- | ------ | --------------- | --------- | ---------- |
-| **Desktop (Electron)** | ✅ YES      | ✅ YES         | ✅ YES         | ✅ YES     | ✅ YES | ✅ YES          | ✅ YES    | ✅ YES     |
-| **Browser (Web)**      | ✅ YES      | ⚠️ BUGGY       | ⚠️ BUGGY       | ✅ YES     | ✅ YES | ⚠️ LIMITED      | ✅ YES    | ✅ YES     |
-| **iOS Native App**     | ❌ NO       | ❌ NO          | ❌ NO          | ❌ NO      | ❌ NO  | ❌ NO           | ❌ NO     | ❌ NO      |
-| **Android Native App** | ❌ NO       | ❌ NO          | ❌ NO          | ❌ NO      | ❌ NO  | ❌ NO           | ❌ NO     | ❌ NO      |
-| **iPadOS Native App**  | ❌ NO       | ❌ NO          | ❌ NO          | ❌ NO      | ❌ NO  | ❌ NO           | ❌ NO     | ❌ NO      |
+> **Removed:** Matrix entries marked browser/mobile buggy/non-working were issue-based and not source-validated in this pass.
+
+| Platform               | PDF Viewing             | Text Highlight | Area Highlight | Navigation | Search | External Window     | Local PDF | Remote PDF |
+| ---------------------- | ----------------------- | -------------- | -------------- | ---------- | ------ | ------------------- | --------- | ---------- |
+| **Desktop (Electron)** | ✅ YES                  | ✅ YES         | ✅ YES         | ✅ YES     | ✅ YES | ✅ YES              | ✅ YES    | ✅ YES     |
+| **Browser (Web)**      | ✅ YES                  | ✅ YES         | ✅ YES         | ✅ YES     | ✅ YES | ⚠️ policy-dependent | ✅ YES    | ✅ YES     |
+| **iOS Native App**     | ? source not conclusive | ?              | ?              | ?          | ?      | ?                   | ?         | ?          |
+| **Android Native App** | ? source not conclusive | ?              | ?              | ?          | ?      | ?                   | ?         | ?          |
+| **iPadOS Native App**  | ? source not conclusive | ?              | ?              | ?          | ?      | ?                   | ?         | ?          |
 
 ---
 
 ## 8. Code Location Reference
 
-| Component                     | File                                             | Key Functions                                                                                  | Lines    |
-| ----------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------- | -------- |
-| **PDF Viewer Core**           | `src/main/frontend/extensions/pdf/core.cljs`     | `pdf-viewer`, `pdf-loader`, `pdf-highlights`                                                   | 776-1090 |
-| **Highlight Management**      | `src/main/frontend/extensions/pdf/core.cljs`     | `add-hl!`, `upd-hl!`, `del-hl!`                                                                | 557-611  |
-| **Asset Inflation**           | `src/main/frontend/extensions/pdf/assets.cljs`   | `inflate-asset`                                                                                | 44-73    |
-| **Annotation Persistence**    | `src/main/frontend/extensions/pdf/assets.cljs`   | `ensure-ref-block!`, `file-based-persist-hls-data$`, `db-based-load-hls-data$`                 | 194-231  |
-| **Area Image Save**           | `src/main/frontend/extensions/pdf/assets.cljs`   | `persist-hl-area-image$`, `db-based-persist-hl-area-image`, `file-based-persist-hl-area-image` | 233-278  |
-| **Block Operations**          | `src/main/frontend/extensions/pdf/assets.cljs`   | `open-block-ref!`, `goto-block-ref!`, `copy-hl-ref!`                                           | 333-389  |
-| **Toolbar UI**                | `src/main/frontend/extensions/pdf/toolbar.cljs`  | `pdf-toolbar`, `pdf-outline-&-highlights`                                                      | 480-649  |
-| **Utilities (ClojureScript)** | `src/main/frontend/extensions/pdf/utils.cljs`    | `scroll-to-highlight`, `zoom-in-viewer`, `resolve-hls-layer!`                                  | 50-184   |
-| **Utilities (JavaScript)**    | `src/main/frontend/extensions/pdf/utils.js`      | `scaledToViewport`, `scrollToHighlight`                                                        | 1-180    |
-| **Window Management**         | `src/main/frontend/extensions/pdf/windows.cljs`  | `open-pdf-in-new-window!`, `close-pdf-in-new-window!`                                          | 74-116   |
-| **Styling**                   | `src/main/frontend/extensions/pdf/pdf.css`       | Highlight colors, layout, responsive design                                                    | 1-960    |
-| **Find/Search**               | `src/main/frontend/extensions/pdf/finder.js`     | `PDFFindController`, `PDFFindBar`                                                              | 1-900    |
-| **Keyboard Shortcuts**        | `src/main/frontend/modules/shortcut/config.cljs` | PDF shortcuts (Alt+P, Alt+N, etc.)                                                             | 47-66    |
+| Component                     | File                                             | Key Functions                                                                | Lines    |
+| ----------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------- | -------- |
+| **PDF Viewer Core**           | `src/main/frontend/extensions/pdf/core.cljs`     | `pdf-viewer`, `pdf-loader`, `pdf-highlights`                                 | 776-1090 |
+| **Highlight Management**      | `src/main/frontend/extensions/pdf/core.cljs`     | `add-hl!`, `upd-hl!`, `del-hl!`                                              | 557-611  |
+| **Asset Inflation**           | `src/main/frontend/extensions/pdf/assets.cljs`   | `inflate-asset`                                                              | 44-73    |
+| **Annotation Persistence**    | `src/main/frontend/extensions/pdf/assets.cljs`   | `ensure-ref-block!`, `db-based-ensure-ref-block!`, `db-based-load-hls-data$` | 64-123   |
+| **Area Image Save**           | `src/main/frontend/extensions/pdf/assets.cljs`   | `persist-hl-area-image$`, `db-based-persist-hl-area-image`                   | 130-170  |
+| **Block Operations**          | `src/main/frontend/extensions/pdf/assets.cljs`   | `open-block-ref!`, `goto-block-ref!`, `copy-hl-ref!`                         | 333-389  |
+| **Toolbar UI**                | `src/main/frontend/extensions/pdf/toolbar.cljs`  | `pdf-toolbar`, `pdf-outline-&-highlights`                                    | 480-649  |
+| **Utilities (ClojureScript)** | `src/main/frontend/extensions/pdf/utils.cljs`    | `scroll-to-highlight`, `zoom-in-viewer`, `resolve-hls-layer!`                | 50-184   |
+| **Utilities (JavaScript)**    | `src/main/frontend/extensions/pdf/utils.js`      | `scaledToViewport`, `scrollToHighlight`                                      | 1-180    |
+| **Window Management**         | `src/main/frontend/extensions/pdf/windows.cljs`  | `open-pdf-in-new-window!`, `close-pdf-in-new-window!`                        | 74-116   |
+| **Styling**                   | `src/main/frontend/extensions/pdf/pdf.css`       | Highlight colors, layout, responsive design                                  | 1-960    |
+| **Find/Search**               | `src/main/frontend/extensions/pdf/finder.js`     | `PDFFindController`, `PDFFindBar`                                            | 1-900    |
+| **Keyboard Shortcuts**        | `src/main/frontend/modules/shortcut/config.cljs` | PDF shortcuts (Alt+P, Alt+N, etc.)                                           | 47-66    |
 
 ---
 
@@ -758,9 +730,7 @@ PDF URL provided
 
 **File-Based Graphs**
 
-- ✅ PDF features fully supported
-- ✅ Portable `.edn` files
-- ✅ Easy backup via git
+> **Removed:** This recommendation block is stale for current PDF extension source, which is DB-centered for annotation persistence.
 
 **Local PDFs**
 
@@ -1129,16 +1099,7 @@ Use Capacitor PDF viewer plugin:
       (is (pdf-assets/area-highlight? area-hl))
       (is (not (pdf-assets/area-highlight? text-hl))))))
 
-(deftest test-file-based-vs-db-based
-  (testing "Persistence functions check graph mode"
-    ;; Mock config/db-based-graph?
-    (with-redefs [config/db-based-graph? (constantly true)]
-      ;; Test db-based code path
-      )
-
-    (with-redefs [config/db-based-graph? (constantly false)]
-      ;; Test file-based code path
-      )))
+;; > **Removed:** file-based-vs-db-based test scenario is stale for current PDF extension persistence path.
 ```
 
 ### Integration Test Scenarios
@@ -1372,32 +1333,29 @@ Use Capacitor PDF viewer plugin:
 
 ## Summary: Quick Reference
 
-### Platform Compatibility Matrix
+### Source-Validated Compatibility Snapshot
 
-| Feature               | Desktop | Browser  | iOS   | Android |
-| --------------------- | ------- | -------- | ----- | ------- |
-| **PDF Viewing**       | ✅ Full | ✅ Full  | ❌ No | ❌ No   |
-| **Text Highlighting** | ✅ Yes  | ⚠️ Buggy | ❌ No | ❌ No   |
-| **Area Highlighting** | ✅ Yes  | ⚠️ Buggy | ❌ No | ❌ No   |
-| **Local PDFs**        | ✅ Yes  | ✅ Yes   | ❌ No | ❌ No   |
-| **Remote PDFs**       | ✅ Yes  | ✅ Yes   | ❌ No | ❌ No   |
-| **DB Mode**           | ✅ Yes  | ✅ Yes   | ❌ No | ❌ No   |
-| **File Mode**         | ✅ Yes  | ✅ Yes   | ❌ No | ❌ No   |
+| Feature                | Desktop (Electron) | Browser (Web)               | iOS/Android Native                |
+| ---------------------- | ------------------ | --------------------------- | --------------------------------- |
+| PDF viewing/rendering  | ✅ Yes             | ✅ Yes                      | ? not conclusive from source only |
+| Text highlighting      | ✅ Yes             | ✅ Yes                      | ? not conclusive from source only |
+| Area highlights        | ✅ Yes             | ✅ Yes                      | ? not conclusive from source only |
+| Local PDF assets       | ✅ Yes             | ✅ Yes                      | ? not conclusive from source only |
+| Remote PDF URLs        | ✅ Yes             | ✅ Yes                      | ? not conclusive from source only |
+| External/system window | ✅ Yes             | ⚠️ runtime policy dependent | ? not conclusive from source only |
 
 ### Key Takeaways
 
-1. **Desktop is King**: All PDF features work perfectly on Electron desktop app
-2. **Database Mode Fully Supported**: PDF annotations work great with db-based graphs
-3. **Local and Remote**: Both local files and HTTPS URLs are supported
-4. **Mobile Needs Work**: iOS/Android apps cannot open PDFs - this is a known critical issue
-5. **Browser Has Bugs**: Web version works but annotation creation may fail
+1. Current PDF annotation persistence path is DB-based in `src/main/frontend/extensions/pdf/assets.cljs`.
+2. PDF feature stack remains PDF.js-based with active toolbar, finder, outline, and annotation flows.
+3. Several legacy issue-based claims (mobile failure and browser annotation-loss) were removed in this revision because they are not verifiable from `src/`, `deps/`, and `packages/` alone.
 
 ### Quick Links
 
-- **Main PDF Code**: `src/main/frontend/extensions/pdf/core.cljs`
-- **Asset Handling**: `src/main/frontend/extensions/pdf/assets.cljs`
-- **Issue Tracker**: `dz/docs/product-report/issues_page1.json`
-- **Schema Docs**: `docs/03-features/database-graphs/schema-reference.md`
+- Main PDF core: `src/main/frontend/extensions/pdf/core.cljs`
+- PDF asset logic: `src/main/frontend/extensions/pdf/assets.cljs`
+- PDF toolbar: `src/main/frontend/extensions/pdf/toolbar.cljs`
+- PDF windows flow: `src/main/frontend/extensions/pdf/windows.cljs`
 
 ---
 

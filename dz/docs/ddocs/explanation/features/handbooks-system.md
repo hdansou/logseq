@@ -12,7 +12,7 @@ related-docs:
 
 # Handbooks System: Interactive In-App Tutorials
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## Overview
 
@@ -37,13 +37,9 @@ Logseq's Handbooks system provides interactive, in-app tutorials and help docume
 1. Click **Help** menu (top bar)
 2. Select **Handbook**
 
-**Method 2: Command Palette**
+> **Removed:** Command palette access to handbooks is not implemented in current source; opening is wired via the Help menu toggle and handbook deep links.
 
-1. Open command palette (Cmd+K / Ctrl+K)
-2. Type "handbook"
-3. Select the handbook option
-
-> **Note**: There is no dedicated keyboard shortcut (e.g., `?`) for opening handbooks. Access is through the Help menu or command palette.
+> **Note**: There is no dedicated keyboard shortcut for opening handbooks.
 
 **Result**: Draggable popup panel with handbook categories
 
@@ -279,17 +275,16 @@ At load time, this tree is flattened into a keyed map via `tree-seq`, with the r
 
 **YouTube Videos**:
 
-```html
-<!-- In handbook HTML content -->
-<video src="https://www.youtube.com/watch?v=ABC123"></video>
+```clojure
+{:demos ["https://www.youtube.com/watch?v=ABC123"]}
 ```
 
 **Result**: Embedded YouTube player (using [`youtube.cljs`](../../src/main/frontend/extensions/video/youtube.cljs))
 
 **Local Videos**:
 
-```html
-<video src="./assets/demo.mp4"></video>
+```clojure
+{:demos ["./assets/demo.mp4"]}
 ```
 
 **Result**: Native HTML5 video player with controls
@@ -325,9 +320,10 @@ At load time, this tree is flattened into a keyed map via `tree-seq`, with the r
 **Features**:
 
 - Swipe on mobile
-- Keyboard navigation (← →)
 - Bullet navigation (1, 2, 3...)
 - Auto-resize to container
+
+> **Removed:** Explicit carousel keyboard navigation guarantees are not declared in current handbook code.
 
 ### Chapter Navigation
 
@@ -360,375 +356,97 @@ Current chapter: [ Chapter 1: Basics ▼ ]
 
 **From Handbooks Dashboard**:
 
-1. Open handbooks via Help menu
-2. Click **"Keyboard shortcuts"** card at the bottom of the categories list
-3. Handbooks panel closes and shortcuts panel opens in the right sidebar
+1. Open handbooks via Help menu.
+2. Click **"Keyboard shortcuts"** in the categories pane.
+3. Handbooks closes and the shortcuts view opens in the right sidebar (`shortcut-settings`).
 
 **Direct Access**:
 
-1. Open Help menu (top bar)
-2. Click **"Keyboard shortcuts"** directly (separate menu item from Handbook)
+1. Open Help menu.
+2. Click **"Keyboard shortcuts"**.
 
-**Code Reference**: [`handbooks/core.cljs:278-296`](../../src/main/frontend/extensions/handbooks/core.cljs#L278-L296)
+**Code Reference**: [`handbooks/core.cljs:281-304`](../../src/main/frontend/extensions/handbooks/core.cljs#L281-L304), [`container.cljs:227-228`](../../src/main/frontend/components/container.cljs#L227-L228)
 
-```clojure
-;; The keyboard shortcuts card is appended to the categories list in pane-dashboard:
-{:key      :ls-shortcuts
- :title    [:span "Keyboard shortcuts"]
- :children [:span (->> (vals @shortcut-config/*config)
-                       (map count)
-                       (apply +))
-            " shortcuts"]
- :color    "#2563EB"
- :icon     "command"}
-
-;; On click, the handler checks for :ls-shortcuts key and opens the sidebar:
-:on-click #(if (= key :ls-shortcuts)
-             (do (state/toggle! :ui/handbooks-open?)
-                 (state/open-right-sidebar!)
-                 (state/sidebar-add-block! (state/get-current-repo)
-                   "shortcut-settings" :shortcut-settings))
-             (nav-to-pane! [:topics category title] pane-state))
-```
-
-### Shortcut Categories
-
-Shortcuts organized by functional area:
-
-| Category             | Examples                                                     |
-| -------------------- | ------------------------------------------------------------ |
-| **Editor Basics**    | Enter, Tab, Cmd+B (bold), Cmd+I (italic)                     |
-| **Navigation**       | Cmd+K (search), Cmd+O (open page), Cmd+Shift+P (page search) |
-| **Block Operations** | Cmd+Shift+M (move), Cmd+Shift+↑/↓ (reorder), Cmd+L (link)    |
-| **Formatting**       | Cmd+B (bold), Cmd+I (italic), Cmd+U (underline)              |
-| **Commands**         | / (slash command), [[ (page reference), (( (block reference) |
-| **View**             | Cmd+. (right sidebar), Cmd+Shift+L (toggle sidebar)          |
-| **Git**              | Cmd+Shift+U (push), Cmd+Shift+D (diff)                       |
-| **Dev Tools**        | Cmd+Shift+I (developer tools)                                |
-
-**Total**: 150+ keyboard shortcuts
-
-**See**: [Keyboard Shortcuts Reference](../../reference/features/keyboard-shortcuts.md)
+> **Removed:** Static shortcut examples/counts in this doc. The shown count is computed at runtime from `shortcut-config/*config`.
 
 ---
 
-## Content Authoring (Internal)
+## Findings: New Capabilities
 
-### For Logseq Team
+Validated against current source in `src/`:
 
-**Creating New Handbook Content**:
+1. **Deep-link routing to handbook topics** (desktop):
+  - `logseq://handbook/<topic-key>` is parsed in Electron and sent to renderer.
+  - Renderer opens handbooks and routes to the topic key via `:handbook/route-chan`.
 
-All content is authored in a single `handbooks.edn` file. To add a new category or topic, edit this file directly.
+2. **Copyable handbook deep links from topic view**:
+  - Topic header copy action writes `logseq://handbook/<key>` to clipboard and shows a success notification.
 
-1. **Add a Category** (top-level child in the tree):
+3. **Developer watch mode for handbook content**:
+  - When enabled, app polls `HEAD /handbooks.edn` and reloads content when `content-length` changes.
 
-   ```clojure
-   {:key "my-category"
-    :title "My Category"
-    :description "Description here"
-    :color "#3B82F6"
-    :icon "lightbulb"
-    :children []}
-   ```
-
-2. **Add a Topic** (child of a category):
-
-   ```clojure
-   {:key "my-category/my-topic"
-    :title "My Topic"
-    :cover "./assets/cover.png"
-    :demos ["./assets/demo.mp4"]
-    :content "<h2>Topic Title</h2><p>Content in HTML format</p>"}
-   ```
-
-3. **Add Chapters** (children of a topic, optional):
-
-   ```clojure
-   {:key "my-category/my-topic/chapter-1"
-    :title "Chapter 1: Basics"
-    :content "<h3>Getting started</h3>..."}
-   ```
-
-4. **Add Popular Topics** (reference by key in root `:popular-topics`):
-
-   ```clojure
-   {:popular-topics ["my-category/my-topic" ...]
-    :children [...]}
-   ```
-
-5. **Add Assets** (`assets/`):
-
-   - Images: PNG, JPG, GIF, WebP, SVG
-   - Videos: MP4, WebM
-   - Keep assets < 5 MB each for fast loading
-   - Reference with relative paths (e.g., `./assets/screenshot.png`); URLs are resolved to CDN at render time
-
-6. **Deploy**: Push to `handbooks.pages.dev` (Cloudflare Pages)
-
-### Asset Optimization
-
-**Images**:
-
-- Max width: 1200px
-- Format: WebP (best compression) or PNG/JPG
-- Compression: TinyPNG or ImageOptim
-- Keep < 500 KB per image
-
-**Videos**:
-
-- Use YouTube for long videos (> 2 min)
-- Local videos: MP4 H.264, < 5 MB
-- Resolution: 1280x720 (720p)
-- Bitrate: 1-2 Mbps
-
-**Code Reference**: Asset URL resolution automatically prepends CDN domain:
-
-```clojure
-(defn inflate-content-assets-urls [content]
-  (if-let [matches (and (not (string/blank? content))
-                        (re-seq #"src=\"([^\"]+)\"" content))]
-    (reduce
-     (fn [content matched]
-       (if-let [matched (second matched)]
-         (string/replace content matched (resolve-asset-url matched)) content))
-     content matches)
-    content))
-```
-
----
-
-## User Experience
-
-### Contextual Help
-
-**Problem**: Users stuck, need help without leaving app
-
-**Solution**: Open Help menu → **Handbook** → Instant access to tutorials
-
-**Example Workflow**:
-
-1. User confused about queries
-2. Open Help → Handbook
-3. Search "query"
-4. Click **"Advanced Queries"** topic
-5. Watch demo video
-6. Read guide
-7. Close handbooks (click X button)
-8. Apply knowledge immediately
-
-### Onboarding
-
-**New User Flow**:
-
-1. Install Logseq
-2. User opens Help → Handbook
-4. Follows **"Quick Start"** topic (5 min tutorial)
-5. Creates first graph guided by handbook
-6. Returns to handbooks for **"First Steps"** topic
-
-**Goal**: Get users productive in < 10 minutes
-
-### Keyboard-Friendly
-
-**Navigation within the handbooks panel**:
-
-- **Esc** — Close search or panel
-- **Tab** — Navigate between cards
-- **Enter** — Select card/topic
-- **Up/Down arrows** — Navigate search results
-- **←** / **→** — Previous/next chapter (in topic detail view)
-
-**Goal**: Accessible without mouse once the panel is open
-
----
-
-## Comparison with External Docs
-
-| Feature    | Handbooks (In-App)      | External Docs                             |
-| ---------- | ----------------------- | ----------------------------------------- |
-| Access     | Help menu → Handbook    | Open browser, navigate to docs.logseq.com |
-| Context    | No context switch       | Leaves app                                |
-| Search     | Within handbooks only   | Global search                             |
-| Offline    | Requires internet (CDN) | Requires internet                         |
-| Multimedia | Videos, images, demos   | Text-heavy                                |
-| Updates    | Automatic (CDN)         | Manual (git pull)                         |
-| Versioning | Not version-specific    | Can show older versions                   |
-
-**Best Use Cases**:
-
-**Handbooks**:
-
-- Quick reference while working
-- Step-by-step tutorials
-- Keyboard shortcut lookup
-- Visual demos
-
-**External Docs**:
-
-- Deep dives (API, architecture)
-- Code examples
-- Community contributions
-- Search engine indexing
+**Code Reference**: [`url.cljs:111-114`](../../src/electron/electron/url.cljs#L111-L114), [`listener.cljs:135-138`](../../src/main/electron/listener.cljs#L135-L138), [`state.cljs:2011-2017`](../../src/main/frontend/state.cljs#L2011-L2017), [`handbooks/core.cljs:616-623`](../../src/main/frontend/extensions/handbooks/core.cljs#L616-L623), [`handbooks/core.cljs:566-576`](../../src/main/frontend/extensions/handbooks/core.cljs#L566-L576)
 
 ---
 
 ## Troubleshooting
 
-### Handbooks Won't Open
+### Handbooks Opens But Topic Link Does Not Route
 
-**Problem**: Clicking Handbook in Help menu does nothing
+**Symptoms**: `logseq://handbook/<key>` opens app but not the expected topic.
 
-**Possible Causes**:
+**Checks**:
 
-1. Panel already open (hidden behind another window or off-screen)
-2. Network issue (CDN unreachable)
-
-**Solutions**:
-
-- Look for existing handbook panel (it is a draggable popup that may have been moved off-screen)
-- Check internet connection
-- Restart Logseq
+1. Confirm key exists in loaded `handbooks.edn` tree.
+2. Confirm key normalization rules (lowercase + snake_case) for internal links.
+3. Inspect console for `ERROR: handbook link resource not found`.
 
 ### Content Not Loading
 
-**Problem**: Blank screen or loading spinner
+**Symptoms**: loading state persists or error text appears in panel.
 
-**Possible Causes**:
+**Checks**:
 
-1. Network timeout
-2. CDN down (rare)
-3. CORS issue (dev mode)
-
-**Solutions**:
-
-- Wait 10 seconds (slow network)
-- Check browser console: Help → Toggle Developer Tools → Console
-- Try again later
-- Report issue if persistent
-
-### Videos Won't Play
-
-**Problem**: Video player shows error
-
-**Possible Causes**:
-
-1. YouTube video unavailable (geographic restriction)
-2. Local video codec unsupported
-3. Ad blocker interfering
-
-**Solutions**:
-
-- Test YouTube URL in browser
-- Disable ad blocker temporarily
-- Try different browser (Electron vs. Chrome)
-
-### Images Too Small
-
-**Problem**: Can't see details in screenshots
-
-**Solution**: Click image → Opens lightbox (full-size view)
-
-**Zoom**:
-
-- **+** button — Zoom in
-- **-** button — Zoom out
-- Click outside → Close lightbox
+1. Verify network access to `https://handbooks.pages.dev/handbooks.edn`.
+2. If dev watch is enabled, verify local watch endpoint if used (`http://localhost:1337`).
 
 ---
 
-## Future Enhancements
+## Removed or Out-of-Scope Items
 
-### Planned Features (🟡 Active Development)
+> **Removed:** "Future Enhancements" roadmap. These items are not backed by implementation in `src/`, `deps/`, or `packages/` as of 2026-05-30.
 
-**Offline Handbooks**:
+> **Removed:** Internal handbook authoring/deploy process details and asset optimization quotas. Current repository source validates runtime consumption behavior, not publishing workflow policy.
 
-- Cache handbooks locally
-- Access without internet
-- Update on startup
-
-**Version-Specific Handbooks**:
-
-- Show docs for installed version
-- Highlight new features in updates
-- Deprecation warnings
-
-**Interactive Demos**:
-
-- Try features within handbook (sandbox)
-- Live code examples
-- Practice exercises
-
-**Progress Tracking**:
-
-- Mark topics as "completed"
-- Track tutorial progress
-- Suggest next topics
-
-**Localization**:
-
-- Translate handbooks to multiple languages
-- Community contributions via Git
-
-### Research Areas
-
-- AI-powered help (answer questions based on handbook content)
-- Video transcription for searchable content
-- User-generated handbooks (community tutorials)
+> **Removed:** `internal-docs/handbooks-authoring.md` pointer. That path is not present in this repository.
 
 ---
 
 ## Related Documentation
 
-**Tutorials**:
-
-- [Getting Started](../../tutorials/getting-started/01-installation.md) — Installation guide (similar to handbook content)
-- [Basic Editing](../../tutorials/getting-started/03-basic-editing.md) — Editing fundamentals
-
-**How-To Guides**:
-
-- [Video Embedding](../multimedia/video-embed.md) — How handbook videos are embedded
-
-**References**:
-
-- [Keyboard Shortcuts](../../reference/features/keyboard-shortcuts.md) — Complete shortcuts list (linked from handbooks)
-
-**Explanations**:
-
-- This document! — Understanding the handbooks system architecture
+- [Getting Started](../../tutorials/getting-started/01-installation.md)
+- [Video Embedding](../../how-to/multimedia/video-embed.md)
+- [Keyboard Shortcuts](../../reference/features/keyboard-shortcuts.md)
 
 ---
 
 ## Code Reference
 
-**Core Implementation**: [`src/main/frontend/extensions/handbooks/core.cljs`](../../src/main/frontend/extensions/handbooks/core.cljs) (660 lines)
+**Core Implementation**: [`src/main/frontend/extensions/handbooks/core.cljs`](../../src/main/frontend/extensions/handbooks/core.cljs) (667 lines)
 
-**Key Components**:
+**Entrypoints**:
 
-- `topic-card` (line 83-94) — Topic card component
-- `pane-category-topics` (line 96-106) — Category topic list
-- `media-render` (line 108-121) — Video/image rendering
-- `chapter-select` (line 123-152) — Chapter navigation dropdown
-- `pane-topic-detail` (line 154-257) — Topic content view with chapters
-- `pane-dashboard` (line 259-306) — Dashboard view with categories
-- `content` (line 480-660) — Main component with state management and data loading
+- Help menu toggle: [`src/main/frontend/components/container.cljs`](../../src/main/frontend/components/container.cljs)
+- Popup wrapper and draggable container: [`src/main/frontend/components/handbooks.cljs`](../../src/main/frontend/components/handbooks.cljs)
+- Desktop URL routing bridge: [`src/electron/electron/url.cljs`](../../src/electron/electron/url.cljs), [`src/main/electron/listener.cljs`](../../src/main/electron/listener.cljs)
 
 **Dependencies**:
 
-- YouTube integration: [`youtube.cljs`](../../src/main/frontend/extensions/video/youtube.cljs)
-- Lightbox: [`lightbox.cljs`](../../src/main/frontend/extensions/lightbox.cljs)
-- Shortcuts config: [`shortcut/config.cljs`](../../src/main/frontend/modules/shortcut/config.cljs)
-
-**External Libraries**:
-
-- Glide.js: Carousel for demo galleries
-- Rum: React-like components (ClojureScript)
+- YouTube player integration: [`src/main/frontend/extensions/video/youtube.cljs`](../../src/main/frontend/extensions/video/youtube.cljs)
+- Lightbox integration: [`src/main/frontend/extensions/lightbox.cljs`](../../src/main/frontend/extensions/lightbox.cljs)
+- Shortcut config source: [`src/main/frontend/modules/shortcut/config.cljs`](../../src/main/frontend/modules/shortcut/config.cljs)
 
 ---
 
-**Last Updated**: March 2026
-**Status**: 🟢 Stable (Handbooks mature feature)  
+**Status**: 🟢 Stable
 **Feedback**: Report handbooks issues on [GitHub](https://github.com/logseq/logseq/issues) with `handbooks` label
-
----
-
-**Content Team**: To update handbook content, see internal guide: `internal-docs/handbooks-authoring.md`

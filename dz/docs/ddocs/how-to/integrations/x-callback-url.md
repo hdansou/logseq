@@ -2,7 +2,7 @@
 title: 'X-Callback-URL'
 description: 'How to capture content to Logseq from other apps using URL schemes'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
@@ -15,7 +15,7 @@ relatedDocs:
 
 # X-Callback-URL
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > How to send content to Logseq from other apps, scripts, and automation tools.
 
@@ -85,9 +85,9 @@ logseq://x-callback-url/<action>?[parameters]
 | `url`     | Web address     | `url=https://example.com`    |
 | `title`   | Link title      | `title=Example Site`         |
 | `page`    | Target page     | `page=Ideas` or `page=TODAY` |
-| `append`  | Add to end of page instead of current editing position | `append=true`                |
+| `append`  | When already editing, append instead of inserting at the cursor | `append=true`                |
 
-When `page` is omitted, Logseq uses this priority: config `quick-capture-options.default-page`, then the currently open page, then today's journal (or a "quick capture" page if journals are disabled).
+When `page` is omitted, Logseq first checks `quick-capture-options.insert-today?`. If that is enabled, or if you pass `page=TODAY`, it targets today's journal. Otherwise it uses config `quick-capture-options.default-page`, then the currently open page, then today's journal when journals are enabled, or a "quick capture" page when journals are disabled.
 
 The captured content is formatted using the template in your config at `quick-capture-templates.text`. The default template is:
 
@@ -96,6 +96,12 @@ The captured content is formatted using the template in your config at `quick-ca
 ```
 
 Available template placeholders: `{time}`, `{date}`, `{text}`, `{url}`.
+
+## Findings: New Capabilities
+
+- `quick-capture-options.insert-today?` can force empty `page` captures into today's journal.
+- `quick-capture-options.redirect-page?` can redirect to the page that quick capture creates.
+- `quick-capture-options.prettify-url?` can auto-format tweet and video URLs while capturing links.
 
 ### `invokeCommand` Parameters
 
@@ -288,9 +294,10 @@ echo "Saved to Logseq"
 
 ### Page Not Found
 
-- Page names are case-sensitive
-- Use `page=TODAY` for journal (literal)
-- Create the page first if it doesn't exist
+> **Removed:** Page names are case-sensitive.
+> **Removed:** Create the page first if it doesn't exist.
+
+Use the exact target page name. `page=TODAY` still resolves to the current journal page.
 
 ---
 
@@ -301,4 +308,4 @@ echo "Saved to Logseq"
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

@@ -2,8 +2,8 @@
 title: 'Logseq System Overview'
 description: "High-level overview of Logseq's architecture, value propositions, and design principles"
 status: stable
-lastVerified: '2026-03-10'
-logseqVersion: '2.0.x'
+lastVerified: '2026-05-30'
+logseqVersion: '0.11.x'
 category: architecture
 relatedDocs:
   reference:
@@ -16,7 +16,7 @@ relatedDocs:
 
 # Logseq System Overview
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > Understanding what Logseq is, why it exists, and how it empowers users to manage knowledge effectively.
 
@@ -58,7 +58,7 @@ Logseq supports two storage architectures:
 | **Compatibility** | External editors          | Logseq only          |
 | **Properties**    | Text-based                | First-class entities |
 | **Scalability**   | File system limits        | Better (SQLite-backed) |
-| **Collaboration** | File sync                 | Real-time (RTC)      |
+| **Collaboration** | External filesystem sync tooling | Real-time (RTC/db-sync) |
 | **Best For**      | Git workflows, simplicity | Power users, teams   |
 
 Both types maintain the same user experience—the difference is in how data is stored and synchronized.
@@ -122,9 +122,19 @@ Both types maintain the same user experience—the difference is in how data is 
 
 ### 4. Sync & Collaboration
 
-- **File Sync**: Traditional cloud sync for markdown files
-- **RTC**: Real-time collaboration with CRDT-like operations
-- **E2EE**: End-to-end encryption for private data
+- **RTC/db-sync**: Active cloud synchronization path for database graphs
+- **Realtime Collaboration**: Multi-user graph editing with server-backed operation sync
+- **E2EE**: End-to-end encryption for db-sync graph data and key material workflows
+
+> **Removed:** "File Sync: Traditional cloud sync for markdown files". Current source treats the old Markdown cloud File Sync runtime as historical, with RTC/db-sync as the active cloud sync implementation.
+
+## Findings: New Capabilities
+
+Compared with earlier versions of this overview, the current source in `src/`, `deps/`, and `packages/` adds concrete sync/runtime capabilities:
+
+- **CLI E2EE bootstrap for sync**: `logseq sync start` and `logseq sync download` support `--e2ee-password` to verify and persist password material before sync operations.
+- **Runtime-specific secret persistence**: Worker crypto storage uses platform secret storage APIs (browser runtime secret storage + node runtime file-backed storage) for persisted E2EE password payloads.
+- **Cloud sync backend hardening**: `deps/db-sync` runs on Cloudflare Workers with Durable Objects for sync session/state handling.
 
 ---
 
@@ -195,4 +205,4 @@ Both types maintain the same user experience—the difference is in how data is 
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

@@ -13,18 +13,24 @@ related-docs:
 
 # Setting Up Repeating Tasks
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 Learn how to create tasks that automatically repeat on a schedule, perfect for recurring activities, habits, and regular reviews.
 
 ## Overview
 
-Repeating tasks in Logseq automatically reschedule themselves when completed. When you mark a repeating task as DONE, Logseq advances the date to the next occurrence and resets the status back to TODO on the same task. This is ideal for:
+Repeating tasks in Logseq automatically reschedule themselves when completed. The repeat engine uses a repeat type to decide how the next occurrence is calculated, and it can toggle a configured checked property instead of only `status`. This is ideal for:
 
 - Daily habits (exercise, journaling)
 - Weekly reviews (team meetings, planning sessions)
 - Monthly tasks (bill payments, reports)
 - Periodic maintenance (backups, updates)
+
+## Findings: New Capabilities
+
+- `repeat/repeat-type` is a first-class setting with three behaviors: `dotted-plus` advances from completion, `plus` advances from the original scheduled date, and `double-plus` advances from the scheduled date while skipping forward to the next future occurrence.
+- `repeat/checked-property` lets a repeating task use a property other than `status` as its completion toggle.
+- Repeat properties are preserved by the graph parser/exporter round-trip for repeated timestamps.
 
 ## Basic Repeating Task
 
@@ -34,25 +40,29 @@ Add `repeat` properties to any task:
 
 ```markdown
 - TODO Water plants
+  repeat/repeated?:: true
   repeat/recur-frequency:: 3
   repeat/recur-unit:: day
+  repeat/repeat-type:: double-plus
+  repeat/temporal-property:: scheduled
 ```
 
 **What this does:**
 
 - Task repeats every 3 days
-- When you mark it DONE, the date advances and the status resets to TODO
+- When you mark it DONE, the date advances according to the repeat type and the checked property resets to TODO or its unchecked state
 - The scheduled or deadline date is updated to the next occurrence
 
 ### Enabling Repeat via the UI
 
-To enable repeating on a task through the interface:
+To enable repeating on a task through the interface, open the scheduled or deadline property editor and use the repeat settings panel:
 
 1. Create a task: `TODO Review notes`
 2. Add a `scheduled` or `deadline` date property
-3. Click the date property to open its popup
-4. Check the "Repeat task" checkbox in the popup
-5. Configure frequency and unit
+3. Enable repeating with the `Repeat task` toggle
+4. Configure frequency, unit, repeat type, and checked property
+
+> **Removed:** The older “click the date property and check a Repeat task box in the popup” description is stale. The current UI exposes a repeat settings panel with repeat toggle, frequency, unit, repeat type, and checked-property controls.
 
 ## Repeat Properties
 
@@ -62,6 +72,7 @@ To enable repeating on a task through the interface:
 | -------------------------- | -------- | ------------------------------------ | ------------------------------- |
 | `repeat/recur-frequency`   | Number   | 1, 2, 3...                           | How often to repeat             |
 | `repeat/recur-unit`        | Choice   | Minute, Hour, Day, Week, Month, Year | Time unit                       |
+| `repeat/repeat-type`       | Choice   | dotted-plus, plus, double-plus       | How the next occurrence is computed |
 | `repeat/repeated?`         | Checkbox | true/false                           | Marks as repeating task         |
 | `repeat/temporal-property` | Property | deadline or scheduled                | Which date to update            |
 | `repeat/checked-property`  | Property | (defaults to status)                 | Which property marks completion |
@@ -315,8 +326,8 @@ The next completion will use the new schedule.
 
 When you mark a repeating task as DONE, Logseq runs a command pipeline (defined in `frontend.worker.commands`) that:
 
-1. **Reschedules the date** -- The scheduled/deadline date advances to the next future occurrence based on the repeat frequency and unit
-2. **Resets status to TODO** -- The task's status property is set back to TODO (or the unchecked state of the `checked-property`)
+1. **Reschedules the date** -- The scheduled/deadline date advances according to the repeat type, frequency, and unit
+2. **Resets completion state** -- The task's status property is set back to TODO, or the configured `checked-property` is returned to its unchecked state
 
 The task is modified in place -- no new copy is created. The same block gets its date updated and status reset.
 
@@ -370,7 +381,7 @@ Combine for flexible scheduling:
   repeat/temporal-property:: scheduled
 ```
 
-When `temporal-property` is set to `scheduled`, the scheduled date is the primary date advanced, but the deadline is also rescheduled. If `temporal-property` is not set, it defaults to `scheduled`.
+When `temporal-property` is set to `scheduled`, the scheduled date is the primary date advanced, but the deadline is also rescheduled when present. If `temporal-property` is not set, it defaults to `scheduled`.
 
 ### With Task Properties
 
@@ -399,8 +410,9 @@ Property history is enabled per-property, not per-task. To track changes to a pr
 1. `repeat/repeated?` is set to true (checkbox checked)
 2. `repeat/recur-frequency` has valid number
 3. `repeat/recur-unit` is one of the valid values (Minute, Hour, Day, Week, Month, Year)
-4. Task has a `scheduled` or `deadline` date property set
-5. Task status is being changed to DONE (or the checked state of the `checked-property`)
+4. `repeat/repeat-type` is set to the behavior you want
+5. Task has a `scheduled` or `deadline` date property set
+6. Task status is being changed to DONE (or the checked state of the `checked-property`)
 
 ### Wrong Repeat Date
 
@@ -409,9 +421,10 @@ Property history is enabled per-property, not per-task. To track changes to a pr
 **Solution:**
 
 - Verify `repeat/temporal-property` is set to the correct property (scheduled or deadline). If unset, it defaults to scheduled.
+- Verify `repeat/repeat-type` matches the intended timing rule.
 - Check frequency/unit combination
 - Ensure the temporal property has a date value on the task
-- Note: the reschedule always advances to a future date, skipping past occurrences
+- Note: `double-plus` advances to a future date, skipping past occurrences; `plus` can land in the past if the original schedule is overdue
 
 ### Can't Pause Repeat
 

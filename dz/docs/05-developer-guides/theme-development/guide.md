@@ -1,6 +1,6 @@
 # Logseq Theme Development Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 **Version:** 1.0
 **Target Audience:** Theme Developers
@@ -17,6 +17,7 @@
 8. [Best Practices](#best-practices)
 9. [Testing Your Theme](#testing-your-theme)
 10. [Publishing Your Theme](#publishing-your-theme)
+11. [Findings: New Capabilities](#findings-new-capabilities)
 
 ---
 
@@ -56,6 +57,8 @@ Logseq operates in two distinct modes that affect file organization and theming:
 
 **Important**: Themes work identically in both modes. The difference is primarily in how the underlying data is stored, not in how CSS is applied.
 
+> **Removed:** `html.is-file-graph` / `set-file-graph-flag!` mode-detection hooks are no longer present in current `src/`, `deps/`, or `packages/` sources.
+
 ---
 
 ## Design System Overview
@@ -86,13 +89,13 @@ Logseq uses Radix Colors for its color system, providing:
 - **Alpha variants** for transparency
 - **Semantic color names**
 
-Available color scales:
+Built-in accent options in current app settings:
 
-- `gray`, `mauve`, `slate`, `sage`, `olive`, `sand`
-- `red`, `crimson`, `pink`, `plum`, `purple`, `violet`
-- `blue`, `cyan`, `teal`, `green`, `grass`, `lime`
-- `orange`, `amber`, `yellow`, `brown`, `bronze`, `gold`
-- `logseq` (custom brand color)
+- `logseq` (default)
+- `tomato`, `red`, `crimson`, `pink`, `plum`, `purple`, `violet`, `indigo`, `blue`, `cyan`, `teal`, `green`, `grass`, `orange`
+- `none` (disable accent mapping for custom theme compatibility)
+
+Radix base palettes (`--rx-*`) remain broader than the built-in accent picker.
 
 #### 3. CSS Variable System
 
@@ -227,7 +230,11 @@ html[data-theme='dark'] {
 
 /* Typography */
 .ls-block {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   font-size: 1rem;
   line-height: 1.6;
 }
@@ -325,10 +332,13 @@ html {
      "description": "A beautiful theme for Logseq",
      "author": "Your Name",
      "license": "MIT",
+     "main": "index.html",
      "logseq": {
        "id": "my-awesome-theme",
+       "main": "index.html",
        "title": "My Awesome Theme",
        "icon": "./icon.png",
+       "effect": true,
        "themes": [
          {
            "name": "My Awesome Theme",
@@ -350,7 +360,6 @@ html {
 3. **Create `custom.css`** (use template above)
 
 4. **Test locally:**
-
    - Copy theme folder to `<graph-root>/.logseq/plugins/`
    - Reload Logseq
    - Enable in Settings → Themes
@@ -371,7 +380,6 @@ html {
 --lx-gray-01 through --lx-gray-12     /* Grayscale */
 --lx-accent-01 through --lx-accent-12 /* Accent color */
 --lx-bg-override                      /* Background override */
---lx-text-override                    /* Text override */
 
 /* 3. Legacy Logseq (for compatibility) */
 --ls-primary-background-color
@@ -381,6 +389,10 @@ html {
 --ls-link-text-color
 /* ...over 50 legacy variables */
 ```
+
+> **Removed:** `--lx-text-override` is not present in current theme CSS sources.
+
+`--lx-bg-override` is currently used by shui/theme styling for contextual background overrides.
 
 ### Essential Variables by Category
 
@@ -805,7 +817,9 @@ html[data-theme='dark'] {
 /* Smooth motion for users who prefer it */
 @media (prefers-reduced-motion: no-preference) {
   * {
-    transition: color 0.2s, background-color 0.2s;
+    transition:
+      color 0.2s,
+      background-color 0.2s;
   }
 }
 
@@ -1236,9 +1250,8 @@ pre {
 /* Firefox */
 .visible-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--ls-scrollbar-foreground-color) var(
-      --ls-scrollbar-background-color
-    );
+  scrollbar-color: var(--ls-scrollbar-foreground-color)
+    var(--ls-scrollbar-background-color);
 }
 ```
 
@@ -1313,7 +1326,19 @@ html[data-theme='dark'] .glassmorphic-card {
 
 ### Q: What's the difference between `--lx-*` and `--ls-*` variables?
 
-**A:** `--lx-*` are new Logseq variables tied to the Radix color system. `--ls-*` are legacy variables for backward compatibility. Use `--lx-*` for new themes.
+**A:** `--lx-*` map semantic accent/gray scales (usually from Radix `--rx-*`) and are used heavily by modern UI styles. `--ls-*` are still widely consumed semantic app variables and remain important for compatibility and component coverage. In practice, robust themes often set both layers.
+
+---
+
+## Findings: New Capabilities
+
+Validated against current sources in `src/`, `deps/`, and `packages/` (2026-05-29):
+
+- Accent reset mode is implemented: selecting `none` sets `html[data-color="none"]`, allowing custom themes to avoid built-in accent remapping.
+- Theme runtime now consistently sets `html` attributes for `data-theme`, `data-color`, `data-font`, and `data-font-global`.
+- Plugin theming supports both declarative `logseq.themes` (from `package.json`) and programmatic registration via `logseq.provideTheme(...)`.
+- Plugin-provided CSS injection via `logseq.provideStyle(...)` remains available for targeted overrides.
+- Theme selection persists light/dark theme choices by mode in plugin user preferences.
 
 ### Q: Can I create themes that only affect certain pages?
 

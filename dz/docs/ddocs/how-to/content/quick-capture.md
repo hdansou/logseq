@@ -2,7 +2,7 @@
 title: 'Quick Capture'
 description: 'How to quickly capture content to Logseq from anywhere'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop, mobile]
 graphType: [file, db]
@@ -13,23 +13,23 @@ relatedDocs:
 
 # Quick Capture
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
-> How to capture thoughts, links, and content to Logseq as quickly as possible.
+> Quick capture is an external capture pipeline that receives content from desktop callback URLs or mobile share intents and inserts it into the current graph context.
 
 ## How Quick Capture Works
 
-Quick capture is triggered externally via the `logseq://x-callback-url/quickCapture` URL scheme (desktop) or the system share sheet (mobile). There is no built-in keyboard shortcut for quick capture.
+Quick capture is triggered externally via the `logseq://x-callback-url/quickCapture` URL scheme on desktop or the mobile share flow on iOS/Android. Both entry points publish `[:editor/quick-capture args]` and share the same insertion logic in `src/main/frontend/quick_capture.cljs`.
 
 ### Capture Destination Priority
 
 When a quick capture is received, Logseq determines where to insert it using this priority order:
 
-1. **Today's journal** -- if `:insert-today?` is `true` in config, or `page=TODAY` is passed in the URL
-2. **Explicit page** -- if a `page` parameter is provided in the URL
-3. **Default page** -- if `:default-page` is set in config (e.g., `"Inbox"`)
+1. **Today's journal** -- if journals are enabled and `page=TODAY` is passed, or `page` is blank while `:insert-today?` is `true`
+2. **Explicit page** -- if a non-empty `page` parameter is provided in the URL
+3. **Default page** -- if `:default-page` is set in config (for example, `"Inbox"`)
 4. **Current page** -- whatever page is open in the editor
-5. **Fallback** -- today's journal (if journals enabled) or a page named `"quick capture"`
+5. **Fallback** -- today's journal when journals are enabled, otherwise the literal `"quick capture"` page
 
 ---
 
@@ -38,20 +38,23 @@ When a quick capture is received, Logseq determines where to insert it using thi
 In `config.edn`:
 
 ```clojure
-{:quick-capture-options
- {:insert-today? true        ;; Add to today's journal
-  :default-page "Inbox"     ;; Fallback page when no page is specified
-  :redirect-page? false}}   ;; Don't navigate after capture
-```
-
-You can also customize the capture template:
-
-```clojure
 {:quick-capture-templates
- {:text "**{time}** [[quick capture]]: {text} {url}"}}
+ {:text "**{time}** [[quick capture]]: {text} {url}"}
+
+ :quick-capture-options
+ {:insert-today? true
+  :default-page "Inbox"
+  :redirect-page? false
+  :prettify-url? true}}
 ```
 
 Available template variables: `{time}`, `{date}`, `{text}`, `{url}`.
+
+## Findings: New Capabilities
+
+- `:prettify-url?` is now documented in the quick-capture config template and controls whether supported URLs are formatted as `{{video ...}}` or `{{twitter ...}}`.
+- The runtime still reads that option from `[:quick-capture-option :prettify-url?]` in `src/main/frontend/quick_capture.cljs`, so the spelling should be checked if the toggle appears ignored.
+- Quick capture now honors `append` as a URL parameter, letting external callers request append-style insertion instead of editing the active block.
 
 ---
 
@@ -94,6 +97,8 @@ Start-Process "logseq://x-callback-url/quickCapture?content=Quick%20thought"
 ---
 
 ## System-Wide Shortcuts
+
+> **Removed:** There is no built-in quick-capture hotkey or modal in the current source path. These examples are external wrappers around the callback URL.
 
 ### macOS with Automator
 
@@ -142,12 +147,7 @@ UriEncode(str) {
 3. Choose Logseq
 4. Edit and save
 
-**Shortcuts App:**
-Create a shortcut:
-
-1. Add "URL" action with logseq:// scheme
-2. Add "Open URLs" action
-3. Add to home screen or use with Siri
+> **Removed:** The old widget and Shortcuts App guidance is not part of the current source-backed quick-capture path. Use Share Sheet or a custom automation flow instead.
 
 ### Android
 
@@ -163,6 +163,8 @@ See [X-Callback-URL Guide](../integrations/x-callback-url.md) for Tasker setup.
 ---
 
 ## Browser Extensions
+
+> **Removed:** Logseq does not ship a browser extension in this quick-capture path. Use the callback URL directly or your own bookmarklet/automation.
 
 ### Bookmarklet
 
@@ -184,10 +186,6 @@ javascript: (function () {
 ```
 
 Click the bookmark to send selected text + page info to Logseq.
-
-### Chrome/Firefox Extension
-
-Search for "Logseq" in your browser's extension store for community-built extensions.
 
 ---
 
@@ -253,4 +251,4 @@ Create an "Inbox" page for captures, then:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

@@ -1,6 +1,6 @@
 # Logseq Real-Time Collaboration (RTC) Developer Onboarding Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 Welcome to the Logseq RTC development team! This comprehensive guide will help you understand the RTC architecture, codebase structure, and how to contribute effectively to the real-time collaboration features.
 
@@ -83,27 +83,42 @@ db_sync/
 │       └── index.cljs           # Index handler
 ├── malli_schema.cljs            # Data validation schemas
 ├── batch.cljs                   # Batch operations
+├── checksum.cljs                # Sync integrity checksums
 ├── common.cljs                  # Shared utilities
 ├── cycle.cljs                   # Sync cycle management
 ├── index.cljs                   # Indexing
+├── node/                        # Server-side Node.js adapter
 ├── order.cljs                   # Operation ordering
 ├── snapshot.cljs                # Graph snapshots
 ├── storage.cljs                 # Storage abstraction
 ├── protocol.cljs                # Protocol definitions
 ├── logging.cljs                 # Logging
 ├── platform/                    # Platform adapters (node, cloudflare)
-└── sentry/                      # Error reporting
+├── sentry.cljs                  # Sentry error reporting entry
+├── sentry/                      # Error reporting
+└── tx_sanitize.cljs             # Transaction sanitization for deleted properties
 ```
 
 ### Client-side sync files: `src/main/frontend/worker/sync/`
 
 ```txt
 sync/
-├── client_op.cljs               # Client operation storage and management
+├── apply_txs.cljs               # Transaction application logic
+├── asset_db_listener.cljs       # Asset change listeners
+├── assets.cljs                  # Asset sync operations
+├── auth.cljs                    # Authentication (client-side)
+├── client_op.cljs               # Client operation storage (SQLite-based)
 ├── const.cljs                   # Constants and configuration
 ├── crypt.cljs                   # Encryption utilities
+├── download.cljs                # Graph/asset download handling
+├── handle_message.cljs          # WebSocket message routing
+├── large_title.cljs             # Large-title handling during sync
 ├── log_and_state.cljs           # Logging and state management
-└── asset_db_listener.cljs       # Asset change listeners
+├── presence.cljs                # Client-side user presence
+├── temp_sqlite.cljs             # Temporary SQLite operations
+├── transport.cljs               # Transport/coercion layer
+├── upload.cljs                  # Graph/asset upload handling
+└── util.cljs                    # Shared utilities
 ```
 
 ### Related Files
@@ -119,18 +134,16 @@ sync/
 
 ### 1. Operations
 
-Operations represent atomic changes to the graph:
+> **Removed:** The old tuple-based operation format (`[:update t {...}]`, `[:move t {...}]`, `[:remove t {...}]`, `[:update-page ...]`, `[:remove-page ...]`, `[:update-kv-value ...]`) no longer exists. Block/page changes are stored in SQLite as `forward-outliner-ops` / `inverse-outliner-ops` (transit-encoded) and transmitted to the server as `tx/batch` messages with transit-encoded `:tx` strings. The only ops still represented in the current `client_op.cljs` op-schema are asset operations:
 
 ```clojure
-;; Operation types
-[:update t {:block-uuid uuid :av-coll [...]}]    ; Update block content/properties
-[:move t {:block-uuid uuid}]                     ; Move block to new position
-[:remove t {:block-uuid uuid}]                   ; Delete block
-[:update-page t {:block-uuid uuid}]              ; Update page properties
-[:remove-page t {:block-uuid uuid}]              ; Delete page
-[:update-asset t {:block-uuid uuid}]             ; Update asset
-[:remove-asset t {:block-uuid uuid}]             ; Remove asset
-[:update-kv-value t {:db-ident ident :value v}]  ; Update key-value data
+;; Current operation types (client_op.cljs op-schema)
+[:update-asset t {:block-uuid uuid}]   ; Upload/update an asset
+[:remove-asset t {:block-uuid uuid}]   ; Remove an asset
+
+;; Block/page changes are stored as outliner-op transactions:
+;; {:tx-id uuid, :tx "<transit-encoded-datascript-tx>",
+;;  :outliner-op :keyword, :forward-outliner-ops [...], :inverse-outliner-ops [...]}
 ```
 
 ### 2. Transaction Ordering
@@ -172,16 +185,26 @@ Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logs
 
 ### 5. WebSocket Message Types
 
-```clojure
-;; Outgoing messages
-{:action "apply-ops" :ops [...] :graph-uuid uuid}
-{:action "pull-remote-data" :graph-uuid uuid}
-{:action "list-graphs"}
+> **Removed:** The old format using `:action` (outgoing) and `:req-id` (incoming) fields no longer exists. The protocol now uses a `:type` string field on both sides.
 
-;; Incoming messages
-{:req-id "push-updates" :value {...}}          ; Remote operations
-{:req-id "online-users-updated" :value [...]}  ; User presence
-{:req-id "push-asset-block-updates" :value {...}}  ; Asset updates
+```clojure
+;; Outgoing client messages (ws-client-message-schema in malli_schema.cljs)
+{:type "hello"    :client "<client-id>"}
+{:type "presence" :editing-block-uuid "<uuid-or-nil>"}
+{:type "pull"     :since <t-int>}                      ; Pull updates since t
+{:type "tx/batch" :t-before <int> :txs [{:tx-id uuid :tx "<transit-str>" :outliner-op kw}]}
+{:type "ping"}
+
+;; Incoming server messages (ws-server-message-schema in malli_schema.cljs)
+{:type "hello"        :t <int> :checksum "<str>"}      ; Connection established
+{:type "online-users" :online-users [{:user-id str :email str ...}]}
+{:type "presence"     :user-id str :editing-block-uuid "<uuid-or-nil>"}
+{:type "pull/ok"      :t <int> :txs [...] :checksum "<str>"}
+{:type "tx/batch/ok"  :t <int> :checksum "<str>"}
+{:type "changed"      :t <int>}                        ; Remote data changed
+{:type "tx/reject"    :reason "<enum>" :t <int>}       ; Transaction rejected
+{:type "pong"}
+{:type "error"        :message "<str>"}
 ```
 
 ## Development Setup
@@ -205,13 +228,13 @@ Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logs
 2. **Install dependencies**:
 
    ```bash
-   yarn install
+   pnpm install
    ```
 
 3. **Start development server**:
 
    ```bash
-   yarn watch  # or npm run watch
+   pnpm watch  # or pnpm dev for mobile+desktop combined watch
    ```
 
 4. **Enable RTC in development**:
@@ -232,6 +255,8 @@ Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logs
 
 ### 1. Adding a New Operation Type
 
+> **Removed:** `gen_client_op.cljs` and `remote_update.cljs` no longer exist. Block/page change operations are handled through the outliner transaction pipeline (`forward-outliner-ops` / `inverse-outliner-ops`) rather than explicit named operation types. Only asset operations (`:update-asset`, `:remove-asset`) use the named op-schema pattern. To add a new asset operation type, follow these steps:
+
 1. **Define the operation schema** in `malli_schema.cljs`:
 
    ```clojure
@@ -242,14 +267,13 @@ Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logs
      [:value [:map [:block-uuid :uuid] [:my-data :string]]]]]
    ```
 
-2. **Add operation generation** in `gen_client_op.cljs`:
+2. **Add operation storage** in `client_op.cljs` (see `add-asset-ops` for the pattern):
 
    ```clojure
-   (defn generate-my-new-op [block-uuid my-data]
-     [:my-new-op (get-current-t) {:block-uuid block-uuid :my-data my-data}])
+   (defn add-my-new-ops [repo ops] ...)
    ```
 
-3. **Handle operation in remote updates** in `remote_update.cljs`:
+3. **Handle application of remote operations** in `apply_txs.cljs`:
 
    ```clojure
    (defn apply-my-new-op [repo conn op-value]
@@ -264,26 +288,26 @@ Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logs
 1. **Enable debug logging**:
 
    ```clojure
-   (js/console.log "RTC Debug:" data)
+   (log/info :rtc-debug data)  ; use lambdaisland.glogi, not js/console.log
    ```
 
-2. **Inspect operation queues**:
+2. **Inspect pending transaction count**:
 
    ```clojure
-   (client-op/get-all-block-ops repo)
+   (client-op/get-pending-local-tx-count repo)
    ```
 
-3. **Check WebSocket state**:
+3. **Check WebSocket state** via the debug UI (see `src/main/frontend/db/rtc/debug_ui.cljs`):
 
    ```clojure
-   ;; In browser console
-   window.logseq.rtc.debug_state()
+   ;; Invoke via thread-api from the renderer process:
+   (state/<invoke-db-worker :thread-api/rtc-get-debug-state)
    ```
 
 4. **Monitor transaction flow**:
 
 ```clojure
-;; Add logging in core.cljs
+;; Add logging in apply_txs.cljs
 (log/info :rtc-transaction {:local-t local-t :remote-t remote-t})
 ```
 
@@ -308,9 +332,11 @@ Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logs
 
 #### Generating Operations
 
+> **Removed:** `client-op/add-ops!` does not exist. Asset ops are stored with `add-asset-ops`; block/page changes flow through the outliner transaction pipeline automatically.
+
 ```clojure
-(let [op [:update (get-current-t) {:block-uuid block-uuid :av-coll av-coll}]]
-  (client-op/add-ops! repo [op]))
+;; Store asset operations:
+(client-op/add-asset-ops repo asset-ops)
 ```
 
 #### Handling Remote Updates
@@ -328,27 +354,52 @@ Blocks use fractional indexes for ordering. The main API is in `deps/db/src/logs
 ### Test Structure
 
 ```txt
-test/
+src/test/
 ├── frontend/
+│   ├── components/
+│   │   └── rtc/
+│   │       └── indicator_test.cljs
+│   ├── handler/
+│   │   └── db_based/
+│   │       ├── rtc_flows_test.cljs
+│   │       └── sync_test.cljs
+│   │   └── events/
+│   │       └── rtc_error_test.cljs
 │   └── worker/
-│       └── rtc/
-│           ├── core_test.cljs
+│       ├── db_sync_sim_test.cljs
+│       ├── db_sync_test.cljs
+│       ├── node_sync_test.cljs
+│       └── sync/
+│           ├── assets_test.cljs
 │           ├── client_op_test.cljs
-│           ├── remote_update_test.cljs
-│           └── integration_test.cljs
+│           ├── crypt_test.cljs
+│           ├── download_test.cljs
+│           ├── restart_test.cljs
+│           └── upload_test.cljs
+└── logseq/cli/command/
+    └── sync_test.cljs
 ```
 
 ### Running Tests
 
 ```bash
-# Unit tests
-yarn test:rtc
+# Lint + all unit tests (preferred)
+bb dev:lint-and-test
 
-# Integration tests
-yarn test:rtc-integration
+# Run a single test by name
+bb dev:test -v frontend.worker.sync.client-op-test/my-test
 
-# E2E tests
-yarn test:rtc-e2e
+# All unit tests via pnpm
+pnpm test
+
+# Node adapter tests
+pnpm test:node-adapter
+
+# App E2E tests (from clj-e2e/)
+bb test
+
+# CLI E2E tests
+bb -f cli-e2e/bb.edn test --skip-build
 ```
 
 ### Writing Tests
@@ -417,28 +468,22 @@ yarn test:rtc-e2e
 #### Built-in Debug Functions
 
 ```clojure
-;; Get current RTC state
-(rtc-core/new-task--get-debug-state)
+;; Get current RTC state (invoke from renderer via thread-api)
+(state/<invoke-db-worker :thread-api/rtc-get-debug-state)
 
-;; Check pending operations
-(client-op/get-unpushed-block-ops-count repo)
+;; Check pending local transaction count
+(client-op/get-pending-local-tx-count repo)
 
-;; Monitor WebSocket
-(ws/create-mws-state-flow mws)
+;; Stop RTC
+(state/<invoke-db-worker :thread-api/rtc-stop)
+
+;; Toggle auto-push
+(state/<invoke-db-worker :thread-api/rtc-toggle-auto-push)
 ```
 
 #### Browser Console Commands
 
-```javascript
-// Get RTC debug state
-window.logseq.api.rtc_debug_state()
-
-// Force sync
-window.logseq.api.rtc_force_sync()
-
-// Get operation queue
-window.logseq.api.rtc_get_pending_ops()
-```
+> **Removed:** `window.logseq.api.rtc_debug_state()`, `window.logseq.api.rtc_force_sync()`, and `window.logseq.api.rtc_get_pending_ops()` are not present in the codebase. Use the built-in RTC Debug UI (accessible from within the app) or call `:thread-api/rtc-get-debug-state` via the worker state API instead.
 
 ### Logging Best Practices
 
@@ -465,13 +510,11 @@ window.logseq.api.rtc_get_pending_ops()
 ### Code Style
 
 1. **Follow Clojure conventions**:
-
    - Use kebab-case for names
    - Prefer pure functions
    - Use destructuring appropriately
 
 2. **RTC-specific conventions**:
-
    - Prefix RTC functions with namespace
    - Use consistent operation naming
    - Add comprehensive docstrings
@@ -497,6 +540,54 @@ window.logseq.api.rtc_get_pending_ops()
 - [ ] Does it maintain backward compatibility?
 - [ ] Is error handling comprehensive?
 - [ ] Are performance implications considered?
+
+## Findings: New Capabilities
+
+The following capabilities exist in the current codebase but were not covered in earlier versions of this document:
+
+### Extended Client Sync Directory
+
+`src/main/frontend/worker/sync/` now contains 16 files (was 5). Notable additions:
+
+- **`apply_txs.cljs`** — The core logic for applying remote transactions to the local DataScript database.
+- **`handle_message.cljs`** — Routes incoming WebSocket messages to the appropriate handler.
+- **`transport.cljs`** — Coerces/validates WebSocket messages using the Malli schema (`coerce-ws-client-message`, `coerce-ws-server-message`).
+- **`download.cljs` / `upload.cljs`** — Handles full graph download from and upload to object storage (S3-compatible).
+- **`presence.cljs`** — Client-side user-presence tracking (mirrors the server-side presence in `deps/db-sync`).
+- **`auth.cljs`** — Client-side authentication handling.
+- **`temp_sqlite.cljs`** — Manages temporary SQLite operations during sync.
+- **`large_title.cljs`** — Handles blocks with large titles during sync.
+
+### Thread-API RTС Operations
+
+Available via `(state/<invoke-db-worker :thread-api/rtc-*)`:
+
+- `:thread-api/rtc-start` / `:thread-api/rtc-stop` — Start and stop RTC.
+- `:thread-api/rtc-toggle-auto-push` — Toggle automatic operation push.
+- `:thread-api/rtc-toggle-remote-profile` — Toggle remote profiling.
+- `:thread-api/rtc-grant-graph-access` — Grant collaborator access to a graph.
+- `:thread-api/rtc-get-graphs` — List remote graphs.
+- `:thread-api/rtc-delete-graph` — Delete a remote graph.
+- `:thread-api/rtc-get-users-info` — Get user info for collaborators.
+- `:thread-api/rtc-get-block-content-versions` — Fetch version history of a block.
+- `:thread-api/rtc-get-debug-state` — Get the full RTC debug state map.
+- `:thread-api/rtc-request-download-graph` / `:thread-api/rtc-download-graph-from-s3` — Trigger graph download.
+
+### Transaction Integrity Checksums
+
+`deps/db-sync/src/logseq/db_sync/checksum.cljs` provides checksum verification. `pull/ok` and `tx/batch/ok` server messages include an optional `:checksum` field for integrity verification.
+
+### Graph End-to-End Encryption (E2EE)
+
+The `graph-info-schema` includes `[:graph-e2ee? {:optional true} :boolean]`. Per-graph E2EE is supported; see `crypt.cljs`.
+
+### Graph Schema Versioning
+
+`graph-info-schema` includes `[:schema-version {:optional true} [:maybe :string]]`. The RTC debug state also tracks `:local-graph-schema-version` and `:remote-graph-schema-version` separately, enabling detection of version mismatches.
+
+### Transaction Sanitization
+
+`deps/db-sync/src/logseq/db_sync/tx_sanitize.cljs` strips deleted/migrated datoms from transactions before they are applied. When adding new DB migrations that delete properties, add those property identifiers to `logseq.db-sync.tx-sanitize/migration-deleted-attrs`.
 
 ## Resources
 

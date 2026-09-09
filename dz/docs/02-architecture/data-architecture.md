@@ -1,6 +1,6 @@
 # Data Architecture
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 ## Overview
 
@@ -34,17 +34,17 @@ erDiagram
 
     Block {
         uuid id
-        string content
-        integer order
+        string title
+        string order
         datetime created-at
         datetime updated-at
         boolean collapsed
     }
 
     Property {
-        string key
-        string value
-        string type
+        keyword db-ident
+        keyword type
+        any value
     }
 ```
 
@@ -54,7 +54,7 @@ DataScript stores data in an EAV triple format, providing flexibility and query 
 
 ```clojure
 ;; Example EAV triples
-[block-id :block/content "This is content"]
+[block-id :block/title "This is content"]
 [block-id :block/page page-id]
 [block-id :block/refs [ref-id-1 ref-id-2]]
 [page-id :block/name "my page"]
@@ -69,42 +69,59 @@ DataScript stores data in an EAV triple format, providing flexibility and query 
 
 ```clojure
 {:block/uuid        {:db/unique :db.unique/identity}
- :block/content     {:db/valueType :db.type/string}
- :block/page        {:db/valueType :db.type/ref}
- :block/parent      {:db/valueType :db.type/ref}
+ :block/title       {:db/index true}   ; block/page content text (NOT :block/content)
+ :block/page        {:db/valueType :db.type/ref
+                     :db/index true}
+ :block/parent      {:db/valueType :db.type/ref
+                     :db/index true}
  :block/refs        {:db/valueType :db.type/ref
                      :db/cardinality :db.cardinality/many}
- :block/created-at  {:db/valueType :db.type/instant}
- :block/updated-at  {:db/valueType :db.type/instant}}
+ :block/order       {:db/index true}   ; fractional index string, not integer
+ :block/collapsed?  {}                 ; note: :block/collapsed? with question mark
+ :block/created-at  {:db/index true}
+ :block/updated-at  {:db/index true}}
 ```
 
 **Page Entity** (pages are blocks with `:block/name`):
 
 ```clojure
-{:block/name        {:db/unique :db.unique/identity}  ; lowercase page name
- :block/title       {}                                 ; display title
- :block/namespace   {:db/valueType :db.type/ref}
+{:block/name        {:db/index true}   ; lowercase page name (not :db.unique/identity)
+ :block/title       {:db/index true}   ; display title (original name)
+ :block/journal-day {:db/index true}   ; for journal pages
  :block/tags        {:db/valueType :db.type/ref
-                     :db/cardinality :db.cardinality/many}}
+                     :db/cardinality :db.cardinality/many}
+ :block/alias       {:db/valueType :db.type/ref
+                     :db/cardinality :db.cardinality/many
+                     :db/index true}}
 ```
+
+> **Removed:** `:block/namespace` — namespace hierarchy is not stored as a separate attribute. Pages use hierarchical naming conventions; no `:block/namespace` ref attribute exists in the schema.
 
 ### Property System
 
-**Dynamic Properties**:
+In DB graphs, properties are first-class entities identified by a `:db/ident` keyword and stored under namespaced attributes (`:logseq.property/*`). They are not ad-hoc key-value pairs.
+
+**Built-in Property Attributes**:
 
 ```clojure
-;; Properties are flexible key-value pairs
-{:property/key "author"
- :property/value "John Doe"
- :property/type "string"}
+;; Properties are entities with namespaced idents
+;; :block/title holds the display name
+;; :logseq.property/type holds the type keyword
 
-{:property/key "priority"
- :property/value "high"
- :property/type "enum"}
+;; Example: a built-in "type" property entity
+{:db/ident          :logseq.property/type
+ :block/title       "Property type"
+ :logseq.property/type :keyword}
 
-{:property/key "due-date"
- :property/value #inst "2024-12-31"
- :property/type "date"}
+;; Example: a user property for "priority"
+{:db/ident          :user.property/priority
+ :block/title       "Priority"
+ :logseq.property/type :keyword}   ; :string, :number, :date, :checkbox, :url, :node, etc.
+
+;; Example: a user property for "due-date"
+{:db/ident          :user.property/due-date
+ :block/title       "Due date"
+ :logseq.property/type :date}
 ```
 
 ## Storage Architectures
@@ -168,8 +185,8 @@ Logseq's SQLite storage uses an address-content model with Transit serialization
 -- kvs table: stores Transit-serialized DataScript data
 CREATE TABLE IF NOT EXISTS kvs (
     addr INTEGER PRIMARY KEY,
-    content TEXT,          -- Transit-serialized DataScript data
-    addresses TEXT         -- JSON array of referenced addresses
+    content TEXT,    -- Transit-serialized DataScript data
+    addresses JSON   -- JSON array of referenced addresses
 );
 
 -- Separate SQLite databases per graph:
@@ -264,11 +281,11 @@ sequenceDiagram
 **Indexing Strategy**:
 
 ```clojure
-;; Automatic indexes created by DataScript
-:avet  ; Attribute-Value-Entity-Transaction
-:aevt  ; Attribute-Entity-Value-Transaction
-:eavt  ; Entity-Attribute-Value-Transaction
-:vaet  ; Value-Attribute-Entity-Transaction
+;; Indexes used by DataScript (verified in codebase)
+:avet  ; Attribute-Value-Entity — used for attribute lookups by value
+:aevt  ; Attribute-Entity-Value — used for scanning all values of an attribute
+:eavt  ; Entity-Attribute-Value — used for entity-specific attribute lookups
+;; Note: :vaet is not present in this codebase
 ```
 
 **Query Caching**:
@@ -358,11 +375,9 @@ sequenceDiagram
 **File-Based Persistence**:
 
 ```clojure
-;; Incremental file updates
-(defn persist-block-change [block-data]
-  (let [file-path (block->file-path block-data)
-        file-content (generate-markdown block-data)]
-    (write-file file-path file-content)))
+;; File-based graphs write markdown files on each save.
+;; The actual write path goes through the editor handler -> file worker -> IPC.
+;; See: src/main/frontend/handler/editor.cljs and src/main/frontend/worker/file.cljs
 ```
 
 **Database Persistence**:
@@ -415,56 +430,51 @@ sequenceDiagram
 
 ### Schema Evolution
 
-**Migration Framework**:
+The current DB schema version is **65.33**. Migrations are data-driven, defined in `src/main/frontend/worker/db/migrate.cljs` as a vector of `[version migration-map]` tuples:
 
 ```clojure
-(defn migrate-schema [db from-version to-version]
-  (reduce apply-migration db
-    (get-migrations from-version to-version)))
-
-(defmulti apply-migration
-  (fn [db migration] (:migration/type migration)))
-
-(defmethod apply-migration :add-attribute
-  [db {:keys [attribute schema]}]
-  (update-schema db attribute schema))
+;; Actual migration framework: schema-version->updates
+(def schema-version->updates
+  [["65.30" {:properties [:logseq.property/assignee]}]
+   ["65.31" {:properties [:logseq.property.agent/session-id]}]
+   ["65.32" {:fix repair-comment-classes-and-targets}]
+   ["65.33" {:properties [:logseq.property.view/gallery-asset-property
+                          :logseq.property.view/gallery-display-properties
+                          :logseq.property.view/gallery-card-size
+                          :logseq.property.view/gallery-card-width
+                          :logseq.property.view/gallery-card-height]}]])
+;; Each migration map supports keys: :properties, :classes, :fix, :delete-properties
 ```
+
+> **Removed:** The `migrate-schema` / `defmulti apply-migration` pattern shown previously does not exist. The actual system uses the `schema-version->updates` data structure above.
 
 ### Data Import/Export
 
 **Export Formats**:
 
-- JSON for full graph export
-- Markdown for file-based compatibility
-- EDN for Clojure-native format
-- RDF for semantic web integration
+- Markdown (file-based graphs and DB graphs)
+- HTML
+- OPML
+- EDN (developer/debug export)
+- Roam JSON (compatible with Roam Research format)
+
+> **Removed:** RDF export — no RDF export capability exists in the codebase.
 
 **Import Sources**:
 
-- Roam Research databases
-- Obsidian vaults
-- Notion workspaces
+- File-based Logseq graphs (markdown files)
+- DB-format SQLite exports (`.sqlite` / `.zip`)
 - Standard markdown files
+
+> **Removed:** Roam Research database import, Obsidian vault import, and Notion workspace import are not implemented. Only file-based markdown import and SQLite DB import exist. Logseq can _export_ to Roam JSON format but cannot import from Roam, Obsidian, or Notion directly.
 
 ## Security and Privacy
 
 ### Data Encryption
 
-**At-Rest Encryption**:
+> **Removed:** At-rest encryption — no `encrypt-content`, `encrypt/aes-encrypt`, or `encode/base64-encode` functions exist in the codebase. The codebase does not implement application-level at-rest encryption for graph data.
 
-```clojure
-;; Optional encryption for sensitive data
-(defn encrypt-content [content encryption-key]
-  (-> content
-      (encrypt/aes-encrypt encryption-key)
-      (encode/base64-encode)))
-```
-
-**In-Transit Encryption**:
-
-- TLS 1.3 for all network communications
-- End-to-end encryption for sync operations
-- Certificate pinning for enhanced security
+> **Removed:** Certificate pinning and end-to-end encryption for sync operations — no evidence of these features in source code. Sync uses standard TLS but no pinning or application-level E2E encryption layer was found.
 
 ### Privacy Controls
 
@@ -479,6 +489,32 @@ sequenceDiagram
 - Transaction logging for data changes
 - User action tracking (optional)
 - Change attribution and timestamps
+
+---
+
+## Findings: New Capabilities
+
+The following capabilities exist in the codebase but were not mentioned in the original document:
+
+### Schema Versioning
+
+DB graphs carry a structured schema version (currently **65.33**, as a `{:major 65 :minor 33}` map). The version is stored in the graph as `:logseq.kv/schema-version` and validated on open. See `deps/db/src/logseq/db/frontend/schema.cljs` and `src/main/frontend/worker/db/migrate.cljs`.
+
+### Fractional-Index Block Ordering
+
+`:block/order` is a **fractional index string** (not an integer), allowing efficient reordering of blocks without renumbering siblings. The ordering is managed via `deps/db/src/logseq/db/common/order.cljs`.
+
+### SQLite GC for kvs Table
+
+The `deps/db/src/logseq/db/sqlite/gc.cljs` namespace implements garbage collection of unreferenced addresses in the `kvs` table via `gc-kvs-table!`, keeping storage compact over time.
+
+### Class-Based Type System
+
+In addition to tags, DB graphs have a formal class system (`logseq.class/*` idents). Blocks can be tagged with classes (via `:block/tags`) to inherit typed properties defined on those classes. This is distinct from file-graph tags.
+
+### Built-in Property Namespace
+
+All built-in properties live under the `:logseq.property/*` namespace (e.g., `:logseq.property/type`, `:logseq.property/hide?`, `:logseq.property/public?`). User-defined properties use the `:user.property/*` namespace.
 
 ---
 

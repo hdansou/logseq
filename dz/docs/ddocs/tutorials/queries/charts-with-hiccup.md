@@ -4,7 +4,7 @@ description: 'Learn to render ASCII bar charts and full SVG line charts directly
 status: draft
 difficulty: intermediate
 timeToComplete: '45 minutes'
-lastVerified: '2026-04-21'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x (DB graphs only)'
 platforms: [desktop, web]
 prerequisites:
@@ -18,6 +18,7 @@ relatedDocs:
 
 # Build ASCII and SVG Charts in Logseq Queries with Hiccup
 
+> **Last revised:** 2026-05-30
 > **What you'll learn**: How to use the `:view` function in advanced queries to render aggregation results as ASCII bar charts and SVG line charts, and how to register reusable chart templates in `config.edn`.
 
 ## Introduction
@@ -201,7 +202,7 @@ For this step you need a tagged page with some numeric properties. If you don't 
   ```
 ````
 
-> 💡 **Property idents**: replace `:user.property/running` and `:user.property/walking` with the actual idents from your graph. They include random suffixes (e.g. `:user.property/running-jHqSz90j`). Find them by running `[:find ?ident :where [?p :db/ident ?ident] [(clojure.string/starts-with? (str ?ident) ":user.property/")]]`.
+> 💡 **Property idents**: replace `:user.property/running` and `:user.property/walking` with the actual idents from your graph. User properties often include generated suffixes (e.g. `:user.property/running-jHqSz90j`), but ident formats can vary across imported graphs and environments. Find actual idents with `[:find ?ident :where [?p :db/ident ?ident] [(clojure.string/starts-with? (str ?ident) ":user.property/")]]`.
 > ⚠️ **Number properties are entity refs**: a direct `[?p :user.property/running ?x]` binds `?x` to a value-entity's `:db/id`, **not** the number. You must add a deref step `[?x :logseq.property/value ?n]` to get the actual number. Tip: if results show suspiciously consecutive small integers, that's the giveaway you're looking at eids.
 
 **Expected result**: a clean two-line chart with axes, gridlines, dot markers, value labels, and a legend identifying running and walking.
@@ -275,6 +276,11 @@ Since registered views can't take config arguments (only the query result `r`), 
 
 For richer parameterization, design your view to accept a "sentinel" first row. For example, a polymorphic chart could expect `(:type "line" :title "..." val1 val2 …)` and switch on the first element.
 
+## Findings: New Capabilities
+
+- `config.edn` supports both `:query/views` and `:query/result-transforms` as keyword-addressable functions, so you can keep chart rendering and post-processing reusable and centralized.
+- User property idents are generated with uniqueness suffixes by default in DB graphs; query snippets should always discover idents from the graph instead of hardcoding guessed names.
+
 ## Verify Your Work
 
 You should now be able to:
@@ -310,14 +316,9 @@ In this tutorial, you:
 
 ### Block renders blank with no console error
 
-**Problem**: SCI silently dropped one of the following idioms inside your `:view`:
+> **Removed:** The previous claim that SCI silently drops idioms like `map-indexed`, `#()` reader macros, and keyword-as-function calls is stale for current builds.
 
-- `map-indexed` (use `(for [i (range (count s))] …)` instead)
-- `#()` reader macros (use `(fn [x] …)` instead)
-- Keyword-as-function over a collection like `(map :values series)` (use `(map (fn [s] (:values s)) series)`)
-- `:style` passed as a string (must be a map: `{:font-size "12px"}`, not `"font-size: 12px"`)
-
-**Solution**: scan the let block for any of these and rewrite using the plain-`fn` form. If still blank, replace the body with `(fn [r] [:pre.code (pr-str r)])` to confirm the query is returning data.
+**Current guidance**: if a custom view renders blank, first validate output shape with `(fn [r] [:pre.code (pr-str r)])`, then add chart logic incrementally and check browser console errors for malformed Hiccup or runtime exceptions.
 
 ### `nth not supported on this type Number()` error
 
@@ -327,7 +328,7 @@ In this tutorial, you:
 
 ### `:title` key is ignored
 
-**Problem**: in current Logseq DB, the top-level `:title "..."` key in the query map is silently dropped.
+**Problem**: for regular advanced query blocks, the top-level `:title "..."` key is not reliably shown in the result renderer.
 
 **Solution**: put your heading inside `:view` as `[:h3 "..."]` or `[:text {:x ... :y ...} "..."]` for SVG, or as a markdown header in the block above the `query::` property.
 
@@ -352,4 +353,4 @@ Use `?actual-number` in `:find`.
 
 ---
 
-_Last updated: 2026-04-21 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-05-30 | [Report an issue](https://github.com/logseq/logseq/issues)_

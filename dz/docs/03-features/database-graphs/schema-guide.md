@@ -1,6 +1,6 @@
 # Logseq Database Graph Schema: A Detective's Investigation Report
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## Case Summary
 
@@ -16,10 +16,10 @@
 
 **Key Discovery Highlights**:
 
-- **Schema Version**: Currently at 65.22 (major.minor versioning)
+- **Schema Version**: Currently at 65.33 (major.minor versioning)
 - **Dual Schema System**: Uses both DataScript schema (for database structure) and Malli schema (for validation)
 - **100+ Built-in Properties**: Comprehensive property system from basic metadata to advanced features
-- **13 Built-in Classes**: Root, Tag, Property, Page, Journal, Whiteboard, Task, Query, Card, Asset, and specialized block types
+- **18 Built-in Classes**: Root, Tag, Property, Page, Journal, Whiteboard, Task, Comments, Comment, Query, Card, Cards, Asset, Code-block, Quote-block, Math-block, Pdf-annotation, and Template
 - **Multiple Entity Types**: Pages, blocks, properties, classes, closed values, property values, files, and more
 
 ---
@@ -100,14 +100,14 @@ graph TB
 
     subgraph "Property System"
         BP[Built-in Properties<br/>100+ properties]
-        PT[Property Types<br/>14 types]
+        PT[Property Types<br/>19 types]
         PC[Property Config<br/>schema, validation]
         BP --> PT
         BP --> PC
     end
 
     subgraph "Class System"
-        BC[Built-in Classes<br/>13 classes]
+        BC[Built-in Classes<br/>18 classes]
         CE[Class Extends<br/>inheritance]
         CP[Class Properties<br/>schema definition]
         BC --> CE
@@ -150,38 +150,22 @@ graph TB
 
 The DataScript schema is the **foundation of the database graph architecture**. Unlike file-based graphs, DB graphs use a structured schema with explicit attribute definitions.
 
-**Location**: `deps/db/src/logseq/db/frontend/schema.cljs:63-70`
+**Location**: `deps/db/src/logseq/db/frontend/schema.cljs`
 
 ```clojure
-(def schema
-  "Schema for DB graphs. :block/tags are classes in this schema"
-  (merge
-   (apply dissoc file-schema/schema file-schema/file-only-attributes)
-   {:block/name {:db/index true}        ; remove db/unique for :block/name
-    ;; closed value
-    :block/closed-value-property {:db/valueType :db.type/ref
-                                  :db/cardinality :db.cardinality/many}}))
+(def ^:large-vars/data-var schema
+  "Schema for DB graphs"
+  {:db/ident        {:db/unique :db.unique/identity}
+   :kv/value       {}
+   :block/uuid {:db/unique :db.unique/identity}
+   :block/parent {:db/valueType :db.type/ref
+                  :db/index true}
+   ;; ... full standalone definition (no merge from file-based schema)
+   :block/closed-value-property {:db/valueType :db.type/ref
+                                 :db/cardinality :db.cardinality/many}})
 ```
 
-#### 🔍 Critical Discovery #1: Schema Inheritance
-
-The DB graph schema **inherits from the file-based schema** but removes file-specific attributes:
-
-**Location**: `deps/db/src/logseq/db/file_based/schema.cljs:101-104`
-
-```clojure
-(def file-only-attributes
-  [:block/namespace :block/properties-text-values :block/pre-block? :recent/pages :block/file
-   :block/properties :block/properties-order :block/repeated? :block/deadline :block/scheduled :block/priority
-   :block/marker :block/macros :block/type :block/format])
-```
-
-**Why This Matters**: DB graphs store properties as **first-class entities** (via `:db/ident`) rather than as key-value maps in `:block/properties`. This enables:
-
-- Direct queries on property values
-- Property inheritance through classes
-- Type-safe property validation
-- Property reuse across blocks
+> **Removed:** Critical Discovery #1 previously stated that the DB schema **inherits from the file-based schema** via `(merge (apply dissoc file-schema/schema file-schema/file-only-attributes) ...)`. This is no longer accurate. `deps/db/src/logseq/db/file_based/schema.cljs` no longer exists and the schema is now a **standalone definition** with all attributes declared inline. The `:block/name` entry no longer has `db/unique` (uses `db/index` instead), and `:block/closed-value-property` is defined directly in the schema.
 
 #### 🔍 Critical Discovery #2: Key Schema Attributes
 
@@ -279,7 +263,7 @@ graph LR
 
 While DataScript enforces structural constraints (types, cardinality), **Malli enforces business logic and validation rules**.
 
-**Location**: `deps/db/src/logseq/db/frontend/malli_schema.cljs:541-555`
+**Location**: `deps/db/src/logseq/db/frontend/malli_schema.cljs:595-612`
 
 ```clojure
 (def Data
@@ -289,6 +273,7 @@ While DataScript enforces structural constraints (types, cardinality), **Malli e
     :class class-page
     :hidden hidden-page
     :normal-page normal-page
+    :reaction-entity reaction-entity
     :property-history-block property-history-block
     :closed-value-block closed-value-block
     :property-value-block property-value-block
@@ -303,20 +288,24 @@ While DataScript enforces structural constraints (types, cardinality), **Malli e
 
 The Malli schema uses a **multi-dispatch system** to validate different entity types:
 
-**Location**: `deps/db/src/logseq/db/frontend/malli_schema.cljs:509-539`
+**Location**: `deps/db/src/logseq/db/frontend/malli_schema.cljs:557-594`
 
 ```clojure
 (defn entity-dispatch-key [db ent]
-  (let [d (if (:block/uuid ent) (d/entity db [:block/uuid ent]) ent)
+  (let [d (if (:block/uuid ent) (d/entity db [:block/uuid (:block/uuid ent)]) ent)
         ;; order matters as some block types are a subset of others e.g. :whiteboard
         dispatch-key (cond
+                       (:logseq.property.reaction/target d)
+                       :reaction-entity
                        (entity-util/property? d)
                        :property
                        (entity-util/class? d)
                        :class
-                       (entity-util/hidden? d)
+                       (and (entity-util/page? d)
+                            (true? (:logseq.property/hide? d)))
                        :hidden
-                       (entity-util/whiteboard? d)
+                       ;; TODO: Remove deprecated
+                       (whiteboard? d)
                        :normal-page
                        (entity-util/page? d)
                        :normal-page
@@ -426,9 +415,9 @@ sequenceDiagram
 
 Properties are the **lifeblood of the database graph**. They provide metadata, relationships, and functionality to every entity.
 
-**Location**: `deps/db/src/logseq/db/frontend/property.cljs:21-576`
+**Location**: `deps/db/src/logseq/db/frontend/property.cljs:20-706`
 
-The `built-in-properties` map is massive (500+ lines). Here's the structure:
+The `built-in-properties` map is massive (680+ lines). Here's the structure:
 
 ```clojure
 (def ^:large-vars/data-var built-in-properties
@@ -473,7 +462,7 @@ Each property has a rich configuration:
 
 Properties fall into several categories:
 
-**Location**: `deps/db/src/logseq/db/frontend/property.cljs:578-600`
+**Location**: `deps/db/src/logseq/db/frontend/property.cljs:711-732`
 
 ```clojure
 (def db-attribute-properties
@@ -539,7 +528,7 @@ Properties fall into several categories:
 
 #### Task Properties
 
-**Location**: `deps/db/src/logseq/db/frontend/property.cljs:280-338`
+**Location**: `deps/db/src/logseq/db/frontend/property.cljs:300-330`
 
 ```clojure
 :logseq.property/status
@@ -613,13 +602,13 @@ graph TB
 
 **Primary**: `deps/db/src/logseq/db/frontend/class.cljs`
 
-**Role**: Defines 13 built-in classes (tags) that categorize and add functionality to pages and blocks.
+**Role**: Defines 18 built-in classes (tags) that categorize and add functionality to pages and blocks.
 
 ### The Investigation
 
 Classes (also called "tags" in the UI) provide **object-oriented classification** with inheritance.
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:16-93`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs:16-105`
 
 ```clojure
 (def ^:large-vars/data-var built-in-classes
@@ -656,7 +645,7 @@ Classes (also called "tags" in the UI) provide **object-oriented classification*
 
 Classes support **multiple inheritance** through the `:logseq.property.class/extends` property:
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:137-146`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs:167-176`
 
 ```clojure
 (defn get-class-extends
@@ -664,11 +653,11 @@ Classes support **multiple inheritance** through the `:logseq.property.class/ext
   [class]
   (assert (de/entity? class) "get-class-extends `class` should be an entity")
   (loop [extends (:logseq.property.class/extends class)
-         result #{}]
+         result []]
     (if (seq extends)
-      (recur (set (mapcat :logseq.property.class/extends extends))
+      (recur (mapcat :logseq.property.class/extends extends)
              (into result extends))
-      result)))
+      (reverse (distinct result)))))
 ```
 
 **Example**: `Journal` extends `Page`, so journals inherit all properties and behaviors of pages.
@@ -692,28 +681,30 @@ Blocks tagged with `#Asset` **must have** these three properties, enforced by Ma
 
 ### Built-in Classes Table
 
-| Class              | Extends | Purpose           | Required Properties                                        | Special Behaviors                         |
-| ------------------ | ------- | ----------------- | ---------------------------------------------------------- | ----------------------------------------- |
-| **Root**           | -       | Top-level class   | None                                                       | Foundation of class hierarchy             |
-| **Tag**            | Root    | User-created tags | None                                                       | All classes are tags                      |
-| **Property**       | Root    | Property pages    | `:logseq.property/type`                                    | Define property schemas                   |
-| **Page**           | Root    | Normal pages      | None                                                       | Can have child pages                      |
-| **Journal**        | Page    | Daily notes       | None                                                       | Auto-created by date                      |
-| **Whiteboard**     | Page    | Canvas pages      | None                                                       | Tldraw integration                        |
-| **Task**           | -       | Task blocks       | None                                                       | Has status, priority, deadline, scheduled |
-| **Query**          | -       | Query blocks      | `:logseq.property/query`                                   | Executable queries                        |
-| **Card**           | -       | Flashcards        | `:logseq.property.fsrs/state`, `:logseq.property.fsrs/due` | Spaced repetition                         |
-| **Cards**          | Query   | Card queries      | None                                                       | Flashcard collections                     |
-| **Asset**          | -       | Files/images      | `:type`, `:size`, `:checksum`                              | File management                           |
-| **Code-block**     | -       | Code blocks       | `:logseq.property.node/display-type`, `:code/lang`         | Syntax highlighting                       |
-| **Quote-block**    | -       | Quotes            | `:logseq.property.node/display-type`                       | Quote styling                             |
-| **Math-block**     | -       | Math              | `:logseq.property.node/display-type`                       | LaTeX rendering                           |
-| **Pdf-annotation** | -       | PDF highlights    | `:asset`, `:hl-color`, `:hl-page`, `:hl-value`             | PDF viewer integration                    |
-| **Template**       | -       | Templates         | `:logseq.property/template-applied-to`                     | Block templates                           |
+| Class              | Extends | Purpose             | Schema Properties                                                                                                                                                                                                                          | Special Behaviors                         |
+| ------------------ | ------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- |
+| **Root**           | -       | Top-level class     | None                                                                                                                                                                                                                                       | Foundation of class hierarchy             |
+| **Tag**            | Root    | User-created tags   | None                                                                                                                                                                                                                                       | All classes are tags                      |
+| **Property**       | Root    | Property pages      | `:logseq.property/type`                                                                                                                                                                                                                    | Define property schemas                   |
+| **Page**           | Root    | Normal pages        | None                                                                                                                                                                                                                                       | Can have child pages                      |
+| **Journal**        | Page    | Daily notes         | None                                                                                                                                                                                                                                       | Auto-created by date                      |
+| **Whiteboard**     | Page    | Canvas pages        | None                                                                                                                                                                                                                                       | Tldraw integration (deprecated)           |
+| **Task**           | -       | Task blocks         | `:logseq.property/status`, `:logseq.property/priority`, `:logseq.property/deadline`, `:logseq.property/scheduled`                                                                                                                          | Has status, priority, deadline, scheduled |
+| **Comments**       | -       | Discussion threads  | `:logseq.property.comments/blocks`                                                                                                                                                                                                         | Comment thread container on nodes         |
+| **Comment**        | -       | Individual comments | None                                                                                                                                                                                                                                       | Single comment node                       |
+| **Query**          | -       | Query blocks        | `:logseq.property/query`                                                                                                                                                                                                                   | Executable queries                        |
+| **Card**           | -       | Flashcards          | `:logseq.property.fsrs/state`, `:logseq.property.fsrs/due`                                                                                                                                                                                 | Spaced repetition                         |
+| **Cards**          | Query   | Card queries        | None                                                                                                                                                                                                                                       | Flashcard collections                     |
+| **Asset**          | -       | Files/images        | `:logseq.property.asset/type`, `:logseq.property.asset/size`, `:logseq.property.asset/checksum` (all required)                                                                                                                             | File management                           |
+| **Code-block**     | -       | Code blocks         | `:logseq.property.node/display-type`, `:logseq.property.code/lang`                                                                                                                                                                         | Syntax highlighting                       |
+| **Quote-block**    | -       | Quotes              | `:logseq.property.node/display-type`                                                                                                                                                                                                       | Quote styling                             |
+| **Math-block**     | -       | Math                | `:logseq.property.node/display-type`                                                                                                                                                                                                       | LaTeX rendering                           |
+| **Pdf-annotation** | -       | PDF highlights      | `:logseq.property/ls-type`, `:logseq.property.pdf/hl-color`, `:logseq.property/asset`, `:logseq.property.pdf/hl-page`, `:logseq.property.pdf/hl-value`, `:logseq.property.pdf/hl-type`, `:logseq.property.pdf/hl-image` (first 5 required) | PDF viewer integration                    |
+| **Template**       | -       | Templates           | `:logseq.property/template-applied-to`                                                                                                                                                                                                     | Block templates                           |
 
 ### Class Categories
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:95-120`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs:107-148`
 
 ```clojure
 (def page-children-classes
@@ -734,9 +725,10 @@ Blocks tagged with `#Asset` **must have** these three properties, enforced by Ma
     :logseq.class/Asset})
 
 (def private-tags
-  "Built-in classes that are private and should not be used by a user directly"
+  "Built-in classes that are private and should not be used by a user directly."
   (set/union (disj internal-tags :logseq.class/Root)
-             #{:logseq.class/Journal :logseq.class/Whiteboard}))
+             #{:logseq.class/Journal :logseq.class/Whiteboard
+               :logseq.class/Pdf-annotation}))
 
 (def hidden-tags
   "Built-in classes that are hidden in a few contexts like property values"
@@ -801,15 +793,15 @@ Property types define **what kind of data** a property can store and **how to va
 ```clojure
 (def internal-built-in-property-types
   "Valid property types only for use by internal built-in-properties"
-  #{:keyword :map :coll :any :entity :class :page :property :string :raw-number})
+  #{:keyword :map :coll :any :entity :class :page :property :string :json :raw-number})
 
 (def user-built-in-property-types
   "Valid property types for users in order they appear in the UI"
-  [:default :number :date :datetime :checkbox :url :node])
+  [:default :number :date :datetime :checkbox :url :node :asset])
 
 (def user-allowed-internal-property-types
   "Internal property types that users are allowed to store"
-  #{:map})
+  #{:map :json :string})
 
 (def closed-value-property-types
   "Valid property :type for closed values"
@@ -817,7 +809,7 @@ Property types define **what kind of data** a property can store and **how to va
 
 (def cardinality-property-types
   "Valid property types that can change cardinality"
-  #{:default :number :url :date :node})
+  #{:default :number :url :date :node :asset})
 
 (def value-ref-property-types
   "Property value ref types where the refed entities either store their value in
@@ -827,7 +819,7 @@ Property types define **what kind of data** a property can store and **how to va
 (def user-ref-property-types
   "User ref types. Property values are stored in either
   :logseq.property/value or :block/title"
-  (into #{:date :node} value-ref-property-types))
+  (into #{:date :node :asset} value-ref-property-types))
 
 (def all-ref-property-types
   "All ref types - user and internal"
@@ -839,7 +831,6 @@ Property types define **what kind of data** a property can store and **how to va
 Property types fall into two main categories:
 
 1. **Scalar Types** - Values stored directly on the entity
-
    - `:string`, `:raw-number`, `:checkbox`, `:datetime`, `:keyword`, `:map`, `:coll`, `:any`
 
 2. **Reference Types** - Values stored as references to other entities
@@ -888,60 +879,57 @@ For reference types, values are stored differently:
 ```clojure
 (def built-in-validation-schemas
   "Map of types to malli validation schemas"
-  {:default  [:fn
-              {:error/message "should be a text block"}
-              text-entity?]
-   :number   [:fn
-              {:error/message "should be a number"}
-              number-entity?]
-   :date     [:fn
-              {:error/message "should be a journal date"}
-              date?]
-   :datetime [:fn
-              {:error/message "should be a datetime"}
-              number?]
-   :checkbox boolean?
-   :url      [:fn
-              {:error/message "should be a URL"}
-              url-entity?]
-   :node   [:fn
-            {:error/message "should be a page/block with tags"}
-            node-entity?]
-
-   ;; Internal types
-   :string   string?
-   :raw-number number?
-   :entity   [:fn entity?]
-   :class    [:fn class-entity?]
-   :property [:fn property-entity?]
-   :page     [:fn page-entity?]
-   :keyword  keyword?
-   :map      map?
-   :coll     coll?
-   :any      some?})
+  (into
+   {:default  [:fn
+               {:error/message "should be a text block"}
+               text-entity?]
+    :number   [:fn
+               {:error/message "should be a number"}
+               number-entity?]
+    :date     [:fn
+               {:error/message "should be a journal date"}
+               date?]
+    :datetime [:fn
+               {:error/message "should be a datetime"}
+               number?]
+    :checkbox [:fn
+               {:error/message "should be a boolean"}
+               boolean?]
+    :url      [:fn
+               {:error/message "should be a URL"}
+               url-entity?]
+    :node   [:fn
+             {:error/message "should be a node with a title"}
+             node-entity?]
+    :asset  [:fn
+             {:error/message "should be an asset node"}
+             asset-entity?]}
+   internal-validation-schemas))
 ```
 
 ### Property Types Table
 
-| Type            | User-Facing? | Storage                        | Validation           | Supports Cardinality? | Supports Closed Values? | Example Usage           |
-| --------------- | ------------ | ------------------------------ | -------------------- | --------------------- | ----------------------- | ----------------------- |
-| **:default**    | ✅ Yes       | Ref (`:block/title`)           | Text entity          | ✅ Yes                | ✅ Yes                  | Free text, tags, labels |
-| **:number**     | ✅ Yes       | Ref (`:logseq.property/value`) | Number entity        | ✅ Yes                | ✅ Yes                  | Ratings, scores, counts |
-| **:date**       | ✅ Yes       | Ref (`:block/title`)           | Journal page         | ✅ Yes                | ❌ No                   | Birth dates, deadlines  |
-| **:datetime**   | ✅ Yes       | Scalar                         | Number (timestamp)   | ❌ No                 | ❌ No                   | Created-at, updated-at  |
-| **:checkbox**   | ✅ Yes       | Scalar                         | Boolean              | ❌ No                 | ✅ Yes                  | Flags, toggles          |
-| **:url**        | ✅ Yes       | Ref (`:block/title`)           | URL format           | ✅ Yes                | ✅ Yes                  | Links, references       |
-| **:node**       | ✅ Yes       | Ref (`:block/title`)           | Page/block with tags | ✅ Yes                | ❌ No                   | References to objects   |
-| **:string**     | ❌ Internal  | Scalar                         | String               | ❌ No                 | ❌ No                   | Internal text storage   |
-| **:raw-number** | ❌ Internal  | Scalar                         | Number               | ❌ No                 | ❌ No                   | Internal numbers        |
-| **:keyword**    | ❌ Internal  | Scalar                         | Keyword              | ❌ No                 | ❌ No                   | Internal enums          |
-| **:map**        | ⚠️ Advanced  | Scalar                         | Map                  | ❌ No                 | ❌ No                   | Structured data         |
-| **:coll**       | ❌ Internal  | Scalar                         | Collection           | ❌ No                 | ❌ No                   | Ordered lists           |
-| **:any**        | ❌ Internal  | Scalar                         | Any value            | ❌ No                 | ❌ No                   | Unconstrained values    |
-| **:entity**     | ❌ Internal  | Ref                            | Entity exists        | ❌ No                 | ❌ No                   | Generic entity refs     |
-| **:class**      | ❌ Internal  | Ref                            | Class entity         | ✅ Yes                | ❌ No                   | Class references        |
-| **:page**       | ❌ Internal  | Ref                            | Page entity          | ✅ Yes                | ❌ No                   | Page references         |
-| **:property**   | ❌ Internal  | Ref                            | Property entity      | ✅ Yes                | ❌ No                   | Property references     |
+| Type            | User-Facing? | Storage                        | Validation                   | Supports Cardinality? | Supports Closed Values? | Example Usage           |
+| --------------- | ------------ | ------------------------------ | ---------------------------- | --------------------- | ----------------------- | ----------------------- |
+| **:default**    | ✅ Yes       | Ref (`:block/title`)           | Text entity                  | ✅ Yes                | ✅ Yes                  | Free text, tags, labels |
+| **:number**     | ✅ Yes       | Ref (`:logseq.property/value`) | Number entity                | ✅ Yes                | ✅ Yes                  | Ratings, scores, counts |
+| **:date**       | ✅ Yes       | Ref (`:block/title`)           | Journal page                 | ✅ Yes                | ❌ No                   | Birth dates, deadlines  |
+| **:datetime**   | ✅ Yes       | Scalar                         | Number (timestamp)           | ❌ No                 | ❌ No                   | Created-at, updated-at  |
+| **:checkbox**   | ✅ Yes       | Scalar                         | Boolean                      | ❌ No                 | ✅ Yes                  | Flags, toggles          |
+| **:url**        | ✅ Yes       | Ref (`:block/title`)           | URL format                   | ✅ Yes                | ✅ Yes                  | Links, references       |
+| **:node**       | ✅ Yes       | Ref (`:block/title`)           | Page/block with title        | ✅ Yes                | ❌ No                   | References to objects   |
+| **:asset**      | ✅ Yes       | Ref (`:block/title`)           | Asset node (tagged `#Asset`) | ✅ Yes                | ❌ No                   | File attachments        |
+| **:string**     | ❌ Internal  | Scalar                         | String                       | ❌ No                 | ❌ No                   | Internal text storage   |
+| **:raw-number** | ❌ Internal  | Scalar                         | Number                       | ❌ No                 | ❌ No                   | Internal numbers        |
+| **:json**       | ❌ Internal  | Scalar                         | JSON string                  | ❌ No                 | ❌ No                   | Structured JSON data    |
+| **:keyword**    | ❌ Internal  | Scalar                         | Keyword                      | ❌ No                 | ❌ No                   | Internal enums          |
+| **:map**        | ⚠️ Advanced  | Scalar                         | Map                          | ❌ No                 | ❌ No                   | Structured data         |
+| **:coll**       | ❌ Internal  | Scalar                         | Collection                   | ❌ No                 | ❌ No                   | Ordered lists           |
+| **:any**        | ❌ Internal  | Scalar                         | Any value                    | ❌ No                 | ❌ No                   | Unconstrained values    |
+| **:entity**     | ❌ Internal  | Ref                            | Entity exists                | ❌ No                 | ❌ No                   | Generic entity refs     |
+| **:class**      | ❌ Internal  | Ref                            | Class entity                 | ✅ Yes                | ❌ No                   | Class references        |
+| **:page**       | ❌ Internal  | Ref                            | Page entity                  | ✅ Yes                | ❌ No                   | Page references         |
+| **:property**   | ❌ Internal  | Ref                            | Property entity              | ✅ Yes                | ❌ No                   | Property references     |
 
 ### Mermaid Diagram: Property Type Decision Tree
 
@@ -1010,9 +998,6 @@ Entities are the **fundamental units of data** in the database. Each entity has 
 (defn property? [entity]
   (has-tag? entity :logseq.class/Property))
 
-(defn whiteboard? [entity]
-  (has-tag? entity :logseq.class/Whiteboard))
-
 (defn closed-value? [entity]
   (some? (:block/closed-value-property entity)))
 
@@ -1021,20 +1006,30 @@ Entities are the **fundamental units of data** in the database. Each entity has 
 
 (defn page? [entity]
   (or (internal-page? entity)
+      (journal? entity)
       (class? entity)
-      (property? entity)
-      (whiteboard? entity)
-      (journal? entity)))
+      (property? entity)))
 
 (defn asset? [entity]
   (some? (:logseq.property.asset/type entity)))
 
-(defn hidden? [page]
-  (boolean
-   (when page
-     (if (string? page)
-       (string/starts-with? page "$$$")
-       (:logseq.property/hide? page)))))
+(defn hidden?
+  [page]
+  (letfn [(hidden-parent? [entity seen]
+            (when (and entity
+                       (:db/id entity)
+                       (not (contains? seen (:db/id entity))))
+              (or (:logseq.property/hide? entity)
+                  (:logseq.property/deleted-at entity)
+                  (hidden-parent? (:block/parent entity) (conj seen (:db/id entity))))))]
+    (boolean
+     (when page
+       (if (string? page)
+         (string/starts-with? page "$$$")
+         (when (or (map? page) (de/entity? page))
+           (or (:logseq.property/hide? page)
+               (:logseq.property/deleted-at page)
+               (hidden-parent? (:block/parent page) #{}))))))))
 
 (defn object? [node]
   (seq (:block/tags node)))
@@ -1051,8 +1046,8 @@ Entity (has :block/uuid)
 │   ├── Class Page (tagged #Tag)
 │   ├── Property Page (tagged #Property)
 │   ├── Hidden Page (:logseq.property/hide? true)
-│   ├── Journal Page (tagged #Journal)
-│   └── Whiteboard Page (tagged #Whiteboard)
+│   └── Journal Page (tagged #Journal)
+├── Whiteboard Page (tagged #Whiteboard) [Deprecated — no longer classified by entity-util/page?]
 ├── Block (has :block/parent and :block/page)
 │   ├── Normal Block
 │   ├── Whiteboard Block (page is whiteboard)
@@ -1184,10 +1179,14 @@ Entity (has :block/uuid)
   "A block tagged with #Asset"
   (vec
    (concat
-    [:map]
+    [:map {:error/path ["asset-block"]}]
+    ;; TODO: Derive required property types from existing schema in frontend.property
     [[:logseq.property.asset/type :string]
      [:logseq.property.asset/checksum :string]
-     [:logseq.property.asset/size :int]]
+     [:logseq.property.asset/size :int]
+     [:logseq.property.asset/width {:optional true} :int]
+     [:logseq.property.asset/height {:optional true} :int]
+     [:logseq.property.asset/align {:optional true} :keyword]]
     block-attrs
     page-or-block-attrs)))
 ```
@@ -1479,18 +1478,17 @@ sequenceDiagram
 
 ## Key Witnesses (Main Files)
 
-| File Path                                               | Role                               | Lines of Code | Key Exports                                                                             |
-| ------------------------------------------------------- | ---------------------------------- | ------------- | --------------------------------------------------------------------------------------- |
-| **`deps/db/src/logseq/db/frontend/schema.cljs`**        | DataScript schema definition       | ~106          | `schema`, `version`, `ref-type-attributes`, `card-many-attributes`                      |
-| **`deps/db/src/logseq/db/frontend/malli_schema.cljs`**  | Malli validation schemas           | ~595          | `Data`, `DB`, `property-tuple`, `entity-dispatch-key`, entity type schemas              |
-| **`deps/db/src/logseq/db/frontend/property.cljs`**      | Built-in properties                | ~793          | `built-in-properties`, `db-attribute-properties`, `schema-properties`                   |
-| **`deps/db/src/logseq/db/frontend/class.cljs`**         | Built-in classes                   | ~176          | `built-in-classes`, `page-classes`, `internal-tags`, `get-class-extends`                |
-| **`deps/db/src/logseq/db/frontend/property/type.cljs`** | Property types & validation        | ~222          | `user-built-in-property-types`, `built-in-validation-schemas`, `all-ref-property-types` |
-| **`deps/db/src/logseq/db/frontend/entity_util.cljs`**   | Entity type checking               | ~95           | `page?`, `property?`, `class?`, `hidden?`, `asset?`                                     |
-| **`deps/db/src/logseq/db/sqlite/create_graph.cljs`**    | Schema initialization              | ~250          | `build-db-initial-data`, `build-initial-properties`, `build-initial-classes`            |
-| **`deps/db/src/logseq/db.cljs`**                        | Main DB API                        | ~600          | `transact!`, `get-page`, `get-schema`, query helpers                                    |
-| **`deps/db/src/logseq/db/frontend/db.cljs`**            | DB graph helpers                   | ~135          | `get-all-properties`, `class-instance?`, `get-built-in-page`                            |
-| **`deps/db/src/logseq/db/file_based/schema.cljs`**      | File-based schema (for comparison) | ~122          | `schema`, `file-only-attributes`                                                        |
+| File Path                                               | Role                         | Lines of Code | Key Exports                                                                             |
+| ------------------------------------------------------- | ---------------------------- | ------------- | --------------------------------------------------------------------------------------- |
+| **`deps/db/src/logseq/db/frontend/schema.cljs`**        | DataScript schema definition | ~142          | `schema`, `version`, `ref-type-attributes`, `card-many-attributes`                      |
+| **`deps/db/src/logseq/db/frontend/malli_schema.cljs`**  | Malli validation schemas     | ~647          | `Data`, `DB`, `property-tuple`, `entity-dispatch-key`, entity type schemas              |
+| **`deps/db/src/logseq/db/frontend/property.cljs`**      | Built-in properties          | ~1024         | `built-in-properties`, `db-attribute-properties`, `schema-properties`                   |
+| **`deps/db/src/logseq/db/frontend/class.cljs`**         | Built-in classes             | ~226          | `built-in-classes`, `page-classes`, `internal-tags`, `get-class-extends`                |
+| **`deps/db/src/logseq/db/frontend/property/type.cljs`** | Property types & validation  | ~253          | `user-built-in-property-types`, `built-in-validation-schemas`, `all-ref-property-types` |
+| **`deps/db/src/logseq/db/frontend/entity_util.cljs`**   | Entity type checking         | ~115          | `page?`, `property?`, `class?`, `hidden?`, `asset?`                                     |
+| **`deps/db/src/logseq/db/sqlite/create_graph.cljs`**    | Schema initialization        | ~275          | `build-db-initial-data`, `build-initial-properties`, `build-initial-classes`            |
+| **`deps/db/src/logseq/db.cljs`**                        | Main DB API                  | ~905          | `transact!`, `get-page`, `get-schema`, query helpers                                    |
+| **`deps/db/src/logseq/db/frontend/db.cljs`**            | DB graph helpers             | ~141          | `get-all-properties`, `class-instance?`, `get-built-in-page`                            |
 
 ---
 
@@ -1564,14 +1562,14 @@ sequenceDiagram
 
 ---
 
-### 3. 🔍 **Schema Version 65.22**
+### 3. 🔍 **Schema Version 65.33**
 
-**Evidence**: `deps/db/src/logseq/db/frontend/schema.cljs:40`
+**Evidence**: `deps/db/src/logseq/db/frontend/schema.cljs`
 
-**Finding**: Current schema version is **65.22** (major.minor format).
+**Finding**: Current schema version is **65.33** (major.minor format).
 
 **Major version (65)**: Breaking changes requiring migration
-**Minor version (12)**: Non-breaking additions
+**Minor version (33)**: Non-breaking additions
 
 **Why It Matters**:
 
@@ -1683,9 +1681,9 @@ Journals inherit all properties and behaviors from Pages.
 
 ### 8. 🔍 **Entity Type Dispatch Order Matters**
 
-**Evidence**: `deps/db/src/logseq/db/frontend/malli_schema.cljs:509-539`
+**Evidence**: `deps/db/src/logseq/db/frontend/malli_schema.cljs:557-594`
 
-**Finding**: The entity type dispatch function checks types **in a specific order** because some entity types overlap:
+**Finding**: The entity type dispatch function checks types **in a specific order** because some entity types overlap. As of this revision the dispatch begins with `:reaction-entity` (checked via `:logseq.property.reaction/target`) before property/class/page/block checks:
 
 ```clojure
 ;; Order matters! Comments in original code:
@@ -1694,8 +1692,9 @@ Journals inherit all properties and behaviors from Pages.
 
 **Example**:
 
-- Whiteboards are pages (have `:block/name`) but also tagged `#Whiteboard`
-- Properties are pages but also tagged `#Property`
+- Reaction entities are checked first (before properties/classes)
+- Properties and classes are special page types
+- Whiteboards are (deprecated) pages also tagged `#Whiteboard`
 - Assets are blocks but also tagged `#Asset`
 
 **Critical Rule**: **More specific types must be checked before more general types**.
@@ -1706,7 +1705,7 @@ Journals inherit all properties and behaviors from Pages.
 
 ### 9. 🔍 **Property Namespaces**
 
-**Evidence**: `deps/db/src/logseq/db/frontend/property.cljs:623-628`
+**Evidence**: `deps/db/src/logseq/db/frontend/property.cljs:756-766`
 
 **Finding**: Logseq uses **multiple property namespaces**:
 
@@ -1716,7 +1715,9 @@ Journals inherit all properties and behaviors from Pages.
     "logseq.property.linked-references" "logseq.property.asset" "logseq.property.table" "logseq.property.node"
     "logseq.property.code" "logseq.property.repeat"
     "logseq.property.journal" "logseq.property.class" "logseq.property.view"
-    "logseq.property.user" "logseq.property.history" "logseq.property.embedding"})
+    "logseq.property.user" "logseq.property.history"
+    "logseq.property.reaction" "logseq.property.sync" "logseq.property.publish"
+    "logseq.property.recycle" "logseq.property.comments" "logseq.property.agent"})
 ```
 
 **User properties**: Use `user.property.*` namespace
@@ -1776,12 +1777,10 @@ Each closed value is **an entity** with:
 **Finding**: Properties come in three flavors:
 
 1. **DB Attribute Properties** (13): Also DataScript attributes
-
    - Examples: `:block/tags`, `:block/alias`, `:block/parent`
    - Stored directly as DataScript attributes
 
 2. **Public DB Attribute Properties** (3): User-visible DB attributes
-
    - Examples: `:block/tags`, `:block/alias`, `:block/journal-day`
 
 3. **Private DB Attribute Properties** (10): Internal-only DB attributes
@@ -1874,7 +1873,7 @@ Each closed value is **an entity** with:
 
 ### 3. ⚠️ **No Partial Schema Loading**
 
-**Issue**: The entire schema (100+ properties, 13 classes) must be loaded on graph initialization. No lazy loading.
+**Issue**: The entire schema (100+ properties, 18 classes) must be loaded on graph initialization. No lazy loading.
 
 **Impact**:
 
@@ -1990,7 +1989,7 @@ Each closed value is **an entity** with:
 
 ```clojure
 db-schema/version
-;; => {:major 65 :minor 12}
+;; => {:major 65 :minor 33}
 ```
 
 ---
@@ -2135,16 +2134,16 @@ db-schema/version
 
 #### `logseq.db.frontend.class/get-class-extends`
 
-**Type**: `(fn [class-entity] #{entity})`
+**Type**: `(fn [class-entity] [entity])`
 
-**Description**: Get all ancestor classes (transitive closure of `:logseq.property.class/extends`).
+**Description**: Get all ancestor classes in order (transitive traversal of `:logseq.property.class/extends`). Returns a vector (deduped, reversed for root-first ordering).
 
 **Example**:
 
 ```clojure
 (db-class/get-class-extends (d/entity db :logseq.class/Journal))
-;; => #{#datascript/Entity {:db/ident :logseq.class/Page}
-;;      #datascript/Entity {:db/ident :logseq.class/Root}}
+;; => [#datascript/Entity {:db/ident :logseq.class/Page}
+;;     #datascript/Entity {:db/ident :logseq.class/Root}]
 ```
 
 ---
@@ -2249,12 +2248,12 @@ db-schema/version
 
 **Schema Version Format**: `{:major number :minor number}`
 
-**Current Version**: `{:major 65 :minor 12}` (as of this writing)
+**Current Version**: `{:major 65 :minor 33}` (as of this writing)
 
-**Location**: `deps/db/src/logseq/db/frontend/schema.cljs:40`
+**Location**: `deps/db/src/logseq/db/frontend/schema.cljs`
 
 ```clojure
-(def version (parse-schema-version "65.22"))
+(def version (parse-schema-version "65.33"))
 ```
 
 **Version Comparison**: `deps/db/src/logseq/db/frontend/schema.cljs:34-38`
@@ -2297,7 +2296,6 @@ db-schema/version
 **Migration Types**:
 
 1. **Additive Migrations** (minor version bumps)
-
    - Add new properties
    - Add new classes
    - Add new closed values
@@ -2606,7 +2604,7 @@ Uncomment this line to see validation details:
 | **DataScript Schema**          | ~1-2 KB     | Small, static                  |
 | **Malli Schema**               | ~10-20 KB   | Precompiled schemas            |
 | **Built-in Properties Config** | ~100-200 KB | Large map with 100+ properties |
-| **Built-in Classes Config**    | ~10-20 KB   | 13 classes with configs        |
+| **Built-in Classes Config**    | ~10-20 KB   | 18 classes with configs        |
 | **Typical Graph (10k blocks)** | ~50-100 MB  | Depends on property density    |
 
 ---
@@ -2615,7 +2613,7 @@ Uncomment this line to see validation details:
 
 ### 1. **Lazy Schema Loading**
 
-**Current**: All 100+ properties and 13 classes loaded on initialization
+**Current**: All 100+ properties and 18 classes loaded on initialization
 **Proposed**: Lazy-load property/class definitions as needed
 **Benefit**: Faster initialization, lower memory usage
 **Complexity**: Medium
@@ -2697,6 +2695,81 @@ Uncomment this line to see validation details:
 
 ---
 
+## Findings: New Capabilities
+
+### 1. 🆕 **Reaction Entities**
+
+**Evidence**: `deps/db/src/logseq/db/frontend/malli_schema.cljs:438-455`
+
+**Finding**: A new `reaction-entity` Malli schema type handles emoji reactions on blocks and pages. Reaction entities are dispatched **first** in `entity-dispatch-key` (before property/class checks) via the `:logseq.property.reaction/target` attribute.
+
+```clojure
+(def reaction-entity
+  "A reaction entity referencing a target node"
+  (vec
+   [:map {:error/path ["reaction-entity"]}
+    [:block/uuid :uuid]
+    [:logseq.property.reaction/emoji-id :string]
+    [:logseq.property.reaction/target :int]
+    [:block/created-at :int]
+    [:block/tx-id {:optional true} :int]
+    [:block/properties {:optional true} block-properties]
+    [:block/refs {:optional true} [:set :int]]]))
+```
+
+**Implication**: Any entity carrying `:logseq.property.reaction/target` is dispatched to `:reaction-entity` validation before all other entity-type checks. The `Data` multi-schema now includes `:reaction-entity reaction-entity`.
+
+---
+
+### 2. 🆕 **New Class Category Sets: `block-kind-tags`, `disallowed-inline-tags`, `extends-hidden-tags`**
+
+**Evidence**: `deps/db/src/logseq/db/frontend/class.cljs:130-148`
+
+**Finding**: Three new top-level set vars have been added to `class.cljs`:
+
+```clojure
+(def block-kind-tags
+  #{:logseq.class/Cards :logseq.class/Code-block
+    :logseq.class/Math-block :logseq.class/Quote-block
+    :logseq.class/Query :logseq.class/Pdf-annotation
+    :logseq.class/Template})
+
+(def disallowed-inline-tags
+  "Classes that should be removed from inline tags"
+  (set/union page-classes
+             private-tags
+             block-kind-tags))
+
+(def extends-hidden-tags
+  "Built-in classes that are hidden when choosing extends"
+  (set/union
+   private-tags
+   block-kind-tags))
+```
+
+- **`block-kind-tags`**: Classes representing block-level structural elements (queries, code, math, quote, PDF, template, cards). Distinct from user-facing tags.
+- **`disallowed-inline-tags`**: Union of `page-classes`, `private-tags`, and `block-kind-tags`. Classes that must not appear as inline block tags; used in `logseq.outliner.core` when saving blocks.
+- **`extends-hidden-tags`**: Union of `private-tags` and `block-kind-tags`. Classes hidden from the "extends" chooser UI to prevent users from extending internal/block-kind classes.
+
+---
+
+### 3. 🆕 **`entity-util/whiteboard?` Removed; Whiteboard Excluded from `page?`**
+
+**Finding**: The `whiteboard?` helper function has been removed from `logseq.db.frontend.entity-util`. A private `whiteboard?` remains inside `malli_schema.cljs` (marked `TODO: Remove deprecated`) for backwards-compat dispatch. Crucially, `entity-util/page?` **no longer** includes whiteboard entities:
+
+```clojure
+;; Current entity-util/page? — no whiteboard
+(defn page? [entity]
+  (or (internal-page? entity)
+      (journal? entity)
+      (class? entity)
+      (property? entity)))
+```
+
+**Implication**: Code expecting `entity-util/page?` to return `true` for whiteboard pages will now get `false`. Whiteboard entities still validate as `:normal-page` via the deprecated local check in `malli_schema.cljs`.
+
+---
+
 ## Case Closed
 
 ### Summary Verdict
@@ -2775,7 +2848,7 @@ deps/db/src/logseq/db/
 │   ├── schema.cljs              # DataScript schema definition
 │   ├── malli_schema.cljs        # Malli validation schemas
 │   ├── property.cljs            # Built-in properties (100+)
-│   ├── class.cljs               # Built-in classes (13)
+│   ├── class.cljs               # Built-in classes (18)
 │   ├── property/
 │   │   ├── type.cljs            # Property types & validation
 │   │   └── build.cljs           # Property building utilities
@@ -2788,19 +2861,23 @@ deps/db/src/logseq/db/
 │   ├── inputs.cljs              # Input parsing
 │   ├── kv_entity.cljs           # Key-value entity utilities
 │   └── asset.cljs               # Asset utilities
-├── file_based/
-│   └── schema.cljs              # File-based graph schema (for comparison)
+> **Note:** `deps/db/src/logseq/db/file_based/` has been removed. The DB graph schema is now a fully standalone definition with no inheritance from a file-based schema.
 ├── sqlite/
 │   ├── create_graph.cljs        # Graph initialization
 │   ├── build.cljs               # SQLite building utilities
 │   ├── util.cljs                # SQLite utilities
-│   └── export.cljs              # Export functionality
+│   ├── export.cljs              # Export functionality
+│   ├── backup.cljs              # Backup utilities
+│   ├── debug.cljs               # Debug helpers
+│   └── gc.cljs                  # Garbage collection
 ├── common/
-│   ├── entity_plus.cljs         # Entity extensions
-│   ├── entity_util.cljs         # Common entity utilities
+│   ├── entity_plus.cljc         # Entity extensions
 │   ├── order.cljs               # Block ordering
 │   ├── initial_data.cljs        # Initial data utilities
-│   └── delete_blocks.cljs       # Block deletion utilities
+│   ├── delete_blocks.cljs       # Block deletion utilities
+│   ├── normalize.cljs           # Data normalization
+│   ├── reference.cljs           # Reference utilities
+│   └── view.cljs                # View helpers
 └── db.cljs                      # Main DB API
 
 src/main/frontend/worker/db/
@@ -2816,13 +2893,14 @@ src/main/frontend/db/
 - **`deps/db/src/logseq/db/frontend/`** - Core DB graph schema
 - **`deps/db/src/logseq/db/sqlite/`** - SQLite persistence
 - **`src/main/frontend/worker/db/`** - Migration and workers
-- **`deps/db/src/logseq/db/file_based/`** - File-based schema (legacy)
+- **`deps/db/src/logseq/db/common/`** - Shared DB utilities
 
 ---
 
 **Generated with**: Claude Code 🤖
 **Investigation Date**: 2025-10-15
-**Schema Version**: 65.22
+**Last Validated**: 2026-05-29
+**Schema Version**: 65.33
 **Evidence Files**: 10+
 **Lines of Code Analyzed**: 3000+
 **Diagrams Created**: 8

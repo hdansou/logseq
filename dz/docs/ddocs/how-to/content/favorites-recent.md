@@ -3,7 +3,7 @@ title: 'Managing Favorites & Recent Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'How-To'
-last-verified: '2026-03-10'
+last-verified: '2026-05-30'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/04-linking-pages.md'
@@ -12,16 +12,21 @@ related-docs:
 
 # Managing Favorites & Recent Pages
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
-Learn how to organize and quickly access your most important pages using Favorites and Recent pages features.
+Learn how to organize and quickly access your most important pages using Favorites and Recent Pages features.
 
 ## Overview
 
 Logseq provides two navigation features to access pages quickly:
 
 - **Favorites**: Pin important pages for permanent quick access
-- **Recent Pages**: Auto-tracked history of recently visited pages
+- **Recent Pages**: A per-graph history of recently visited pages
+
+## Findings: New Capabilities
+
+- On mobile, the bottom **Go to** tab surfaces both Favorites and Recent Pages together.
+- The command palette still opens with a **Recently updated pages** group, which is separate from the sidebar Recent Pages history.
 
 ## Favorites
 
@@ -31,7 +36,7 @@ Logseq provides two navigation features to access pages quickly:
 
 1. Open the page you want to favorite
 2. Click the **⋯** (more options) menu in the page header
-3. Select **"Add to favorites"**
+3. Select **"Add to Favorites"**
 4. The page appears in left sidebar under "Favorites"
 
 **Method 2: Keyboard Shortcut**
@@ -59,7 +64,7 @@ When viewing a page:
 
 Drag and drop pages in the sidebar to reorder:
 
-```
+```markdown
 Favorites:
 ├── 📋 Dashboard
 ├── 📝 Daily Journal
@@ -71,7 +76,7 @@ Favorites:
 
 Use page namespaces for organized favorites:
 
-```
+```markdown
 Favorites:
 ├── Work/Projects
 ├── Work/Meetings
@@ -103,27 +108,19 @@ Note: Favorites are stored internally via a special `$$$favorites` page whose ch
 
 ### How Recent Pages Work
 
-Recent pages are actually **recently updated pages**, sorted by the `block/updated-at` timestamp. They track:
+> **Removed:** The old "recently updated pages" explanation is stale. Sidebar Recent Pages now track recently visited pages, not pages sorted by `block/updated-at`.
 
-- Pages you edit (content changes update the timestamp)
-- Pages you create (creation sets the timestamp)
-- Pages whose blocks are modified
-
-Note: Simply viewing/opening a page without editing it does not update the timestamp, so it may not appear in the recent list.
+Recent Pages are a per-graph history of recently visited pages. Logseq records the latest 15 unique pages you navigate to, and reopening a page that is already in the list does not move it to the top.
 
 ### Recent Pages Limit
 
-Logseq keeps track of the **last 15 recently updated pages**.
+Logseq keeps the **last 15 unique recent pages** in the stored list.
 
-Older pages automatically drop off the list.
+The sidebar may show fewer items after filtering hidden or blank pages.
 
 ### Clearing Recent Pages
 
-Recent pages cannot be manually cleared, but you can:
-
-1. **Wait for natural expiration** (they age out)
-2. **Visit other pages** to push old ones out
-3. **Restart Logseq** (recent list persists but can be reset)
+> **Removed:** The previous restart-based reset advice is stale. Recent Pages are persisted per graph, and the current UI does not provide a supported manual clear action.
 
 ## Practical Workflows
 
@@ -153,11 +150,8 @@ Favorites:
 ```markdown
 Favorites:
 ├── Project Alpha
-│ recent-page:: true
 ├── Project Beta
-│ recent-page:: true
 └── Project Gamma
-recent-page:: true
 ```
 
 **Use recent for sub-pages:**
@@ -165,6 +159,8 @@ recent-page:: true
 - Recent automatically tracks project-related pages
 - No need to favorite every sub-page
 - Quick access to what you were working on
+
+> **Removed:** `recent-page:: true` is not a supported page property. Recent Pages are managed automatically from navigation history.
 
 ### Knowledge Base Navigation
 
@@ -217,7 +213,7 @@ You can query for recently updated pages using the `block/updated-at` attribute:
 #+END_QUERY
 ```
 
-Note: Logseq does not track page visit frequency. The "recent" feature is based solely on `block/updated-at` timestamps.
+Note: Logseq does not track page visit frequency. The command palette's initial "Recently updated pages" surface is based on `block/updated-at` timestamps. That is separate from the sidebar Recent Pages history.
 
 ### Combine with Quick Capture
 
@@ -243,22 +239,24 @@ On mobile, favorites are even more valuable:
 
 **Access:**
 
-- Tap hamburger menu (☰)
-- "Favorites" section at top
+- Tap the bottom **Go to** tab
+- Favorites and Recent Pages share the same panel
 - Instant navigation
 
 **Adding:**
 
 1. Open page
-2. Tap ⋯ (more options)
-3. "Add to favorites"
+2. Tap the favorite/star action in the header or page menu
+3. Select **"Add to Favorites"**
 
 ### Mobile Recent Pages
 
 **Access:**
 
-- Swipe right from left edge
-- Or tap hamburger menu → "Recent"
+- Tap the bottom **Go to** tab
+- Use the **Recent** list in the same panel as Favorites
+
+> **Removed:** The old hamburger-menu and left-edge swipe instructions do not match the current mobile UI.
 
 **Limited space:**
 
@@ -295,10 +293,10 @@ On mobile, favorites are even more valuable:
 
 **Solution:**
 
-- Recent pages track recently *updated* pages, not just visited ones
-- Edit some pages to populate the list
-- Check you're in correct graph
-- Restart Logseq if issue persists
+- Recent pages track recently visited pages, not pages you merely open from search
+- Check you're in the correct graph
+- Navigate to a few pages to populate the list
+- Confirm the pages are not hidden or blank
 
 ### Too Many Favorites
 
@@ -317,8 +315,8 @@ On mobile, favorites are even more valuable:
 
 **Solution:**
 
-- Page may have aged out (only shows the last 15)
-- The "recent" list is based on edit timestamps, not page visits -- simply opening a page without editing may not add it
+- Page may have aged out of the 15-item history
+- The sidebar list is based on page visits, so repeated opens do not move an already-listed page to the top
 - Use search instead: `Ctrl/Cmd + K`
 - Check if page was renamed/deleted
 - Use in-page search: `Ctrl/Cmd + F` (Electron find-in-page)
@@ -388,17 +386,15 @@ Monthly review:
 
 Use `Ctrl/Cmd + K` to open the command palette / search. The initial view shows recently updated pages. Typing will fuzzy-search across all pages. Favorites are not given special priority in search results, but they remain easily accessible from the left sidebar.
 
+Note: this command-palette surface is separate from the sidebar Recent Pages history. The command palette shows recently updated pages, while the sidebar shows recently visited pages.
+
 ### With Command Palette
 
-Access favorites via command palette:
-
-1. Press `Ctrl/Cmd + K`
-2. Type favorite name
-3. Press Enter to navigate
+> **Removed:** The command palette does not expose a dedicated favorites surface in the current source. Use the left sidebar Favorites list or search for the page name.
 
 ### With Graph View
 
-The graph view displays all pages and their connections. Favorited pages do not currently receive special visual treatment (no distinct color or icon) in the graph view, but you can use the graph's search and filter controls to locate important nodes.
+The graph view displays pages and their connections. Use graph search and filter controls to locate important nodes.
 
 ## See Also
 

@@ -1,11 +1,11 @@
 # Logseq Database Graph Schema Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 **Complete enumeration of all built-in properties, classes, property types, and entity types**
 
-**Schema Version**: 65.22
-**Last Updated**: 2026-03-10
+**Schema Version**: 65.33
+**Last Updated**: 2026-05-29
 **Source**: `deps/db/src/logseq/db/frontend/`
 
 ---
@@ -26,11 +26,17 @@
     - [PDF Annotation Properties](#pdf-annotation-properties)
     - [Whiteboard Properties](#whiteboard-properties)
     - [Linked References Properties](#linked-references-properties)
+    - [Comments Properties](#comments-properties)
     - [Journal Properties](#journal-properties)
     - [FSRS (Spaced Repetition) Properties](#fsrs-spaced-repetition-properties)
     - [User Properties](#user-properties)
     - [History Properties](#history-properties)
     - [Template Properties](#template-properties)
+    - [Deletion Properties](#deletion-properties)
+    - [Recycle Properties](#recycle-properties)
+    - [Reaction Properties](#reaction-properties)
+    - [Agent Properties](#agent-properties)
+    - [Sync Properties](#sync-properties)
     - [Embedding Properties](#embedding-properties)
     - [Miscellaneous Properties](#miscellaneous-properties)
   - [Built-in Classes](#built-in-classes)
@@ -69,9 +75,9 @@
 
 ## Built-in Properties
 
-**Total Count**: 107 properties
+**Total Count**: 118 properties
 
-**Location**: `deps/db/src/logseq/db/frontend/property.cljs:21-576`
+**Location**: `deps/db/src/logseq/db/frontend/property.cljs`
 
 ---
 
@@ -171,6 +177,7 @@ Properties for repeating/recurring tasks.
 | **`:logseq.property.repeat/recur-frequency`**   | `:number`   | one         | ❌      | ✅         | ❌            | How often task repeats (e.g., 2 for "every 2 days")          |
 | **`:logseq.property.repeat/recur-unit`**        | `:default`  | one         | ❌      | ✅         | ✅ Yes (6)    | Time unit for recurrence                                     |
 | **`:logseq.property.repeat/repeated?`**         | `:checkbox` | one         | ❌      | ✅         | ❌            | Whether block is a repeating task                            |
+| **`:logseq.property.repeat/repeat-type`**       | `:default`  | one         | ❌      | ✅         | ✅ Yes (3)    | How the next due date is calculated after completion         |
 | **`:logseq.property.repeat/temporal-property`** | `:property` | one         | ❌      | ❌         | ❌            | Which temporal property triggers repeat (deadline/scheduled) |
 | **`:logseq.property.repeat/checked-property`**  | `:property` | one         | ❌      | ❌         | ❌            | Property that tracks checked state                           |
 
@@ -183,6 +190,12 @@ Properties for repeating/recurring tasks.
 5. `:logseq.property.repeat/recur-unit.month` - "Month"
 6. `:logseq.property.repeat/recur-unit.year` - "Year"
 
+**Repeat Type Closed Values**:
+
+1. `:logseq.property.repeat/repeat-type.dotted-plus` - "Advance from completion"
+2. `:logseq.property.repeat/repeat-type.plus` - "Advance from scheduled"
+3. `:logseq.property.repeat/repeat-type.double-plus` - "Advance from scheduled, skip to future"
+
 **Properties on Properties**:
 
 - `:logseq.property.repeat/recur-frequency`:
@@ -191,6 +204,9 @@ Properties for repeating/recurring tasks.
 - `:logseq.property.repeat/recur-unit`:
   - `:logseq.property/hide-empty-value`: `true`
   - `:logseq.property/default-value`: `:logseq.property.repeat/recur-unit.day`
+- `:logseq.property.repeat/repeat-type`:
+  - `:logseq.property/hide-empty-value`: `true`
+  - `:logseq.property/default-value`: `:logseq.property.repeat/repeat-type.double-plus`
 
 ---
 
@@ -198,17 +214,19 @@ Properties for repeating/recurring tasks.
 
 Properties related to property definitions and behavior.
 
-| Property                                           | Type        | Cardinality | Public? | View Context | Description                                       |
-| -------------------------------------------------- | ----------- | ----------- | ------- | ------------ | ------------------------------------------------- |
-| **`:logseq.property/description`**                 | `:default`  | one         | ✅      | any          | Description of a property or class                |
-| **`:logseq.property/default-value`**               | `:entity`   | one         | ❌      | property     | Default ref value for property                    |
-| **`:logseq.property/scalar-default-value`**        | `:any`      | one         | ❌      | property     | Default scalar value for property                 |
-| **`:logseq.property/hide-empty-value`**            | `:checkbox` | one         | ✅      | property     | Hide property when value is empty                 |
-| **`:logseq.property/created-from-property`**       | `:entity`   | one         | ❌      | -            | Property that created this property value block   |
-| **`:logseq.property/built-in?`**                   | `:checkbox` | one         | ❌      | -            | Whether entity is built-in (created by Logseq)    |
-| **`:logseq.property/enable-history?`**             | `:checkbox` | one         | ✅      | property     | Record history when property value changes        |
-| **`:logseq.property/choice-checkbox-state`**       | `:checkbox` | one         | ❌      | -            | Checkbox state for choice values (used by status) |
-| **`:logseq.property/checkbox-display-properties`** | `:property` | many        | ❌      | -            | Properties to display as checkboxes               |
+| Property                                           | Type        | Cardinality | Public? | View Context | Description                                                    |
+| -------------------------------------------------- | ----------- | ----------- | ------- | ------------ | -------------------------------------------------------------- |
+| **`:logseq.property/description`**                 | `:default`  | one         | ✅      | any          | Description of a property or class                             |
+| **`:logseq.property/default-value`**               | `:entity`   | one         | ❌      | property     | Default ref value for property                                 |
+| **`:logseq.property/scalar-default-value`**        | `:any`      | one         | ❌      | property     | Default scalar value for property                              |
+| **`:logseq.property/hide-empty-value`**            | `:checkbox` | one         | ✅      | property     | Hide property when value is empty                              |
+| **`:logseq.property/created-from-property`**       | `:entity`   | one         | ❌      | -            | Property that created this property value block                |
+| **`:logseq.property/built-in?`**                   | `:checkbox` | one         | ❌      | -            | Whether entity is built-in (created by Logseq)                 |
+| **`:logseq.property/enable-history?`**             | `:checkbox` | one         | ✅      | property     | Record history when property value changes                     |
+| **`:logseq.property/choice-checkbox-state`**       | `:checkbox` | one         | ❌      | -            | Checkbox state for choice values (used by status)              |
+| **`:logseq.property/checkbox-display-properties`** | `:property` | many        | ❌      | -            | Properties to display as checkboxes                            |
+| **`:logseq.property/choice-classes`**              | `:class`    | many        | ❌      | never        | Tag-scoped choice: specify choices locally for particular tags |
+| **`:logseq.property/choice-exclusions`**           | `:node`     | many        | ❌      | never        | Tag-level exclusion of global choices for its objects          |
 
 **Properties on Properties**:
 
@@ -225,11 +243,13 @@ Properties related to property definitions and behavior.
 
 Properties for class/tag definitions and behavior.
 
-| Property                                    | Type        | Cardinality | Public? | View Context | Queryable? | Description                      |
-| ------------------------------------------- | ----------- | ----------- | ------- | ------------ | ---------- | -------------------------------- |
-| **`:logseq.property.class/extends`**        | `:class`    | many        | ✅      | class        | ✅         | Parent classes (inheritance)     |
-| **`:logseq.property.class/properties`**     | `:property` | many        | ✅      | never        | ❌         | Properties defined by this class |
-| **`:logseq.property.class/hide-from-node`** | `:checkbox` | one         | ✅      | class        | ❌         | Hide class tag from node display |
+| Property                                                  | Type        | Cardinality | Public? | View Context | Queryable? | Description                                               |
+| --------------------------------------------------------- | ----------- | ----------- | ------- | ------------ | ---------- | --------------------------------------------------------- |
+| **`:logseq.property.class/extends`**                      | `:class`    | many        | ✅      | class        | ✅         | Parent classes (inheritance)                              |
+| **`:logseq.property.class/properties`**                   | `:property` | many        | ✅      | never        | ❌         | Properties defined by this class                          |
+| **`:logseq.property.class/hide-from-node`**               | `:checkbox` | one         | ✅      | class        | ❌         | Hide class tag from node display                          |
+| **`:logseq.property.class/bidirectional-property-title`** | `:string`   | one         | ✅      | class        | ❌         | Title for the reverse/bidirectional property              |
+| **`:logseq.property.class/enable-bidirectional?`**        | `:checkbox` | one         | ✅      | class        | ❌         | Show reverse nodes linking to current node via properties |
 
 **Properties on Properties**:
 
@@ -242,20 +262,25 @@ Properties for class/tag definitions and behavior.
 
 Properties for configuring table/gallery views.
 
-| Property                                            | Type        | Cardinality | Public? | Queryable? | Closed Values | RTC Ignore? | Description                      |
-| --------------------------------------------------- | ----------- | ----------- | ------- | ---------- | ------------- | ----------- | -------------------------------- |
-| **`:logseq.property.view/type`**                    | `:default`  | one         | ❌      | ✅         | ✅ Yes (3)    | ❌          | View type (table, list, gallery) |
-| **`:logseq.property.view/feature-type`**            | `:keyword`  | one         | ❌      | ❌         | ❌            | ❌          | Feature type for view            |
-| **`:logseq.property.view/group-by-property`**       | `:property` | one         | ❌      | ✅         | ❌            | ❌          | Property to group by             |
-| **`:logseq.property.view/sort-groups-by-property`** | `:property` | one         | ❌      | ❌         | ❌            | ✅          | Property to sort groups by       |
-| **`:logseq.property.view/sort-groups-desc?`**       | `:checkbox` | one         | ❌      | ❌         | ❌            | ✅          | Sort groups descending?          |
-| **`:logseq.property.table/sorting`**                | `:coll`     | one         | ❌      | ❌         | ❌            | ✅          | Table sorting configuration      |
-| **`:logseq.property.table/filters`**                | `:map`      | one         | ❌      | ❌         | ❌            | ❌          | Table filter configuration       |
-| **`:logseq.property.table/hidden-columns`**         | `:keyword`  | many        | ❌      | ❌         | ❌            | ❌          | Hidden columns in table          |
-| **`:logseq.property.table/ordered-columns`**        | `:coll`     | one         | ❌      | ❌         | ❌            | ❌          | Column order in table            |
-| **`:logseq.property.table/sized-columns`**          | `:map`      | one         | ❌      | ❌         | ❌            | ❌          | Column width settings            |
-| **`:logseq.property.table/pinned-columns`**         | `:property` | many        | ❌      | ❌         | ❌            | ❌          | Pinned columns in table          |
-| **`:logseq.property/view-for`**                     | `:node`     | one         | ❌      | ❌         | ❌            | ❌          | Query/page this view belongs to  |
+| Property                                               | Type          | Cardinality | Public? | Queryable? | Closed Values | RTC Ignore? | Description                          |
+| ------------------------------------------------------ | ------------- | ----------- | ------- | ---------- | ------------- | ----------- | ------------------------------------ |
+| **`:logseq.property.view/type`**                       | `:default`    | one         | ❌      | ✅         | ✅ Yes (3)    | ❌          | View type (table, list, gallery)     |
+| **`:logseq.property.view/feature-type`**               | `:keyword`    | one         | ❌      | ❌         | ❌            | ❌          | Feature type for view                |
+| **`:logseq.property.view/group-by-property`**          | `:property`   | one         | ❌      | ✅         | ❌            | ❌          | Property to group by                 |
+| **`:logseq.property.view/sort-groups-by-property`**    | `:property`   | one         | ❌      | ❌         | ❌            | ✅          | Property to sort groups by           |
+| **`:logseq.property.view/sort-groups-desc?`**          | `:checkbox`   | one         | ❌      | ❌         | ❌            | ✅          | Sort groups descending?              |
+| **`:logseq.property.view/gallery-asset-property`**     | `:property`   | one         | ❌      | ❌         | ❌            | ❌          | Property that provides gallery asset |
+| **`:logseq.property.view/gallery-display-properties`** | `:property`   | many        | ❌      | ❌         | ❌            | ❌          | Properties shown on gallery cards    |
+| **`:logseq.property.view/gallery-card-size`**          | `:keyword`    | one         | ❌      | ❌         | ❌            | ✅          | Gallery card size keyword            |
+| **`:logseq.property.view/gallery-card-width`**         | `:raw-number` | one         | ❌      | ❌         | ❌            | ✅          | Gallery card width in pixels         |
+| **`:logseq.property.view/gallery-card-height`**        | `:raw-number` | one         | ❌      | ❌         | ❌            | ✅          | Gallery card height in pixels        |
+| **`:logseq.property.table/sorting`**                   | `:coll`       | one         | ❌      | ❌         | ❌            | ✅          | Table sorting configuration          |
+| **`:logseq.property.table/filters`**                   | `:map`        | one         | ❌      | ❌         | ❌            | ❌          | Table filter configuration           |
+| **`:logseq.property.table/hidden-columns`**            | `:keyword`    | many        | ❌      | ❌         | ❌            | ❌          | Hidden columns in table              |
+| **`:logseq.property.table/ordered-columns`**           | `:coll`       | one         | ❌      | ❌         | ❌            | ❌          | Column order in table                |
+| **`:logseq.property.table/sized-columns`**             | `:map`        | one         | ❌      | ❌         | ❌            | ❌          | Column width settings                |
+| **`:logseq.property.table/pinned-columns`**            | `:property`   | many        | ❌      | ❌         | ❌            | ❌          | Pinned columns in table              |
+| **`:logseq.property/view-for`**                        | `:node`       | one         | ❌      | ❌         | ❌            | ❌          | Query/page this view belongs to      |
 
 **View Type Closed Values**:
 
@@ -278,15 +303,20 @@ Properties for configuring table/gallery views.
 
 Properties for file/asset management.
 
-| Property                                     | Type          | Cardinality | Public? | Queryable? | RTC Ignore? | Description                         |
-| -------------------------------------------- | ------------- | ----------- | ------- | ---------- | ----------- | ----------------------------------- |
-| **`:logseq.property/asset`**                 | `:entity`     | one         | ❌      | ❌         | ❌          | Reference to asset entity           |
-| **`:logseq.property.asset/type`**            | `:string`     | one         | ❌      | ✅         | ❌          | File MIME type (e.g., "image/png")  |
-| **`:logseq.property.asset/size`**            | `:raw-number` | one         | ❌      | ✅         | ❌          | File size in bytes                  |
-| **`:logseq.property.asset/checksum`**        | `:string`     | one         | ❌      | ❌         | ❌          | File checksum (hash)                |
-| **`:logseq.property.asset/last-visit-page`** | `:raw-number` | one         | ❌      | ❌         | ✅          | Last visited page number (for PDFs) |
-| **`:logseq.property.asset/remote-metadata`** | `:map`        | one         | ❌      | ❌         | ✅          | Cloud storage metadata              |
-| **`:logseq.property.asset/resize-metadata`** | `:map`        | one         | ❌      | ❌         | ❌          | Image resize metadata               |
+| Property                                        | Type          | Cardinality | Public? | Queryable? | RTC Ignore? | Description                         |
+| ----------------------------------------------- | ------------- | ----------- | ------- | ---------- | ----------- | ----------------------------------- |
+| **`:logseq.property/asset`**                    | `:entity`     | one         | ❌      | ❌         | ❌          | Reference to asset entity           |
+| **`:logseq.property.asset/type`**               | `:string`     | one         | ❌      | ✅         | ❌          | File MIME type (e.g., "image/png")  |
+| **`:logseq.property.asset/size`**               | `:raw-number` | one         | ❌      | ✅         | ❌          | File size in bytes                  |
+| **`:logseq.property.asset/checksum`**           | `:string`     | one         | ❌      | ❌         | ❌          | File checksum (hash)                |
+| **`:logseq.property.asset/width`**              | `:raw-number` | one         | ❌      | ✅         | ❌          | Image width in pixels               |
+| **`:logseq.property.asset/height`**             | `:raw-number` | one         | ❌      | ✅         | ❌          | Image height in pixels              |
+| **`:logseq.property.asset/align`**              | `:keyword`    | one         | ❌      | ❌         | ❌          | Asset alignment                     |
+| **`:logseq.property.asset/external-url`**       | `:string`     | one         | ✅      | ✅         | ❌          | URL for externally hosted assets    |
+| **`:logseq.property.asset/external-file-name`** | `:string`     | one         | ❌      | ❌         | ❌          | Filename for external assets        |
+| **`:logseq.property.asset/last-visit-page`**    | `:raw-number` | one         | ❌      | ❌         | ✅          | Last visited page number (for PDFs) |
+| **`:logseq.property.asset/remote-metadata`**    | `:map`        | one         | ❌      | ❌         | ✅          | Cloud storage metadata              |
+| **`:logseq.property.asset/resize-metadata`**    | `:map`        | one         | ❌      | ❌         | ❌          | Image resize metadata               |
 
 **Note**: `:type`, `:size`, and `:checksum` are **required** for blocks tagged with `#Asset`.
 
@@ -333,6 +363,16 @@ Properties for filtering linked references.
 | ------------------------------------------------- | ------- | ----------- | ------- | --------------------- |
 | **`:logseq.property.linked-references/includes`** | `:node` | many        | ❌      | References to include |
 | **`:logseq.property.linked-references/excludes`** | `:node` | many        | ❌      | References to exclude |
+
+---
+
+### Comments Properties
+
+Properties for the threaded comments feature.
+
+| Property                               | Type    | Cardinality | Public? | Queryable? | Description                                              |
+| -------------------------------------- | ------- | ----------- | ------- | ---------- | -------------------------------------------------------- |
+| **`:logseq.property.comments/blocks`** | `:node` | many        | ❌      | ❌         | Blocks that are commented on (used by `#Comments` class) |
 
 ---
 
@@ -395,13 +435,72 @@ Properties for templates.
 
 ---
 
+### Deletion Properties
+
+Properties tracking soft-deletion of blocks.
+
+| Property                              | Type        | Cardinality | Public? | Queryable? | Description                      |
+| ------------------------------------- | ----------- | ----------- | ------- | ---------- | -------------------------------- |
+| **`:logseq.property/deleted-at`**     | `:datetime` | one         | ❌      | ❌         | Timestamp when block was deleted |
+| **`:logseq.property/deleted-by-ref`** | `:entity`   | one         | ❌      | ❌         | User who deleted this block      |
+
+---
+
+### Recycle Properties
+
+Properties for the recycle-bin feature — preserving a block's original location before deletion.
+
+| Property                                       | Type      | Cardinality | Public? | Queryable? | Description                                 |
+| ---------------------------------------------- | --------- | ----------- | ------- | ---------- | ------------------------------------------- |
+| **`:logseq.property.recycle/original-parent`** | `:node`   | one         | ❌      | ❌         | Parent block before the block was recycled  |
+| **`:logseq.property.recycle/original-page`**   | `:node`   | one         | ❌      | ❌         | Page the block belonged to before recycling |
+| **`:logseq.property.recycle/original-order`**  | `:string` | one         | ❌      | ❌         | Fractional-index order before recycling     |
+
+---
+
+### Reaction Properties
+
+Properties for emoji reactions on blocks.
+
+| Property                                 | Type      | Cardinality | Public? | Queryable? | Description                       |
+| ---------------------------------------- | --------- | ----------- | ------- | ---------- | --------------------------------- |
+| **`:logseq.property.reaction/emoji-id`** | `:string` | one         | ❌      | ❌         | Emoji identifier for the reaction |
+| **`:logseq.property.reaction/target`**   | `:node`   | one         | ❌      | ❌         | Block that was reacted to         |
+
+---
+
+### Agent Properties
+
+Properties for the AI agent / AgentBridge integration.
+
+| Property                                | Type      | Cardinality | Public? | Queryable? | Description                              |
+| --------------------------------------- | --------- | ----------- | ------- | ---------- | ---------------------------------------- |
+| **`:logseq.property.agent/session-id`** | `:string` | one         | ✅      | ❌         | AgentBridge session ID for a routed task |
+
+**Properties on Properties**:
+
+- `:logseq.property.agent/session-id`:
+  - `:logseq.property/description`: "Stores the AgentBridge session ID for a routed task."
+
+---
+
+### Sync Properties
+
+Properties for remote-sync / large-object storage.
+
+| Property                                       | Type   | Cardinality | Public? | Queryable? | Description                                                    |
+| ---------------------------------------------- | ------ | ----------- | ------- | ---------- | -------------------------------------------------------------- |
+| **`:logseq.property.sync/large-title-object`** | `:map` | one         | ❌      | ❌         | Reference to large block title stored in remote object storage |
+
+---
+
 ### Embedding Properties
 
-Properties for semantic search embeddings.
+> **REMOVED** — The `:logseq.property.embedding` namespace has been removed from `built-in-properties`. The property below no longer exists in the current schema.
 
-| Property                                               | Type        | Cardinality | Public? | Queryable? | RTC Ignore? | Description                      |
-| ------------------------------------------------------ | ----------- | ----------- | ------- | ---------- | ----------- | -------------------------------- |
-| **`:logseq.property.embedding/hnsw-label-updated-at`** | `:datetime` | one         | ❌      | ❌         | ✅          | When HNSW label was last updated |
+| Property                                                   | Type            | Cardinality | Public? | Queryable? | RTC Ignore? | Description                                         |
+| ---------------------------------------------------------- | --------------- | ----------- | ------- | ---------- | ----------- | --------------------------------------------------- |
+| ~~**`:logseq.property.embedding/hnsw-label-updated-at`**~~ | ~~`:datetime`~~ | ~~one~~     | ~~❌~~  | ~~❌~~     | ~~✅~~      | **(REMOVED)** Was: when HNSW label was last updated |
 
 ---
 
@@ -423,14 +522,16 @@ Other system properties.
 | **`:logseq.property/publishing-public?`**      | `:checkbox` | one         | ✅      | ❌         | Include in published graph                 |
 | **`:logseq.property/exclude-from-graph-view`** | `:checkbox` | one         | ✅      | ❌         | Hide from graph visualization              |
 | **`:logseq.property/created-by-ref`**          | `:entity`   | one         | ❌      | ✅         | User who created this block                |
+| **`:logseq.property/assignee`**                | `:node`     | many        | ✅      | ✅         | Assignee(s) for a task (scoped to `#Page`) |
+| **`:logseq.property.publish/published-url`**   | `:url`      | one         | ✅      | ❌         | Published URL for a page                   |
 
 ---
 
 ## Built-in Classes
 
-**Total Count**: 13 classes
+**Total Count**: 18 classes
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:16-93`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs`
 
 | Class                              | Extends | Title            | Required Properties                                                    | Schema Properties                                 | Special Behaviors                                                         |
 | ---------------------------------- | ------- | ---------------- | ---------------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -441,6 +542,8 @@ Other system properties.
 | **`:logseq.class/Journal`**        | `Page`  | "Journal"        | -                                                                      | -                                                 | Daily notes; has `:logseq.property.journal/title-format` = "MMM do, yyyy" |
 | **`:logseq.class/Whiteboard`**     | `Page`  | "Whiteboard"     | -                                                                      | -                                                 | Canvas/whiteboard pages                                                   |
 | **`:logseq.class/Task`**           | -       | "Task"           | -                                                                      | `:status`, `:priority`, `:deadline`, `:scheduled` | Task management                                                           |
+| **`:logseq.class/Comments`**       | -       | "Comments"       | -                                                                      | `:comments/blocks`                                | Thread of comments on a block; hidden from node; icon: "message-circle"   |
+| **`:logseq.class/Comment`**        | -       | "Comment"        | -                                                                      | -                                                 | Individual comment; hidden from node                                      |
 | **`:logseq.class/Query`**          | -       | "Query"          | -                                                                      | `:query`                                          | Executable query blocks; has icon "search"                                |
 | **`:logseq.class/Card`**           | -       | "Card"           | -                                                                      | `:fsrs/state`, `:fsrs/due`                        | Flashcards for spaced repetition                                          |
 | **`:logseq.class/Cards`**          | `Query` | "Cards"          | -                                                                      | -                                                 | Query blocks for flashcards; has icon "search"                            |
@@ -459,21 +562,21 @@ Other system properties.
 
 **Location**: `deps/db/src/logseq/db/frontend/class.cljs:95-120`
 
-| Category                  | Classes                                                     | Purpose                                             |
-| ------------------------- | ----------------------------------------------------------- | --------------------------------------------------- |
-| **Page Classes**          | `Root`, `Tag`, `Property`, `Page`, `Journal`, `Whiteboard`  | Classes that behave like pages (have `:block/name`) |
-| **Internal Tags**         | `Root`, `Tag`, `Property`, `Page`, `Asset`                  | Hidden from node display and all-pages view         |
-| **Private Tags**          | `Tag`, `Property`, `Page`, `Asset`, `Journal`, `Whiteboard` | Should not be used by users directly                |
-| **Hidden Tags**           | `Root`, `Page`, `Asset`                                     | Hidden in some contexts like property values        |
-| **Page Children Classes** | `Journal`, `Whiteboard`                                     | Classes that extend `Page`                          |
+| Category                  | Classes                                                                       | Purpose                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Page Classes**          | `Tag`, `Property`, `Page`, `Journal`, `Whiteboard`                            | Classes that behave like pages (have `:block/name`); `Root` is **not** in this set |
+| **Internal Tags**         | `Root`, `Tag`, `Property`, `Page`, `Asset`                                    | Hidden from node display and all-pages view                                        |
+| **Private Tags**          | `Tag`, `Property`, `Page`, `Asset`, `Journal`, `Whiteboard`, `Pdf-annotation` | Should not be used by users directly                                               |
+| **Hidden Tags**           | `Root`, `Page`, `Asset`                                                       | Hidden in some contexts like property values                                       |
+| **Page Children Classes** | `Journal`, `Whiteboard`                                                       | Classes that extend `Page`                                                         |
 
 ---
 
 ## Property Types
 
-**Total Count**: 14 types (7 user-facing + 10 internal, with 3 shared)
+**Total Count**: 19 types (8 user-facing + 11 internal, all distinct)
 
-**Location**: `deps/db/src/logseq/db/frontend/property/type.cljs:15-78`
+**Location**: `deps/db/src/logseq/db/frontend/property/type.cljs`
 
 ---
 
@@ -481,17 +584,18 @@ Other system properties.
 
 Types available to users in the UI when creating properties.
 
-| Type            | Storage                        | Validation           | Supports Cardinality? | Supports Closed Values? | Example Use Case                           |
-| --------------- | ------------------------------ | -------------------- | --------------------- | ----------------------- | ------------------------------------------ |
-| **`:default`**  | Ref (`:block/title`)           | Text entity          | ✅ Yes                | ✅ Yes                  | Free text, tags, labels, choice fields     |
-| **`:number`**   | Ref (`:logseq.property/value`) | Number entity        | ✅ Yes                | ✅ Yes                  | Ratings, scores, counts, numeric choices   |
-| **`:date`**     | Ref (`:block/title`)           | Journal page         | ✅ Yes                | ❌ No                   | Birth dates, event dates, milestones       |
-| **`:datetime`** | Scalar (`:number`)             | Number (timestamp)   | ❌ No                 | ❌ No                   | Created-at, updated-at, precise timestamps |
-| **`:checkbox`** | Scalar (`:boolean`)            | Boolean              | ❌ No                 | ✅ Yes                  | Flags, toggles, yes/no fields              |
-| **`:url`**      | Ref (`:block/title`)           | URL format           | ✅ Yes                | ✅ Yes                  | Links, web references, external resources  |
-| **`:node`**     | Ref (`:block/title`)           | Page/block with tags | ✅ Yes                | ❌ No                   | References to tagged objects               |
+| Type            | Storage                        | Validation            | Supports Cardinality? | Supports Closed Values? | Example Use Case                           |
+| --------------- | ------------------------------ | --------------------- | --------------------- | ----------------------- | ------------------------------------------ |
+| **`:default`**  | Ref (`:block/title`)           | Text entity           | ✅ Yes                | ✅ Yes                  | Free text, tags, labels, choice fields     |
+| **`:number`**   | Ref (`:logseq.property/value`) | Number entity         | ✅ Yes                | ✅ Yes                  | Ratings, scores, counts, numeric choices   |
+| **`:date`**     | Ref (`:block/title`)           | Journal page          | ✅ Yes                | ❌ No                   | Birth dates, event dates, milestones       |
+| **`:datetime`** | Scalar (`:number`)             | Number (timestamp)    | ❌ No                 | ❌ No                   | Created-at, updated-at, precise timestamps |
+| **`:checkbox`** | Scalar (`:boolean`)            | Boolean               | ❌ No                 | ✅ Yes                  | Flags, toggles, yes/no fields              |
+| **`:url`**      | Ref (`:block/title`)           | URL format            | ✅ Yes                | ✅ Yes                  | Links, web references, external resources  |
+| **`:node`**     | Ref (`:block/title`)           | Page/block with tags  | ✅ Yes                | ❌ No                   | References to tagged objects               |
+| **`:asset`**    | Ref (`:block/title`)           | `#Asset`-tagged block | ✅ Yes                | ❌ No                   | References to uploaded asset blocks        |
 
-**Order in UI**: As listed above (default, number, date, datetime, checkbox, url, node)
+**Order in UI**: As listed above (default, number, date, datetime, checkbox, url, node, asset)
 
 ---
 
@@ -501,7 +605,8 @@ Types only used by built-in properties (not available to users in UI).
 
 | Type              | Storage | Validation      | Supports Cardinality? | User Allowed? | Example Built-in Properties                                                |
 | ----------------- | ------- | --------------- | --------------------- | ------------- | -------------------------------------------------------------------------- |
-| **`:string`**     | Scalar  | String          | ❌ No                 | ❌ No         | `:logseq.property.asset/type`, `:logseq.property.code/lang`                |
+| **`:string`**     | Scalar  | String          | ❌ No                 | ⚠️ Advanced   | `:logseq.property.asset/type`, `:logseq.property.code/lang`                |
+| **`:json`**       | Scalar  | JSON string     | ❌ No                 | ⚠️ Advanced   | Advanced/API use only; stores raw JSON strings                             |
 | **`:raw-number`** | Scalar  | Number          | ❌ No                 | ❌ No         | `:block/journal-day`, `:logseq.property.asset/size`                        |
 | **`:keyword`**    | Scalar  | Keyword         | ❌ No                 | ❌ No         | `:logseq.property/type`, `:logseq.property.node/display-type`              |
 | **`:map`**        | Scalar  | Map             | ❌ No                 | ⚠️ Advanced   | `:logseq.property.tldraw/page`, `:logseq.property.fsrs/state`              |
@@ -512,23 +617,23 @@ Types only used by built-in properties (not available to users in UI).
 | **`:page`**       | Ref     | Page entity     | ✅ Yes                | ❌ No         | `:block/alias`                                                             |
 | **`:property`**   | Ref     | Property entity | ✅ Yes                | ❌ No         | `:logseq.property.class/properties`, `:logseq.property.history/property`   |
 
-**Note**: `:map` is the only internal type users can create through EDN or API (advanced use only).
+**Note**: `:map`, `:json`, and `:string` are internal types users can create through EDN or API (advanced use only). They are defined in `user-allowed-internal-property-types` in `property/type.cljs`.
 
 ---
 
 ### Property Type Categories
 
-| Category                     | Types                                                                                      | Description                                                            |
-| ---------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| **Scalar Types**             | `:string`, `:raw-number`, `:checkbox`, `:datetime`, `:keyword`, `:map`, `:coll`, `:any`    | Values stored directly on entity                                       |
-| **Reference Types**          | `:default`, `:number`, `:url`, `:date`, `:node`, `:entity`, `:class`, `:page`, `:property` | Values stored as references to other entities                          |
-| **Value Ref Types**          | `:default`, `:number`, `:url`                                                              | Ref types where value is in `:block/title` or `:logseq.property/value` |
-| **Original Value Ref Types** | `:number`                                                                                  | Ref types storing value in `:logseq.property/value` (as native type)   |
-| **User Ref Types**           | `:default`, `:number`, `:url`, `:date`, `:node`                                            | Ref types available to users                                           |
-| **Closed Value Types**       | `:default`, `:number`, `:url`                                                              | Types that support closed/allowed values                               |
-| **Cardinality Types**        | `:default`, `:number`, `:url`, `:date`, `:node`, `:class`, `:page`, `:property`            | Types that support cardinality many                                    |
-| **Default Value Ref Types**  | `:default`, `:number`, `:checkbox`                                                         | Types that support default values                                      |
-| **Text Ref Types**           | `:default`, `:url`, `:entity`                                                              | Ref types that store text in `:block/title`                            |
+| Category                     | Types                                                                                                | Description                                                                                                                                                                                     |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Scalar Types**             | `:string`, `:json`, `:raw-number`, `:checkbox`, `:datetime`, `:keyword`, `:map`, `:coll`, `:any`     | Values stored directly on entity                                                                                                                                                                |
+| **Reference Types**          | `:default`, `:number`, `:url`, `:date`, `:node`, `:asset`, `:entity`, `:class`, `:page`, `:property` | Values stored as references to other entities                                                                                                                                                   |
+| **Value Ref Types**          | `:default`, `:number`, `:url`                                                                        | Ref types where value is in `:block/title` or `:logseq.property/value`                                                                                                                          |
+| **Original Value Ref Types** | `:number`                                                                                            | Ref types storing value in `:logseq.property/value` (as native type)                                                                                                                            |
+| **User Ref Types**           | `:default`, `:number`, `:url`, `:date`, `:node`, `:asset`                                            | Ref types available to users                                                                                                                                                                    |
+| **Closed Value Types**       | `:default`, `:number`, `:url`                                                                        | Types that support closed/allowed values                                                                                                                                                        |
+| **Cardinality Types**        | `:default`, `:number`, `:url`, `:date`, `:node`, `:asset`                                            | User-configurable types that support cardinality many (`cardinality-property-types` in source); internal types `:class`, `:page`, `:property` also use cardinality-many in built-in definitions |
+| **Default Value Ref Types**  | `:default`, `:number`, `:checkbox`                                                                   | Types that support default values                                                                                                                                                               |
+| **Text Ref Types**           | `:default`, `:url`, `:entity`                                                                        | Ref types that store text in `:block/title`                                                                                                                                                     |
 
 ---
 
@@ -536,25 +641,27 @@ Types only used by built-in properties (not available to users in UI).
 
 **Location**: `deps/db/src/logseq/db/frontend/property/type.cljs:150-193`
 
-| Type          | Validation Function | Error Message                      |
-| ------------- | ------------------- | ---------------------------------- |
-| `:default`    | `text-entity?`      | "should be a text block"           |
-| `:number`     | `number-entity?`    | "should be a number"               |
-| `:date`       | `date?`             | "should be a journal date"         |
-| `:datetime`   | `number?`           | "should be a datetime"             |
-| `:checkbox`   | `boolean?`          | (Malli built-in)                   |
-| `:url`        | `url-entity?`       | "should be a URL"                  |
-| `:node`       | `node-entity?`      | "should be a page/block with tags" |
-| `:string`     | `string?`           | (Malli built-in)                   |
-| `:raw-number` | `number?`           | (Malli built-in)                   |
-| `:entity`     | `entity?`           | "should be an Entity"              |
-| `:class`      | `class-entity?`     | "should be a Class"                |
-| `:property`   | `property-entity?`  | "should be a Property"             |
-| `:page`       | `page-entity?`      | "should be a Page"                 |
-| `:keyword`    | `keyword?`          | (Malli built-in)                   |
-| `:map`        | `map?`              | (Malli built-in)                   |
-| `:coll`       | `coll?`             | (Malli built-in)                   |
-| `:any`        | `some?`             | (Malli built-in)                   |
+| Type          | Validation Function | Error Message                         |
+| ------------- | ------------------- | ------------------------------------- |
+| `:default`    | `text-entity?`      | "should be a text block"              |
+| `:number`     | `number-entity?`    | "should be a number"                  |
+| `:date`       | `date?`             | "should be a journal date"            |
+| `:datetime`   | `number?`           | "should be a datetime"                |
+| `:checkbox`   | `boolean?`          | "should be a boolean"                 |
+| `:url`        | `url-entity?`       | "should be a URL"                     |
+| `:node`       | `node-entity?`      | "should be a node with a title"       |
+| `:asset`      | `asset-entity?`     | "should be an asset node"             |
+| `:string`     | `string?`           | "should be a string"                  |
+| `:json`       | `string?`           | "should be JSON string"               |
+| `:raw-number` | `number?`           | "should be a raw number"              |
+| `:entity`     | `entity?`           | "should be an Entity"                 |
+| `:class`      | `class-entity?`     | "should be a Class"                   |
+| `:property`   | `property-entity?`  | "should be a Property"                |
+| `:page`       | `page-entity?`      | "should be a Page"                    |
+| `:keyword`    | `keyword?`          | "should be a Clojure keyword"         |
+| `:map`        | `map?`              | "should be a Clojure map"             |
+| `:coll`       | `coll?`             | "should be a collection"              |
+| `:any`        | `some?`             | (no message — Malli `some?` built-in) |
 
 ---
 
@@ -941,23 +1048,23 @@ The dispatch function checks types in this order (order matters!):
 
 ## Summary Statistics
 
-| Category                          | Count                                                                 |
-| --------------------------------- | --------------------------------------------------------------------- |
-| **Total Built-in Properties**     | 107                                                                   |
-| **Public Properties**             | 21                                                                    |
-| **DB Attribute Properties**       | 13                                                                    |
-| **Properties with Closed Values** | 4 (status, priority, pdf/hl-color, repeat/recur-unit)                 |
-| **Total Built-in Classes**        | 13                                                                    |
-| **Page Classes**                  | 6 (Root, Tag, Property, Page, Journal, Whiteboard)                    |
-| **Block Classes**                 | 7 (Task, Query, Card, Cards, Asset, Code, Quote, Math, PDF, Template) |
-| **Property Types**                | 14 (7 user + 10 internal, 3 shared)                                   |
-| **User-Facing Property Types**    | 7                                                                     |
-| **Ref Property Types**            | 9                                                                     |
-| **Scalar Property Types**         | 8                                                                     |
-| **Entity Types**                  | 13                                                                    |
-| **Page Entity Types**             | 5                                                                     |
-| **Block Entity Types**            | 6                                                                     |
-| **Special Entity Types**          | 2                                                                     |
+| Category                          | Count                                                                                                      |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Total Built-in Properties**     | 118                                                                                                        |
+| **Public Properties**             | 26                                                                                                         |
+| **DB Attribute Properties**       | 13                                                                                                         |
+| **Properties with Closed Values** | 6 (status, priority, pdf/hl-color, repeat/recur-unit, repeat/repeat-type, view/type)                       |
+| **Total Built-in Classes**        | 18                                                                                                         |
+| **Page Classes**                  | 5 (Tag, Property, Page, Journal, Whiteboard)                                                               |
+| **Non-Page Classes**              | 13 (Root, Task, Comments, Comment, Query, Card, Cards, Asset, Code, Quote, Math, PDF Annotation, Template) |
+| **Property Types**                | 19 (8 user + 11 internal)                                                                                  |
+| **User-Facing Property Types**    | 8                                                                                                          |
+| **Ref Property Types**            | 10                                                                                                         |
+| **Scalar Property Types**         | 9                                                                                                          |
+| **Entity Types**                  | 13 (dispatch checks; whiteboard pages reuse `:normal-page` key)                                            |
+| **Page Entity Types**             | 5                                                                                                          |
+| **Block Entity Types**            | 6                                                                                                          |
+| **Special Entity Types**          | 3 (File Block, Key-Value Entity, Empty Placeholder Entity)                                                 |
 
 ---
 
@@ -1013,6 +1120,46 @@ Has :block/uuid?
 
 Has :db/ident + :kv/value? → Key-Value Entity
 ```
+
+---
+
+## Findings: New Capabilities
+
+The following capabilities were identified in source code but were absent from this document prior to the 2026-05-29 revision.
+
+### New Property Namespaces
+
+Five new property namespaces have been added since the previous revision:
+
+| Namespace                  | Properties | Purpose                                                   |
+| -------------------------- | ---------- | --------------------------------------------------------- |
+| `logseq.property.comments` | 1          | Threaded comments on blocks                               |
+| `logseq.property.reaction` | 2          | Emoji reactions on blocks                                 |
+| `logseq.property.recycle`  | 3          | Recycle-bin: preserve original location of deleted blocks |
+| `logseq.property.agent`    | 1          | AI AgentBridge session tracking (one public property)     |
+| `logseq.property.sync`     | 1          | Remote object storage for large block titles              |
+
+### New Properties (10)
+
+| Property                                   | Type        | Namespace         |
+| ------------------------------------------ | ----------- | ----------------- |
+| `:logseq.property.comments/blocks`         | `:node`     | comments          |
+| `:logseq.property/deleted-at`              | `:datetime` | core              |
+| `:logseq.property/deleted-by-ref`          | `:entity`   | core              |
+| `:logseq.property.recycle/original-parent` | `:node`     | recycle           |
+| `:logseq.property.recycle/original-page`   | `:node`     | recycle           |
+| `:logseq.property.recycle/original-order`  | `:string`   | recycle           |
+| `:logseq.property.reaction/emoji-id`       | `:string`   | reaction          |
+| `:logseq.property.reaction/target`         | `:node`     | reaction          |
+| `:logseq.property.agent/session-id`        | `:string`   | agent (public ✅) |
+| `:logseq.property.sync/large-title-object` | `:map`      | sync              |
+
+### Corrected Behaviors
+
+- **`:string` property type**: now confirmed as user-allowed via EDN/API (`user-allowed-internal-property-types` includes `:map`, `:json`, and `:string`).
+- **`cardinality-property-types`**: source restricts user-configurable cardinality to 6 types (`default`, `number`, `url`, `date`, `node`, `asset`); internal types use cardinality-many at definition time but are not user-configurable.
+- **`page-classes`**: `Root` is **not** included in the source `page-classes` set (`{Tag, Property, Page, Journal, Whiteboard}`).
+- **Summary Statistics**: Completely updated — previous values were from schema version ~40 era.
 
 ---
 

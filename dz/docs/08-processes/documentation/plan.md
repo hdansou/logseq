@@ -1,39 +1,44 @@
 # Comprehensive Product Documentation Plan for Logseq
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## Plan Overview
 
 I have created a structured documentation plan for comprehensive product documentation of the Logseq application. This plan is designed to provide stakeholders, developers, and users with deep insights into the application's architecture, features, and technical implementation.
 
-## Generated Documentation Structure
+## Generated Documentation Structure (Validated)
 
 ### ✅ Completed Documents
 
-1. **[README.md](./README.md)** - Documentation overview and structure
-2. **[01-executive-summary.md](./01-executive-summary.md)** - High-level overview for stakeholders
-3. **[02-application-overview.md](./02-application-overview.md)** - What Logseq is and its core value proposition
-4. **[03-system-architecture.md](./03-system-architecture.md)** - High-level system design with C4 diagrams
-5. **[04-technical-stack.md](./04-technical-stack.md)** - Technology choices and dependencies
-6. **[05-data-architecture.md](./05-data-architecture.md)** - Database design and data flow
+> **Removed:** The previously listed local files (`README.md`, `01-executive-summary.md` ... `05-data-architecture.md`) are not present under `dz/docs/08-processes/documentation/`.
+
+Current status in this directory:
+
+1. **[generation-prompt.md](./generation-prompt.md)** - Prompt used to produce process documentation outputs
+2. **[plan.md](./plan.md)** - This planning and validation document
+3. **[update-process.md](./update-process.md)** - Maintenance/update workflow
 
 ### 📋 Remaining Documents to Generate
 
-7. **[06-core-features.md](./06-core-features.md)** - Main application features and capabilities
-8. **[07-user-interface.md](./07-user-interface.md)** - UI/UX design and component architecture
-9. **[08-platform-support.md](./08-platform-support.md)** - Desktop, web, and mobile implementations
-10. **[09-electron-integration.md](./09-electron-integration.md)** - Desktop application specifics
-11. **[10-plugin-ecosystem.md](./10-plugin-ecosystem.md)** - Plugin architecture and API
-12. **[11-external-integrations.md](./11-external-integrations.md)** - Third-party integrations
-13. **[12-file-management.md](./12-file-management.md)** - File system interaction and storage
-14. **[13-sync-collaboration.md](./13-sync-collaboration.md)** - Real-time collaboration and sync
-15. **[14-whiteboard-system.md](./14-whiteboard-system.md)** - Visual canvas and drawing capabilities
-16. **[15-query-system.md](./15-query-system.md)** - Advanced querying and search
-17. **[16-graph-visualization.md](./16-graph-visualization.md)** - Knowledge graph features
-18. **[17-security-privacy.md](./17-security-privacy.md)** - Security model and privacy features
-19. **[18-performance-optimization.md](./18-performance-optimization.md)** - Performance considerations
-20. **[19-development-workflow.md](./19-development-workflow.md)** - Build system and development process
-21. **[20-deployment-distribution.md](./20-deployment-distribution.md)** - Distribution and release process
+> **Removed:** The previous numbered list (`06-...` through `20-...`) implied concrete files in this directory. Those files are not currently present here.
+
+Planned output remains these thematic areas, but publication paths should be aligned to the current docs structure before generation:
+
+1. Core features
+2. UI architecture
+3. Platform support
+4. Electron integration
+5. Plugin ecosystem
+6. External integrations
+7. File/data management
+8. Sync and collaboration
+9. Whiteboard/canvas
+10. Query system
+11. Graph visualization
+12. Security and privacy
+13. Performance optimization
+14. Development workflow
+15. Deployment and distribution
 
 ## Key Documentation Features
 
@@ -50,10 +55,20 @@ Based on the codebase exploration, the documentation covers:
 
 1. **ClojureScript/React Architecture** - Functional programming approach with reactive UI
 2. **DataScript Database** - Graph database with Datalog queries
-3. **Multi-Platform Support** - Electron desktop, web, and React Native mobile
-4. **Plugin System** - Extensible architecture with iframe sandboxing
+3. **Multi-Platform Support** - Electron desktop, web, and Capacitor-based mobile clients
+4. **Plugin System** - Extensible architecture with iframe and shadow sandboxing modes
 5. **Local-First Design** - Privacy-focused data ownership model
 6. **Real-Time Collaboration** - Modern sync and collaboration features
+
+## Findings: New Capabilities
+
+The following capabilities are clearly represented in current source (`src/`, `deps/`, `packages/`) and should be reflected in any generated product documentation set:
+
+1. **Dual plugin sandbox execution modes** - Plugin runtime supports both iframe and shadow sandbox setup paths (not just iframe).
+2. **DB-sync and RTC operational depth** - Active db-sync + RTC flows are present across frontend/mobile surfaces and dev/test paths.
+3. **Mobile collaboration surfaces** - Mobile UI includes RTC graph operations (remote graph fetch/download/leave/delete flows).
+4. **Capacitor-native mobile integration** - Android/iOS integrations are aligned with Capacitor plugins and native bridges.
+5. **Plugin-facing DataScript query surface** - Plugin SDK exposes DataScript query APIs that are part of practical extension capabilities.
 
 ### Content Organization
 
@@ -79,11 +94,10 @@ The documentation serves:
 
 To complete the documentation:
 
-1. **Continue generating remaining documents** (15 more documents)
-2. **Add code examples** from the actual codebase
-3. **Include performance benchmarks** and testing strategies
-4. **Document deployment processes** and distribution channels
-5. **Create cross-references** between related documents
+1. **Define target locations first**: Map each planned thematic document to the current docs hierarchy before generating files.
+2. **Regenerate the set with source-backed references**: Keep each claim anchored to active code under `src/`, `deps/`, and `packages/`.
+3. **Include platform and plugin runtime updates**: Capacitor mobile, dual plugin sandbox modes, and db-sync/RTC details.
+4. **Add cross-links after generation**: Build links only after files exist to avoid stale references.
 
 ## Documentation Standards Applied
 
@@ -93,8 +107,8 @@ To complete the documentation:
 - **Code examples** in appropriate languages (ClojureScript, JavaScript, SQL)
 - **Markdown structure** for easy maintenance and version control
 
-This comprehensive plan provides a solid foundation for understanding Logseq's architecture, features, and technical implementation across all platforms and use cases.
+This plan remains a solid framework, but it now reflects current repository state and removes stale file-level completion claims.
 
 ---
 
-_Generated on August 27, 2025 from Logseq codebase analysis_
+_Originally generated on August 27, 2025; validated and corrected on May 30, 2026._

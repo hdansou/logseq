@@ -12,7 +12,7 @@ related-docs:
 
 # Getting Started with Real-Time Collaboration
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## What You'll Learn
 
@@ -21,7 +21,7 @@ In this tutorial, you'll learn how to:
 1. Enable Real-Time Collaboration (RTC) for your graph
 2. Invite collaborators to work with you
 3. See others' changes in real-time
-4. Understand user presence and cursors
+4. Understand user presence and editing indicators
 5. Resolve conflicts when editing simultaneously
 6. Work with encrypted shared graphs
 
@@ -32,8 +32,8 @@ In this tutorial, you'll learn how to:
 
 Logseq's Real-Time Collaboration (RTC) lets multiple people edit the same graph simultaneously, with changes appearing instantly for everyone. Unlike traditional file syncing, RTC provides:
 
-- **Instant synchronization** — See changes as they happen (< 1 second)
-- **Conflict resolution** — Smart merging when multiple people edit the same content
+- **Instant synchronization** — See remote changes quickly while collaborating
+- **Conflict resolution** — Deterministic transaction ordering with stale-write rejection and retry
 - **User presence** — See who's online and where they're working
 - **End-to-end encryption** — Your data stays private (optional)
 
@@ -50,7 +50,7 @@ Logseq's Real-Time Collaboration (RTC) lets multiple people edit the same graph 
     Local Database                                                       Local Database
 ```
 
-Logseq uses a **transaction-based sync approach** with **optimistic concurrency control** on a centralized server (Cloudflare Durable Objects), ensuring consistency across all clients. Each client sends batched transactions with a `t-before` value; the server rejects stale transactions and broadcasts changes to other clients.
+Logseq uses a **transaction-based sync approach** with **optimistic concurrency control** on a centralized server (Cloudflare Durable Objects), ensuring consistency across clients. Each client sends batched transactions with a `t-before` value. The server rejects stale transactions, returns checksums with accepted batches, and broadcasts `changed` notifications so clients can pull the latest txs.
 
 ## Step 1: Create Your First Remote Graph
 
@@ -112,38 +112,28 @@ When creating a remote graph, you'll see an encryption option:
 
 ## Step 2: Invite Collaborators
 
-### 2.1 Generate Share Link
+### 2.1 Invite by Email
 
-1. Click **Settings** (⚙️) → **Sync** tab
-2. Scroll to **Collaboration** section
-3. Click **Invite collaborators**
-4. A share link is generated (valid for 7 days)
+1. Click the collaborators button (user-plus icon) in the header, or open **Settings** → **Collaboration**
+2. In **Members**, enter the collaborator's email address
+3. Click **Invite**
 
-**Share Link Format**:
-
-```
-https://logseq.com/share/abc123def456?expires=1234567890
-```
+> **Removed:** Link-based invitation flow (`https://logseq.com/share/...` with expiry) is not part of the current desktop RTC invitation path. Current flow uses member invites via `POST /graphs/:graph-id/members`.
 
 ### 2.2 Send Invitation
 
-Copy the link and send it to your collaborators via:
-
-- Email
-- Slack/Discord
-- Any secure messaging app
-
-**Security Tip**: Share links expire after 7 days. For ongoing collaboration, invite via Logseq account email instead.
+Share the invitation email address with your collaborator (the person must have or create a Logseq account for access).
 
 ### 2.3 Accept Invitation (Collaborator Side)
 
-When your collaborator receives the link:
+When your collaborator is invited:
 
-1. They click the link (opens Logseq)
-2. If not signed in, they'll be prompted to create a Logseq account
-3. They click **Accept Invitation**
-4. The graph appears in their **Graphs** list
-5. If encrypted, they'll need to enter their own password (see Step 2.4)
+1. They sign in to Logseq
+2. They access the graph from their remote graph list
+3. The graph appears in their **Graphs** list
+4. If encrypted, they'll need to enter their own password (see Step 2.4)
+
+> **Removed:** Explicit in-app **Accept Invitation** link-confirmation flow is not represented in current RTC member APIs/UI.
 
 ### 2.4 Set Up Encryption (If Graph is Encrypted)
 
@@ -186,9 +176,11 @@ Let's practice real-time editing together:
 
 **What you'll see**:
 
-- Their cursor appears as a colored indicator (e.g., 🟦 "Alice")
-- Their text appears as they type (character by character)
-- No conflicts — you're editing different blocks
+- Their avatar appears in the collaborators area when online
+- If they edit a block, that block can show an editing-user avatar indicator
+- No conflicts when you're editing different blocks
+
+> **Removed:** Character-by-character shared cursor rendering is not the current RTC presence model; presence is block-level (`editing-block-uuid`).
 
 ### 3.3 User Presence
 
@@ -200,11 +192,10 @@ Notice the **online users indicator** at the top-right:
 └──────────────────────────────────────┘
 ```
 
-- **Green dot 🟢**: Online and active
-- **Gray dot ⚪**: Online but idle (5+ minutes inactive)
-- **No indicator**: Offline
+- Online collaborators appear with name/avatar metadata from presence updates.
+- Block-level editing presence is shown by an editing avatar on the block.
 
-Click on a name to see where they're currently editing.
+> **Removed:** Idle-state color semantics and click-to-jump behavior are not guaranteed by the current implementation.
 
 ## Step 4: Handling Conflicts
 
@@ -226,8 +217,8 @@ Original:    - This is a test block
 You type:    - This is a test block for RTC
 Alice types: - This is a collaborative test block
 
-Result:      - This is a collaborative test block for RTC
-             (Merged intelligently by conflict resolution)
+Result:      Server accepts one batch at a time by `t-before`.
+             If your batch is stale, it is rejected and your client pulls latest txs, then retries.
 ```
 
 ### 4.2 Conflict Resolution Algorithm
@@ -244,10 +235,10 @@ Logseq uses **optimistic concurrency control** with transaction versioning:
 
 | Situation                    | Resolution                                        |
 | ---------------------------- | ------------------------------------------------- |
-| Different blocks             | No conflict — transactions applied sequentially   |
-| Same block, non-overlapping  | Both transactions applied in server order          |
-| Same block, stale t-before   | Rejected; client pulls remote changes and retries |
-| Duplicate block orders       | Server auto-generates unique fractional indexes    |
+| Different blocks             | No conflict - transactions applied sequentially |
+| Same block, concurrent edits | One tx path wins first; stale batch gets `tx/reject` and client retries |
+| Stale `t-before`             | Rejected with `reason: "stale"`; client issues `pull` |
+| Partial batch apply failure  | `tx/reject` can include `success-tx-ids` and `failed-tx-id` |
 
 ## Step 5: Advanced Features
 
@@ -264,7 +255,7 @@ RTC gracefully handles offline scenarios:
 **When you go offline**:
 
 1. You can continue editing (all changes saved locally)
-2. A **yellow indicator** shows you're offline
+2. Sync status reflects offline state
 3. Changes queue up locally
 
 **When you reconnect**:
@@ -272,9 +263,11 @@ RTC gracefully handles offline scenarios:
 1. Local changes sync automatically
 2. Remote changes are downloaded
 3. Conflicts resolved using same algorithm
-4. Green indicator shows you're back online
+4. Sync state returns to connected/open
 
-**Storage**: Local changes are stored in the local SQLite database and a Datascript-based client-ops store until synced.
+**Storage**: Local changes and sync metadata are stored in local SQLite-backed client-op tables until synced.
+
+> **Removed:** DataScript-based client-op storage is deprecated and unsupported in the current worker sync client-op implementation.
 
 ### 5.3 Asset Synchronization
 
@@ -285,12 +278,13 @@ When you add images or files:
 3. Other collaborators download automatically
 4. Assets cached locally for offline access
 
-**Supported Asset Types**:
+**Current behavior**:
 
-- Images: PNG, JPG, GIF, SVG, WebP
-- Documents: PDF (with annotations synced)
-- Videos: MP4, WebM (embedded via YouTube/Vimeo)
-- Files: Any file type (stored as attachment)
+- Assets are uploaded/downloaded through the sync asset endpoints
+- The sync indicator reports pending uploads/downloads
+- Download/upload progress is tracked per asset operation
+
+> **Removed:** This tutorial no longer guarantees a fixed "supported asset types" matrix (or PDF annotation sync semantics) because current sync logic is endpoint/operation based.
 
 ### 5.4 Page Moves and Renames
 
@@ -371,12 +365,18 @@ Collaborators:      Pull latest transactions, apply page rename + backlinks
 
 **Monitor sync status**:
 
+Use the cloud sync indicator in the header to inspect:
+
+- Pending local changes
+- Pending asset uploads/downloads
+- Pending server changes
+- Last synced time
+
 ```txt
-Settings → Sync → Sync Status
-  Last synced: 2 seconds ago ✅
-  Pending operations: 0
-  Network: Connected 🟢
+Cloud indicator -> details popup
 ```
+
+> **Removed:** Settings-based **Sync Status** panel and **Force Full Sync** action are not part of the current desktop RTC indicator flow.
 
 ## Troubleshooting
 
@@ -387,9 +387,9 @@ Settings → Sync → Sync Status
 **Solutions**:
 
 1. Check internet connection (RTC requires constant connection)
-2. Check sync status: Settings → Sync → **Sync Status**
+2. Check the cloud sync indicator details in the header
 3. Look for error messages in status bar
-4. Try **Force Sync**: Settings → Sync → **Force Full Sync**
+4. Try restarting sync from the indicator (**Start sync**) if it is closed
 5. Restart Logseq (re-establishes WebSocket connection)
 
 ### Conflict Storms
@@ -433,7 +433,7 @@ Settings → Sync → Sync Status
 ✅ How to create a remote graph with RTC enabled  
 ✅ How to invite collaborators and set up encryption  
 ✅ How to edit simultaneously with conflict resolution  
-✅ How to understand user presence and cursors  
+✅ How to understand user presence and editing indicators  
 ✅ Best practices for team collaboration  
 ✅ How to troubleshoot common issues
 
@@ -454,6 +454,21 @@ Settings → Sync → Sync Status
 - [E2EE Encryption Deep Dive](../../explanation/security/e2ee-encryption.md)
 - [RTC Architecture (Developer Onboarding)](../../../dz/docs/01-onboarding/rtc-onboarding.md)
 - [Conflict Resolution Algorithm](../../explanation/collaboration/conflict-resolution.md)
+
+## Findings: New Capabilities
+
+Since the previous revision, current source reflects these notable capabilities:
+
+1. **Per-entry reject metadata for tx batches**
+  - `tx/reject` can return `success-tx-ids` and `failed-tx-id`, enabling precise client reconciliation for partially applied batches.
+2. **Checksum-aware sync responses**
+  - `hello`, `pull/ok`, and `tx/batch/ok` include checksum fields used for client/server consistency checks (especially in dev/test diagnostics).
+3. **Graph readiness gating during bootstrap**
+  - Sync and snapshot endpoints can return not-ready states while snapshot upload/import is still in progress (`graph-ready-for-use?`).
+4. **Richer sync indicator telemetry**
+  - Header indicator surfaces pending local, server, and asset-operation counts plus transfer progress.
+5. **Member-management collaboration flow**
+  - Collaboration now centers on graph members (`/graphs/:graph-id/members`) with invite/remove operations rather than share-link onboarding.
 
 ## Reference: Key Concepts
 
@@ -489,7 +504,7 @@ Sync uses **WebSocket** for real-time communication. Messages are JSON-encoded w
 
 ```txt
 Client → Server:   {"type": "hello", "client": "<repo>"}
-Client → Server:   {"type": "tx/batch", "t-before": 42, "txs": "<transit-encoded>"}
+Client → Server:   {"type": "tx/batch", "t-before": 42, "txs": [{"tx": "<transit>", "tx-id": "<uuid?>"}]}
 Client → Server:   {"type": "pull", "since": 42}
 Client → Server:   {"type": "presence", "editing-block-uuid": "<uuid>"}
 Client → Server:   {"type": "ping"}
@@ -497,6 +512,7 @@ Client → Server:   {"type": "ping"}
 Server → Client:   {"type": "hello", "t": 42}
 Server → Client:   {"type": "tx/batch/ok", "t": 43}
 Server → Client:   {"type": "tx/reject", "reason": "stale", "t": 43}
+Server → Client:   {"type": "tx/reject", "reason": "db transact failed", "t": 43, "success-tx-ids": ["..."], "failed-tx-id": "..."}
 Server → Client:   {"type": "changed", "t": 43}
 Server → Client:   {"type": "pull/ok", "t": 43, "txs": [...]}
 Server → Client:   {"type": "online-users", "online-users": [...]}
@@ -508,6 +524,6 @@ Server → Client:   {"type": "pong"}
 
 ---
 
-**Last Updated**: March 2026  
+**Last Updated**: 2026-05-30  
 **Status**: 🟡 Active Development (RTC features evolving rapidly)  
 **Feedback**: Join [Logseq Discord](https://discord.gg/logseq) `#rtc-feedback` channel

@@ -1,6 +1,8 @@
 # Graph Validation Developer Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
+> **Previously revised:** 2026-05-28
+> **Change summary:** Fixed stale line numbers (`shortcut/config.cljs` 516-519→521-524, `db_core.cljs` 1140-1143→1472-1475); corrected `validate-db!` → `validate-db` in `deps/db/…/validate.cljs`; fixed `validate-tx-report!` → `validate-tx-report`; corrected `:skip-validate-db?` tx-meta key (was incorrectly namespaced as `::validate/skip-validate-db?`); removed wrong `validate.cljs:43` claim for `:block/warning` auto-retract; added `validate-local-db!` under New Capabilities.
 
 ## Overview
 
@@ -24,7 +26,7 @@ DB Worker Thread API (:thread-api/validate-db)
         ↓
 worker.db.validate/validate-db
         ↓
-db.frontend.validate/validate-db!
+db.frontend.validate/validate-db
         ↓
 Schema Validation (Malli)
         ↓
@@ -47,7 +49,7 @@ User Notification
 **Success Case**:
 
 ```
-Your graph is valid! {:entities 5000, :pages 100, :blocks 4500, :classes 50, :properties 200, :datoms 120000}
+Your graph is valid! {:entities 5000, :pages 100, :blocks 4500, :classes 50, :properties 200, :objects 120, :property-pairs 800, :datoms 120000}
 ```
 
 **Error Case**:
@@ -61,7 +63,7 @@ Attempting to fix invalid blocks. Run validation again to see if they were fixed
 
 ### 1. UI Entry Point
 
-**File**: `src/main/frontend/handler/common/developer.cljs:83-84`
+**File**: `src/main/frontend/handler/common/developer.cljs:91-92`
 
 ```clojure
 (defn ^:export validate-db []
@@ -70,74 +72,88 @@ Attempting to fix invalid blocks. Run validation again to see if they were fixed
 
 This public function is triggered from the command palette and invokes the worker thread.
 
-**Command Registration**: `src/main/frontend/modules/shortcut/config.cljs`
+**Command Registration**: `src/main/frontend/modules/shortcut/config.cljs:521-524`
 
 ```clojure
 :dev/validate-db {:binding []
+                  :desc "(Dev) Validate current graph"
                   :inactive (not (state/developer-mode?))
                   :fn :frontend.handler.common.developer/validate-db}
 ```
 
 ### 2. Worker Thread API
 
-**File**: `src/main/frontend/worker/db_worker.cljs`
+**File**: `src/main/frontend/worker/db_core.cljs:1472-1475`
+
+> **Note:** `db_worker.cljs` is a thin bootstrap entrypoint; all thread API definitions live in `db_core.cljs`.
 
 ```clojure
 (def-thread-api :thread-api/validate-db
-  [repo]
+  [repo & [opts]]
   (when-let [conn (worker-state/get-datascript-conn repo)]
-    (worker-db-validate/validate-db conn)))
+    (worker-db-validate/validate-db conn opts)))
 ```
 
-The worker thread handles validation to avoid blocking the UI thread.
+The optional `opts` map is forwarded to `validate-db`. Returns `nil` silently if the conn isn't found.
 
 ### 3. Main Validation Orchestrator
 
-**File**: `src/main/frontend/worker/db/validate.cljs`
+**File**: `src/main/frontend/worker/db/validate.cljs:286-325`
 
 ```clojure
 (defn validate-db
-  [conn]
-  (fix-extends-cardinality! conn)
-  (fix-icon-wrong-type! conn)
-  (db-migrate/ensure-built-in-data-exists! conn)
-  (fix-non-closed-values! conn)
-  (fix-num-prefix-db-idents! conn)
+  [conn & {:keys [fix] :or {fix true}}]
+  (when fix
+    (fix-extends-cardinality! conn)
+    (fix-icon-wrong-type! conn)
+    (db-migrate/ensure-built-in-data-exists! conn)
+    (fix-non-closed-values! conn)
+    (fix-num-prefix-db-idents! conn))
 
-  (let [db @conn
-        {:keys [errors datom-count entities]} (db-validate/validate-db! db)
-        invalid-entity-ids (distinct (map (fn [e] (:db/id (:entity e))) errors))]
+  (let [{:keys [errors datom-count entities invalid-entity-ids]}
+        (if fix
+          (validate-and-fix-invalid-blocks! conn)   ; loops until stable or no progress
+          (let [{:keys [errors] :as result} (validate-db-result @conn)]
+            (log-validation-errors! errors)
+            result))
+        db @conn]
     (if errors
       (do
-        (fix-invalid-blocks! conn errors)
+        (shared-service/broadcast-to-clients! :log [:db-invalid :error ...])
         (shared-service/broadcast-to-clients! :notification
           [(str "Validation detected " (count errors) " invalid block(s)...") :warning false]))
       (shared-service/broadcast-to-clients! :notification
-        [(str "Your graph is valid! "
-              (assoc (db-validate/graph-counts db entities) :datoms datom-count))
-         :success false]))))
+        [(str "Your graph is valid! " (assoc (db-validate/graph-counts db entities) :datoms datom-count))
+         :success false]))
+    {:errors errors
+     :datom-count datom-count
+     :invalid-entity-ids invalid-entity-ids}))
 ```
-
-> **Note:** Before running schema validation, the function applies several pre-fix steps (cardinality fixes, icon type fixes, built-in data checks, non-closed value fixes, and numeric-prefix db-ident fixes).
 
 ### 4. Core Schema Validation
 
-**File**: `deps/db/src/logseq/db/frontend/validate.cljs:91-111`
+**File**: `deps/db/src/logseq/db/frontend/validate.cljs:90-109`
 
 ```clojure
-(defn validate-db!
+(defn validate-db
   "Validates all the entities of the given db using :eavt datoms. Returns a map
-  with info about db being validated."
+  with info about db being validated. If there are errors, they are placed on
+  :errors and grouped by entity"
   [db]
   (let [datoms (d/datoms db :eavt)
         ent-maps* (db-malli-schema/datoms->entities datoms)
-        ent-maps (map (fn [e] (assoc e :db/id (:e e))) ent-maps*)
-        entities (map (fn [e] (dissoc e :db/id)) ent-maps)
+        ent-maps (mapv
+                  ;; Remove some UI interactions adding this e.g. import
+                  #(dissoc % :block.temp/load-status :block.temp/has-children?)
+                  (db-malli-schema/update-properties-in-ents db ent-maps*))
         errors (binding [db-malli-schema/*db-for-validate-fns* db]
-                 (-> entities closed-db-schema-explainer :errors))]
-    {:errors errors
-     :datom-count (count datoms)
-     :entities ent-maps}))
+                 (-> (map (fn [e] (dissoc e :db/id)) ent-maps)
+                     closed-db-schema-explainer :errors))]
+    (cond-> {:datom-count (count datoms)
+             :entities ent-maps*}
+      (some? errors)
+      (assoc :errors (map #(update % :errors (fn [errs] (me/humanize {:errors errs})))
+                          (group-errors-by-entity db ent-maps errors))))))
 ```
 
 This function:
@@ -191,27 +207,32 @@ The `fix-invalid-blocks!` function attempts to repair issues:
 
 ### Example Fix Logic
 
+> **Note:** The code below is illustrative — the actual implementation (line 35) uses `mapcat` to accumulate all tx-data and applies it in a single `d/transact!` call. There is no `block-entity?` helper; dispatch is done via the `:dispatch-key` field on the error map.
+
 ```clojure
-(defn fix-invalid-blocks!
+;; Illustrative sketch of fix-invalid-blocks! shape
+;; See src/main/frontend/worker/db/validate.cljs:35 for full implementation
+(defn- fix-invalid-blocks!
   [conn errors]
-  (doseq [error errors]
-    (let [entity (:entity error)
-          eid (:db/id entity)]
-      (cond
-        ;; Missing block title - retract the entity
-        (and (block-entity? entity)
-             (not (seq (:block/title entity))))
-        (d/transact! conn [[:db/retractEntity eid]])
-
-        ;; Missing block page - assign to journal/parent page
-        (and (block-entity? entity)
-             (not (:block/page entity)))
-        (when-let [page-id (or (some-> (db-model/get-latest-journals @conn 1) first :db/id)
-                               (:db/id (:block/parent entity)))]
-          (d/transact! conn [{:db/id eid :block/page page-id}]))
-
-        ;; Add more fix patterns...
-        ))))
+  (let [db @conn
+        fix-tx-data (mapcat
+                     (fn [{:keys [entity dispatch-key]}]
+                       (let [entity (d/entity db (:db/id entity))]
+                         (cond
+                           ;; Legacy attributes
+                           (some? (:logseq.property/parent entity))
+                           [[:db/retract (:db/id entity) :logseq.property/parent]]
+                           ;; block missing page (dispatch-key :block)
+                           (and (= dispatch-key :block) (nil? (:block/page entity)))
+                           (let [page-id (or (:db/id (:block/page (:block/parent entity)))
+                                             (:db/id (first (ldb/get-latest-journals db))))]
+                             (when page-id
+                               [[:db/add (:db/id entity) :block/page page-id]]))
+                           ;; ... many more cases ...
+                           :else nil)))
+                     errors)]
+    (when (seq fix-tx-data)
+      (d/transact! conn fix-tx-data {:fix-db? true}))))
 ```
 
 ## Automatic Validation During Development
@@ -282,7 +303,7 @@ Detailed error logs are sent to the browser console:
 | Feature         | Validate DB               | GC Graph                 |
 | --------------- | ------------------------- | ------------------------ |
 | **Purpose**     | Check schema integrity    | Remove orphaned data     |
-| **Trigger**     | Manual only               | Auto (3 days) + Manual   |
+| **Trigger**     | Manual only               | Auto (30 days) + Manual  |
 | **Auto-fixes**  | Yes, attempts repairs     | No, just deletes         |
 | **Report Type** | Validation errors         | Space reclaimed          |
 | **Dev Mode**    | Required                  | Required                 |
@@ -297,9 +318,10 @@ Detailed error logs are sent to the browser console:
 **File**: `deps/db/src/logseq/db/frontend/validate.cljs`
 
 ```clojure
-(defn validate-tx-report!
-  "Validates entities in a transaction report"
-  [tx-report options]
+(defn validate-tx-report
+  "Validates the datascript tx-report for entities that have changed. Returns
+  boolean indicating if db is valid"
+  [{:keys [db-after tx-data tx-meta]} {:keys [closed-schema?]}]
   ;; Validates only entities affected by the transaction
   )
 ```
@@ -375,7 +397,7 @@ View the Malli schema:
 
 (let [conn (get-conn "graph-name")
       db @conn]
-  (validate/validate-db! db))
+  (validate/validate-db db))
 ```
 
 ### 4. Skipping Validation
@@ -385,7 +407,7 @@ For performance-critical operations:
 ```clojure
 (d/transact! conn
   [{:db/id 123 :block/title "foo"}]
-  {::validate/skip-validate-db? true})
+  {:skip-validate-db? true})
 ```
 
 ## Common Issues
@@ -435,15 +457,14 @@ For performance-critical operations:
 
 ## File Reference
 
-| File                                               | Purpose                         |
-| -------------------------------------------------- | ------------------------------- |
-| `src/main/frontend/handler/common/developer.cljs`  | UI entry point (lines 83-84)    |
-| `src/main/frontend/modules/shortcut/config.cljs`   | Command registration            |
-| `src/main/frontend/worker/db_worker.cljs`          | Worker thread API               |
-| `src/main/frontend/worker/db/validate.cljs`        | Main orchestration & auto-fix   |
+| File                                               | Purpose                                |
+| -------------------------------------------------- | -------------------------------------- |
+| `src/main/frontend/worker/db_core.cljs`            | Worker thread API (line 1472)          |
+| `src/main/frontend/handler/common/developer.cljs`  | UI entry point (lines 91-92)           |
+| `src/main/frontend/worker/db/validate.cljs`        | Main orchestration & auto-fix          |
 | `deps/db/src/logseq/db/frontend/validate.cljs`     | Core schema validation + tx validation |
-| `deps/db/src/logseq/db/frontend/malli_schema.cljs` | Entity schema definitions       |
-| `src/resources/dicts/en.edn`                       | UI labels                       |
+| `deps/db/src/logseq/db/frontend/malli_schema.cljs` | Entity schema definitions              |
+| `src/resources/dicts/en.edn`                       | UI labels                              |
 
 ## Testing
 
@@ -519,7 +540,48 @@ window.frontend.handler.common.developer.validate_db()
 await logseq.App.invokeExternalCommand('logseq.dev/validate-db')
 ```
 
-The validation auto-fix will retract `:block/warning` attributes for blocks that have been corrected (see `validate.cljs:43`).
+> **Removed:** The claim that validation auto-fix retracts `:block/warning` via `validate.cljs:43` is incorrect. `fix-invalid-blocks!` (line 35) does not contain any `:block/warning` handling. The `:block/warning` attribute is valid in the schema (`[:keyword]`) but is not automatically cleared by the validation pass.
+
+## Findings: New Capabilities
+
+### `validate-local-db!`
+
+**File**: `deps/db/src/logseq/db/frontend/validate.cljs:127`
+
+A separate public entry point for CLI, importer, and test use-cases that wraps `validate-db` with default local-DB behaviour:
+
+```clojure
+(defn validate-local-db!
+  "Validates a local (non-RTC) DB like validate-db! but with default behavior,
+  options and logging specific to a local DB. Used by CLI, importer and tests"
+  [db & {:keys [db-name open-schema verbose]}]
+  ...)
+```
+
+This function is not exposed through the UI path; it is called from the Logseq CLI and integration tests.
+
+### Additional fix categories in `fix-invalid-blocks!`
+
+The actual `fix-invalid-blocks!` implementation (line 35) handles many more cases than previously documented. Newly discovered fix branches include:
+
+- `:logseq.property/parent` present → retract it
+- `:hide?` / `:public?` / `:block/pre-block?` present → retract each
+- Embedding properties (`:logseq.property.embedding/hnsw-label*`) → retract
+- Normal page missing `:block/updated-at` → set it to `:block/created-at`
+- "External URL" node without tags → retract entity
+- Property erroneously tagged with `:logseq.class/Tag` → retract that tag
+- User-class ident entity missing class tag → add `:logseq.class/Tag`, retract `:logseq.class/Page`
+- Class with spurious `:kv/value` → retract it
+- Property with `:logseq.property.class/extends` datoms → retract them
+- `:block/level` present → retract it
+- Class missing `:db/ident` → synthesise from title via `db-class/create-user-class-ident-from-name`
+- Whiteboard-shape entities → retract entity
+- `:logseq.property/created-by-ref` pointing to non-entity → retract entity
+- Block missing `:block/uuid` (but otherwise intact) → generate and add a new UUID
+- Property-value-block with `:block/title` → retract title
+- Normal page with `:block/page` (shouldn't have one) → retract `:block/page`
+
+All branches accumulate tx-data via `mapcat`; a **single** `d/transact!` call is issued at the end.
 
 ## Future Improvements
 

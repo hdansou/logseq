@@ -1,6 +1,6 @@
 # Plugin Ecosystem
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## Overview
 
@@ -169,17 +169,19 @@ classDiagram
         +UI: IUIProxy
         +Assets: IAssetsProxy
         +Git: IGitProxy
-        +Utils: IUtilsProxy
-        +Settings: PluginSettings
-        +Storage: IAsyncStorage
+        +Commands: ICommandsProxy
+        +Net: LSPluginNet
+        +FileStorage: LSPluginFileStorage
+        +Experiments: LSPluginExperiments
+        +settings?: object
     }
 
     class IAppProxy {
         +registerUIItem()
-        +registerSlashCommand()
         +registerPageMenuItem()
         +registerCommand()
-        +showMsg()
+        +registerSearchService()
+        +onCurrentGraphChanged()
     }
 
     class IEditorProxy {
@@ -188,6 +190,7 @@ classDiagram
         +insertAtEditingCursor()
         +updateBlock()
         +insertBlock()
+        +registerSlashCommand()
     }
 
     class IDBProxy {
@@ -213,10 +216,9 @@ logseq.App.registerUIItem('toolbar', {
   template: '<button>My Plugin</button>',
 })
 
-logseq.App.registerSlashCommand('My Command', {
-  action: async () => {
-    // Command implementation
-  },
+// Slash commands belong to the Editor proxy, not App
+logseq.Editor.registerSlashCommand('My Command', async () => {
+  // Command implementation
 })
 ```
 
@@ -302,11 +304,9 @@ import '@logseq/libs'
 
 const main = () => {
   // Register plugin functionality
-  logseq.App.registerSlashCommand('Insert Greeting', {
-    action: async () => {
-      const greeting = `Hello from ${logseq.settings.pluginName}!`
-      await logseq.Editor.insertAtEditingCursor(greeting)
-    },
+  logseq.Editor.registerSlashCommand('Insert Greeting', async () => {
+    const greeting = `Hello from ${logseq.settings.pluginName}!`
+    await logseq.Editor.insertAtEditingCursor(greeting)
   })
 
   // Register UI components
@@ -322,7 +322,7 @@ const main = () => {
   // Handle UI events
   logseq.provideModel({
     showGreeting() {
-      logseq.App.showMsg('Hello from plugin!', 'success')
+      logseq.UI.showMsg('Hello from plugin!', 'success')
     },
   })
 }
@@ -384,8 +384,10 @@ logseq.on('my-custom-event', (data) => {
       (js-invoke js/LSPluginCore
                  (str "hook" (string/capitalize (name tag)))
                  (name type)
-                 (bean/->js payload)
-                 plugin-id)
+                 (if (coll? payload)
+                   (bean/->js (normalize-keyword-for-json payload))
+                   payload)
+                 (if (keyword? plugin-id) (name plugin-id) plugin-id))
       (catch :default e
         (log/error :invoke-hook-exception e)))))
 
@@ -429,7 +431,7 @@ flowchart TD
 **Global Plugin Settings**:
 
 ```clojure
-;; plugin-config.cljs - Configuration management
+;; plugin_config.cljs - Configuration management
 (defn add-or-update-plugin
   [{:keys [id] :as plugin}]
   (p/let [content (fs/read-file nil (plugin-config-path))
@@ -438,8 +440,7 @@ flowchart TD
                               (rewrite/assoc (keyword id)
                                            (select-keys plugin common-plugin-keys))
                               str)]
-    (fs/write-plain-text-file! "" nil (plugin-config-path)
-                              updated-content {:skip-compare? true})))
+    (fs/write-file! (plugin-config-path) updated-content)))
 ```
 
 **Plugin Settings Schema**:
@@ -447,13 +448,13 @@ flowchart TD
 ```typescript
 interface SettingSchemaDesc {
   key: string
-  type: 'string' | 'number' | 'boolean' | 'enum' | 'object'
+  type: 'string' | 'number' | 'boolean' | 'enum' | 'object' | 'heading'
   title: string
   description?: string
   default?: any
-  inputAs?: 'textarea' | 'color' | 'date'
+  inputAs?: 'textarea' | 'color' | 'date' | 'datetime-local' | 'range'
   enumChoices?: string[]
-  enumPicker?: 'radio' | 'select'
+  enumPicker?: 'radio' | 'select' | 'checkbox'
 }
 ```
 
@@ -665,7 +666,7 @@ interface ILSPluginUser {
   Editor: IEditorProxy
   DB: IDBProxy
   UI: IUIProxy
-  Settings: PluginSettings
+  settings?: object // plugin settings schema values
   // ... other APIs
 }
 ```
@@ -738,7 +739,7 @@ if (unsubscribe) {
 try {
   await logseq.Editor.updateBlock(uuid, content)
 } catch (error) {
-  logseq.App.showMsg('Operation failed', 'error')
+  logseq.UI.showMsg('Operation failed', 'error')
   console.error('Plugin error:', error)
 }
 ```
@@ -774,50 +775,30 @@ logseq.App.registerSearchService('ai-search', {
 
 ### Extension Enhancers and Plugin Composition
 
-```typescript
-// Create plugin composition system for markdown processing
-logseq.App.registerExtensionEnhancer('markdown-processor', {
-  name: 'Advanced Markdown Processor',
-  enhance: (content: string, context: ProcessingContext) => {
-    // Transform markdown content with custom processing
-    const enhanced = processMarkdown(content, context)
-    return {
-      content: enhanced,
-      metadata: extractMetadata(content),
-    }
-  },
-  priority: 10, // Higher priority runs first
-  dependencies: ['base-markdown-plugin'],
-})
-```
+> **Removed:** `logseq.App.registerExtensionEnhancer` was never part of the public SDK and does not exist. There is no plugin composition / extension-enhancer API. Remove any usage of this pattern.
 
 ### Route Renderers for Custom Pages
 
+> **Note:** `registerRouteRenderer` lives on `logseq.Experiments`, not `logseq.App`.
+
 ```typescript
 // Custom page rendering for special routes
-logseq.App.registerRouteRenderer(/^\/dashboard(?:\/(.+))?/, {
+logseq.Experiments.registerRouteRenderer('dashboard', {
   name: 'Plugin Dashboard',
-  render: (route: string, params: URLSearchParams) => {
-    const dashboardType = params.get('type') || 'overview'
-    return createCustomDashboard(dashboardType)
-  },
-  cleanup: () => {
-    // Cleanup when route changes
-    cleanupDashboardResources()
-  },
-  beforeRender: (route: string) => {
-    // Pre-render setup
-    return checkDashboardPermissions()
+  path: '/dashboard',
+  render: (props: {}) => {
+    return createCustomDashboard()
   },
 })
 ```
 
 ### Fenced Code Renderers
 
+> **Note:** `registerFencedCodeRenderer` lives on `logseq.Experiments`, not `logseq.App`.
+
 ```typescript
 // Custom code block rendering
-logseq.App.registerFencedCodeRenderer('mermaid', {
-  name: 'Mermaid Diagrams',
+logseq.Experiments.registerFencedCodeRenderer('mermaid', {
   edit: false, // Read-only rendering
   render: (props) => {
     const container = document.createElement('div')
@@ -838,80 +819,46 @@ logseq.App.registerFencedCodeRenderer('mermaid', {
 
 ### Advanced FileStorage API
 
+> **Removed:** `storage.createTempFile()`, `storage.writeFile()`, and `storage.cleanup()` do not exist on `IAsyncStorage`. `getItem` is not generic. The actual interface provides: `getItem`, `setItem`, `removeItem`, `hasItem`, `allKeys`, `clear`.
+
 ```typescript
 // Plugin-specific file system access
 const storage = logseq.Assets.makeSandboxStorage()
 
-// Store complex data structures
-await storage.setItem('user-preferences', {
-  theme: 'dark',
-  shortcuts: { save: 'Ctrl+S' },
-  lastSync: new Date().toISOString(),
-})
+// Store data (value is serialised by the host if not a string)
+await storage.setItem(
+  'user-preferences',
+  JSON.stringify({
+    theme: 'dark',
+    shortcuts: { save: 'Ctrl+S' },
+    lastSync: new Date().toISOString(),
+  })
+)
 
-// Retrieve with type safety
-interface UserPrefs {
-  theme: 'light' | 'dark'
-  shortcuts: Record<string, string>
-  lastSync: string
-}
+// Retrieve stored data
+const raw = await storage.getItem('user-preferences')
+const prefs = raw ? JSON.parse(raw) : null
 
-const prefs = await storage.getItem<UserPrefs>('user-preferences')
-
-// File operations with automatic cleanup
-const tempFile = await storage.createTempFile('export.json')
-await storage.writeFile(tempFile, JSON.stringify(exportData))
-
-// Automatic cleanup on plugin unload
+// Cleanup on plugin unload
 logseq.beforeunload(async () => {
-  await storage.cleanup()
+  await storage.clear()
 })
 ```
 
 ### Performance Monitoring and Optimization
 
+> **Removed:** `logseq.Experiments.enableFeature('performance-monitoring')`, `logseq.on('performance:metrics', ...)`, and `logseq.emit('performance:operation', ...)` are not part of the SDK. `LSPluginExperiments` has no performance-monitoring APIs. Use standard browser `performance.now()` for timing.
+
 ```typescript
-// Plugin performance tracking
-logseq.Experiments.enableFeature('performance-monitoring')
-
-// Monitor plugin resource usage
-logseq.on('performance:metrics', (metrics: PluginMetrics) => {
-  console.log('Plugin performance:', {
-    memoryUsage: `${metrics.memory.used}MB / ${metrics.memory.limit}MB`,
-    cpuUsage: `${metrics.cpu.usage}%`,
-    apiCalls: metrics.api.callCount,
-    slowOperations: metrics.timing.slowOps,
-  })
-
-  // React to performance issues
-  if (metrics.memory.used > metrics.memory.limit * 0.8) {
-    triggerMemoryCleanup()
-  }
-})
-
-// Measure operation performance
+// Measure operation performance with standard browser API
 async function performExpensiveOperation() {
   const start = performance.now()
-
   try {
     const result = await heavyComputation()
-    const duration = performance.now() - start
-
-    // Report performance metrics
-    logseq.emit('performance:operation', {
-      name: 'heavy-computation',
-      duration,
-      success: true,
-    })
-
+    console.log(`Completed in ${performance.now() - start}ms`)
     return result
   } catch (error) {
-    logseq.emit('performance:operation', {
-      name: 'heavy-computation',
-      duration: performance.now() - start,
-      success: false,
-      error: error.message,
-    })
+    console.error(`Failed after ${performance.now() - start}ms`, error)
     throw error
   }
 }
@@ -921,7 +868,8 @@ async function performExpensiveOperation() {
 
 ```typescript
 // Advanced Git operations through plugin API
-const gitResult = await logseq.Git.execCommand('log', ['--oneline', '-10'])
+// execCommand takes a single args array (not a separate command name)
+const gitResult = await logseq.Git.execCommand(['log', '--oneline', '-10'])
 console.log('Recent commits:', gitResult)
 
 // Custom ignore file management
@@ -933,27 +881,19 @@ await logseq.Git.saveIgnoreFile(updatedIgnore)
 
 ### Experiments API for Beta Features
 
+> **Removed:** `logseq.Experiments.isFeatureEnabled`, `logseq.Experiments.enableFeature`, and `logseq.Experiments.onFeatureToggle` do not exist in `LSPluginExperiments`. The `Experiments` object exposes renderer-registration methods (`registerFencedCodeRenderer`, `registerRouteRenderer`, `registerBlockPropertiesRenderer`, etc.) and React/ReactDOM accessors. Do not use feature-flag methods.
+
+> **Removed:** `logseq.App.searchV2` does not exist in `IAppProxy`.
+
 ```typescript
-// Access experimental features
-if (logseq.Experiments.isFeatureEnabled('advanced-search-v2')) {
-  // Use new search APIs
-  const results = await logseq.App.searchV2(query, {
-    semantic: true,
-    contextWindow: 100,
-  })
-}
+// Access experimental renderer registration
+logseq.Experiments.registerFencedCodeRenderer('my-lang', {
+  render: (props) => renderMyLang(props.content),
+})
 
-// Enable features for plugin development
-logseq.Experiments.enableFeature('plugin-hot-reload')
-logseq.Experiments.enableFeature('detailed-performance-metrics')
-
-// React to feature flag changes
-logseq.Experiments.onFeatureToggle('feature-name', (enabled) => {
-  if (enabled) {
-    initializeNewFeature()
-  } else {
-    cleanupFeature()
-  }
+logseq.Experiments.registerRouteRenderer('my-page', {
+  path: '/my-page',
+  render: () => renderMyPage(),
 })
 ```
 
@@ -984,13 +924,9 @@ logseq.App.registerCommand('my-command', () => {
   // Old implementation
 })
 
-// New API (recommended)
-logseq.App.registerSlashCommand('My Command', {
-  action: async () => {
-    // Enhanced implementation with async support
-  },
-  shortcut: { binding: 'Ctrl+Alt+M' },
-  description: 'Detailed command description',
+// New API (recommended) — slash commands are on logseq.Editor
+logseq.Editor.registerSlashCommand('My Command', async () => {
+  // Enhanced implementation with async support
 })
 ```
 
@@ -1009,6 +945,65 @@ logseq.App.registerSlashCommand('My Command', {
 }
 ```
 
+## Findings: New Capabilities
+
+The following APIs and features exist in the current SDK (`@logseq/libs 0.3.3`) but are not covered in earlier sections of this document.
+
+### `logseq.Commands` Proxy (`ICommandsProxy`)
+
+A unified command bus was added. It exposes two methods that subsume the older per-proxy registration helpers:
+
+```typescript
+// Register a command with one or more placements (palette, slash, shortcut, context menu)
+logseq.Commands.register(
+  'my-plugin/insert-date',
+  {
+    label: 'Insert current date',
+    palette: true,
+    keybinding: { binding: 'Ctrl+Alt+D' },
+  },
+  async () => {
+    await logseq.Editor.insertAtEditingCursor(new Date().toLocaleDateString())
+  }
+)
+
+// Execute any built-in or plugin command by id
+await logseq.Commands.execute('logseq.editor/cycle-todo')
+```
+
+### `logseq.DB.customQuery()`
+
+Runs a simple query or advanced datalog query through `query-react`, complementing the existing `logseq.DB.q()` (DSL) and `logseq.DB.datascriptQuery()` (parameterised) methods:
+
+```typescript
+const result = await logseq.DB.customQuery(`
+  {:title "TODOs"
+   :query [:find (pull ?b [*])
+           :where [?b :block/marker ?m]
+                  [(= ?m "TODO")]]}
+`)
+```
+
+### `logseq.App.checkCurrentIsDbGraph()`
+
+Returns a boolean indicating whether the currently open graph is a DB graph (SQLite-backed) rather than a file-based (Markdown) graph. Use this to gate DB-only or file-only plugin behaviour:
+
+```typescript
+const isDb = await logseq.App.checkCurrentIsDbGraph()
+if (isDb) {
+  // DB-graph specific logic
+}
+```
+
+### Additional `logseq.Experiments` Renderers
+
+Beyond `registerFencedCodeRenderer` and `registerRouteRenderer`, the Experiments module now provides:
+
+- `registerBlockPropertiesRenderer(key, opts)` — render custom UI in a block's properties area, with declarative `when` conditions or a predicate function.
+- `registerDaemonRenderer(key, opts)` — register a persistent background renderer.
+- `registerHostedRenderer(key, opts)` — register a renderer served inside Logseq's hosted panel.
+- `registerSidebarRenderer(key, opts)` — shorthand for a hosted renderer displayed in the right sidebar.
+
 ---
 
-_This comprehensive plugin ecosystem documentation covers the complete architecture, advanced features, development workflow, security model, and best practices for creating, distributing, and managing Logseq plugins. The plugin system is production-ready with 200+ community plugins, sophisticated sandboxing, performance monitoring, and extensive development tooling._
+_This comprehensive plugin ecosystem documentation covers the complete architecture, advanced features, development workflow, security model, and best practices for creating, distributing, and managing Logseq plugins. The plugin system is production-ready with 200+ community plugins, sophisticated sandboxing, and extensive development tooling._

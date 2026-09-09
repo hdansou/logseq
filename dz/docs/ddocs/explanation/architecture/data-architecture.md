@@ -2,7 +2,7 @@
 title: 'Data Architecture'
 description: 'Understanding how Logseq stores and manages knowledge graph data'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 category: architecture
 relatedDocs:
@@ -15,7 +15,7 @@ relatedDocs:
 
 # Data Architecture
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > Understanding how Logseq structures, stores, and queries your knowledge.
 
@@ -146,6 +146,7 @@ Properties are first-class entities in database graphs:
 | `:checkbox` | Boolean          | true, false    |
 | `:url`      | URL string       | "https://..."  |
 | `:node`     | Page/block ref   | [[Page Name]]  |
+| `:asset`    | Asset node ref   | Uploaded file block |
 
 ### Closed Values
 
@@ -197,6 +198,8 @@ Built-in classes (all are tagged :logseq.class/Tag):
   ├── Journal     (extends Page)
   └── Whiteboard  (extends Page, deprecated)
   Task
+  Comments
+  Comment
   Query
   ├── Cards       (extends Query)
   Card
@@ -253,13 +256,16 @@ Files are parsed on load, building the in-memory database.
 ### Database Storage
 
 ```
-logseq_db_graph/
+<db-graph-storage>/
 ├── db.sqlite        # Main database
 ├── db.sqlite-wal    # Write-ahead log
+├── search.sqlite    # Search index database
 └── assets/
 ```
 
 SQLite provides ACID transactions and persistence.
+
+For database graphs, runtime state is still held in a DataScript connection in the db worker, with SQLite as the durable backing store.
 
 ### Storage Flow
 
@@ -280,21 +286,25 @@ DataScript Transaction
 
 ### Indexed Attributes
 
+Schema-defined indexes and identities (from `logseq.db.frontend.schema/schema`):
+
 | Attribute          | Index Type | Purpose               |
 | ------------------ | ---------- | --------------------- |
 | `:block/uuid`      | Unique     | Fast UUID lookup      |
 | `:block/name`      | Index      | Page name search (lowercase, not unique) |
 | `:block/title`     | Index      | Original page name    |
-| `:block/refs`      | Many-ref   | Backlink queries      |
-| `:block/tags`      | Many-ref   | Class filtering       |
 | `:block/parent`    | Ref+Index  | Tree traversal        |
 | `:block/page`      | Ref+Index  | Page membership       |
 | `:block/link`      | Ref+Index  | Tag/embed links       |
+| `:block/alias`     | Ref+Index  | Alias resolution      |
 | `:block/order`     | Index      | Sibling ordering      |
+| `:block/journal-day` | Index    | Journal date queries  |
 | `:block/created-at`| Index      | Time-based queries    |
 | `:block/updated-at`| Index      | Time-based queries    |
 | `:db/ident`        | Unique     | Property/class lookup |
 | `:file/path`       | Unique     | File lookup (file graphs) |
+
+> **Removed:** `:block/refs` and `:block/tags` were previously listed as indexed attributes here; they are cardinality-many refs in schema but not marked with `:db/index true`.
 
 ### Query Performance
 
@@ -331,14 +341,14 @@ DataScript Transaction
 
 ## Undo/Redo
 
-Transactions are logged for undo/redo:
+Undo/redo history is recorded as structured history ops that include db transaction metadata (`:outliner-op` and optional db-sync tx identifiers), then replayed through worker history handlers.
 
 ```
 Undo Stack          Current State        Redo Stack
 [tx1, tx2, tx3]  →  Database State  ←   [tx4]
 ```
 
-Each transaction can be reversed by applying its inverse.
+This is implemented as operation-history replay rather than a simple blanket "invert every tx datom" rule.
 
 ---
 
@@ -356,9 +366,11 @@ Database graphs validate entities using Malli schemas defined in `logseq.db.fron
 
 ### Validation Points
 
-1. **On graph open**: Validates and auto-fixes invalid blocks
-2. **On import**: When loading external data
-3. **On sync**: When receiving remote changes
+1. **Per transaction (default path)**: DB writes validate tx reports unless explicitly skipped via tx-meta flags (for migrations/initialization/replay paths).
+2. **Manual full-graph validation**: Available through worker API (`:thread-api/validate-db`) and developer tooling.
+3. **Import checks**: Import flows run explicit validation checks and report/fix issues where applicable.
+
+> **Removed:** "Automatic full-graph validation on graph open/import/sync" is not a single always-on lifecycle hook; validation is split across tx-time checks, explicit validation APIs, and import-specific checks.
 
 ---
 
@@ -372,10 +384,21 @@ Database graphs validate entities using Malli schemas defined in `logseq.db.fron
 
 ### Optimization Strategies
 
-1. **Lazy loading**: Only load visible content
-2. **Batch transactions**: Group related changes
-3. **Indexed queries**: Use indexed attributes
-4. **Query caching**: Memoize frequent queries
+1. **Batch transactions**: Group related changes (`batch-transact!`, temp-conn batch paths)
+2. **Indexed queries**: Prefer schema-indexed attributes for hot paths
+3. **Worker offloading**: Keep heavy DB operations and sync logic in db worker
+4. **Search/vector indexes**: Dedicated search DB and vector index pipeline for retrieval workflows
+
+> **Removed:** "Lazy loading only visible content" and generic "query memoization" claims were removed from this page because they are not represented as current core architecture guarantees in the source of truth.
+
+---
+
+## Findings: New Capabilities
+
+- Added built-in property type `:asset` for asset-node references in DB graphs.
+- Built-in class set now includes `:logseq.class/Comments` and `:logseq.class/Comment`.
+- DB runtime includes dedicated search-index progress/build flow and vector index integration in the db worker.
+- Validation/fix tooling in worker DB paths includes targeted repair routines (for example schema/cardinality and invalid-entity cleanup) exposed via validation APIs.
 
 ---
 
@@ -387,4 +410,4 @@ Database graphs validate entities using Malli schemas defined in `logseq.db.fron
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

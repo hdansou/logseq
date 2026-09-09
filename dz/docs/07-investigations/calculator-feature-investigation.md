@@ -1,10 +1,13 @@
 # Investigation: Logseq Calculator
 
 **Investigation Date:** 2026-04-14  
-**Status:** Feature confirmed present; migrated reference page was missing  
-**Severity:** Low product risk, medium documentation gap  
-**Platforms Investigated:** Desktop, Web, shared frontend code; mobile status not explicitly verified  
+**Last Verified:** 2026-05-30  
+**Status:** Feature confirmed present and stable in shared frontend paths  
+**Severity:** Low product risk, low documentation risk  
+**Platforms Investigated:** Desktop, Web, shared frontend code; mobile command popup path verified, calculator execution path still not mobile-e2e verified  
 **Graph Modes Investigated:** File-based and database graphs
+
+> **Last revised:** 2026-05-30
 
 ---
 
@@ -15,15 +18,19 @@
 1. ✅ **The calculator feature still exists** and is still wired into the slash command system as **`/Calculator`**. The command inserts a code block whose language is `calc`, then moves focus into the code editor. Source: [src/main/frontend/commands.cljs](../../../src/main/frontend/commands.cljs#L106-L116), [src/main/frontend/commands.cljs](../../../src/main/frontend/commands.cljs#L283-L285)
 2. ✅ **Calculator evaluation is synchronous and local**. Every edit re-evaluates the entire calculator block immediately through `calc/eval-lines`; there is no background worker, debounce timer, IPC call, or network dependency in the calculator path. Source: [src/main/frontend/extensions/code.cljs](../../../src/main/frontend/extensions/code.cljs#L461-L464), [src/main/frontend/extensions/calc.cljc](../../../src/main/frontend/extensions/calc.cljc#L209-L215)
 3. ✅ **Results are derived state, not persisted state**. The saved artifact is the code block content itself. Output is recomputed from the current block text whenever the editor mounts or changes. Source: [src/main/frontend/extensions/code.cljs](../../../src/main/frontend/extensions/code.cljs#L575-L575), [src/main/frontend/extensions/code.cljs](../../../src/main/frontend/extensions/code.cljs#L602-L603)
-4. ⚠️ **The migrated reference page is missing, not the feature**. The old user-facing page still exists only in the legacy docs snapshot, while the migrated docs backlog still lists `reference/features/calculator.md` as a page to create. Source: [src/test/docs-0.10.12/pages/Calculator.md](../../../src/test/docs-0.10.12/pages/Calculator.md), [dz/docs/progress.json](../progress.json#L597-L603)
+4. ✅ **The migrated reference page exists and remains aligned with core behavior.** Ongoing risk is documentation drift, not missing coverage. Source: [dz/docs/ddocs/reference/features/calculator.md](../ddocs/reference/features/calculator.md)
 5. ⚠️ **Error visibility is intentionally minimal**. Parse failures and runtime errors are rendered as `?` in the UI, which keeps the block clean but hides diagnostic detail from end users. Source: [src/main/frontend/extensions/calc.cljc](../../../src/main/frontend/extensions/calc.cljc#L223-L232)
 
 ### Critical Risks or Issues
 
 - 🟢 **Low data-loss risk inside the calculator implementation itself**: calculator state is pure and recomputed from block text.
 - 🟡 **Medium UX risk for troubleshooting**: users get `?` instead of a parse or evaluation error message.
-- 🟡 **Medium docs risk**: the feature exists and is test-covered, but the migrated reference page was absent.
-- 🟡 **Platform ambiguity risk**: the implementation lives in shared frontend code, but no mobile-specific calculator test or doc was found during this investigation.
+- 🟢 **Low docs risk**: the feature exists and a maintained reference page is present; primary risk is future drift.
+- 🟡 **Platform ambiguity risk**: mobile command-popup infrastructure is present, but no calculator-specific mobile E2E verification was found.
+
+## Findings: New Capabilities
+
+1. ✅ **Mobile command popup support is now directly evidenced in source.** Mobile popup positioning logic explicitly handles editor command popups (`editor.commands` namespace), which is consistent with exposing slash-command flows on mobile UI surfaces. Source: [src/main/mobile/components/popup.cljs](../../../src/main/mobile/components/popup.cljs#L78-L109)
 
 ---
 
@@ -245,7 +252,7 @@ After reopening the graph, the calculator output is recomputed from the persiste
   Users see `?` for parse or evaluation failures, but the UI does not explain whether the problem is syntax, unsupported input, or a bad variable reference.
 
 - 🟡 **Medium risk: mobile ambiguity**  
-  The feature lives in shared frontend code, but this investigation found no mobile-specific calculator test or dedicated mobile doc. The desktop/web path is well supported; mobile should be considered unverified until explicitly tested.
+  Mobile editor-command popup support is present in source, but calculator-specific mobile execution behavior still lacks direct E2E verification.
 
 - 🟢 **Low risk: persistence mismatch**  
   Because outputs are recomputed from persisted source text, there is little opportunity for source/output divergence after reload.
@@ -264,21 +271,22 @@ There is **no calculator-specific debounce or batching window** on expression ev
 
 ### File-Based vs Database Graphs
 
-| Aspect | File-Based Graph | Database Graph | Winner |
-| ------ | ---------------- | -------------- | ------ |
-| Slash command availability | Same shared command path | Same shared command path | Tie |
-| Evaluation behavior | Same `calc/eval-lines` path | Same `calc/eval-lines` path | Tie |
-| What persists | Code block text in markdown | Code block text in DB | Tie |
-| Calculator-specific state persistence | None | None | Tie |
-| Reload behavior | Recompute from text | Recompute from text | Tie |
+| Aspect                                | File-Based Graph            | Database Graph              | Winner |
+| ------------------------------------- | --------------------------- | --------------------------- | ------ |
+| Slash command availability            | Same shared command path    | Same shared command path    | Tie    |
+| Evaluation behavior                   | Same `calc/eval-lines` path | Same `calc/eval-lines` path | Tie    |
+| What persists                         | Code block text in markdown | Code block text in DB       | Tie    |
+| Calculator-specific state persistence | None                        | None                        | Tie    |
+| Reload behavior                       | Recompute from text         | Recompute from text         | Tie    |
 
 ### Platform Comparison
 
-| Aspect | Desktop | Web | Mobile | Winner |
-| ------ | ------- | --- | ------ | ------ |
-| Shared command registration | Yes | Yes | Unverified | Desktop/Web |
-| Shared calculator evaluator | Yes | Yes | Likely shared code, not explicitly verified | Desktop/Web |
-| Explicit automated evidence found in this investigation | Yes | Yes (frontend path) | No | Desktop/Web |
+| Aspect                                                  | Desktop | Web                 | Mobile                                      | Winner      |
+| ------------------------------------------------------- | ------- | ------------------- | ------------------------------------------- | ----------- |
+| Shared command registration                             | Yes     | Yes                 | Editor-command popup path present           | Desktop/Web |
+| Shared calculator evaluator                             | Yes     | Yes                 | Likely shared code, not explicitly verified | Desktop/Web |
+| Mobile command popup path for editor commands           | N/A     | N/A                 | Yes                                         | Mobile      |
+| Explicit automated evidence found in this investigation | Yes     | Yes (frontend path) | No                                          | Desktop/Web |
 
 ---
 
@@ -329,16 +337,16 @@ last + 1
 
 ## 8. Code Location Reference
 
-| File | Purpose | Key Functions / Data | Lines |
-| ---- | ------- | -------------------- | ----- |
-| [src/main/frontend/commands.cljs](../../../src/main/frontend/commands.cljs) | Slash command entry point | `calc-steps`, `Calculator` command entry | ~106-116, ~283-285 |
-| [src/main/frontend/extensions/code.cljs](../../../src/main/frontend/extensions/code.cljs) | Code block integration | `change` handler, `:calc-atom`, `:codemirror/focus`, results mounting | ~461-464, ~575, ~602-623 |
-| [src/main/frontend/extensions/calc.cljc](../../../src/main/frontend/extensions/calc.cljc) | Parser, evaluator, formatter, UI output | `parse`, `constants`, `new-env`, `eval`, `eval-lines`, `results` | ~19-23, ~37-117, ~209-232 |
-| [src/resources/grammar/calc.bnf](../../../src/resources/grammar/calc.bnf) | Calculator grammar | directives, operators, variable grammar | 1-39 |
-| [src/test/frontend/extensions/calc_test.cljc](../../../src/test/frontend/extensions/calc_test.cljc) | Unit coverage | arithmetic, functions, formatting, variables, bases, failure cases | 1-279 |
-| [clj-e2e/test/logseq/e2e/commands_basic_test.clj](../../../clj-e2e/test/logseq/e2e/commands_basic_test.clj) | E2E proof that the command works | `calculator-test` | ~241-248 |
-| [src/test/docs-0.10.12/pages/Calculator.md](../../../src/test/docs-0.10.12/pages/Calculator.md) | Legacy user doc snapshot | old calculator page content | 1-118 |
-| [dz/docs/progress.json](../progress.json) | Docs migration backlog | missing `reference/features/calculator.md` entry | ~597-603 |
+| File                                                                                                        | Purpose                                 | Key Functions / Data                                                  | Lines                     |
+| ----------------------------------------------------------------------------------------------------------- | --------------------------------------- | --------------------------------------------------------------------- | ------------------------- |
+| [src/main/frontend/commands.cljs](../../../src/main/frontend/commands.cljs)                                 | Slash command entry point               | `calc-steps`, `Calculator` command entry                              | ~106-116, ~283-285        |
+| [src/main/frontend/extensions/code.cljs](../../../src/main/frontend/extensions/code.cljs)                   | Code block integration                  | `change` handler, `:calc-atom`, `:codemirror/focus`, results mounting | ~461-464, ~575, ~602-623  |
+| [src/main/frontend/extensions/calc.cljc](../../../src/main/frontend/extensions/calc.cljc)                   | Parser, evaluator, formatter, UI output | `parse`, `constants`, `new-env`, `eval`, `eval-lines`, `results`      | ~19-23, ~37-117, ~209-232 |
+| [src/resources/grammar/calc.bnf](../../../src/resources/grammar/calc.bnf)                                   | Calculator grammar                      | directives, operators, variable grammar                               | 1-39                      |
+| [src/test/frontend/extensions/calc_test.cljc](../../../src/test/frontend/extensions/calc_test.cljc)         | Unit coverage                           | arithmetic, functions, formatting, variables, bases, failure cases    | 1-279                     |
+| [clj-e2e/test/logseq/e2e/commands_basic_test.clj](../../../clj-e2e/test/logseq/e2e/commands_basic_test.clj) | E2E proof that the command works        | `calculator-test`                                                     | ~241-248                  |
+
+> **Removed:** Previous source references to `dz/docs/progress.json` migration backlog status were documentation-process evidence and are no longer used to validate feature behavior in `src/`, `deps/`, or `packages/`.
 
 ---
 
@@ -349,11 +357,11 @@ last + 1
 - Use the calculator as a **live `calc` code block**, not as a standalone document feature.
 - Keep related variables inside the same block; calculator variables do not persist independently across blocks.
 - Treat `?` as “this line failed” rather than “the whole block failed.”
-- If mobile support matters for your workflow, verify it on-device because current evidence is desktop/web-heavy.
+- If mobile support matters for your workflow, verify calculator editing/output behavior on-device because current automated evidence is still desktop/web-heavy.
 
 ### For Developers
 
-- Add and maintain a canonical migrated reference page at [dz/docs/ddocs/reference/features/calculator.md](../ddocs/reference/features/calculator.md).
+- Keep [dz/docs/ddocs/reference/features/calculator.md](../ddocs/reference/features/calculator.md) synchronized with `calc.bnf`, evaluator behavior, and slash-command UX.
 - Consider exposing optional error detail on hover or in developer mode instead of only rendering `?`.
 - Add an explicit mobile verification note or mobile test if calculator is intended to be supported there.
 - Add backlinks from the code-block reference page since calculator is implemented as a specialized code block mode.
@@ -378,9 +386,9 @@ last + 1
 
 ### Appendix B: Related Historical Material
 
-- Legacy doc snapshot: [src/test/docs-0.10.12/pages/Calculator.md](../../../src/test/docs-0.10.12/pages/Calculator.md)
-- Migration backlog reference: [dz/docs/progress.json](../progress.json#L597-L603)
+> **Removed:** Migration backlog tracking in `dz/docs/progress.json` is historical process data and not part of current source-of-truth feature validation.
 
 ### Appendix C: Change History
 
-- **2026-04-14**: Initial investigation created after confirming the feature still exists in code but lacked a migrated reference page.
+- **2026-04-14**: Initial investigation created after confirming the feature still exists in code.
+- **2026-05-30**: Revalidated against `src/`, `deps/`, and `packages/`; updated mobile evidence wording, removed stale migration-backlog evidence, and refreshed risk framing.

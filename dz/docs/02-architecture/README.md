@@ -1,6 +1,6 @@
 # Architecture Documentation
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 High-level system architecture and design documentation for Logseq.
 
@@ -84,4 +84,6 @@ To update architecture documentation:
 
 ---
 
-**Navigation**: [Back to Docs Home](../README.md)
+> **Removed:** `../README.md` — the `dz/docs/README.md` index file does not exist. Navigation link removed until a top-level index is created.
+
+**Navigation**: [Back to dz/docs/](../)

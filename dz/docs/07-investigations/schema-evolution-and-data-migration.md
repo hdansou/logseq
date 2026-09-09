@@ -4,6 +4,8 @@
 **Investigation Type:** Best Practices Development  
 **Status:** ✅ Complete
 
+> **Last revised:** 2026-05-30
+
 ---
 
 ## Executive Summary
@@ -24,6 +26,20 @@ This investigation examines the correlation among schema changes, data validatio
 
 6. **No Automated Rollback**: Failed migrations have no automated rollback mechanism, making testing critical before release
 
+## Findings: New Capabilities
+
+1. **Schema Progression to 65.33**: Current schema version in `db-schema/version` is now `65.33`, with frontend DB migrations extended through `65.33`
+
+2. **Migration Supports Property Deletions**: Frontend migration updates now include `:delete-properties` entries (for example in `65.25`) in addition to property/class/fix migrations
+
+3. **Built-in Data Repair During Migration Validation**: Migration flow includes `ensure-built-in-data-exists!`, and validation code calls it to restore missing built-in entities when needed
+
+4. **Client Ops SQLite Binary Export API**: Worker thread APIs include `:thread-api/export-client-ops-db-binary`, with coverage in worker and db-worker-node tests
+
+> **Removed:** The old migration file path `src/main/frontend/worker/db_migrate.cljs` is no longer valid. Use `src/main/frontend/worker/db/migrate.cljs`.
+
+> **Removed:** The migration runner reference `migrate-db-graph` is no longer current. Use `migrate` in `frontend.worker.db.migrate`.
+
 ### Critical Risks Identified
 
 🔴 **High Risk**
@@ -42,11 +58,11 @@ This investigation examines the correlation among schema changes, data validatio
 
 This investigation covered:
 
-- Schema definition and versioning system ([deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs))
-- Migration patterns ([src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs))
+- Schema definition and versioning system ([deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs), [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs))
+- Migration patterns ([src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs))
 - Property system ([deps/db/src/logseq/db/frontend/property/build.cljc](deps/db/src/logseq/db/frontend/property/build.cljc))
 - Validation mechanisms ([deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs))
-- Import/export systems ([deps/db/src/logseq/db/sqlite/build.cljs](deps/db/src/logseq/db/sqlite/build.cljs))
+- Import/export systems ([deps/db/src/logseq/db/sqlite/build.cljs](deps/db/src/logseq/db/sqlite/build.cljs), [deps/db/src/logseq/db/sqlite/export.cljs](deps/db/src/logseq/db/sqlite/export.cljs))
 - RTC synchronization ([src/main/frontend/worker/rtc/](src/main/frontend/worker/rtc/))
 
 ---
@@ -138,8 +154,8 @@ This investigation has produced comprehensive documentation across multiple area
 **Required Actions:**
 
 1. ✅ Add property definition to `built-in-properties` in [deps/db/src/logseq/db/frontend/property/build.cljc](deps/db/src/logseq/db/frontend/property/build.cljc)
-2. ✅ Add migration entry to `schema-version->updates` in [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
-3. ✅ Bump `db-schema/version` in [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
+2. ✅ Add migration entry to `schema-version->updates` in [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
+3. ✅ Bump `db-schema/version` in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 4. ✅ Add validation rules if needed in [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
 5. ✅ Configure RTC sync behavior in property definition
 6. ✅ Test migration on sample graphs with previous schema version
@@ -243,7 +259,7 @@ This investigation has produced comprehensive documentation across multiple area
 
 **Pattern:** Schema versions use major.minor format; migrations apply sequentially
 
-**Location:** [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
+**Location:** [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
 
 **Why it matters:** Missing migration entries cause validation failures
 
@@ -256,7 +272,7 @@ This investigation has produced comprehensive documentation across multiple area
 ### Schema Definition
 
 - **DataScript Schema:** [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
-- **Schema Version:** `db-schema/version` (currently "65.16")
+- **Schema Version:** `db-schema/version` in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs) (currently "65.33")
 - **Schema Attributes:** `ref-type-attributes`, `card-many-attributes`
 
 ### Property System
@@ -267,9 +283,9 @@ This investigation has produced comprehensive documentation across multiple area
 
 ### Migration System
 
-- **DB Graph Migration:** [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
+- **DB Graph Migration:** [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
 - **Migration Definitions:** `schema-version->updates` vector
-- **Migration Runner:** `migrate-db-graph` function
+- **Migration Runner:** `migrate` function
 
 ### Validation System
 
@@ -279,7 +295,7 @@ This investigation has produced comprehensive documentation across multiple area
 
 ### Import/Export
 
-- **SQLite Export:** [deps/db/src/logseq/db/sqlite/build.cljs](deps/db/src/logseq/db/sqlite/build.cljs)
+- **SQLite Export:** [deps/db/src/logseq/db/sqlite/export.cljs](deps/db/src/logseq/db/sqlite/export.cljs)
 - **Transit Utils:** [deps/db/src/logseq/db/sqlite/util.cljs](deps/db/src/logseq/db/sqlite/util.cljs)
 - **Import Builder:** [deps/db/src/logseq/db/sqlite/build.cljs](deps/db/src/logseq/db/sqlite/build.cljs)
 
@@ -303,8 +319,8 @@ This investigation has produced comprehensive documentation across multiple area
 Before making schema changes:
 
 - [ ] Review [PR Review Checklist](../08-processes/schema-change-pr-checklist.md)
-- [ ] Check current schema version in [deps/db/src/logseq/db/schema.cljs](deps/db/src/logseq/db/schema.cljs)
-- [ ] Review recent migrations in [src/main/frontend/worker/db_migrate.cljs](src/main/frontend/worker/db_migrate.cljs)
+- [ ] Check current schema version in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
+- [ ] Review recent migrations in [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
 - [ ] Identify affected areas (validation, import/export, RTC)
 - [ ] Plan migration strategy
 
@@ -596,9 +612,10 @@ Comprehensive testing requires coverage across multiple dimensions:
 
 ## Changelog
 
-| Date       | Version | Changes                                 |
-| ---------- | ------- | --------------------------------------- |
-| 2025-12-28 | 1.0     | Initial investigation and documentation |
+| Date       | Version | Changes                                                                                                 |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------- |
+| 2025-12-28 | 1.0     | Initial investigation and documentation                                                                 |
+| 2026-05-30 | 1.1     | Validated against current source; updated schema/migration references and added new capability findings |
 
 ---
 

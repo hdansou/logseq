@@ -1,9 +1,11 @@
 # Investigation: Logseq Quick Capture Feature and Callback URL
 
-**Version:** 1.0  
-**Date:** November 24, 2025  
-**Platforms:** macOS (Electron), iOS (Capacitor)  
-**Investigator:** GitHub Copilot
+**Version:** 1.1  
+**Investigation Date:** November 24, 2025
+
+> **Last revised:** 2026-05-30
+> **Platforms:** macOS (Electron), iOS (Capacitor)  
+> **Investigator:** GitHub Copilot
 
 ---
 
@@ -19,6 +21,17 @@
 - **💾 Immediate persistence**: Content is inserted directly into blocks with auto-save handling
 - **⚠️ Duplicate firing risk**: iOS has a known issue where `appUrlOpen` can fire twice for the same intent
 
+## Findings: New Capabilities
+
+- `quick-capture` now supports a configurable URL prettifier gate via `[:quick-capture-option :prettify-url?]` (default `true`) in `src/main/frontend/quick_capture.cljs`.
+- Mobile intent import includes native file-path normalization and a read fallback (`file://` and `_capacitor_file_` handling) in `src/main/frontend/mobile/intent.cljs`.
+- Callback URL handler also supports `/invokeCommand` in addition to `/quickCapture` in `src/electron/electron/url.cljs`.
+
+### Verification Scope Note
+
+- This validation pass is scoped to `src/`, `deps/`, and `packages/` only.
+- Native iOS extension implementation details are outside this validation scope.
+
 ### Critical Components
 
 | Component            | Location                               | Purpose                                   |
@@ -29,6 +42,8 @@
 | Mobile Intent        | `src/main/frontend/mobile/intent.cljs` | Share payload processing                  |
 | Electron URL Handler | `src/electron/electron/url.cljs`       | Desktop callback URL processing           |
 | Electron Listener    | `src/main/electron/listener.cljs`      | IPC bridge to renderer                    |
+
+> **Removed:** `ios/App/ShareViewController/*` as a validated source for this pass, because this update is scoped to `src/`, `deps/`, and `packages/`.
 
 ---
 
@@ -154,7 +169,7 @@ electron/core.cljs:open-url-handler
                   └→ state/pub-event! [:editor/quick-capture args]
 ```
 
-**Location:** `src/electron/electron/url.cljs:59-80`
+**Location:** `src/electron/electron/url.cljs:62-92`
 
 ```clojure
 (defn- x-callback-url-handler
@@ -470,7 +485,7 @@ override public func viewDidLoad() {
   3. Process each resource:
      FOR resource IN payload.resources:
        ├─ File/media? → Copy to Logseq assets
-       │   └─ Return: [[block-uuid]] link
+       │   └─ Return: asset entities from `db-based-save-assets!`
        └─ Text? → Return as-is
 
      Join with newlines → rich-content
@@ -507,6 +522,8 @@ override public func viewDidLoad() {
   Handler: editor-handler/db-based-save-assets!
   Creates block entities with :block/uuid
   Auto-save triggered
+
+> **Removed:** "File/media resources are returned as `[[block-uuid]]` links in handle-payload." Current `handle-payload` composes `{url}` only when all processed resources are strings.
 ```
 
 ---
@@ -673,9 +690,9 @@ public struct SharedData: Decodable, Encodable {
 
 **With Media:**
 
-```markdown
-**14:30** [[quick capture]]: Check this out [[uuid-of-image-block]]
-```
+Asset resources are imported through `db-based-save-assets!`; inline `[[uuid]]` text is not guaranteed by `handle-payload` in current `src/main/frontend/mobile/intent.cljs`.
+
+> **Removed:** `**14:30** [[quick capture]]: Check this out [[uuid-of-image-block]]`
 
 **With Video:**
 
@@ -707,7 +724,7 @@ public struct SharedData: Decodable, Encodable {
 | **Page Selection**       | ✅ Full                                | ✅ Full                               |
 | **Asset Handling**       | Direct file paths                      | Copy to shared container              |
 | **Error Handling**       | Notifications                          | Notifications + error UI in extension |
-| **Concurrency**          | Sequential                             | Parallel (TaskGroup for attachments)  |
+| **Concurrency**          | Sequential                             | Dedup + deep-link routing in JS layer |
 | **Persistence**          | Immediate to DB/files                  | Immediate to DB after asset copy      |
 
 ### Key Differences
@@ -765,8 +782,9 @@ public struct SharedData: Decodable, Encodable {
 
 **iOS:**
 
-- Parallel: Process all attachments concurrently (TaskGroup)
-- Main app: Sequential after URL open
+- URL dedup + deep-link routing in JS layer (`appUrlOpen` -> `handle-incoming-url!` -> `deeplink`)
+
+> **Removed:** "Parallel TaskGroup processing" claim for this validation pass (outside `src/`, `deps/`, `packages/`).
 
 #### 4. **Content Type Detection**
 
@@ -825,7 +843,9 @@ public struct SharedData: Decodable, Encodable {
 
 - **Video URLs:** Converted to `{{video URL}}`
 - **Twitter/X URLs:** Converted to `{{twitter URL}}`
-- **Images/Media (iOS):** Converted to `[[block-uuid]]` references
+- **Prettify Gate:** URL prettification is controlled by `[:quick-capture-option :prettify-url?]` (default `true`).
+
+> **Removed:** "Images/Media (iOS) are converted to `[[block-uuid]]` references" as a current `src/` behavior guarantee.
 
 ---
 
@@ -905,7 +925,9 @@ public struct SharedData: Decodable, Encodable {
 
 ### 🟡 **Medium Risk: Asset File Race Conditions**
 
-**Issue:** iOS share extension copies files to group container, main app imports asynchronously
+> **Removed:** Extension-lifecycle timing analysis based on `ShareViewController.swift` (`0.2s` completion delay) from this validated section, because native extension code is outside the current source scope (`src/`, `deps/`, `packages/`).
+
+**Issue (scoped):** Mobile intent imports assets asynchronously and file reads can fail.
 
 **Scenario:**
 
@@ -919,28 +941,17 @@ Time  Extension           Main App
 300ms                     Read file.png ← File might be deleted by extension cleanup
 ```
 
-**Current Mitigation:**
+**Current Mitigation (scoped):**
 
-- Group container persists until explicitly cleared
-- Extension completes **before** opening URL
-- 0.2s delay before extension completion
-
-**Code (ShareViewController.swift:23-26):**
-
-```swift
-override public func viewDidAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-        self.extensionContext!.completeRequest(returningItems: [], completionHandler: nil)
-    }
-}
-```
+- `normalize-native-file-path` handles common iOS URL forms.
+- `<filesystem-read-file` retries with original path if normalized read fails.
+- Errors are logged and surfaced via notifications.
 
 **Recommendation:**
 
-- ✅ **Working**: 0.2s delay provides safety window
+- ✅ **Working**: path normalization + fallback read reduce import failures
 - 📊 **Monitor**: Log if asset import fails due to missing files
-- 🔧 **Enhancement**: Explicit file locking or reference counting
+- 🔧 **Enhancement**: Add richer import diagnostics for failing resource URLs
 
 ---
 
@@ -948,7 +959,7 @@ override public func viewDidAppear(_ animated: Bool) {
 
 **Issue:** Content insertion delayed by 100ms when not in editing mode
 
-**Code (quick_capture.cljs:90-93):**
+**Code (quick_capture.cljs:100-103):**
 
 ```clojure
 (js/setTimeout #(editor-handler/api-insert-new-block! content
@@ -1044,22 +1055,22 @@ override public func viewDidAppear(_ animated: Bool) {
 
 ### Core Implementation Files
 
-| File                                                    | Lines   | Purpose                                       |
-| ------------------------------------------------------- | ------- | --------------------------------------------- |
-| `src/main/frontend/quick_capture.cljs`                  | 1-93    | Core quick capture logic, template processing |
-| `src/electron/electron/url.cljs`                        | 59-85   | macOS callback URL parser                     |
-| `src/main/electron/listener.cljs`                       | 114-116 | IPC bridge from Electron to renderer          |
-| `src/main/mobile/init.cljs`                             | 91-105  | iOS appUrlOpen listener                       |
-| `src/main/mobile/deeplink.cljs`                         | 18-111  | Mobile deep link router                       |
-| `src/main/frontend/mobile/intent.cljs`                  | 83-285  | iOS share intent handler                      |
-| `ios/App/ShareViewController/ShareViewController.swift` | 1-200   | iOS share extension implementation            |
-| `ios/App/ShareViewController/SharedData.swift`          | 10-27   | iOS data structures                           |
+| File                                   | Lines   | Purpose                                       |
+| -------------------------------------- | ------- | --------------------------------------------- |
+| `src/main/frontend/quick_capture.cljs` | 1-103   | Core quick capture logic, template processing |
+| `src/electron/electron/url.cljs`       | 62-92   | macOS callback URL parser                     |
+| `src/main/electron/listener.cljs`      | 114-116 | IPC bridge from Electron to renderer          |
+| `src/main/mobile/init.cljs`            | 91-105  | iOS appUrlOpen listener                       |
+| `src/main/mobile/deeplink.cljs`        | 18-111  | Mobile deep link router                       |
+| `src/main/frontend/mobile/intent.cljs` | 83-269  | iOS share intent handler                      |
+
+> **Removed:** `ios/App/ShareViewController/ShareViewController.swift` and `ios/App/ShareViewController/SharedData.swift` from the validated core reference table for this scoped pass.
 
 ### Key Functions
 
 #### 1. `frontend.quick-capture/quick-capture`
 
-**Location:** `src/main/frontend/quick_capture.cljs:22-93`
+**Location:** `src/main/frontend/quick_capture.cljs:23-100`
 
 **Purpose:** Core logic for processing quick capture requests
 
@@ -1097,7 +1108,7 @@ args - Map with keys:
 
 #### 2. `electron.url/x-callback-url-handler`
 
-**Location:** `src/electron/electron/url.cljs:59-85`
+**Location:** `src/electron/electron/url.cljs:62-92`
 
 **Purpose:** Parse and route x-callback-url actions
 
@@ -1108,9 +1119,10 @@ win - Electron BrowserWindow
 parsed-url - js/URL object
 ```
 
-**Supported Actions:**
+**Supported Actions (in current handler):**
 
 - `/quickCapture` - Quick capture action
+- `/invokeCommand` - plugin command dispatch path (outside this investigation's core quick-capture flow)
 
 **Flow:**
 
@@ -1123,7 +1135,7 @@ parsed-url - js/URL object
 
 #### 3. `mobile.intent/handle-payload`
 
-**Location:** `src/main/frontend/mobile/intent.cljs:247-285`
+**Location:** `src/main/frontend/mobile/intent.cljs:219-269`
 
 **Purpose:** Process iOS share extension payload
 
@@ -1231,7 +1243,6 @@ url - String (e.g., "logseq://shared?payload=...")
    ```
 
 4. **Use page parameter** for categorization
-
    - Reading List: `page=Reading List`
    - Project notes: `page=Project Name`
 
@@ -1250,13 +1261,11 @@ url - String (e.g., "logseq://shared?payload=...")
 #### ⚠️ **Known Issues & Workarounds**
 
 1. **iOS duplicate captures**
-
    - **Issue:** Sometimes content inserted twice
    - **Workaround:** Check recent blocks before sharing again
    - **When:** If you share twice within 1 second
 
 2. **Large files on iOS**
-
    - **Issue:** Share extension may timeout
    - **Workaround:** Share files one at a time
    - **Limit:** ~10MB per file (soft limit)
@@ -1271,7 +1280,7 @@ url - String (e.g., "logseq://shared?payload=...")
 
 #### 🔧 **Immediate Improvements**
 
-1. **Replace setTimeout with await** (quick_capture.cljs:90-93)
+1. **Replace setTimeout with await** (quick_capture.cljs:100-103)
 
    ```clojure
    ;; Current (timing-dependent):
@@ -1449,38 +1458,39 @@ bb dev:e2e-basic-test "Quick Capture URL"
    - ✅ Verify: Inserted in today's journal
 
 4. **Append mode**
+
    ```bash
    # Create page first, go to middle
    open "logseq://x-callback-url/quickCapture?page=Test&content=Top&append=false"
    # Then:
    open "logseq://x-callback-url/quickCapture?page=Test&content=Bottom&append=true"
    ```
+
    - ✅ Verify: "Bottom" at end of page
 
 **iOS:**
 
 1. **Share text from Safari**
-
    - Open article
    - Select text
    - Tap Share → Logseq
    - ✅ Verify: Text + URL captured
 
 2. **Share image**
-
    - Open Photos
    - Select image
    - Tap Share → Logseq
-   - ✅ Verify: Image embedded as `[[uuid]]`
+
+- ✅ Verify: Asset import succeeds and content is inserted or updated according to current `handle-payload` logic
+
+> **Removed:** "Image embedded as `[[uuid]]`" as a guaranteed outcome of current scoped code path.
 
 3. **Share PDF**
-
    - Open PDF in Files
    - Tap Share → Logseq
    - ✅ Verify: PDF copied to assets, linked
 
 4. **Share URL (no text)**
-
    - Safari → Share URL
    - ✅ Verify: Link captured
 
@@ -1521,9 +1531,9 @@ bb dev:e2e-basic-test "Quick Capture URL"
 ### Related Documentation
 
 - [Quick Capture User Guide](../03-features/quick-capture/guide.md) - User-facing documentation
-- [Mobile Development Guide](../05-developer-guides/mobile-development.md) - Mobile setup
-- [Electron Architecture](../02-architecture/electron-architecture.md) - Electron internals
-- [Configuration Reference](../04-api-reference/config-options.md) - All config options
+- [Mobile Development Guide](../../../docs/develop-logseq-on-mobile.md) - Mobile setup
+- [System Architecture](../02-architecture/system-architecture.md) - Architecture overview
+- [Config.edn Reference](../04-api-reference/config-edn-reference.md) - Configuration options
 
 ---
 
@@ -1562,4 +1572,4 @@ Logseq's quick capture feature provides a robust multi-platform solution for rap
 
 **Investigation Complete** ✓
 
-For questions or updates, see [AGENTS.md](../../AGENTS.md) or create an issue with the `documentation` label.
+For questions or updates, see [AGENTS.md](../../../AGENTS.md) or create an issue with the `documentation` label.

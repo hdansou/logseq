@@ -1,9 +1,10 @@
 # Bug Investigation: Pages Appearing Under Root Tag
 
-**Date**: October 25, 2025  
-**Status**: Root Cause Identified  
-**Severity**: High - Affects core UX  
-**Reporter**: User via screenshot (demo page 1, demo page 2 shown under Root Tag)
+**Investigation Date:** October 25, 2025  
+**Last Verified:** 2026-05-24  
+**Status:** Root Cause Identified (Fix Pending)  
+**Severity:** High - Affects core UX  
+**Reporter:** User via screenshot (demo page 1, demo page 2 shown under Root Tag)
 
 ---
 
@@ -21,7 +22,7 @@
 
 ### 1. The Query Logic (How Root Tag View Works)
 
-**File**: `deps/db/src/logseq/db/frontend/class.cljs:178-189`
+**File**: `deps/db/src/logseq/db/frontend/class.cljs:198-219`
 
 ```clojure
 (defn get-class-objects
@@ -49,7 +50,7 @@
 
 #### Step 1: Initial Page Creation
 
-**File**: `deps/db/src/logseq/db/sqlite/util.cljs:113-125`
+**File**: `deps/db/src/logseq/db/sqlite/util.cljs:102-114`
 
 ```clojure
 (defn build-new-page
@@ -69,7 +70,7 @@
 
 #### Step 2: Pipeline Processing
 
-**File**: `src/main/frontend/worker/pipeline.cljs:108-125`
+**File**: `src/main/frontend/worker/pipeline.cljs:118-143`
 
 When a page is created, the pipeline checks if it needs tag processing:
 
@@ -223,7 +224,7 @@ demo page 1 |
 
 ### Option 1: Filter in get-class-objects (Quick Fix)
 
-**File**: `deps/db/src/logseq/db/frontend/class.cljs:178-189`
+**File**: `deps/db/src/logseq/db/frontend/class.cljs:198-219`
 
 ```clojure
 (defn get-class-objects
@@ -305,6 +306,14 @@ Separate concepts:
 
 ---
 
+## Verification Update (May 2026)
+
+- The bug investigation remains valid.
+- The implementation fix is still pending.
+- A focused test remains marked `^:fix-me` in `src/test/frontend/db/db_based_model_test.cljs:56`.
+
+---
+
 ## Testing Checklist
 
 - [ ] Create page via CMD+K
@@ -320,21 +329,22 @@ Separate concepts:
 
 ## Code References
 
-| File                                        | Line    | Purpose                            |
-| ------------------------------------------- | ------- | ---------------------------------- |
-| `deps/db/src/logseq/db/frontend/class.cljs` | 178-189 | `get-class-objects` - Bug location |
-| `deps/db/src/logseq/db/sqlite/util.cljs`    | 113-125 | `build-new-page` - Page creation   |
-| `src/main/frontend/worker/pipeline.cljs`    | 108-125 | Pipeline processing for tags       |
-| `deps/db/src/logseq/db/common/view.cljs`    | 321     | View calling `get-class-objects`   |
+| File                                            | Line    | Purpose                            |
+| ----------------------------------------------- | ------- | ---------------------------------- |
+| `deps/db/src/logseq/db/frontend/class.cljs`     | 198-219 | `get-class-objects` - Bug location |
+| `deps/db/src/logseq/db/sqlite/util.cljs`        | 102-114 | `build-new-page` - Page creation   |
+| `src/main/frontend/worker/pipeline.cljs`        | 118-143 | Pipeline processing for tags       |
+| `deps/db/src/logseq/db/common/view.cljs`        | 406     | View calling `get-class-objects`   |
+| `src/test/frontend/db/db_based_model_test.cljs` | 56-72   | `^:fix-me` regression test         |
 
 ---
 
 ## Related Documentation
 
-- [Root Tag Guide](./ROOT-TAG-GUIDE.md) - Complete Root Tag documentation
-- [Class System Overview](./CLASS-SYSTEM-OVERVIEW.md) _(if exists)_
+- [Root Tag Guide](../06-user-guides/root-tag-guide.md) - Complete Root Tag documentation
 
 ---
 
-**Investigation Status**: ✅ Complete  
+**Investigation Status**: ✅ Complete (Analysis)  
+**Implementation Status**: ⏳ Pending  
 **Next Steps**: Implement fix and validate with user data

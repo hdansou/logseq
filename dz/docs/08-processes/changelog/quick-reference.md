@@ -1,6 +1,6 @@
 # Changelog Generation Quick Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## Commands
 
@@ -9,6 +9,9 @@
 ```text
 # Generate full changelog
 @workspace /new-changelog 2025-01-05 2025-01-15
+
+# Generate full changelog explicitly
+@workspace /new-changelog 2025-01-05 2025-01-15 --format=changelog
 
 # Generate release notes (condensed)
 @workspace /new-changelog 2025-01-05 2025-01-15 --format=release
@@ -65,6 +68,8 @@
 5. **Refactoring** - Code structure improvements
 6. **Chore** - Maintenance tasks
 
+`docs:`, `dev:`, `ci:`, and `test:` commits are currently folded into `Chore` by `dz/scripts/changelog-extend.sh`.
+
 ### Functional Areas
 
 - Block editing and management
@@ -78,9 +83,22 @@
 - Mobile support
 - Developer tools
 - Real-time collaboration (RTC)
+- Publishing
+- Properties
+- Import and export
+- Media / PDF
+- Window management
 - Whiteboards
-- PDF annotations
 - Settings and configuration
+
+> **Removed:** `PDF annotations` as a standalone bucket. Current source surfaces center on PDF viewer and asset flows rather than a separate annotation subsystem.
+
+## Findings: New Capabilities
+
+- `dz/scripts/changelog-extend.sh` can roll an existing changelog window forward with `--no-merge`, `--max-chars`, and `--dry-run`.
+- `dz/scripts/changelog-extend.sh` appends a pre-categorized `## TRIAGE` block, refreshes contributors via `dz/scripts/authors.txt`, and filters noisy commits via `dz/scripts/changelog-exclude.txt`.
+- The current changelog style guide expects `## Currently Available`, `## Upcoming`, and `## Contributors` sections, plus a `Total analyzed:` footer in the contributors block.
+- Active source areas in `src/`, `deps/`, and `packages/` now clearly include publishing, properties, media / PDF, window management, and RTC-backed sync flows, so those areas should be expected in recent release windows.
 
 ## Common Tasks
 
@@ -161,10 +179,16 @@ WIP
 
 ## Files
 
-- `prompts/changelog-generation.md` - Full guidelines
-- `scripts/generate-changelog-log.sh` - Raw log generator
+- `.github/prompts/changelog-generation.prompt.md` - Full prompt and examples
+- `.github/skills/new-changelog.md` - Copilot skill contract and format options
+- `dz/scripts/generate-changelog-log.sh` - Raw log generator
+- `dz/scripts/changelog-extend.sh` - Extend an existing changelog window and refresh TRIAGE/contributors
+- `dz/changelog/STYLE.md` - Current section taxonomy and editorial rules
 - `.github/copilot-instructions.md` - Copilot commands
-- `docs/CHANGELOG_WORKFLOW.md` - Complete documentation
+- `dz/docs/08-processes/changelog/workflow.md` - Complete workflow guide
+
+> **Removed:** `prompts/changelog-generation.md`. The current prompt lives at `.github/prompts/changelog-generation.prompt.md`.
+> **Removed:** `docs/CHANGELOG_WORKFLOW.md`. The current workflow guide lives at `dz/docs/08-processes/changelog/workflow.md`.
 
 ## Troubleshooting
 

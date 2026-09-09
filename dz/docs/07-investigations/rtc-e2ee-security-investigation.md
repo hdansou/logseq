@@ -2,14 +2,25 @@
 
 **Investigation Type:** Security Analysis & Code Detective  
 **Date:** December 7, 2025  
-**Status:** Comprehensive Security Audit  
+**Status:** Revalidated Against Current Source (src/, deps/, packages/)  
 **Risk Level:** 🟢 Low (Well-implemented with industry standards)
+
+> **Last revised:** 2026-05-30
 
 ---
 
 ## Executive Summary
 
-Logseq's Real-Time Collaboration (RTC) implements **robust end-to-end encryption (E2EE)** using industry-standard cryptographic algorithms and best practices. The implementation uses a hybrid encryption model combining RSA-4096 for key exchange and AES-256-GCM for data encryption.
+Logseq's current sync stack implements **robust end-to-end encryption (E2EE)** for encrypted graphs using industry-standard cryptographic algorithms and best practices. The active implementation is in db-sync worker paths (not the removed legacy `frontend.worker.rtc` namespace), and uses a hybrid model combining RSA-4096 for key exchange and AES-256-GCM for data encryption.
+
+> **Removed:** Legacy `src/main/frontend/worker/rtc/*` references in this document are no longer active implementation paths. Current E2EE logic is centered in `src/main/frontend/worker/sync/crypt.cljs` and related db-sync modules.
+
+## Findings: New Capabilities
+
+- **PBKDF2 hardening shipped:** private-key password KDF now uses **600,000** iterations for new payloads and version-tagged encrypted key material (`"20251210"`), while retaining backward decryption for older 100,000-iteration payloads. See `src/main/frontend/common/crypt.cljs`.
+- **Sync architecture converged on db-sync HTTP+WS routes:** graph key exchange and grant-access flows are implemented via `/e2ee/*` endpoints and db-sync request schema validation. See `src/main/frontend/worker/sync/crypt.cljs` and `deps/db-sync/src/logseq/db_sync/malli_schema.cljs`.
+- **Secret storage abstraction is runtime-native:** persisted E2EE password handling now goes through platform crypto adapters (`save-secret-text!`, `read-secret-text`, `delete-secret-text!`) with browser/node owner-specific implementations. See `src/main/frontend/worker/platform.cljs`, `src/main/frontend/worker/platform/browser.cljs`, and `src/main/frontend/worker/platform/node.cljs`.
+- **Sync endpoint defaults changed:** production defaults are now `wss://api.logseq.io/sync/%s` and `https://api.logseq.io` with custom sync server override support. See `src/main/frontend/config.cljs`.
 
 ### 🔐 Multi-User Graph Sharing: Password vs. Token
 
@@ -25,7 +36,6 @@ When an encrypted graph is shared with another user:
 **How It Works:**
 
 1. **Owner's Side:**
-
    - Owner enters their own password to unlock their RSA private key
    - Owner fetches collaborator's RSA public key from server (by email)
    - Owner decrypts graph AES key with their private key
@@ -63,7 +73,7 @@ When an encrypted graph is shared with another user:
 
 - RSA-4096 with OAEP padding and SHA-256 for asymmetric encryption
 - AES-256-GCM for symmetric encryption (authenticated encryption)
-- PBKDF2 with 100,000 iterations and SHA-256 for password-based key derivation
+- PBKDF2 with 600,000 iterations (new payloads) and SHA-256 for password-based key derivation
 
 ✅ **Secure Key Management:**
 
@@ -77,11 +87,7 @@ When an encrypted graph is shared with another user:
 - WebSocket connections over TLS (wss://)
 - All sensitive data encrypted before transmission
 
-🔴 **CRITICAL Security Issue:**
-
-- **Password policy too weak:** Only 6 characters minimum with "Weak" strength allowed
-- **Attack Feasibility:** Brute force in ~1.5 hours on consumer GPU
-- **Action Required:** Increase to 12 characters minimum with "Medium" strength (PRIORITY #1)
+> **Removed:** Prior claim that password policy was "6 chars + weak allowed" is stale and tied to removed UI/path assumptions. Current code should be re-assessed as a separate, current-state password UX/policy audit.
 
 ⚠️ **Multi-User Sharing Risks:**
 
@@ -92,7 +98,6 @@ When an encrypted graph is shared with another user:
 
 ⚠️ **Additional Areas for Enhancement:**
 
-- Increase PBKDF2 iterations to 600,000+ (current OWASP 2023 recommendation)
 - Implement key rotation mechanisms
 - Add forward secrecy capabilities
 - Public key fingerprint verification for collaborators
@@ -257,7 +262,7 @@ Logseq RTC uses a **hybrid encryption system** combining asymmetric and symmetri
 **Purpose:** Derive encryption keys from user passwords  
 **Algorithm:** PBKDF2 (Password-Based Key Derivation Function 2)  
 **Hash Function:** SHA-256  
-**Iterations:** 100,000  
+**Iterations:** 600,000 for new encrypted private-key payloads (legacy 100,000 remains decrypt-compatible)  
 **Salt Size:** 16 bytes (128 bits) - randomly generated  
 **Derived Key:** AES-256 (256 bits)
 
@@ -275,33 +280,33 @@ Logseq RTC uses a **hybrid encryption system** combining asymmetric and symmetri
                                    false
                                    #js ["deriveKey"])
           derived-key (.deriveKey subtle
-                                  #js {:name "PBKDF2"
-                                       :salt salt
-                                       :iterations 100000
-                                       :hash "SHA-256"}
-                                  password-key
-                                  #js {:name "AES-GCM" :length 256}
-                                  true
-                                  #js ["encrypt" "decrypt"])
+                      #js {:name "PBKDF2"
+                        :salt salt
+                        :iterations 600000
+                        :hash "SHA-256"}
+                      password-key
+                      #js {:name "AES-GCM" :length 256}
+                      true
+                      #js ["encrypt" "decrypt"])
           exported-private-key (.exportKey subtle "pkcs8" private-key)
           encrypted-private-key (.encrypt subtle
                                           #js {:name "AES-GCM" :iv iv}
                                           derived-key
                                           exported-private-key)]
-    [salt iv (js/Uint8Array. encrypted-private-key)]))
+    ["20251210" salt iv (js/Uint8Array. encrypted-private-key)]))
 ```
 
-**Location:** `src/main/frontend/common/crypt.cljs:88-115`
+**Location:** `src/main/frontend/common/crypt.cljs:84-112`
 
 **Security Analysis:**
 
 - ✅ PBKDF2 is NIST-approved (SP 800-132)
-- ⚠️ 100,000 iterations meets NIST minimum but below OWASP 2023 recommendation
+- ✅ 600,000 iterations for new payloads aligns with stronger modern guidance
+- ✅ Backward decrypt compatibility for older 100,000-iteration payloads
 - ✅ Random 128-bit salt prevents rainbow table attacks
 - ✅ SHA-256 provides strong cryptographic hashing
 
-**Current Strength:** Moderate password protection  
-**OWASP 2023 Recommendation:** 600,000+ iterations for PBKDF2-SHA256
+**Current Strength:** Strong KDF posture with explicit migration compatibility
 
 ---
 
@@ -749,13 +754,11 @@ When a graph owner shares an encrypted graph with collaborators, Logseq uses **p
 ⚠️ **Critical Trust Points:**
 
 1. **Server Integrity:** Server must return correct public keys (no substitution)
-
    - **Risk:** Malicious server could return attacker's public key
    - **Mitigation:** None currently (no key fingerprint verification)
    - **Industry Standard:** Most E2EE systems face similar trust issue
 
 2. **Email Identity:** Email address correctly identifies user
-
    - **Risk:** Typo in email grants access to wrong person
    - **Mitigation:** None currently (no confirmation step)
 
@@ -852,16 +855,20 @@ Asset File (Binary)
 **Production URL:**
 
 ```clojure
-(def WS-URL "wss://ws.logseq.com/file-sync?graphuuid=%s")
+(defonce default-db-sync-ws-url
+  "wss://api.logseq.io/sync/%s")
 ```
 
-**Development URL:**
+**Development URL (local flag path):**
 
 ```clojure
-(def WS-URL "wss://ws-dev.logseq.com/file-sync?graphuuid=%s")
+(defonce default-db-sync-ws-url
+  "ws://127.0.0.1:8787/sync/%s")
 ```
 
-**Location:** `src/main/frontend/config.cljs:36-49`
+**Location:** `src/main/frontend/config.cljs:41-48`
+
+> **Removed:** Legacy `ws.logseq.com/file-sync` and `ws-dev.logseq.com/file-sync` endpoint claims are no longer accurate for current db-sync defaults.
 
 ### Defense in Depth
 
@@ -887,6 +894,8 @@ Even though data is encrypted end-to-end, transport layer security provides:
 
 **Location:** `src/main/frontend/worker/rtc/ws.cljs:18-48`
 
+> **Removed:** This legacy `worker/rtc/ws.cljs` path is no longer the active db-sync transport implementation. See `src/main/frontend/worker/sync/transport.cljs`.
+
 ### Message Size Optimization
 
 Large messages (>100KB) are uploaded to S3 first, then referenced:
@@ -905,6 +914,8 @@ Large messages (>100KB) are uploaded to S3 first, then referenced:
 ```
 
 **Location:** `src/main/frontend/worker/rtc/ws_util.cljs:36-54`
+
+> **Removed:** This legacy `worker/rtc/ws_util.cljs` reference is retained for historical context only; current sync transport/message shaping lives in `src/main/frontend/worker/sync/transport.cljs`.
 
 ---
 
@@ -964,15 +975,19 @@ Before storage, the user password is encrypted with the **refresh token**:
 
 ```clojure
 (defn- <save-e2ee-password
-  [refresh-token password]
-  (p/let [result (crypt/<encrypt-text-by-text-password refresh-token password)
+  [password]
+  (p/let [platform' (platform/current)
+          refresh-token (if (browser-runtime? platform')
+                          (:auth/refresh-token @worker-state/*state)
+                          (<read-refresh-token-from-auth-file platform'))
+          result (crypt/<encrypt-text-by-text-password refresh-token password)
           text (ldb/write-transit-str result)]
-    (if (native-worker?)
-      (<native-save-password-text! text)
-      (opfs/<write-text! e2ee-password-file text))))
+    (platform/save-secret-text! platform' e2ee-password-secret-key text)))
 ```
 
-**Location:** `src/main/frontend/worker/rtc/crypt.cljs:42-53`
+**Location:** `src/main/frontend/worker/sync/crypt.cljs:108-132`
+
+> **Removed:** OPFS file-based password persistence claim (`opfs/<write-text! e2ee-password-file`) is stale for the current primary sync E2EE path.
 
 **Double Encryption:**
 
@@ -1047,45 +1062,35 @@ Leverages OS-level security:
 
 ### Weaknesses & Risks
 
-#### 1. Weak Password Requirements & PBKDF2 Iteration Count ⚠️
+#### 1. Password Policy & KDF Posture ⚠️
 
-**Current Password Requirements:**
+> **Removed:** The old explicit 6-character/weak-score requirement claim is stale.
 
-- **Minimum Length:** Only 6 characters (very weak)
-- **Minimum Strength:** Score of 1 ("Weak" on 0-3 scale)
-- **No Character Composition:** Not enforced
+**Current KDF Status:**
 
-**Current PBKDF2 Settings:**
+- **PBKDF2 iterations:** 600,000 for new encrypted private-key payloads
+- **Backward compatibility:** decryption supports older 100,000-iteration payloads
 
-- **Iterations:** 100,000
-- **OWASP 2023 Recommendation:** 600,000+ iterations
-- **NIST Minimum:** 10,000 iterations (met)
+**PBKDF2 Settings:**
 
-**Combined Risk:** **HIGH** - Weak password policy + moderate PBKDF2 iterations create significant vulnerability
+- **Iterations (new payloads):** 600,000
+- **OWASP guidance:** aligned with 600,000+ recommendation band
+- **NIST minimum:** exceeded
 
-**Attack Feasibility:**
-With current settings (6-char minimum + 100k iterations):
+**Combined Risk:** **MEDIUM** - KDF posture improved; remaining risk is primarily around password policy definition/enforcement and user behavior.
 
-- 6-character lowercase: ~300 million combinations
-- Using modern GPU (RTX 4090): ~50,000 PBKDF2-SHA256 hashes/second
-- Time to crack weak 6-char password: **~1.5 hours**
-
-With recommended settings (12-char minimum + 600k iterations):
-
-- 12-character mixed case + numbers + symbols: ~3 × 10²¹ combinations
-- Same GPU: ~8,000 hashes/second (6x slower due to iterations)
-- Time to crack: **Infeasible** (billions of years)
+> **Removed:** Prior brute-force timing estimates in this section were based on the stale 100k + 6-char assumption.
 
 **Recommendation:**
 
 ```clojure
 ;; Increase to 600,000 iterations
-:iterations 600000  ;; Currently 100000
+:iterations 600000  ;; Current new-payload setting
 ```
 
 **Impact:** ~1 second computational cost on modern hardware, acceptable UX trade-off
 
-**Location:** `src/main/frontend/common/crypt.cljs:102`
+**Location:** `src/main/frontend/common/crypt.cljs:96-106, 131-139`
 
 ---
 
@@ -1556,25 +1561,24 @@ Attacker injects malicious script
 
 ### Transport Security
 
-| Function       | Purpose                         | Location                 |
-| -------------- | ------------------------------- | ------------------------ |
-| `open-ws-task` | Open secure WebSocket (WSS)     | `rtc/ws.cljs:18-48`      |
-| `send&recv`    | Send/receive encrypted messages | `rtc/ws_util.cljs:55-77` |
-| `get-ws-url`   | Get WebSocket URL (wss://)      | `rtc/ws_util.cljs:79-83` |
+| Function        | Purpose                          | Location                            |
+| --------------- | -------------------------------- | ----------------------------------- |
+| `format-ws-url` | Compose graph-scoped sync WS URL | `worker/sync/transport.cljs:11-20`  |
+| `append-token`  | Attach auth token to WS URL      | `worker/sync/transport.cljs:22-27`  |
+| `send!`         | Send validated WS client message | `worker/sync/transport.cljs:89-109` |
 
 **Files:**
 
-- `src/main/frontend/worker/rtc/ws.cljs`
-- `src/main/frontend/worker/rtc/ws_util.cljs`
+- `src/main/frontend/worker/sync/transport.cljs`
 
 ---
 
 ### Configuration
 
-| Constant        | Value                                            | Location         |
-| --------------- | ------------------------------------------------ | ---------------- |
-| `WS-URL` (prod) | `wss://ws.logseq.com/file-sync?graphuuid=%s`     | `config.cljs:36` |
-| `WS-URL` (dev)  | `wss://ws-dev.logseq.com/file-sync?graphuuid=%s` | `config.cljs:49` |
+| Constant                           | Value                         | Location            |
+| ---------------------------------- | ----------------------------- | ------------------- |
+| `default-db-sync-ws-url` (prod)    | `wss://api.logseq.io/sync/%s` | `config.cljs:41-44` |
+| `default-db-sync-http-base` (prod) | `https://api.logseq.io`       | `config.cljs:46-49` |
 
 **File:** `src/main/frontend/config.cljs`
 
@@ -1584,25 +1588,13 @@ Attacker injects malicious script
 
 ### Immediate (Critical Priority)
 
-#### 1. Fix Weak Password Policy ⚡🔴 **CRITICAL**
+#### 1. Define and Enforce Explicit Password Policy ⚡
 
-**Current Policy (INADEQUATE):**
+> **Removed:** The referenced `src/main/frontend/components/encryption.cljs` password policy code path no longer exists.
 
-```clojure
-;; src/main/frontend/components/encryption.cljs:46-48
-(and (>= (count @*password) 6)      ;; Only 6 characters!
-     (>= (:id pw-strength) 1))      ;; Only "Weak" strength!
-```
+**Current Need:**
 
-**Immediate Changes Required:**
-
-```clojure
-;; Proposed fix (CRITICAL - implement immediately)
-can-submit? #(if init-graph-keys
-               (and (>= (count @*password) 12)     ;; Increase to 12 characters
-                    (>= (:id pw-strength) 2))      ;; Require Medium (2) or Strong (3)
-               true)
-```
+Perform a focused audit and explicitly define password policy requirements in the current E2EE entry points (UI + CLI), then verify enforcement end-to-end.
 
 **Additional Validation:**
 
@@ -1617,15 +1609,14 @@ can-submit? #(if init-graph-keys
 
 **Impact:**
 
-- ✅ **CRITICAL SECURITY FIX:** Prevents brute force attacks
-- ✅ Increases brute force time from hours to billions of years
-- ⚠️ Minimal UX impact (users already see strength meter)
-- ✅ No breaking changes (existing users keep their passwords)
+- ✅ Clarifies security guarantees and enforcement behavior across UI/CLI
+- ✅ Reduces ambiguity about acceptable password quality
+- ⚠️ May require explicit migration and user messaging if stricter rules are introduced
 
-**Files to Modify:**
+**Files to Modify (candidate):**
 
-1. `src/main/frontend/components/encryption.cljs` (password validation)
-2. `src/main/frontend/components/e2ee.cljs` (E2EE password modal)
+1. `src/main/frontend/components/e2ee.cljs`
+2. `src/main/frontend/worker/sync/crypt.cljs`
 
 **Testing Required:**
 
@@ -1635,29 +1626,16 @@ can-submit? #(if init-graph-keys
 
 ---
 
-#### 2. Increase PBKDF2 Iterations ⚡
+#### 2. Maintain PBKDF2 Compatibility and Migration Hygiene
 
-**Current:** 100,000 iterations  
-**Target:** 600,000+ iterations
+**Current:** 600,000 iterations for new payloads; legacy decrypt support remains
 
-**Change:**
-
-```clojure
-;; In src/main/frontend/common/crypt.cljs:102
-;; BEFORE:
-:iterations 100000
-
-;; AFTER:
-:iterations 600000  ;; OWASP 2023 recommendation
-```
+No immediate change required; ensure migration/compatibility tests keep legacy payload decryption stable.
 
 **Impact:**
 
-- ✅ Significantly increases brute-force resistance
-- ⚠️ Adds ~500ms to encryption/decryption operations
-- ✅ Acceptable UX trade-off for security
-
-**Test:** Ensure backward compatibility with existing encrypted keys
+- ✅ Improved brute-force resistance already delivered
+- ✅ Backward compatibility path exists in decrypt flow
 
 ---
 

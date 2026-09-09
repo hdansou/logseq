@@ -1,6 +1,6 @@
 # Logseq Plugin Development Guide: TypeScript Edition
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 A comprehensive, practical guide for building Logseq plugins with TypeScript.
 
@@ -12,14 +12,15 @@ A comprehensive, practical guide for building Logseq plugins with TypeScript.
 4. [Development Workflow](#development-workflow)
 5. [Plugin Architecture Patterns](#plugin-architecture-patterns)
 6. [API Usage Guide](#api-usage-guide)
-7. [UI Development](#ui-development)
-8. [State Management](#state-management)
-9. [Testing](#testing)
-10. [Publishing](#publishing)
-11. [Best Practices](#best-practices)
-12. [Common Recipes](#common-recipes)
-13. [Troubleshooting](#troubleshooting)
-14. [Resources](#resources)
+7. [Findings: New Capabilities](#findings-new-capabilities)
+8. [UI Development](#ui-development)
+9. [State Management](#state-management)
+10. [Testing](#testing)
+11. [Publishing](#publishing)
+12. [Best Practices](#best-practices)
+13. [Common Recipes](#common-recipes)
+14. [Troubleshooting](#troubleshooting)
+15. [Resources](#resources)
 
 ---
 
@@ -194,7 +195,7 @@ my-logseq-plugin/
   },
   "dependencies": {},
   "devDependencies": {
-    "@logseq/libs": "^0.2.1",
+    "@logseq/libs": "^0.3.3",
     "@types/node": "^18.0.0",
     "typescript": "^4.9.0",
     "webpack": "^5.75.0",
@@ -1037,7 +1038,68 @@ await storage.removeItem('my-key')
 // Make asset URL
 const url = await logseq.Assets.makeUrl('images/logo.png')
 console.log('Asset URL:', url)
+
+// Open an asset with Logseq's built-in handlers
+await logseq.Assets.builtInOpen('assets/manual.pdf')
 ```
+
+## Findings: New Capabilities
+
+Validated against current SDK source in `libs/src/LSPlugin.ts` and `libs/src/LSPlugin.user.ts` (2026-05-29).
+
+### 1. Unified command bus (`logseq.Commands`)
+
+You can register and execute commands through `logseq.Commands` in addition to legacy registration APIs:
+
+```typescript
+const unregister = logseq.Commands.register(
+  'duplicate-block',
+  {
+    label: 'Duplicate Block',
+    placements: ['palette', 'shortcut'],
+    keybinding: 'mod+shift+d',
+  },
+  async () => {
+    const block = await logseq.Editor.getCurrentBlock()
+    if (!block) return
+    await logseq.Editor.insertBlock(block.uuid, block.title, { sibling: true })
+  }
+)
+
+await logseq.Commands.execute('duplicate-block')
+
+// Cleanup when needed
+unregister?.()
+```
+
+### 2. DB graph tag/property APIs
+
+For DB graphs, `Editor` now includes first-class tag/class and property APIs:
+
+```typescript
+if (await logseq.App.checkCurrentIsDbGraph()) {
+  const allTags = await logseq.Editor.getAllTags()
+  const allProperties = await logseq.Editor.getAllProperties()
+
+  const taskTag = await logseq.Editor.getTag('logseq.class/Task')
+
+  if (taskTag) {
+    await logseq.Editor.addTagProperty(taskTag.uuid, 'priority')
+  }
+
+  const block = await logseq.Editor.getCurrentBlock()
+  if (block && taskTag) {
+    await logseq.Editor.addBlockTag(block.uuid, taskTag.uuid)
+  }
+}
+```
+
+### 3. Top-level namespaces worth using
+
+- `logseq.Net` for network helpers.
+- `logseq.Experiments` for unstable/experimental extension points.
+
+Use `Experiments` only when no stable API exists.
 
 ---
 
@@ -1298,7 +1360,10 @@ export class PluginStorage<T extends Record<string, any>> {
   private storage = logseq.Assets.makeSandboxStorage()
   private cache: T | null = null
 
-  constructor(private key: string, private defaults: T) {}
+  constructor(
+    private key: string,
+    private defaults: T
+  ) {}
 
   async load(): Promise<T> {
     if (this.cache) return this.cache
@@ -1552,7 +1617,6 @@ jobs:
 ### Marketplace Submission
 
 1. **Create Release on GitHub**
-
    - Tag: `v1.0.0`
    - Attach: `plugin.zip` containing dist files
 
@@ -2212,7 +2276,7 @@ logseq.beforeunload(async () => {
 ### Type Definitions
 
 - `@logseq/libs` package includes full TypeScript definitions
-- View in `node_modules/@logseq/libs/index.d.ts`
+- Primary API types are in `node_modules/@logseq/libs/dist/LSPlugin.d.ts`
 
 ### Useful Libraries
 
@@ -2229,6 +2293,8 @@ _Questions? Join the Logseq Discord and ask in #plugin-development_
 
 ---
 
-**Last Updated**: 2025-10-14
-**SDK Version**: @logseq/libs ^0.2.1
-**Logseq Version**: 0.10.0+
+> **Removed:** Fixed SDK pin guidance (`@logseq/libs ^0.2.1`) from this guide footer. The in-repo SDK is now `@logseq/libs 0.3.3`; prefer `latest` or a tested minimum version for your plugin.
+
+**Last Updated**: 2026-05-29
+**SDK Version (repo source)**: @logseq/libs 0.3.3
+**Logseq Version**: Check at runtime via `await logseq.App.getInfo()`

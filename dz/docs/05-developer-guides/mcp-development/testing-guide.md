@@ -1,436 +1,132 @@
 # Logseq MCP Server Testing Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## Overview
 
-This guide provides comprehensive testing procedures for the Logseq MCP (Model Context Protocol) Server implementation. The MCP server exposes Logseq graph data to AI assistants and other MCP-compatible tools through a standardized protocol.
+This guide documents how to test the currently implemented MCP server in Logseq based on source under `src/`, `deps/`, and `packages/`.
 
-## MCP Server Architecture
+Current implementation is the Desktop API server MCP route set in Electron:
 
-The server operates in two modes:
+- `POST /mcp` (initialize + requests)
+- `GET /mcp` (session transport)
+- `DELETE /mcp` (session close)
 
-- **API Server Mode**: Connects to a running Logseq instance via HTTP API
-- **Local Graph Mode**: Direct access to local graph database files
+## Verified Architecture
+
+### Transport and Session Model
+
+- MCP uses streamable HTTP transport (`StreamableHTTPServerTransport`), not CLI stdio.
+- Sessions are keyed by `mcp-session-id` and tracked in-memory.
+- Invalid or missing session IDs return HTTP 400 errors.
+- DNS rebinding protection is enabled with allowed host list derived from configured `host:port`.
+
+### Server Wiring
+
+- MCP routes are attached only when `:mcp-enabled?` is true in API server state.
+- Routes are served by the Desktop API server host/port (default `127.0.0.1:12315`).
+- MCP requests pass through the same API pre-handler path as other API routes.
 
 ### Available Tools
 
-| Tool             | Description                                         | API Mode | Local Mode |
-| ---------------- | --------------------------------------------------- | -------- | ---------- |
-| `listPages`      | List all pages in the graph                         | ✅       | ✅         |
-| `getPage`        | Get specific page content and block structure       | ✅       | ✅         |
-| `upsertNodes`    | Create or edit pages, blocks, tags, and properties  | ✅       | ✅         |
-| `searchBlocks`   | Search graph for blocks containing a search term    | ✅       | ✅         |
-| `listProperties` | List all properties in the graph                    | ✅       | ✅         |
-| `listTags`       | List all tags/classes in the graph                  | ✅       | ✅         |
+The MCP server registers six tools:
 
-## Prerequisites
+| Tool             | Description                                    |
+| ---------------- | ---------------------------------------------- |
+| `listPages`      | List pages                                     |
+| `getPage`        | Get page content/blocks by page name or uuid   |
+| `upsertNodes`    | Batch add/edit pages, blocks, tags, properties |
+| `searchBlocks`   | Search graph blocks                            |
+| `listTags`       | List tags/classes                              |
+| `listProperties` | List properties                                |
 
-1. **Node.js Dependencies**: Ensure MCP SDK is installed
+## Removed or Corrected Claims
 
-   ```bash
-   cd deps/cli
-   yarn install
-   ```
+> **Removed:** "CLI `mcp-server` command validation" procedures (`./logseq mcp-server ...`) are not validated by current source in `src/`, `deps/`, and `packages/`.
 
-2. **Logseq CLI**: Build the CLI if needed
+> **Removed:** "Local Graph Mode" for MCP (`-g/--graph`) as a tested current implementation.
 
-   ```bash
-   cd deps/cli
-   yarn build
-   ```
+> **Removed:** "Debug tool mode" (`-t/--debug-tool`) as part of current source-verified MCP path.
 
-3. **Test Graph**: Create or identify a test graph with:
-   - Multiple pages with content
-   - Pages with properties
-   - Pages with tags
-   - Block hierarchies
-   - Various content types
+> **Removed:** Claim that `listTags` and `listProperties` are unavailable in API mode. Current registered MCP tools include both.
 
-## Testing Procedures
+## Testing Procedures (Current Implementation)
 
-### 1. Command Line Interface Testing
+### 1. Preconditions
 
-#### 1.1 Basic Command Validation
+1. Start Logseq Desktop.
+2. Enable Local HTTP API server.
+3. Enable MCP server in settings.
+4. Confirm API server is running at configured host/port.
 
-Test that the MCP server command is properly registered:
+### 2. Route Availability
 
-```bash
-# From project root
-./logseq --help
-# Should show mcp-server as an available command
+Validate MCP routes on the API server:
 
-./logseq mcp-server --help
-# Should display MCP server options:
-# -a, --api-server-token  API server token to connect to current graph
-# -g, --graph            Local graph to use with MCP server
-# -t, --debug-tool       Debug mcp tool with direct invocation
-```
+- `POST /mcp` should accept initialize requests.
+- `GET /mcp` without valid `mcp-session-id` should return 400.
+- `DELETE /mcp` without valid `mcp-session-id` should return 400.
 
-#### 1.2 Parameter Validation
+### 3. Session Lifecycle
 
-Test invalid parameter combinations:
+Validate initialize and follow-up behavior:
 
-```bash
-# No parameters (should fail gracefully)
-./logseq mcp-server
+1. Send initialize request to `POST /mcp` with no session header.
+2. Capture returned `mcp-session-id`.
+3. Reuse that session ID for subsequent MCP requests.
+4. Call `DELETE /mcp` with the session ID.
+5. Verify further requests on that session fail as invalid/missing session.
 
-# Invalid graph path (should show error)
-./logseq mcp-server -g "nonexistent-graph"
+### 4. Tool Discovery and Execution
 
-# Invalid debug tool (should show error)
-./logseq mcp-server -g "test-graph" -t invalidTool
-```
-
-### 2. Local Graph Mode Testing
-
-#### 2.1 Setup Local Graph Test
-
-```bash
-# Test with a real graph directory
-./logseq mcp-server -g "your-test-graph-name"
-```
-
-Expected behavior:
-
-- Server starts without errors
-- Connects via stdio transport
-- Registers 6 tools: listPages, getPage, upsertNodes, searchBlocks, listProperties, listTags
-
-#### 2.2 Debug Tool Testing
-
-Test each tool individually using debug mode:
-
-```bash
-# Test listPages
-./logseq mcp-server -g "test-graph" -t listPages
-
-# Test getPage with existing page
-./logseq mcp-server -g "test-graph" -t getPage --pageName "Your Page Title"
+Using an MCP-capable client against the API endpoint:
 
-# Test getPage with non-existent page
-./logseq mcp-server -g "test-graph" -t getPage --pageName "Non-Existent Page"
+1. Verify exactly six tools are discoverable: `listPages`, `getPage`, `upsertNodes`, `searchBlocks`, `listTags`, `listProperties`.
+2. Execute read tools on an existing graph and validate response payloads are MCP `content` blocks with text JSON payloads.
+3. Execute `upsertNodes` in dry-run mode to validate schema/operation handling without committing writes.
 
-# Test listProperties
-./logseq mcp-server -g "test-graph" -t listProperties
+### 5. Error Path Validation
 
-# Test listTags
-./logseq mcp-server -g "test-graph" -t listTags
-```
-
-#### 2.3 Expected Debug Output Validation
-
-For each debug test, verify:
-
-**listPages**:
-
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "[{\"id\":\"...\",\"title\":\"...\",\"createdAt\":...,\"updatedAt\":...}]"
-    }
-  ]
-}
-```
-
-**getPage** (existing page):
-
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "[{\"block/uuid\":\"...\",\"block/content\":\"...\",\"block/children\":[...]}]"
-    }
-  ]
-}
-```
-
-**getPage** (non-existent page):
-
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "Error: Page \"Non-Existent Page\" not found"
-    }
-  ]
-}
-```
-
-**listProperties**:
-
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "[{\"block/uuid\":\"...\",\"block/title\":\"...\",\"logseq.property/classes\":[...]}]"
-    }
-  ]
-}
-```
+Validate these negative paths:
 
-**listTags**:
+- Missing/invalid `mcp-session-id` on `GET` and `DELETE` => 400.
+- Bad session on `POST` non-initialize request => JSON-RPC error response (`-32000`).
+- Tool/API failures return MCP text content with error prefix (`API Error:` or `Unexpected API error:`).
 
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "[{\"block/uuid\":\"...\",\"block/title\":\"...\",\"logseq.property.class/extends\":[...]}]"
-    }
-  ]
-}
-```
-
-### 3. API Server Mode Testing
-
-#### 3.1 Setup API Server Test
-
-1. Start Logseq desktop application
-2. Enable API server in Logseq settings
-3. Get API token from Logseq settings
-
-```bash
-# Test with API token
-./logseq mcp-server -a "your-api-token"
-
-# Or set environment variable
-export LOGSEQ_API_SERVER_TOKEN="your-api-token"
-./logseq mcp-server
-```
-
-#### 3.2 API Mode Debug Testing
-
-```bash
-# Test listPages via API
-./logseq mcp-server -a "your-token" -t listPages
-
-# Test getPage via API
-./logseq mcp-server -a "your-token" -t getPage --pageName "Page Title"
-
-# Verify listProperties and listTags are not available in API mode
-./logseq mcp-server -a "your-token" -t listProperties  # Should fail
-./logseq mcp-server -a "your-token" -t listTags        # Should fail
-```
-
-#### 3.3 API Connection Error Testing
-
-Test various API failure scenarios:
-
-```bash
-# Invalid token
-./logseq mcp-server -a "invalid-token" -t listPages
-
-# Logseq not running (API server down)
-# Stop Logseq, then:
-./logseq mcp-server -a "valid-token" -t listPages
-
-# Network connectivity issues
-# Block port 12315, then test
-```
-
-### 4. MCP Protocol Integration Testing
-
-#### 4.1 MCP Client Testing
-
-Test with an actual MCP client like Claude Desktop or other MCP-compatible tools:
-
-1. **Configure MCP Client**:
-
-   ```json
-   {
-     "mcpServers": {
-       "logseq": {
-         "command": "/path/to/logseq",
-         "args": ["mcp-server", "-g", "test-graph"]
-       }
-     }
-   }
-   ```
-
-2. **Test Tool Discovery**: Verify client can discover all available tools
-
-3. **Test Tool Execution**: Execute each tool through the client
-
-#### 4.2 Protocol Compliance Testing
-
-Verify MCP protocol compliance:
-
-- Server responds to initialization requests
-- Tools are properly registered with correct schemas
-- Responses follow MCP format specification
-- Error handling follows MCP error format
-
-### 5. Performance and Load Testing
-
-#### 5.1 Large Graph Testing
-
-Test with graphs containing:
-
-- 1000+ pages
-- Complex block hierarchies (10+ levels deep)
-- Large pages (1000+ blocks)
-- Many properties and tags (100+)
-
-#### 5.2 Concurrent Access Testing
-
-Test server behavior with:
-
-- Multiple simultaneous tool calls
-- Rapid successive requests
-- Long-running operations
-
-### 6. Error Handling and Edge Cases
-
-#### 6.1 Graph Database Issues
-
-Test scenarios:
-
-- Corrupted database files
-- Database locked by another process
-- Insufficient permissions
-- Disk space issues
-
-#### 6.2 API Server Issues
-
-Test scenarios:
-
-- API server timeout
-- Malformed API responses
-- API authentication failures
-- Network interruptions
-
-#### 6.3 Input Validation
-
-Test with various inputs:
-
-- Special characters in page names
-- Unicode characters
-- Very long page names
-- Empty strings
-- SQL injection attempts (should be prevented by DataScript)
-
-### 7. Security Testing
-
-#### 7.1 Access Control
-
-Verify that:
-
-- Server only accesses specified graph directories
-- API tokens are handled securely
-- No unauthorized file system access occurs
-
-#### 7.2 Input Sanitization
-
-Test that:
-
-- Page name inputs are properly sanitized
-- No code injection is possible
-- Error messages don't leak sensitive information
-
-### 8. Cross-Platform Testing
-
-Test on different platforms:
-
-- macOS
-- Linux
-- Windows (if supported)
+### 6. Security Checks
 
 Verify:
 
-- File path handling works correctly
-- Database access works across platforms
-- Dependencies are properly resolved
+- MCP endpoint is not active when MCP setting is disabled.
+- Allowed hosts for transport session initialization are constrained to configured `host:port`.
+- Requests require valid API server authorization behavior consistent with API routes.
 
-### 9. Regression Testing
+## Findings: New Capabilities
 
-#### 9.1 Automated Test Suite Creation
-
-Create automated tests for:
-
-- Each tool function
-- Error conditions
-- Protocol compliance
-- Performance benchmarks
-
-#### 9.2 Version Compatibility
-
-Test compatibility with:
-
-- Different Logseq graph formats
-- Different MCP SDK versions
-- Different Node.js versions
-
-### 10. Documentation and Examples
-
-#### 10.1 Integration Examples
-
-Create example integrations with:
-
-- Claude Desktop
-- Other MCP clients
-- Custom MCP tools
-
-#### 10.2 Troubleshooting Guide
-
-Document common issues:
-
-- Connection problems
-- Performance issues
-- Error messages and solutions
+- Streamable HTTP MCP transport with explicit `POST`/`GET`/`DELETE` handling is now first-class in Desktop API server integration.
+- Sessioned MCP lifecycle is explicitly implemented with server-side session tracking and cleanup on close.
+- `listTags` and `listProperties` are part of the active registered tool surface (not API-excluded).
+- `upsertNodes` supports optional `dry-run` in its input schema.
+- `listPages`, `listTags`, and `listProperties` expose optional `expand` input for richer results.
 
 ## Test Checklist
 
-- [ ] CLI command registration
-- [ ] Parameter validation
-- [ ] Local graph mode functionality
-- [ ] All six tools in debug mode
-- [ ] API server mode functionality
-- [ ] Error handling for invalid inputs
-- [ ] MCP protocol compliance
-- [ ] Performance with large graphs
-- [ ] Cross-platform compatibility
-- [ ] Security validation
-- [ ] Integration with MCP clients
+- [ ] MCP enabled setting controls route availability.
+- [ ] `POST /mcp` initialize succeeds.
+- [ ] `GET /mcp` requires valid session ID.
+- [ ] `DELETE /mcp` closes valid session and rejects invalid session.
+- [ ] Tool discovery returns six registered tools.
+- [ ] `listTags` and `listProperties` succeed through MCP.
+- [ ] `upsertNodes` dry-run path validates without commit.
+- [ ] Error responses follow expected MCP content/error behavior.
 
-## Test Data Requirements
+## Reporting Template
 
-Create test graphs with:
+When reporting MCP issues, include:
 
-- [ ] Basic pages with text content
-- [ ] Pages with block hierarchies
-- [ ] Pages with properties (various types)
-- [ ] Pages with tags/classes
-- [ ] Pages with special characters in names
-- [ ] Empty pages
-- [ ] Pages with large amounts of content
-- [ ] Interconnected pages (references)
-
-## Reporting Issues
-
-When reporting issues, include:
-
-- Logseq version
-- CLI version
-- Operating system
-- Graph size and complexity
-- Exact command used
-- Complete error output
-- Steps to reproduce
-
-## Success Criteria
-
-The MCP server implementation passes testing when:
-
-1. All tools work correctly in both modes
-2. Error handling is graceful and informative
-3. Performance is acceptable for typical graph sizes
-4. MCP protocol compliance is verified
-5. Security requirements are met
-6. Cross-platform compatibility is confirmed
-7. Integration with MCP clients works seamlessly
+- Desktop version/commit under test
+- Host/port configuration
+- Whether MCP setting was enabled
+- Exact MCP request and response payloads
+- Session ID lifecycle steps (initialize/use/delete)
+- Reproduction steps

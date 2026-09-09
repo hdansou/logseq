@@ -3,7 +3,7 @@ title: 'How Publishing Works'
 description: 'Understanding Logseq\'s current page publishing pipeline and customization hooks'
 type: explanation
 status: stable
-lastVerified: '2026-04-24'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 relatedDocs:
   howTo:
@@ -12,7 +12,7 @@ relatedDocs:
     - '[Custom JavaScript](../../how-to/integrations/custom-js.md)'
 ---
 
-> **Last revised:** 2026-04-24
+> **Last revised:** 2026-05-30
 
 Understanding the current Logseq page publishing system, from page menu action to the public page and its custom theme hooks.
 
@@ -26,7 +26,7 @@ When you publish a page, Logseq:
 2. Uploads referenced assets.
 3. Uploads optional custom publish CSS and JavaScript.
 4. Sends the page snapshot to the publish service.
-5. Stores the returned public URL on the page as `Published URL`.
+5. Stores the returned public URL on the page as `Published URL` (prefers short URL when available, with `/page/:graph/:page` as fallback).
 
 When someone opens that URL, the publish worker:
 
@@ -61,7 +61,9 @@ That is a different workflow from the current in-app `Publish page` feature. The
 
 ## What the User Triggers
 
-The publish dialog is opened from the page menu in [src/main/frontend/components/page_menu.cljs](../../../../src/main/frontend/components/page_menu.cljs) and also through the `mod+m` shortcut handled by [src/main/frontend/handler/events/ui.cljs](../../../../src/main/frontend/handler/events/ui.cljs).
+The publish dialog is opened from the page menu in [src/main/frontend/components/page_menu.cljs](../../../../src/main/frontend/components/page_menu.cljs) and also through the `mod+m` shortcut defined in [src/main/frontend/modules/shortcut/config.cljs](../../../../src/main/frontend/modules/shortcut/config.cljs), which dispatches `:publish/open-dialog` to [src/main/frontend/handler/events/ui.cljs](../../../../src/main/frontend/handler/events/ui.cljs).
+
+> **Removed:** The previous claim that the shortcut binding itself is handled in `src/main/frontend/handler/events/ui.cljs` is stale. That namespace handles the event, but the keybinding is defined in shortcut config.
 
 The dialog lets the user optionally set a password before publishing. That password is sent along with the page snapshot in [src/main/frontend/handler/publish.cljs](../../../../src/main/frontend/handler/publish.cljs).
 
@@ -117,6 +119,8 @@ When a visitor opens a published URL, [deps/publish/src/logseq/publish/routes.cl
 - loads refs and tagged-node data
 - loads the page transit blob
 - calls [deps/publish/src/logseq/publish/render.cljs](../../../../deps/publish/src/logseq/publish/render.cljs)
+
+If the page is not published, the worker renders a dedicated not-published page. If password-protected, it renders a password prompt page first.
 
 The renderer then:
 
@@ -240,6 +244,16 @@ deps/publish/render.cljs renders HTML
         v
 Public page with your design overrides
 ```
+
+## Findings: New Capabilities
+
+Compared with this doc's previous revision, current source shows these notable capabilities:
+
+- Short-link entry points are supported via both `/p/:short-id` and `/s/:short-id`, both resolving to canonical `/page/:graph/:page` rendering.
+- Public graph search is wired end-to-end: worker endpoint `/search/:graph-uuid?q=...` plus browser UI/shortcuts in `publish.js` (including `Cmd/Ctrl+K` open behavior).
+- Publish payload generation now explicitly excludes comments-area/comment blocks from exported page content in [src/main/frontend/worker/publish.cljs](../../../../src/main/frontend/worker/publish.cljs).
+- Image publishing includes responsive variant generation (`@1024`, `@1600`) for supported image formats, with checksum metadata per upload in [src/main/frontend/handler/publish.cljs](../../../../src/main/frontend/handler/publish.cljs).
+- Page password storage on the publish worker is hash-based (`pbkdf2$sha256$...`) rather than plaintext, implemented in [deps/publish/src/logseq/publish/common.cljs](../../../../deps/publish/src/logseq/publish/common.cljs).
 
 ## The Practical Mental Model
 

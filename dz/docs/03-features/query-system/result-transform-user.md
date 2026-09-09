@@ -1,6 +1,6 @@
 # Getting Started with :result-transform in Logseq
 
-> **Last revised:** 2026-04-21
+> **Last revised:** 2026-05-29
 
 **Transform your query results like a pro!**
 
@@ -46,6 +46,12 @@ Your Query → Database → Raw Results → :result-transform → Final Results 
 ```
 
 The transformation happens automatically before results are shown to you.
+
+## Findings: New Capabilities
+
+- `:result-transform` supports keyword references to reusable transforms defined in `logseq/config.edn` under `:query/result-transforms`.
+- Query transform evaluation runs in the shared SCI environment and supports helper functions such as `sum`, `average`, `parseFloat`, `isNaN`, `log`, `pprint`, and `call-api`.
+- Logseq now applies child-result pruning by default only for file-based block results; DB graph query results are not pruned by this option.
 
 ---
 
@@ -434,7 +440,6 @@ The biggest difference when using `:result-transform` between graph types is **p
 ### How to Check Your Graph Type
 
 1. Look at your graph folder:
-
    - **Files ending in `.md`** → File-based graph
    - **`logseq.db` file** → DB graph
 
@@ -492,7 +497,6 @@ Replace `:block/priority` with `:logseq.property/priority`
 **Solutions:**
 
 1. **Check spelling:**
-
    - Must be `:result-transform` (singular)
    - Not `:transform`, `:result-transforms`, or `:transform-result`
 
@@ -564,8 +568,9 @@ This is a per-query display option, not a `config.edn` setting.
  :remove-block-children? false}
 ```
 
-**Default:** If you omit the option, Logseq behaves as if `:remove-block-children?`
-were set to `true`.
+> **Removed:** "If omitted, `:remove-block-children?` behaves as `true` for all graphs."
+
+**Current behavior:** If omitted, the default is effectively `true` for file-based block results. For DB graphs, this child-pruning step is not applied.
 
 ### Problem: Query Shows No Results After Adding Transform
 
@@ -614,15 +619,19 @@ were set to `true`.
    :result-transform (fn [result] (sort-by :priority result))
    ```
 
-2. **Using unavailable functions:**
+2. **Using transform functions that fail at runtime:**
 
    ```clojure
-   ;; ❌ Some functions might not be available
-   :result-transform (fn [result] (println result))
+   ;; ❌ Runtime error inside transform
+   :result-transform (fn [result]
+                       (map #(assoc % :x (/ 1 0)) result))
 
-   ;; ✅ Use allowed functions only
-   :result-transform (fn [result] result)
+   ;; ✅ Safe transform
+   :result-transform (fn [result]
+                       (map #(assoc % :x 1) result))
    ```
+
+   `println` and common core functions are available in SCI for query transforms.
 
 ### Problem: Sort Order Is Wrong
 
@@ -798,7 +807,9 @@ Transforms run every time your query updates. Keep them efficient:
 
 ### Q: Can I use JavaScript in transforms?
 
-**A:** No, transforms use Clojure syntax only. But don't worry—most common operations have Clojure equivalents:
+> **Removed:** "No, JavaScript cannot be used in transforms."
+
+**A:** Transforms are written in Clojure(Script) syntax, but ClojureScript interop is available in SCI (for example, `js/Date`, `parseFloat`, and `isNaN`). Most collection operations are still easiest to write in idiomatic Clojure:
 
 | JavaScript           | Clojure               |
 | -------------------- | --------------------- |
@@ -1081,5 +1092,5 @@ Now that you know how to use `:result-transform`, try:
 
 **Happy querying!**
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-29_
 _Version: 1.1_

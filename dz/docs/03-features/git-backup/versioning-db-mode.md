@@ -1,18 +1,20 @@
-# The Case of the Git-Backed SQLite Database: A Detective's Investigation
+# The Case of the SQLite Backup System: A Detective's Investigation
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
+> **Previously revised:** 2026-03-10
+> **Change summary:** Git integration was completely removed. The system now uses a structured per-backup-directory scheme managed by the db-worker, with hourly auto-backup (Electron + Web). All git-related documentation has been replaced.
 
-## Case File: Logseq Database Mode Git Backup & Versioning System
+## Case File: Logseq Database Mode Backup & Versioning System
 
 **Investigation Status:** SOLVED
 **Case Complexity:** High
-**Technical Domain:** Database Persistence, Version Control, Backup Systems
+**Technical Domain:** Database Persistence, SQLite Backup, DB-Worker Architecture
 
 ---
 
 ## Executive Summary
 
-Our investigation reveals a sophisticated backup and versioning system for Logseq's database mode. The system uses Git as a version control layer for SQLite databases, with periodic exports, automated commits, and a multi-tiered backup strategy. This detective-style guide documents the architecture, flow, and key evidence found throughout the codebase.
+Our investigation reveals that Logseq's DB-mode backup system has been substantially redesigned. **Git integration has been completely removed.** The system now uses a structured directory-per-backup scheme backed by SQLite's native backup API, executed through the db-worker process. Auto-backup fires every hour on both Electron and Web. Backups carry typed metadata (source, creation time) enabling source-scoped pruning and throttle control. This document reflects the current codebase as of 2026-05-28.
 
 ---
 
@@ -20,335 +22,299 @@ Our investigation reveals a sophisticated backup and versioning system for Logse
 
 ### Location of Evidence
 
-The backup system operates across multiple locations:
+The backup system operates across these locations on Electron:
 
-1. **Database Storage**: `~/.logseq/graphs/<db-name>/`
-
-   - Primary SQLite database files
+1. **Live Database**: `~/.logseq/graphs/<encoded-graph-dir>/`
+   - Primary SQLite database used by the db-worker
    - Managed by `electron.db` namespace
 
-2. **Git Repository**: `~/.logseq/git/<graph-path>/.git`
+2. **Backup Root**: `~/.logseq/graphs/<encoded-graph-dir>/backup/`
+   - Each backup is its own subdirectory (not a single rolling file)
+   - Subdirectory name is a `build-backup-name` key, URL-encoded
+   - Managed by `logseq.db-worker.graph-backup` namespace
 
-   - Separate git directory (using `--separate-git-dir`)
-   - Configured per graph
-   - Managed by `electron.git` namespace
+3. **Per-Backup Directory**: `backup/<backup-name>/`
+   - `db.sqlite` — SQLite copy via native backup API
+   - `metadata.edn` — Source, creation timestamp, schema version
 
-3. **Local Version Files**: `<graph-path>/logseq/version-files/local/`
-
-   - Timestamped backup snapshots
-   - Keeps latest 6 versions per file
+4. **Emergency Write Backups**: `<graph-dir>/backups/<relative-path>/`
+   - Created only when an IPC `:writeFile` operation fails
+   - Rolling window of 6 files per path (hourly dedup)
    - Managed by `electron.backup-file` namespace
 
-4. **Backup Directory**: `<graph-path>/logseq/bak/`
-   - Emergency backups when write operations fail
-   - Triggered by diff detection (deleted content)
+> **⚠️ Git integration has been removed.** There is no longer an `electron.git` namespace, no `~/.logseq/git/` directory, and no git auto-commit feature. All git-related settings (`:git/disable-auto-commit?`, `:git/auto-commit-seconds`, `:git/commit-on-close?`) have been removed from state and UI.
 
 ### Key Suspects (Components)
 
 ```
-frontend.persist-db (The Orchestrator)
-├── Coordinates periodic exports
-├── Tracks graph changes via transaction IDs
-└── Triggers export every 30 seconds
+electron.db (The Backup Orchestrator)
+├── backup-db-via-worker!     Backup via db-worker IPC (primary path)
+├── backup-db!                Backup via direct sqlite-backup library
+├── run-auto-backup!          Fires for all active window/repo pairs
+├── reconcile-auto-backup-timer!  Starts/stops 1-hour interval timer
+└── sync-auto-backup-repo!    Called on graph open/close to track active repos
 
-electron.db (The Storage Handler)
-├── Manages SQLite file I/O
-├── save-db!: Writes binary data to disk
-└── get-db: Reads database from disk
+logseq.db-worker.graph-backup (The Backup Policy Engine)
+├── <create-backup!           Orchestrates throttle check + snapshot + metadata write
+├── build-backup-name         Creates <graph-name>-[label-]<UTC-timestamp> keys
+├── prune-backups!            Source-scoped pruning (keeps N most recent by source)
+├── list-backups              Returns backup list with name/created-at/size-bytes/source
+└── remove-backup!            Deletes a backup directory
 
-electron.git (The Version Control Agent)
-├── Initializes git repositories
-├── Configures SQLite diff handling
-├── Performs auto-commits at intervals
-└── Executes git operations via dugite
+electron.backup-file (The Emergency Safety Net)
+├── backup-file               Creates emergency backups on write failure
+├── truncate-daily-versioned-files!  Hourly + daily dedup retention strategy
+└── too-soon?                 Rate-limit: skips if a backup exists within last hour
 
-electron.backup-file (The Safety Net)
-├── Creates timestamped version files
-├── Maintains rolling window of backups
-└── Truncates old versions (keeps 6)
+frontend.persist-db (The Manual Trigger)
+└── export-current-graph!     User-triggered backup; calls IPC :db-export with force-backup?=true
+
+frontend.handler.export (The Web Scheduler)
+└── auto-db-backup!           Hourly OPFS backup for web graphs (if backup folder configured)
 ```
 
 ---
 
 ## The Timeline: How It All Works
 
-### Act I: Initialization (When a Graph Opens)
+### Act I: Graph Opens — Auto-backup Timer Starts
 
-**File:** `electron.git.cljs:72-92`
+**File:** `src/electron/electron/db.cljs` — `sync-auto-backup-repo!`, `reconcile-auto-backup-timer!`
 
 ```clojure
-(defn init!
-  [graph-path]
-  (let [separate-git-dir (get-graph-git-dir graph-path)
-        args ["init" "--separate-git-dir=" separate-git-dir]]
-    ;; Configure git for SQLite files
-    (run-git! graph-path #js ["config" "diff.sqlite3.binary" "true"])
-    (run-git! graph-path #js ["config" "diff.sqlite3.textconv" "echo .dump | sqlite3"])
-    ;; Create .gitattributes
-    (fs/writeFileSync ".gitattributes" "*.sqlite diff=sqlite3")))
+(defn sync-auto-backup-repo!
+  [window-id repo]
+  (swap! *auto-backup
+         (fn [state]
+           (if (seq repo)
+             (assoc-in state [:window->repo window-id] repo)
+             (update state :window->repo dissoc window-id))))
+  (reconcile-auto-backup-timer!)
+  nil)
+
+(defn- reconcile-auto-backup-timer!
+  []
+  (let [{:keys [interval-id]} @*auto-backup
+        has-repos? (seq (active-repo-window-ids))]
+    (cond
+      (and has-repos? (nil? interval-id))
+      (let [id (js/setInterval (fn [] (run-auto-backup!))
+                               backup-interval-ms)]    ;; 3,600,000 ms = 1 hour
+        (swap! *auto-backup assoc :interval-id id))
+      ...)))
 ```
 
-**Evidence Found:**
+**Evidence:**
 
-- Git uses a **separate directory** to keep graph directories clean
-- SQLite files are configured with custom diff driver (`diff=sqlite3`)
-- Text conversion command: `echo .dump | sqlite3` (converts binary to SQL for diffs)
+- When any window opens a repo, it registers via `sync-auto-backup-repo!`
+- `reconcile-auto-backup-timer!` starts the interval **only if** at least one repo is active
+- When all repos are closed, the interval is cleared
+- Timer interval: **1 hour** (`backup-interval-ms = (* 60 60 1000)`)
 
-### Act II: The Export Cycle (Every 30 Seconds)
+### Act II: The Hourly Auto-backup Fires
 
-**File:** `frontend.persist_db.cljs:55-80`
+**File:** `src/electron/electron/db.cljs` — `run-auto-backup!`, `backup-db-via-worker!`
 
 ```clojure
+(defn run-auto-backup!
+  []
+  (p/all
+   (for [[repo window-id] (active-repo-window-ids)]
+     (-> (backup-db-via-worker! repo window-id {})
+         (p/catch (fn [error]
+                    (log/warn :electron/auto-db-backup-failed
+                              {:repo repo :error error})
+                    nil))))))
+
+(defn backup-db-via-worker!
+  [db-name window-id opts]
+  (<create-graph-backup!
+   db-name
+   opts
+   (fn [dst-path]
+     (p/let [runtime (db-worker/ensure-runtime! db-name window-id)]
+       (cli-transport/invoke runtime
+                             :thread-api/backup-db-sqlite
+                             [db-name dst-path])))))
+```
+
+**The Backup Chain:**
+
+```
+1. 1-hour timer fires
+   ↓
+2. run-auto-backup! iterates all active (repo, window-id) pairs
+   ↓
+3. backup-db-via-worker! calls <create-graph-backup!
+   ↓
+4. <create-graph-backup! calls graph-backup/<create-backup!
+   with {:source :electron-auto
+         :throttle-ms 3,600,000
+         :keep-versions 12}
+   ↓
+5. graph-backup checks throttle: skip if latest :electron-auto backup < 1h old
+   ↓
+6. snapshot! fn: db-worker invoked via cli-transport with :thread-api/backup-db-sqlite
+   ↓
+7. db-worker uses SQLite native backup API → writes to backup/<name>/db.sqlite
+   ↓
+8. metadata.edn written: {:source :electron-auto :created-at-ms ... :repo ...}
+   ↓
+9. prune-backups! removes :electron-auto backups beyond keep-versions=12
+```
+
+**Key Evidence:**
+
+- **Backup is throttled**: If a backup with source `:electron-auto` already exists within the last hour, it is skipped
+- **Keeps 12 versions** for auto-backup (not 6 — that was the old design)
+- **Source-scoped pruning**: Manual backups (`:electron-manual`) and auto backups (`:electron-auto`) are pruned independently
+- **No change detection**: There is no `graph-has-changed?` guard; the throttle is the only guard against excessive backups
+
+### Act III: The Manual Save (User Triggered)
+
+**File:** `src/main/frontend/persist_db.cljs` — `export-current-graph!`  
+**File:** `src/main/frontend/handler/events.cljs` — `:graph/save-db-to-disk` handler
+
+```clojure
+;; Event dispatch path (events.cljs:249)
+(defmethod handle :graph/save-db-to-disk [[_ _opts]]
+  (persist-db/export-current-graph! :succ-notification? true))
+
+;; persist_db.cljs
 (defn export-current-graph!
-  [& {:keys [succ-notification? force-save?]}]
+  [& {:keys [succ-notification?]}]
   (when (util/electron?)
     (when-let [repo (state/get-current-repo)]
-      (when (or force-save?
-                (and (graph-has-changed? repo)
-                     (state/input-idle? repo :diff 5000)))
-        (<export-db repo {})
-        ...))))
-
-(defn run-export-periodically!
-  []
-  (js/setInterval export-current-graph! (* 30 1000)))  ;; 30 seconds
+      (->
+       (p/do!
+         (ipc/ipc :db-export repo true)   ;; true = force-backup?
+         (when succ-notification?
+           (state/pub-event!
+            [:notification/show {:content "DB backup successfully."
+                                 :status :success}])))
+       (p/catch ...)))))
 ```
 
-**The Export Chain:**
-
-```
-1. Timer fires (every 30s)
-   ↓
-2. Check if graph has changed (via max-tx comparison)
-   ↓
-3. Export database from OPFS/memory
-   File: frontend.persist_db.browser.cljs:223-231
-   ↓
-4. Call electron IPC: :db-export
-   File: electron.handler.cljs:282-284
-   ↓
-5. Write to disk: db/save-db!
-   File: electron.db.cljs:20-23
-   ↓
-6. Update last-synced transaction ID
-```
-
-**Key Evidence:**
-
-- Export is **change-aware**: Only exports if `max-tx` has increased
-- Export also requires **input idle** for at least 5 seconds to avoid exporting during active editing
-- Uses IPC (Inter-Process Communication) between renderer and main process
-- Binary data passed directly (ArrayBuffer) for efficiency
-
-### Act III: The Git Commit (Configurable Interval, Default 60s)
-
-**File:** `electron.git.cljs:191-209`
+**IPC Handler** (`handler.cljs:242`):
 
 ```clojure
-(defonce auto-commit-interval (atom nil))
-
-(defn- auto-commit-tick-fn
-  []
-  (when (state/git-auto-commit-enabled?)
-    (add-all-and-commit!)))
-
-(defn configure-auto-commit!
-  []
-  (when (state/git-auto-commit-enabled?)
-    (let [seconds (state/get-git-commit-seconds)  ;; Default: 60
-          millis (* seconds 1000)]
-      (js/setInterval auto-commit-tick-fn millis))))
+(defmethod handle :db-export [window [_ repo force-backup?]]
+  (when-let [repo (canonical-repo repo)]
+    (db/ensure-graph-dir! repo)
+    (db/backup-db-via-worker! repo (.-id window) {:force-backup? force-backup?})))
 ```
 
-**The Commit Chain:**
+**Evidence:**
+
+- Manual save sends `force-backup? = true`, which sets `:source :electron-manual`
+- `:electron-manual` backups bypass the throttle check (`force-backup?` overrides `too-soon?`)
+- User sees a success notification; errors are shown as sticky error notifications
+- Triggered by: keyboard shortcut → `:graph/db-save-shortcut` → `:graph/save-db-to-disk`
+
+### Act IV: The Backup Directory Structure
+
+**File:** `src/main/logseq/db_worker/graph_backup.cljs`
+
+Each backup lives in its own directory:
 
 ```
-1. Timer fires (configurable, default 60s)
-   ↓
-2. Check if auto-commit enabled
-   File: electron.state.cljs:24-27
-   ↓
-3. Add all files: git add --ignore-errors ./*
-   File: electron.git.cljs:94-102
-   ↓
-4. Commit: git commit -m "Auto saved by Logseq"
-   File: electron.git.cljs:106-128
-   ↓
-5. Handle errors (identity unknown, index.lock exists, etc.)
+~/.logseq/graphs/
+└── <encoded-graph-dir>/
+    ├── db.sqlite               ← live database
+    └── backup/
+        ├── <backup-name-1>/
+        │   ├── db.sqlite       ← SQLite backup copy
+        │   └── metadata.edn   ← {:schema-version 1
+        │                          :name "my-graph-20260528T134500Z"
+        │                          :repo "my-graph"
+        │                          :source :electron-auto
+        │                          :created-at-ms 1748xxx
+        │                          :db-path "/path/to/db.sqlite"}
+        └── <backup-name-2>/
+            ├── db.sqlite
+            └── metadata.edn
 ```
 
-**Key Evidence:**
-
-- Commits are **silent by default** (no user notification)
-- Error handling for common git issues (permissions, lock files)
-- Commit message: "Auto saved by Logseq" (customizable via UI)
-- Commits **all graphs** currently open in all windows
-
-### Act IV: Version Files (File Sync Integration)
-
-**File:** `electron.backup-file.cljs:37-61`
+**Backup naming** (`build-backup-name`):
 
 ```clojure
-(defn backup-file
-  [repo dir relative-path ext content]
-  (let [dir* (get-version-file-dir repo relative-path)
-        new-path (str (string/replace (.toISOString (js/Date.)) ":" "_")
-                      ".Desktop" ext)]
-    (fs/writeFileSync new-path content)
-    (truncate-old-versioned-files! dir*)))  ;; Keep latest 6
+;; Without label:
+;; <graph-name>-20260528T134500Z
 
-(defn- truncate-old-versioned-files!
-  [dir]
-  (let [files (reverse (sort files))
-        old-files (drop 6 files)]
-    (doseq [file old-files]
-      (fs-extra/removeSync file))))
+;; With label (e.g. "manual"):
+;; <graph-name>-manual-20260528T134500Z
 ```
 
-**Evidence Found:**
+Timestamps are UTC ISO-like format: `YYYYMMDDTHHMMSSZ`.  
+Directory names are URL-encoded via `graph-dir/graph-dir-key->encoded-dir-name`.
 
-- Version files created when **deletions detected** in file sync
-- Format: `<ISO-timestamp>.Desktop<ext>`
-- **Rolling window**: Only 6 most recent versions kept
-- Used in conjunction with remote file sync system
+### Act V: Web Graph Auto-backup
 
-**File:** `frontend.fs.sync.cljs:1329-1352`
+**File:** `src/main/frontend/handler/export.cljs` — `auto-db-backup!`
 
 ```clojure
-(defn- need-add-version-file?
-  [^FileTxn filetxn origin-db-content]
-  (when (.-updated? filetxn)
-    (let [content (fs/read-file repo-dir rpath)]
-      (and (seq origin-db-content)
-           (or (nil? content)
-               (some :removed (diff/diff origin-db-content content)))))))
+(defn auto-db-backup!
+  [repo]
+  (when (and
+         util/web-platform?
+         (not (util/capacitor?))
+         (ldb/get-key-value (db/get-db repo) :logseq.kv/graph-backup-folder))
+    (cancel-db-backup!)
+    (let [interval (js/setInterval #(backup-db-graph repo)
+                                   (* 1 60 60 1000))]  ;; 1 hour
+      (reset! *backup-interval interval))))
 ```
 
-**The Version File Trigger:**
+**Evidence:**
 
-- Created during **remote→local sync** operations
-- Only for files with **deleted content** (diff contains `:removed`)
-- Protects against data loss during sync conflicts
+- Web auto-backup is opt-in: requires `:logseq.kv/graph-backup-folder` to be set in the graph DB
+- Fires every 1 hour (same interval as Electron)
+- Web backup path is OPFS-based, not the same directory structure as Electron
 
----
+### Act VI: Emergency Write Failure Backups
 
-## Special Evidence: Git Configuration for SQLite
-
-### The .gitattributes File
-
-**File:** `electron.git.cljs:88-92`
-
-```bash
-*.sqlite diff=sqlite3
-```
-
-### Git Config Commands
-
-```bash
-git config diff.sqlite3.binary true
-git config diff.sqlite3.textconv "echo .dump | sqlite3"
-```
-
-**What This Does:**
-
-1. Treats `.sqlite` files as binary
-2. For `git diff`, converts binary to SQL dump format
-3. Enables readable diffs of database schema and data
-4. Prevents git from attempting line-by-line text diffs
-
-**Example Output:**
-
-```bash
-$ git diff HEAD^ HEAD
-diff --git a/logseq.sqlite b/logseq.sqlite
---- a/logseq.sqlite
-+++ b/logseq.sqlite
-@@ -1,5 +1,6 @@
- CREATE TABLE blocks (id INTEGER PRIMARY KEY, ...);
- INSERT INTO blocks VALUES(1, 'My Note', ...);
-+INSERT INTO blocks VALUES(2, 'New Block', ...);
-```
-
----
-
-## The Interrogation: Key Questions Answered
-
-### Q: When are commits created?
-
-**A:** Two scenarios:
-
-1. **Periodic auto-commit**: Every N seconds (configurable, default 60s)
-2. **On graph close**: Optional, controlled by `git/commit-on-close?` setting
-
-**File:** `electron.git.cljs:211-215`
-
-```clojure
-(defn before-graph-close-hook!
-  []
-  (when (and (state/git-auto-commit-enabled?)
-             (state/git-commit-on-close-enabled?))
-    (add-all-and-commit!)))
-```
-
-### Q: What happens if a write fails?
-
-**A:** Emergency backup is created in `logseq/bak/`
-
-**File:** `electron.handler.cljs:119-142`
+**File:** `src/electron/electron/handler.cljs` — `:writeFile` handler (lines 100–131)  
+**File:** `src/electron/electron/backup_file.cljs`
 
 ```clojure
 (defmethod handle :writeFile [window [_ repo path content]]
   (try
     (fs/writeFileSync path content)
     (catch :default e
-      (let [backup-path (backup-file/backup-file repo :backup-dir path ext content)]
-        (notify-user (str "Write failed. Backup saved to " backup-path))))))
+      (let [backup-path (try
+                          (backup-file/backup-file repo :backup-dir path
+                            (node-path/extname path) content)
+                          (catch :default backup-error ...))]
+        (utils/send-to-renderer window "notification"
+          {:type "error"
+           :i18n-key :electron/write-file-error-with-backup
+           :i18n-args [path error-message backup-path]})))))
 ```
 
-### Q: How are database changes detected?
-
-**A:** Transaction ID tracking
-
-**File:** `frontend.persist_db.cljs:48-53`
+**`backup-file` behavior** (`backup_file.cljs:129`):
 
 ```clojure
-(defonce *last-synced-graph->tx (atom {}))
-
-(defn- graph-has-changed?
-  [repo]
-  (let [tx (@*last-synced-graph->tx repo)
-        db (db/get-db repo)]
-    (or (nil? tx) (> (:max-tx db) tx))))
+(defn backup-file
+  [repo dir relative-path ext content
+   & {:keys [keep-versions backups-dir force-backup?]
+      :or {keep-versions 6 force-backup? false}}]
+  ...
+  (when (or force-backup? (not (too-soon? dir*)))
+    (fs/writeFileSync new-path content)
+    (truncate-daily-versioned-files! dir* keep-versions)))
 ```
 
-**Evidence:**
+**Key Evidence:**
 
-- Each database has a monotonically increasing transaction ID (`max-tx`)
-- System tracks last exported `max-tx` per graph
-- Export only happens if current `max-tx > last-synced-tx`
-
-### Q: Can I disable auto-commit?
-
-**A:** Yes, through Settings
-
-**File:** `frontend.components.settings.cljs:280-293`
-
-```clojure
-(defn switch-git-auto-commit-row []
-  (let [enabled? (state/get-git-auto-commit-enabled?)]
-    (toggle-switch
-     :on-change (fn [_]
-                  (ipc/ipc :userAppCfgs :git/disable-auto-commit? enabled?)
-                  (ipc/ipc :setGitAutoCommit)))))
-```
-
-**Settings Location:**
-
-- UI: Settings → Version Control
-- Config keys:
-  - `:git/disable-auto-commit?` (boolean)
-  - `:git/auto-commit-seconds` (integer, default 60)
-  - `:git/commit-on-close?` (boolean, default false)
+- Emergency backup only fires on **write failure**, not on every write
+- Default `keep-versions = 6`
+- **Rate-limited**: `too-soon?` skips backup if a backup was made within the last hour
+- **New retention strategy** (`truncate-daily-versioned-files!`):
+  - No longer a simple "keep N most recent files"
+  - Keeps up to 6 hourly buckets (newest backup per hour)
+  - Additional slots (if `keep-versions > 6`) use daily dedup buckets
+  - Old files outside both buckets are deleted
+- Notification shown to user with the backup path (i18n key: `:electron/write-file-error-with-backup`)
 
 ---
 
@@ -356,187 +322,80 @@ diff --git a/logseq.sqlite b/logseq.sqlite
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     USER EDITS GRAPH                            │
+│                  GRAPH OPENS (Electron)                         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+                   sync-auto-backup-repo!
+                              ↓
+              reconcile-auto-backup-timer! starts
+              ⏱️ js/setInterval(..., 3,600,000ms)  ← 1 hour
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│           run-auto-backup! fires every hour                     │
+│                                                                 │
+│  For each active (repo, window-id):                             │
+│    backup-db-via-worker!                                        │
+│    └─ <create-graph-backup!                                     │
+│         └─ throttle check: latest :electron-auto < 1h? → skip  │
+│         └─ snapshot! via db-worker :thread-api/backup-db-sqlite │
+│         └─ write metadata.edn {:source :electron-auto}         │
+│         └─ prune-backups! keeps 12 :electron-auto entries       │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│              FRONTEND (Browser/Renderer Process)                │
+│           BACKUP STORAGE LAYOUT                                 │
 │                                                                 │
-│  1. User Transaction → Worker Thread                            │
-│  2. SQLite DB in OPFS/Memory Updated                           │
-│  3. max-tx incremented                                         │
-│                                                                 │
+│  ~/.logseq/graphs/<encoded>/backup/                             │
+│    ├── <graph-20260528T134500Z>/                                 │
+│    │   ├── db.sqlite   ← native SQLite backup                   │
+│    │   └── metadata.edn  ← source, timestamp, repo              │
+│    └── <graph-20260528T144500Z>/                                 │
+│        ├── db.sqlite                                            │
+│        └── metadata.edn                                         │
 └─────────────────────────────────────────────────────────────────┘
-                              ↓
-                    ⏱️  Every 30 seconds
-                              ↓
+
 ┌─────────────────────────────────────────────────────────────────┐
-│              EXPORT CHECK (persist_db.cljs)                     │
+│               USER TRIGGERS MANUAL SAVE                         │
 │                                                                 │
-│  ❓ Has max-tx changed?                                         │
-│      YES → Export database                                      │
-│      NO  → Skip                                                 │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ YES
-┌─────────────────────────────────────────────────────────────────┐
-│              EXPORT DB (IPC to Main Process)                    │
-│                                                                 │
-│  1. Worker: Export SQLite to ArrayBuffer                        │
-│  2. IPC: Send to main process                                   │
-│  3. Main: Write to ~/.logseq/graphs/<db>/logseq.sqlite         │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-                    ⏱️  Every 60 seconds (configurable)
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│              GIT AUTO-COMMIT (electron.git.cljs)                │
-│                                                                 │
-│  ✅ If enabled:                                                 │
-│    1. git add --ignore-errors ./*                               │
-│    2. git commit -m "Auto saved by Logseq"                      │
-│    3. Handle errors gracefully                                  │
-│                                                                 │
-│  🔴 If disabled: Skip                                           │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│                    GIT REPOSITORY                               │
-│                                                                 │
-│  📁 ~/.logseq/git/<graph>/.git                                  │
-│    ├── History of SQLite file changes                           │
-│    ├── Readable diffs (via textconv)                            │
-│    └── Commit messages and timestamps                           │
-│                                                                 │
+│  Shortcut → :graph/db-save-shortcut                             │
+│    → :graph/save-db-to-disk                                     │
+│    → persist-db/export-current-graph!                           │
+│    → ipc :db-export repo force-backup?=true                     │
+│    → backup-db-via-worker! {:force-backup? true}                │
+│    → source :electron-manual, bypasses throttle                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Special Operations: File Sync Integration
+## The Interrogation: Key Questions Answered
 
-### The Version File Detective
+### Q: Are backups still change-aware (only runs if data changed)?
 
-**When file sync is enabled**, the system creates additional version files:
+**A: No.** The `graph-has-changed?` function and `*last-synced-graph->tx` atom have been removed. The only guard against excessive backups is the **throttle**: if a backup with the same source was created within `throttle-ms` (1 hour for auto-backup), it is skipped.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│              REMOTE → LOCAL SYNC                                │
-│                                                                 │
-│  Remote has updated file → Needs to apply locally               │
-│                              ↓                                  │
-│  🔍 Check: Does update contain deletions?                       │
-│      ├── YES → Create version file first                        │
-│      │         (Preserve old content)                           │
-│      └── NO  → Apply update directly                            │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Q: What happened to git auto-commit?
 
-**File:** `frontend.fs.sync.cljs:908-909`
+**A: It was removed.** The entire `electron.git` namespace (`src/electron/electron/git.cljs`) no longer exists. There are no git settings, no auto-commit, no `--separate-git-dir`, and no `.gitattributes` for SQLite diff. Users who want version history can use Logseq's backup listing or external tools.
 
-```clojure
-(defn add-new-version-file
-  [repo path content]
-  (ipc/ipc "addVersionFile" (config/get-local-dir repo) path content))
-```
+### Q: How many backup versions are kept?
 
-**Storage:**
+**A:** Two separate policies:
 
-- Location: `<graph>/logseq/version-files/local/<path>/<timestamp>.Desktop<ext>`
-- Retention: Latest 6 versions
-- Purpose: Rollback capability during sync conflicts
+- **Auto-backup** (`run-auto-backup!`): Keeps **12** versions scoped to `:electron-auto` source (`automatic-backup-keep-versions = 12`)
+- **Emergency write failure backup** (`backup-file`): Keeps **6** per path (default `keep-versions = 6`), with hourly/daily dedup
 
----
+### Q: Can I trigger a manual save?
 
-## The Smoking Gun: Why This Design?
+**A: Yes.** The keyboard shortcut triggers `:graph/db-save-shortcut` → `:graph/save-db-to-disk` → `export-current-graph!`. This sends `force-backup? = true` to bypass the throttle and creates a `:electron-manual` sourced backup. A success notification is shown in the UI.
 
-### Design Rationale
+### Q: What happens if a write fails?
 
-1. **Two-Speed System**
+**A:** Emergency backup via `backup-file/backup-file` writes to `<graph-dir>/backups/<path>/`. The user receives an error notification that includes the backup path. The function is rate-limited (max 1 per hour per path) but `force-backup?` is available.
 
-   - **Fast writes** (30s export): Ensures data reaches disk quickly
-   - **Slower commits** (60s git): Reduces git overhead
-   - **Result**: Balance between safety and performance
+### Q: Is there a backup UI?
 
-2. **Separate Git Directory**
-
-   - Keeps graph directory clean
-   - Allows multiple graphs to share git infrastructure
-   - Prevents .git conflicts in synced folders
-
-3. **Change Detection**
-
-   - Transaction ID tracking prevents unnecessary exports
-   - Only commits when data actually changed
-   - Reduces I/O and disk usage
-
-4. **Multi-Tier Backup**
-
-   - **Primary**: SQLite file on disk
-   - **Versioned**: Git history
-   - **Snapshot**: Version files (latest 6)
-   - **Emergency**: Backup directory (logseq/bak)
-
-5. **SQLite Diff Configuration**
-   - Binary diffs are useless for review
-   - SQL dump format enables readable diffs
-   - Helps with debugging and recovery
-
----
-
-## Case Notes: Edge Cases and Error Handling
-
-### Error: Git Author Identity Unknown
-
-**File:** `electron.git.cljs:125-127`
-
-```clojure
-(if (string/starts-with? error "Author identity unknown")
-  (utils/send-to-renderer "setGitUsernameAndEmail" {:type "git"})
-  (notify-error))
-```
-
-**Action:** Prompts user to configure git username/email
-
-### Error: index.lock Exists
-
-**File:** `electron.git.cljs:98-102`
-
-```clojure
-(p/catch (fn [error]
-  (if (string/includes? error "index.lock': File exists")
-    (log-error error)  ;; Suppress - likely concurrent operation
-    (p/rejected error))))
-```
-
-**Action:** Silently logs (prevents spurious errors)
-
-### Error: Permission Denied
-
-**File:** `electron.git.cljs:99-101`
-
-```clojure
-(if (string/includes? error "permission denied")
-  (log-error error)
-  (p/rejected error))
-```
-
-**Action:** Logs and continues (graceful degradation)
-
-### Emergency: Write Failure
-
-**File:** `electron.handler.cljs:131-142`
-
-```clojure
-(catch :default e
-  (let [backup-path (backup-file/backup-file ...)]
-    (notify-user (str "Write failed. Backup: " backup-path))))
-```
-
-**Action:** Creates timestamped backup in `logseq/bak/`
+**A:** `export-current-graph!` shows a notification on success/failure. There is no dedicated backup listing UI in the renderer that was confirmed in scope. The backup directory can be accessed directly at `~/.logseq/graphs/<encoded>/backup/`. The `list-backups` function in `graph-backup` provides a structured listing API used by the CLI.
 
 ---
 
@@ -544,50 +403,47 @@ diff --git a/logseq.sqlite b/logseq.sqlite
 
 ### For Users
 
-1. **Your data is safe**: 4 layers of backup (disk, git, version files, emergency)
-2. **Auto-save works**: Database saved every 30s, committed every 60s
-3. **You can customize**: Settings → Version Control
-4. **You can recover**: Git history + version files provide rollback options
+1. **Auto-backup every hour**: Electron backs up your database automatically every hour
+2. **Manual save available**: Use the keyboard shortcut to trigger an immediate backup (bypasses throttle)
+3. **12 hourly auto-backups kept**: The last 12 auto-backup snapshots are retained
+4. **Emergency backups on write failure**: If a file write fails, an emergency copy is saved with a notification
+5. **No git integration**: Git auto-commit was removed; use external git tools if you want git history
 
 ### For Developers
 
-1. **Architecture**: Two-process (renderer + main) with IPC bridge
-2. **Performance**: Change-aware exports minimize I/O
-3. **Reliability**: Graceful error handling and degradation
-4. **Integration**: Works with file sync for remote backup
+1. **Architecture**: db-worker executes the SQLite backup via `thread-api/backup-db-sqlite`
+2. **Source-scoped pruning**: Use `:source` in metadata to independently manage manual vs auto backups
+3. **Throttle is separate from pruning**: Throttle prevents excessive backup frequency; pruning controls retention
+4. **Backup format**: Each backup is a directory with `db.sqlite` + `metadata.edn` (schema-version 1)
+5. **No transaction-based change detection**: Removed — rely on the throttle mechanism
 
 ### Key Files Reference
 
-| Component            | File                                | Line Numbers       |
-| -------------------- | ----------------------------------- | ------------------ |
-| Export orchestration | `frontend.persist_db.cljs`          | 55-80              |
-| Database I/O         | `electron.db.cljs`                  | 20-30              |
-| Git operations       | `electron.git.cljs`                 | 72-215             |
-| Git configuration    | `electron.git.cljs`                 | 88-92              |
-| Backup files         | `electron.backup-file.cljs`         | 37-61              |
-| Version files        | `frontend.fs.sync.cljs`             | 908-920, 1329-1352 |
-| Settings UI          | `frontend.components.settings.cljs` | 280-329            |
-| State management     | `electron.state.cljs`               | 20-31              |
-| IPC handlers         | `electron.handler.cljs`             | 77-85, 282-287     |
+| Component                 | File                                          | Key Functions / Lines                                                       |
+| ------------------------- | --------------------------------------------- | --------------------------------------------------------------------------- |
+| Auto-backup orchestration | `src/electron/electron/db.cljs`               | `run-auto-backup!`, `reconcile-auto-backup-timer!`, `backup-db-via-worker!` |
+| Backup policy engine      | `src/main/logseq/db_worker/graph_backup.cljs` | `<create-backup!`, `build-backup-name`, `prune-backups!`, `list-backups`    |
+| Manual save trigger       | `src/main/frontend/persist_db.cljs`           | `export-current-graph!` (line 280)                                          |
+| Manual save event         | `src/main/frontend/handler/events.cljs`       | `:graph/save-db-to-disk` (line 247)                                         |
+| IPC handler               | `src/electron/electron/handler.cljs`          | `:db-export` (line 253), `:writeFile` (line 101)                            |
+| Emergency backups         | `src/electron/electron/backup_file.cljs`      | `backup-file`, `truncate-daily-versioned-files!`, `too-soon?`               |
+| Web auto-backup           | `src/main/frontend/handler/export.cljs`       | `auto-db-backup!` (line 275)                                                |
 
 ---
 
 ## Case Closed
 
-**Status:** ✅ SOLVED
+**Status:** ✅ SOLVED (UPDATED 2026-05-28)
 
-This investigation has revealed a sophisticated, multi-layered backup and versioning system for Logseq's database mode. The system demonstrates careful attention to data integrity, performance, and user experience through:
+The backup system has evolved from a git-backed, 30-second export model to a structured, db-worker-driven hourly backup system. Key changes:
 
-- Automatic, periodic exports and commits
-- Change-aware processing to minimize overhead
-- Multiple backup tiers for maximum safety
-- Graceful error handling and recovery
-- Integration with file sync for remote backup
-- Readable diffs for SQLite databases
-
-The evidence is clear: Logseq's database mode is protected by a robust safety net that balances automation with user control.
+- **Git integration removed** — `electron.git` namespace deleted entirely
+- **1-hour auto-backup** replacing 30-second export + 60-second git commit
+- **Per-backup directories** with `db.sqlite` + `metadata.edn` replacing rolling file writes
+- **Source-scoped retention** (12 auto / 6 emergency) with throttle-based frequency control
+- **Hourly/daily dedup** in emergency backup retention (new `truncate-daily-versioned-files!`)
 
 ---
 
-**Investigation Complete**
-_Detective Code Analyzer, signing off_ 🔍
+**Investigation Updated**
+_Detective Code Analyzer, re-opening cold case 2026-05-28_ 🔍

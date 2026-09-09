@@ -1,10 +1,10 @@
 # Logseq CLI: EDN Format Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 > Comprehensive guide to the EDN (Extensible Data Notation) format used by Logseq CLI for import/export operations
 
-**Version**: 0.4.3
+**Version**: Current CLI (`graph export/import/validate`)
 **For**: Developers & Advanced Users
 
 ---
@@ -116,345 +116,127 @@ nil
 
 ## Export Type Structures
 
-### 1. Full Graph Export (`:graph`)
+### Full Graph Export (`:graph`)
 
-**Default export type** - Contains complete graph data.
+Current CLI EDN export uses this shape:
 
 ```clojure
-{:properties [{...} {...}]              ; Property definitions
- :classes [{...} {...}]                 ; Class/tag definitions
- :pages-and-blocks [{...} {...}]        ; All pages and blocks
+{:properties {:my.property/status
+              {:db/ident :my.property/status
+               :block/title "status"
+               :logseq.property/type :default
+               :db/cardinality :db.cardinality/one}}
+ :classes {:my.class/Project
+           {:block/title "Project"
+            :build/class-extends #{:logseq.class/Root}
+            :build/class-properties [:my.property/status]}}
+ :pages-and-blocks [{:page {:block/title "My Project"
+                            :build/tags #{:my.class/Project}
+                            :build/properties {:my.property/status "active"}}
+                     :blocks [{:block/title "TODO First task"
+                               :build/tags #{:logseq.class/Task}}]}]
  :logseq.db.sqlite.export/export-type :graph
- :logseq.db.sqlite.export/schema-version [1 2]
- :logseq.db.sqlite.export/graph-files [{:file/path "..." :file/content "..."}]
- :logseq.db.sqlite.export/kv-values {:logseq.kv/graph-created-at 1704844800000
-                                     :logseq.kv/schema-version {:major 65 :minor 7}
-                                     :logseq.kv/import-type :cli/create-graph}}
+ :logseq.db.sqlite.export/schema-version {:major 65 :minor 33}
+ :logseq.db.sqlite.export/graph-files [{:file/path "pages/my-project.md"
+                                        :file/content "..."}]
+ :logseq.db.sqlite.export/kv-values [{:db/ident :logseq.kv/graph-created-at
+                                      :kv/value 1704844800000}]
+ :logseq.db.sqlite.export/property-history #{{:block/uuid #uuid "..."
+                                              :block/created-at 1704844800000
+                                              :logseq.property.history/block [:block/uuid #uuid "..."]
+                                              :logseq.property.history/property :my.property/status
+                                              :logseq.property.history/scalar-value "active"}}}
 ```
 
-**Fields:**
+### Removed CLI Export Mode
 
-- **`:properties`** - Array of property entity maps
-- **`:classes`** - Array of class/tag entity maps
-- **`:pages-and-blocks`** - Array of page and block entity maps
-- **`:export-type`** - Always `:graph`
-- **`:schema-version`** - Export format version `[major minor]`
-- **`:graph-files`** - File path mappings (optional, excluded with `-F`)
-- **`:kv-values`** - Graph metadata (creation time, schema version, etc.)
-
----
-
-### 2. Schema-Only Export (`:graph-ontology`)
-
-**Ontology export** - Contains only property and class definitions (no content).
-
-```clojure
-{:properties [{...} {...}]              ; User-defined properties
- :classes [{...} {...}]                 ; User-defined classes
- :logseq.db.sqlite.export/export-type :graph-ontology}
-```
-
-**Fields:**
-
-- **`:properties`** - User-defined property definitions only (no built-ins)
-- **`:classes`** - User-defined class/tag definitions only (no built-ins)
-- **`:export-type`** - Always `:graph-ontology`
-
-**Notes:**
-
-- Built-in properties/classes excluded by default
-- Use `-e logseq.class -e logseq.property` to exclude more namespaces
-- Perfect for sharing graph structure without content
-
----
+> **Removed:** CLI no longer exposes a direct schema-only `:graph-ontology` export command. `logseq graph export --type edn` always exports full graph data (`:graph`).
 
 ## Entity Schemas
 
-### Property Entity
-
-Properties define the schema for attributes used on pages and blocks.
+### Property Entity (Current keys)
 
 ```clojure
-{:db/id 1001                                    ; Database ID
- :db/ident :my.property/priority                ; Unique identifier
- :block/uuid #uuid "a1b2c3d4-..."              ; UUID
- :block/title "priority"                        ; Display name
- :block/created-at 1704844800000               ; Creation timestamp (optional)
- :block/updated-at 1704844800000               ; Update timestamp (optional)
- :property/schema.type :number                  ; Value type
- :property/schema.cardinality :one              ; :one or :many
- :property/schema.classes #{:logseq.class/Task} ; Allowed on these classes (optional)
- :property/closed-values #{"low" "high"}        ; Enum values (optional)
- :property/schema.description "Task priority"   ; Description (optional)}
+{:db/ident :my.property/priority
+ :block/title "priority"
+ :logseq.property/type :number
+ :db/cardinality :db.cardinality/one
+ :build/property-classes #{:logseq.class/Task}
+ :build/closed-values [{:value 1 :uuid #uuid "..."}
+                       {:value 2 :uuid #uuid "..."}]}
 ```
 
-**Property Types** (`:property/schema.type`):
+**Property Types currently exposed to users** (`:logseq.property/type`):
 
-- `:string` - Text value
-- `:number` - Numeric value
-- `:date` - Date value
-- `:checkbox` - Boolean value
-- `:url` - URL value
-- `:page` - Reference to another page
-- `:default` - Any value type
+- `:default`
+- `:number`
+- `:date`
+- `:datetime`
+- `:checkbox`
+- `:url`
+- `:node`
+- `:asset`
 
-**Cardinality** (`:property/schema.cardinality`):
-
-- `:one` - Single value
-- `:many` - Multiple values (set)
-
----
-
-### Class/Tag Entity
-
-Classes (tags) define types of pages and can have properties.
+### Class Entity (Current keys)
 
 ```clojure
-{:db/id 2001
- :db/ident :user.class/Project                  ; Unique identifier
- :block/uuid #uuid "b2c3d4e5-..."
- :block/title "Project"                         ; Display name
- :block/created-at 1704844800000
- :block/updated-at 1704844800000
- :logseq.property.class/extends [:logseq.class/Root]            ; Parent classes
- :logseq.property.class/properties [:my.property/priority        ; Properties for this class
-                    :my.property/status
-                    :my.property/deadline]}
+{:block/title "Project"
+ :build/class-extends #{:logseq.class/Root}
+ :build/class-properties [:my.property/priority :my.property/status]}
 ```
 
-**Built-in Classes:**
-
-- `:logseq.class/Root` - Base class for all classes
-- `:logseq.class/Tag` - Standard tag class
-- `:logseq.class/Page` - Page class
-- `:logseq.class/Whiteboard` - Whiteboard page
-
----
-
-### Page Entity
-
-Pages are the top-level containers in a graph.
+### Page + Block Container (`:pages-and-blocks`)
 
 ```clojure
-{:db/id 3001
- :block/uuid #uuid "c3d4e5f6-..."
- :block/title "My Project Page"                 ; Page title
- :block/name "my project page"                  ; Lowercase normalized name
- :block/created-at 1704844800000
- :block/updated-at 1704844800000
- :block/tags #{:user.class/Project}             ; Tags/classes
- :block/collapsed? false                        ; Collapsed state (optional)
-
- ;; Custom properties (using defined properties)
- :my.property/priority "high"
- :my.property/status "active"
- :my.property/deadline #inst "2025-12-31T00:00:00Z"
-
- ;; Page icon (optional)
- :logseq.property/icon "📊"
-
- ;; Page description (optional)
- :logseq.property.page/description "Main project page"}
+{:page {:block/title "Tasks"
+        :build/properties {:my.property/status "active"}
+        :build/tags #{:my.class/Project}}
+ :blocks [{:block/title "TODO First task"
+           :build/tags #{:logseq.class/Task}}
+          {:block/title "Second task"}]}
 ```
-
----
-
-### Block Entity
-
-Blocks are nested content units within pages.
-
-```clojure
-{:db/id 4001
- :block/uuid #uuid "d4e5f6g7-..."
- :block/title "- Task item #task"               ; Block content
- :block/page {:db/id 3001}                      ; Parent page reference
- :block/parent {:db/id 3001}                    ; Parent block/page reference
- :block/order 0                                 ; Position in parent (0-indexed)
- :block/created-at 1704844800000
- :block/updated-at 1704844800000
- :block/tags #{:logseq.class/Task}              ; Tags
- :block/collapsed? false                        ; Collapsed state (optional)
-
- ;; Custom properties
- :my.property/priority "high"}
-```
-
-**Block References:**
-
-- `:block/page` - Always points to the top-level page
-- `:block/parent` - Points to direct parent (can be page or block)
-- References use `{:db/id N}` notation
-
-**Block Order:**
-
-- `:block/order` - Zero-indexed position within parent
-- Must be unique within parent's children
-
----
 
 ## Common Patterns
 
-### Entity References
+### References
 
-References to other entities use maps with `:db/id`:
+Current export/import commonly uses graph-stable references such as:
 
-```clojure
-;; In export
-{:block/page {:db/id 3001}
- :block/parent {:db/id 3001}
- :block/tags #{:user.class/Project}}  ; Keywords for classes
+- db idents: `:my.property/status`
+- UUID refs: `[:block/uuid #uuid "..."]`
+- build-page refs: `[:build/page {:block/title "Some Page"}]`
 
-;; During import, IDs are remapped
-;; Keywords are resolved to actual entity IDs
-```
+> **Removed:** `{:db/id N}`-style reference notation is not the primary EDN interchange shape for current graph EDN export/import.
 
-### Property Values
+### Cardinality
 
-```clojure
-;; Single-value properties (:cardinality :one)
-:my.property/status "active"
-:my.property/priority 5
-:my.property/due-date #inst "2025-12-31T00:00:00Z"
-
-;; Multi-value properties (:cardinality :many)
-:my.property/tags #{"tag1" "tag2" "tag3"}
-:my.property/assignees #{:user/alice :user/bob}
-```
+- `:db.cardinality/one` for single value
+- `:db.cardinality/many` for set/multi value
 
 ### Timestamps
 
-```clojure
-;; Unix timestamp (milliseconds since epoch)
-:block/created-at 1704844800000
-
-;; EDN instant (ISO 8601)
-:my.property/deadline #inst "2025-12-31T23:59:59.999Z"
-```
-
-### Optional Fields
-
-Many fields are optional and can be omitted:
-
-```clojure
-;; Minimal page entity
-{:block/uuid #uuid "..."
- :block/title "Page Title"
- :block/name "page title"}
-
-;; Full page entity (with all optional fields)
-{:block/uuid #uuid "..."
- :block/title "Page Title"
- :block/name "page title"
- :block/created-at 1704844800000
- :block/updated-at 1704844800000
- :block/tags #{:user.class/Project}
- :block/collapsed? false
- :logseq.property/icon "📊"
- :my.property/status "active"}
-```
-
----
+- File/block/history timestamps are Unix epoch milliseconds (when included)
+- EDN supports `#inst`, but primary graph metadata timestamps in export are numeric
 
 ## Examples
 
-### Example 1: Minimal Graph Export
+### Example: Minimal Current Graph Export
 
 ```clojure
-{:properties []
- :classes []
- :pages-and-blocks [{:block/uuid #uuid "68c012ca-2aee-46a8-a589-8bf67a1d4e92"
-                     :block/title "My First Page"
-                     :block/name "my first page"}]
+{:properties {}
+ :classes {}
+ :pages-and-blocks [{:page {:block/title "My First Page"}
+                     :blocks []}]
  :logseq.db.sqlite.export/export-type :graph
- :logseq.db.sqlite.export/schema-version [1 2]
- :logseq.db.sqlite.export/kv-values {}}
+ :logseq.db.sqlite.export/schema-version {:major 65 :minor 33}
+ :logseq.db.sqlite.export/kv-values []}
 ```
 
-### Example 2: Page with Properties
+### Example: Current CLI Command Pair
 
-```clojure
-{:properties [{:db/ident :my.property/status
-               :block/title "status"
-               :property/schema.type :string
-               :property/schema.cardinality :one}]
-
- :classes [{:db/ident :my.class/Project
-            :block/title "Project"
-            :logseq.property.class/extends [:logseq.class/Root]
-            :logseq.property.class/properties [:my.property/status]}]
-
- :pages-and-blocks [{:block/uuid #uuid "a1b2c3d4-..."
-                     :block/title "My Project"
-                     :block/name "my project"
-                     :block/tags #{:my.class/Project}
-                     :my.property/status "active"}]
-
- :logseq.db.sqlite.export/export-type :graph
- :logseq.db.sqlite.export/schema-version [1 2]}
-```
-
-### Example 3: Page with Nested Blocks
-
-```clojure
-{:properties []
- :classes []
- :pages-and-blocks
- [;; Page
-  {:db/id 1
-   :block/uuid #uuid "page-uuid"
-   :block/title "Tasks"
-   :block/name "tasks"}
-
-  ;; Child block 1
-  {:db/id 2
-   :block/uuid #uuid "block1-uuid"
-   :block/title "TODO First task"
-   :block/page {:db/id 1}
-   :block/parent {:db/id 1}
-   :block/order 0
-   :block/tags #{:logseq.class/Task}}
-
-  ;; Child block 2
-  {:db/id 3
-   :block/uuid #uuid "block2-uuid"
-   :block/title "Second task"
-   :block/page {:db/id 1}
-   :block/parent {:db/id 1}
-   :block/order 1
-   :block/tags #{:logseq.class/Task}}]
-
- :logseq.db.sqlite.export/export-type :graph
- :logseq.db.sqlite.export/schema-version [1 2]}
-```
-
-### Example 4: Schema-Only Export
-
-```clojure
-{:properties
- [{:db/ident :team.property/priority
-   :block/title "priority"
-   :property/schema.type :number
-   :property/schema.cardinality :one
-   :property/closed-values #{1 2 3 4 5}}
-
-  {:db/ident :team.property/assignee
-   :block/title "assignee"
-   :property/schema.type :page
-   :property/schema.cardinality :many}]
-
- :classes
- [{:db/ident :team.class/Task
-   :block/title "Task"
-   :logseq.property.class/extends [:logseq.class/Root]
-   :logseq.property.class/properties [:team.property/priority
-                      :team.property/assignee]}
-
-  {:db/ident :team.class/Epic
-   :block/title "Epic"
-   :logseq.property.class/extends [:logseq.class/Root]
-   :logseq.property.class/properties [:team.property/priority]}]
-
- :logseq.db.sqlite.export/export-type :graph-ontology}
+```bash
+logseq graph export --graph my-graph --type edn --file graph.edn
+logseq graph import --graph target-graph --type edn --input graph.edn
 ```
 
 ---
@@ -468,16 +250,18 @@ Logseq uses [Malli](https://github.com/metosin/malli) for schema validation.
 **Validate on Export:**
 
 ```bash
-# Export with validation
-logseq export-edn -g my-notes -v
+# Export EDN
+logseq graph export --graph my-notes --type edn --file my-notes.edn
 ```
 
 **Validate Separately:**
 
 ```bash
 # Validate existing graph
-logseq validate -g my-notes
+logseq graph validate --graph my-notes
 ```
+
+> **Removed:** `logseq export-edn ...` and `logseq validate ...` are no longer the current CLI command surface.
 
 ### Common Validation Errors
 
@@ -497,10 +281,10 @@ logseq validate -g my-notes
 
 ```clojure
 ;; ❌ Error: Referenced entity doesn't exist
-{:block/page {:db/id 9999}}  ; ID 9999 doesn't exist
+{:logseq.property.history/block [:block/uuid #uuid "00000000-0000-0000-0000-000000000000"]}
 
 ;; ✅ Correct: Reference valid entity
-{:block/page {:db/id 1}}
+{:logseq.property.history/block [:block/uuid #uuid "68c012ca-2aee-46a8-a589-8bf67a1d4e92"]}
 ```
 
 **3. Type Mismatches:**
@@ -508,7 +292,7 @@ logseq validate -g my-notes
 ```clojure
 ;; Property defined as :number
 {:db/ident :my.property/count
- :property/schema.type :number}
+ :logseq.property/type :number}
 
 ;; ❌ Error: String value for number property
 :my.property/count "five"
@@ -522,7 +306,7 @@ logseq validate -g my-notes
 ```clojure
 ;; Property defined as :cardinality :one
 {:db/ident :my.property/status
- :property/schema.cardinality :one}
+ :db/cardinality :db.cardinality/one}
 
 ;; ❌ Error: Set value for single-value property
 :my.property/status #{"active" "pending"}
@@ -563,56 +347,58 @@ logseq validate -g my-notes
 
 ```bash
 # Full backup with timestamps
-logseq export-edn -g production -T -f backup-$(date +%Y%m%d).edn
+logseq graph export --graph production --type edn --include-timestamps --file backup-$(date +%Y%m%d).edn
 ```
 
 ### 4. Exclude Built-ins for Cleaner Exports
 
 ```bash
 # Clean user-content export
-logseq export-edn -g my-notes -b -F
+logseq graph export --graph my-notes --type edn --exclude-built-in-pages --exclude-namespaces schema.org --file my-notes.edn
 ```
+
+> **Removed:** `-F` (exclude files) is not a current CLI flag on `logseq graph export`.
 
 ### 5. Validate Before and After Import
 
 ```bash
 # Validate source graph
-logseq validate -g source-graph
+logseq graph validate --graph source-graph
 
 # Export
-logseq export-edn -g source-graph -f export.edn -v
+logseq graph export --graph source-graph --type edn --file export.edn
 
 # Import to new graph
-logseq import-edn -g target-graph -f export.edn
+logseq graph import --graph target-graph --type edn --input export.edn
 
 # Validate target graph
-logseq validate -g target-graph
+logseq graph validate --graph target-graph
 ```
 
-### 6. Use Schema-Only Exports for Templates
+### 6. Use Repeatable EDN Templates (Full Graph)
 
 ```bash
-# Create reusable schema template
-logseq export-edn -g template -t :graph-ontology -f schema.edn
+# Create reusable EDN template graph
+logseq graph export --graph template --type edn --exclude-built-in-pages --file template.edn
 
 # Apply to new graphs
-logseq import-edn -g new-project -f schema.edn
+logseq graph import --graph new-project --type edn --input template.edn
 ```
+
+> **Removed:** direct CLI `:graph-ontology` export flow.
 
 ### 7. Handle Large Exports Efficiently
 
 ```bash
-# For large graphs, use local mode (faster)
-logseq export-edn -g large-graph -f export.edn
-
-# NOT: logseq export-edn -f export.edn -a TOKEN (slower)
+# For large graphs, export to local file
+logseq graph export --graph large-graph --type edn --file export.edn
 ```
 
 ### 8. Pretty-Print for Debugging
 
 ```bash
 # Export EDN
-logseq export-edn -g my-graph -f graph.edn
+logseq graph export --graph my-graph --type edn --file graph.edn
 
 # Pretty-print with clojure
 clojure -M -e "(clojure.pprint/pprint (clojure.edn/read-string (slurp \"graph.edn\")))" > graph-pretty.edn
@@ -622,17 +408,20 @@ clojure -M -e "(clojure.pprint/pprint (clojure.edn/read-string (slurp \"graph.ed
 
 ```bash
 # Track schema evolution
-logseq export-edn -g production -t :graph-ontology -f schemas/v1.0.0.edn
+logseq graph export --graph production --type edn --exclude-built-in-pages --file schemas/v1.0.0.edn
 git add schemas/v1.0.0.edn
 git commit -m "Schema version 1.0.0"
 ```
 
-### 10. Test Imports with Dry-Run (Future Feature)
+### 10. Dry-run Imports
 
-```bash
-# Currently not supported, but useful pattern:
-# logseq import-edn -g test -f data.edn --dry-run
-```
+> **Removed:** no `--dry-run` option exists for current `logseq graph import`.
+
+## Findings: New Capabilities
+
+- Graph EDN export includes `:logseq.db.sqlite.export/property-history` for property change history payloads.
+- Graph EDN export includes `:logseq.db.sqlite.export/kv-values` as a vector of `{:db/ident ... :kv/value ...}` entries.
+- CLI supports both EDN and SQLite import/export through `logseq graph export --type edn|sqlite` and `logseq graph import --type edn|sqlite`.
 
 ---
 
@@ -649,68 +438,54 @@ git commit -m "Schema version 1.0.0"
 ### Property Entity (Complete)
 
 ```clojure
-{:db/id                           ; Integer - Database ID
- :db/ident                        ; Keyword - Unique identifier (required)
- :block/uuid                      ; UUID - Unique UUID
- :block/title                     ; String - Display name (required)
- :block/name                      ; String - Lowercase normalized name
- :block/created-at                ; Long - Unix timestamp ms (optional)
- :block/updated-at                ; Long - Unix timestamp ms (optional)
- :property/schema.type            ; Keyword - Value type (required)
- :property/schema.cardinality     ; Keyword - :one or :many (required)
- :property/schema.classes         ; Set of keywords - Allowed classes (optional)
- :property/closed-values          ; Set - Enum values (optional)
- :property/schema.description     ; String - Description (optional)
- :logseq.property/public?         ; Boolean - Public property (optional)}
+{:db/ident                        ; Keyword - Unique identifier
+ :block/title                     ; String - Display name
+ :logseq.property/type            ; Keyword - e.g. :default/:number/:date/:datetime/:checkbox/:url/:node/:asset
+ :db/cardinality                  ; Keyword - :db.cardinality/one or :db.cardinality/many
+ :build/property-classes          ; Set of class idents (optional)
+ :build/closed-values             ; Vector of {:value ... :uuid ...} (optional)
+ :build/properties                ; Nested build properties (optional)
+ :block/uuid                      ; UUID (optional, export mode dependent)
+ :block/created-at                ; Long ms (optional)
+ :block/updated-at                ; Long ms (optional)}
 ```
 
 ### Class Entity (Complete)
 
 ```clojure
-{:db/id                           ; Integer - Database ID
- :db/ident                        ; Keyword - Unique identifier (required)
- :block/uuid                      ; UUID - Unique UUID
- :block/title                     ; String - Display name (required)
- :block/name                      ; String - Lowercase normalized name
- :block/created-at                ; Long - Unix timestamp ms (optional)
- :block/updated-at                ; Long - Unix timestamp ms (optional)
- :logseq.property.class/extends                   ; Vector of keywords - Parent classes (optional)
- :logseq.property.class/properties                ; Vector of keywords - Properties (optional)
+{:block/title                     ; String - Display name
+ :build/class-extends             ; Set of class idents (optional)
+ :build/class-properties          ; Vector of property idents (optional)
+ :build/properties                ; Nested build properties (optional)
+ :block/uuid                      ; UUID (optional, export mode dependent)
+ :block/created-at                ; Long ms (optional)
+ :block/updated-at                ; Long ms (optional)
 }
 ```
 
 ### Page Entity (Complete)
 
 ```clojure
-{:db/id                           ; Integer - Database ID
- :block/uuid                      ; UUID - Unique UUID (required)
- :block/title                     ; String - Page title (required)
- :block/name                      ; String - Lowercase normalized name (required)
- :block/created-at                ; Long - Unix timestamp ms (optional)
- :block/updated-at                ; Long - Unix timestamp ms (optional)
- :block/tags                      ; Set of keywords - Tags/classes (optional)
- :block/collapsed?                ; Boolean - Collapsed state (optional)
- :logseq.property/icon            ; String - Page icon emoji (optional)
- :logseq.property.page/description  ; String - Page description (optional)
- ; ... custom properties based on graph schema
- }
+{:page {:block/title              ; String - Page title
+  :build/journal            ; Long journal day (optional)
+  :build/tags               ; Set of class/tag idents (optional)
+  :build/properties         ; Property map (optional)
+  :block/uuid               ; UUID (optional)
+  :block/created-at         ; Long ms (optional)
+  :block/updated-at         ; Long ms (optional)}
+ :blocks [...]}
 ```
 
 ### Block Entity (Complete)
 
 ```clojure
-{:db/id                           ; Integer - Database ID
- :block/uuid                      ; UUID - Unique UUID (required)
- :block/title                     ; String - Block content (required)
- :block/page                      ; Map - {:db/id N} - Parent page (required)
- :block/parent                    ; Map - {:db/id N} - Direct parent (required)
- :block/order                     ; Long - Position in parent (required)
- :block/created-at                ; Long - Unix timestamp ms (optional)
- :block/updated-at                ; Long - Unix timestamp ms (optional)
- :block/tags                      ; Set of keywords - Tags (optional)
- :block/collapsed?                ; Boolean - Collapsed state (optional)
- ; ... custom properties based on graph schema
- }
+{:block/title                     ; String - Block content
+ :build/tags                      ; Set of class/tag idents (optional)
+ :build/properties                ; Property map (optional)
+ :build/children                  ; Nested blocks (optional)
+ :block/uuid                      ; UUID (optional)
+ :block/created-at                ; Long ms (optional)
+ :block/updated-at                ; Long ms (optional)}
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Query System
 
-> **Last revised:** 2026-04-21
+> **Last revised:** 2026-05-29
 
 ## Overview
 
@@ -197,26 +197,44 @@ block is not returned as a separate result if its parent block is also in the
 result set. Set it to `false` on the query map when you want every matching
 child block to appear individually.
 
+> **Note:** `:remove-block-children?` only applies to **file-based graphs**. In DB-based graphs this option is ignored.
+
 ### Common Query Patterns
 
 **Find Blocks by Content**:
 
 ```clojure
+;; File-based graphs: use :block/content
 [:find ?block
  :where
  [?block :block/content ?content]
+ [(clojure.string/includes? ?content "keyword")]]
+
+;; DB graphs: use :block/title (replaces :block/content)
+[:find ?block
+ :where
+ [?block :block/title ?content]
  [(clojure.string/includes? ?content "keyword")]]
 ```
 
 **Find Pages with Specific Properties**:
 
+> **Note (DB graphs):** `:block/properties` is not a stored DataScript attribute in DB graphs. Use the DSL `(property key value)` filter or query the qualified-keyword property directly, e.g. `[?page :logseq.property/type "project"]`.
+
 ```clojure
+;; File-based graphs only
 [:find ?page-name
  :where
  [?page :block/name ?page-name]
  [?page :block/properties ?props]
  [(get ?props "type") ?type]
  [(= ?type "project")]]
+
+;; DB graphs: query property attribute directly
+[:find ?page-title
+ :where
+ [?page :block/title ?page-title]
+ [?page :logseq.property/type "project"]]
 ```
 
 **Find Connected Blocks**:
@@ -393,54 +411,20 @@ classDiagram
 
 ### Query Result Rendering
 
-**Table View**:
-
-```clojure
-(defn query-table
-  [config {:keys [result table?] :as opts}]
-  (when (and table? (seq result))
-    [:div.overflow-auto
-     [:table.table-auto
-      [:thead
-       [:tr
-        [:th "Block"]
-        [:th "Page"]
-        [:th "Created"]]]
-      [:tbody
-       (for [block result]
-         [:tr
-          [:td (block-content block)]
-          [:td (page-link block)]
-          [:td (format-date (:block/created-at block))]])]]]))
-```
-
-**List View**:
-
-```clojure
-(defn query-list
-  [config {:keys [result] :as opts}]
-  [:div.query-results
-   (for [item result]
-     (if (:block/uuid item)
-       (block-component config item)
-       (page-component config item)))])
-```
+> **Removed:** Standalone `query-table` and `query-list` rendering functions no longer exist as named public functions. Query result rendering is handled by the `frontend.components.query.result` and `frontend.components.query.view` namespaces. Results are rendered through `rum/defc query-result` in `view.cljs`, with table layout managed by the views component system. Use `:table? true` in the config map to request table rendering.
 
 ## Query Features and Options
 
 ### Sorting and Filtering
 
-**Sort Options**:
+> **Removed:** `(sort-by ...)` is not a supported DSL query operator. The `sort-by` atom is tracked internally during parsing but is never populated by the DSL build step, making it a no-op in user queries. Use `:result-transform` in the advanced query map to sort results:
 
 ```clojure
-;; Sort by creation date (ascending)
-(sort-by created-at asc)
+;; Sort by update date (most recent first) using :result-transform
+:result-transform (fn [result] (sort-by :block/updated-at > result))
 
-;; Sort by update date (descending)
-(sort-by updated-at desc)
-
-;; Sort by property value
-(sort-by priority desc)
+;; Sort by creation date (oldest first)
+:result-transform (fn [result] (sort-by :block/created-at < result))
 ```
 
 **Sampling**:
@@ -485,15 +469,19 @@ Common operations:
 
 For detailed documentation and more examples, see [result-transform-user.md](result-transform-user.md).
 
-**Group by Page**:
+**Group by Page** (`frontend.components.query.result/get-group-by-page`):
 
 ```clojure
-(defn get-group-by-page
-  [q {:keys [table?]}]
-  (and (not table?)
-       (or (query-contains-filter? q "page-property")
-           (query-contains-filter? q "page-tags"))))
+(defn get-group-by-page [{:keys [result-transform query] :as query-m}
+                         {:keys [table? db-graph?]}]
+  (if (or table? db-graph?)
+    false ;; table view and DB graphs never group by page
+    (get query-m :group-by-page?
+         (and (not result-transform)
+              (not (and (string? query) (string/includes? query "(by-page false)")))))))
 ```
+
+Grouping is suppressed when: (a) table view is active, (b) the graph is DB-based, (c) `:result-transform` is present on the query map, or (d) the query string contains the `(by-page false)` marker.
 
 **Custom Views**:
 
@@ -609,37 +597,41 @@ now
 
 ### Page Properties
 
-**Page-level Property Queries**:
+> **Removed:** `(page-property ...)` and `(page-tags ...)` are not supported DSL operators. Neither is handled in the DSL `build-query` function. For DB graphs, use the `(property key value)` operator with qualified-keyword property names, or use `(tags ...)` (see **Findings: New Capabilities** below).
 
 ```clojure
-;; Pages with specific property
-(page-property type project)
+;; DB graphs: query a page-level property via (property ...)
+(property logseq.property/type "project")
 
-;; Pages with boolean properties
-(page-property completed true)
-(page-property active false)
-
-;; Pages with tag properties
-(page-tags #urgent)
-(page-tags urgent important)
+;; DB graphs: find blocks/pages with a given tag using (tags ...)
+(tags [[Meeting]])
 ```
 
 ## Performance Optimization
 
 ### Query Caching
 
-**React Query System**:
+**React Query System** (`frontend.db.query-react/react-query`):
 
 ```clojure
 (defn react-query
-  [repo query query-opts]
-  (let [query-id (str (hash query))
-        cached-result (get-cached-query query-id)]
-    (if cached-result
-      cached-result
-      (let [result (execute-query repo query query-opts)]
-        (cache-query query-id result)
-        result))))
+  [repo {:keys [query inputs rules] :as query'} query-opts]
+  (let [query (resolve-query query)
+        repo (or repo (state/get-current-repo))
+        db (conn/get-db repo)
+        resolve-with (select-keys query-opts [:current-page-fn :current-block-uuid])
+        resolved-inputs (mapv #(resolve-input db % resolve-with) inputs)
+        rules-input (cond
+                      (some? rules) rules
+                      (query-expects-rules? query) [])
+        inputs (cond-> resolved-inputs
+                 (some? rules-input)
+                 (conj rules-input))
+        k [:custom
+           (or (:query-string query') (dissoc query' :title))
+           (:today-query? query-opts)
+           inputs]]
+    [k (apply react/q repo k query-opts query inputs)]))
 ```
 
 ### Index Utilization
@@ -833,6 +825,43 @@ now
 - **SCI Integration**: Custom result transforms with Safe Clojure
 - **Rule Optimization**: Better performance for recursive queries
 - **Memory Management**: Virtual scrolling and lazy loading
+
+## Findings: New Capabilities
+
+### `tags` DSL Operator (DB Graphs)
+
+The `(tags ...)` operator finds blocks that carry specific tags. It is a DB-graph-only operator that resolves tag names to entity IDs (including structured sub-class children) before querying:
+
+```clojure
+;; Find blocks tagged with "Meeting"
+(tags [[Meeting]])
+
+;; Find blocks tagged with either "Project" or "Research"
+(or (tags [[Project]]) (tags [[Research]]))
+```
+
+### Named `:result-transform` Functions
+
+`:result-transform` accepts not only an inline function but also a **keyword** that references a globally registered transform from `:query/result-transforms` in Logseq's user config:
+
+```clojure
+;; Register in user config
+{:query/result-transforms
+ {:recent-50 (fn [r] (->> r (sort-by :block/updated-at >) (take 50)))}}
+
+;; Use by keyword in a query
+{:query [:find (pull ?b [*]) :where ...]
+ :result-transform :recent-50}
+```
+
+### `(by-page false)` Group Suppressor
+
+Adding the literal text `(by-page false)` anywhere in a DSL query string prevents automatic page-grouping of results, even when the default logic would otherwise enable it:
+
+```clojure
+;; Disable page grouping for this query
+(and [[Project]] (task TODO) (by-page false))
+```
 
 ---
 

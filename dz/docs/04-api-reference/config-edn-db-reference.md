@@ -1,7 +1,8 @@
 # Logseq Database (DB) Graph config.edn Reference Guide
 
-**Last Updated:** January 2025  
-**Logseq Version:** 0.10.x+
+> **Last revised:** 2026-05-29
+
+**Logseq Version:** 0.11.x+
 
 A comprehensive reference for configuration options in **Database (DB) Graph** mode. This guide focuses on DB graphs and highlights differences from file-based (Markdown/Org) graphs.
 
@@ -63,15 +64,15 @@ Windows:      %USERPROFILE%\.logseq\graphs\<graph-name>\logseq\config.edn
 
 ### Config Implications
 
-**24 config options are deprecated/not applicable in DB graphs** (see [Deprecated File-Only Options](#deprecated-file-only-options)).
+**23 config options are deprecated/not applicable in DB graphs** (see [Deprecated File-Only Options](#deprecated-file-only-options)).
 
-**All UI, query, and workflow options remain available** - DB graphs maintain feature parity with file-based graphs for user-facing functionality.
+Most UI, query, and workflow options remain available. Deprecated DB-inapplicable options are ignored after parse and surfaced as deprecation warnings.
 
 ---
 
 ## Deprecated File-Only Options
 
-The following **24 configuration keys** are file-based only and **should NOT be used** in DB graph `config.edn`:
+The following **23 configuration keys** are file-based only and **should NOT be used** in DB graph `config.edn`:
 
 ### File Management (6 keys)
 
@@ -99,7 +100,7 @@ The following **24 configuration keys** are file-based only and **should NOT be 
 | `:preferred-format`           | Only Markdown in DB mode            | N/A - Markdown only                    |
 | `:org-mode/insert-file-link?` | No Org mode in DB                   | N/A                                    |
 
-### Properties (2 keys)
+### Properties (3 keys)
 
 | Deprecated Key                  | Reason                          | Replacement                        |
 | ------------------------------- | ------------------------------- | ---------------------------------- |
@@ -123,7 +124,7 @@ The following **24 configuration keys** are file-based only and **should NOT be 
 | `:srs/initial-interval`  | File-based SRS algorithm  | Use FSRS properties in DB        |
 | `:logbook/settings`      | File-based logbook format | DB uses structured time tracking |
 
-### UI/Organization (5 keys)
+### UI/Organization (3 keys)
 
 | Deprecated Key                      | Reason                                     | Replacement                      |
 | ----------------------------------- | ------------------------------------------ | -------------------------------- |
@@ -131,13 +132,15 @@ The following **24 configuration keys** are file-based only and **should NOT be 
 | `:default-templates`                | Templates stored as pages with `#Template` | Create template pages with class |
 | `:ignored-page-references-keywords` | Reference tracking is database-managed     | N/A                              |
 
-> **Important**: Including these keys in DB graph config.edn will not cause errors, but they will be silently ignored.
+> **Important**: Including these keys in DB graph config.edn does not hard-fail parsing, but Logseq shows deprecation warnings and treats the keys as not used in DB graphs.
+
+> **Note**: Deprecation detection also warns for non-DB-specific deprecated keys `:editor/command-trigger` and `:arweave/gateway`.
 
 ---
 
 ## DB-Compatible Options Reference
 
-All options from the [full config.edn reference](/dz/docs/config-edn-reference.md) work in DB graphs **except** the 24 deprecated options above.
+All options from the [full config.edn reference](config-edn-reference.md) work in DB graphs **except** the 23 deprecated options above.
 
 ### 1. Metadata ✅ **Fully Supported**
 
@@ -313,22 +316,13 @@ All 7 UI options work identically in DB graphs:
  :quick-capture-options
  {:insert-today? true                    ;; Insert at end of journal
   :redirect-page? false                  ;; Redirect after capture
-  :default-page "quick capture"}}        ;; Default capture page
+  :default-page "quick capture"          ;; Default capture page
+  :prettify-url? true}}                  ;; Wrap YouTube/X links in embeds
 ```
 
-### 18. DWIM Settings ⚠️ **Experimental**
+### 18. DWIM Settings
 
-```clojure
-{:dwim/settings
- {:admonition&src? true                  ;; Context-aware Enter in admonitions/src blocks
-  :markup? false                         ;; Context-aware Enter in markup
-  :block-ref? true                       ;; Enter opens block refs
-  :page-ref? true                        ;; Enter opens page refs
-  :properties? true                      ;; Enter in property names
-  :list? false}}                         ;; Enter in lists
-```
-
-> **Note**: `:dwim/settings` exists in templates but is NOT in the Malli schema validation. May be undocumented/experimental.
+> **Removed:** `:dwim/settings` is not present in the current `Config-edn` schema or `deps/common/resources/templates/config.edn`. Remove it from DB graph `config.edn` guidance.
 
 ### 19. Feature Flags ⚠️ **Undocumented**
 
@@ -337,6 +331,13 @@ All 7 UI options work identically in DB graphs:
 ```
 
 > **Note**: Found in code but not in schema. Status unclear.
+
+---
+
+## Findings: New Capabilities
+
+- `:quick-capture-options` supports `:prettify-url?` (template-documented) to auto-wrap supported URLs (for example, YouTube/X) in embed macros.
+- DB config deprecation detection includes additional deprecated keys `:editor/command-trigger` and `:arweave/gateway`.
 
 ---
 
@@ -409,16 +410,7 @@ All 7 UI options work identically in DB graphs:
  {:text "[[capture]] {time}: {text}"
   :media "[[capture]] {time}: {url}"}
  :quick-capture-options
- {:insert-today? true :redirect-page? false}
-
- ;; === DWIM (Experimental) ===
- :dwim/settings
- {:admonition&src? true
-  :markup? false
-  :block-ref? true
-  :page-ref? true
-  :properties? true
-  :list? false}}
+ {:insert-today? true :redirect-page? false :prettify-url? true}}
 ```
 
 ---
@@ -440,7 +432,7 @@ All 7 UI options work identically in DB graphs:
  :macros {}}                            # ✅ Keep
 ```
 
-**Step 2**: Remove 24 file-only options (see [Deprecated Options](#deprecated-file-only-options))
+**Step 2**: Remove 23 file-only options (see [Deprecated Options](#deprecated-file-only-options))
 
 **Step 3**: Update query property references
 
@@ -548,7 +540,6 @@ Warning: :preferred-format is not used in DB graphs
 
 ---
 
-**Version**: Logseq DB 0.10.x  
-**Last Verified**: January 2025
+**Version**: Logseq DB 0.11.x
 
 For file-based graph config reference, see [config-edn-reference.md](config-edn-reference.md).

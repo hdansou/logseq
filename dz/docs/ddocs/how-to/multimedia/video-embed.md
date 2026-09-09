@@ -12,7 +12,7 @@ related-docs:
 
 # Video Embedding in Logseq
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## Overview
 
@@ -26,6 +26,12 @@ Logseq supports embedding videos from YouTube, Vimeo, Bilibili, Loom, and other 
 - Loom
 - YouTube-nocookie (privacy-enhanced mode)
 - Local video files (MP4, WebM, MOV, FLV, AVI, MKV)
+
+## Findings: New Capabilities
+
+- `{{video ...}}` now auto-detects YouTube, YouTube-nocookie, Vimeo, Loom, and Bilibili URLs in the block renderer.
+- YouTube URLs copied into the editor can still be wrapped automatically as `{{video ...}}`, and the timestamp insert flow is still available from the YouTube timestamp command/shortcut.
+- `y2u.be` is accepted alongside `youtube.com`, `youtu.be`, and `youtube-nocookie.com`.
 
 ## Quick Start
 
@@ -131,7 +137,7 @@ Then add custom CSS:
 - Height: Maintains 16:9 aspect ratio (315px for 560px width)
 - Mobile: Full width of screen minus padding
 
-**Code Reference**: [`youtube.cljs:64-66`](../../src/main/frontend/extensions/video/youtube.cljs#L64-L66)
+**Code Reference**: [`youtube.cljs:67`](../../../../../src/main/frontend/extensions/video/youtube.cljs#L67)
 
 ```clojure
 (let [width  (or width (min (- (util/get-width) 96) 560))
@@ -158,7 +164,7 @@ Then add custom CSS:
 
 **Mobile Limitation**: Timestamp controls don't work on iOS/Android native apps (WebView limitation).
 
-**Code Reference**: [`youtube.cljs:139-154`](../../src/main/frontend/extensions/video/youtube.cljs#L139-L154)
+**Code Reference**: [`youtube.cljs:140-156`](../../../../../src/main/frontend/extensions/video/youtube.cljs#L140-L156)
 
 ```clojure
 (rum/defc timestamp
@@ -190,7 +196,7 @@ Then add custom CSS:
 - Event handling (ready, state changes)
 - Multiple players on same page
 
-**Code Reference**: [`youtube.cljs:20-27`](../../src/main/frontend/extensions/video/youtube.cljs#L20-L27)
+**Code Reference**: [`youtube.cljs:21-30`](../../../../../src/main/frontend/extensions/video/youtube.cljs#L21-L30)
 
 ```clojure
 (defn load-youtube-api []
@@ -224,7 +230,7 @@ Logseq supports standard HTML5 video formats:
 
 **Recommendation**: Use **MP4 with H.264 codec** for maximum compatibility.
 
-**Code Reference**: [`config.cljs`](../../src/main/frontend/config.cljs) defines supported formats:
+**Code Reference**: [`config.cljs`](../../../../../src/main/frontend/config.cljs) defines supported formats:
 
 ```clojure
 (def video-formats
@@ -427,7 +433,7 @@ Create video blocks separately and reference them. Videos only load when blocks 
 **Features**:
 
 - ✅ YouTube embeds work (using wrapper page)
-- Timestamp controls don't work (see [youtube.cljs:139](../../src/main/frontend/extensions/video/youtube.cljs#L139))
+- Timestamp controls don't work (see [youtube.cljs:140](../../../../../src/main/frontend/extensions/video/youtube.cljs#L140))
 - ⚠️ Local video playback may have codec issues
 - ⚠️ Fullscreen may exit Logseq app (platform behavior)
 
@@ -436,7 +442,7 @@ Create video blocks separately and reference them. Videos only load when blocks 
 - YouTube timestamp links show error: "YouTube timestamps aren't available on mobile yet"
 - Some video formats don't play (device-dependent)
 
-**Code Reference**: [`youtube.cljs:29-30`](../../src/main/frontend/extensions/video/youtube.cljs#L29-L30)
+**Code Reference**: [`youtube.cljs:30`](../../../../../src/main/frontend/extensions/video/youtube.cljs#L30)
 
 ```clojure
 (defn- use-youtube-wrapper? []
@@ -516,12 +522,14 @@ Create video blocks separately and reference them. Videos only load when blocks 
    - Use `{{video URL}}` syntax
 
 3. **Use external hosting**:
-   - Upload to Vimeo, Dropbox, Google Drive
-   - Embed public link
+  - Upload to Vimeo or another host that serves a playable public video URL
+  - Embed the resulting link
+
+> **Removed:** Direct embedding from Dropbox or Google Drive share links is not supported by the current renderer.
 
 **Size Limits**:
 
-- Assets: 100 MB per file (see [assets.cljs:22-25](../../src/main/frontend/handler/assets.cljs#L22-L25))
+- Assets: 100 MB per file (see [assets.cljs:22-25](../../../../../src/main/frontend/handler/assets.cljs#L22-L25))
 - RTC sync: Large assets slow down collaboration
 
 ---
@@ -601,21 +609,21 @@ Create video blocks separately and reference them. Videos only load when blocks 
 
 ## Code Reference
 
-**Core Implementation**: [`src/main/frontend/extensions/video/youtube.cljs`](../../src/main/frontend/extensions/video/youtube.cljs) (212 lines)
+**Core Implementation**: [`src/main/frontend/extensions/video/youtube.cljs`](../../../../../src/main/frontend/extensions/video/youtube.cljs) (212 lines)
 
 **Key Functions**:
 
-- `youtube-video` (line 53-92) — Main YouTube embed component
-- `timestamp` (line 139-154) — Clickable timestamp links
-- `load-youtube-api` (line 20-27) — YouTube IFrame API loader
-- `get-player` (line 113-127) — Get player instance for controls
-- `seconds->display` (line 94-105) — Format seconds as HH:MM:SS
+- `youtube-video` (line 54-92) — Main YouTube embed component
+- `timestamp` (line 140-156) — Clickable timestamp links
+- `load-youtube-api` (line 21-30) — YouTube IFrame API loader
+- `get-player` (line 114-127) — Get player instance for controls
+- `seconds->display` (line 95-105) — Format seconds as HH:MM:SS
 
-**Configuration**: [`src/main/frontend/config.cljs`](../../src/main/frontend/config.cljs)
+**Configuration**: [`src/main/frontend/config.cljs`](../../../../../src/main/frontend/config.cljs)
 
 - `video-formats` — Supported video file extensions
 
-**Asset Handling**: [`src/main/frontend/handler/assets.cljs`](../../src/main/frontend/handler/assets.cljs)
+**Asset Handling**: [`src/main/frontend/handler/assets.cljs`](../../../../../src/main/frontend/handler/assets.cljs)
 
 - `exceed-limit-size?` (line 22-25) — 100 MB asset limit check
 - `normalize-asset-resource-url` — Convert paths to URLs

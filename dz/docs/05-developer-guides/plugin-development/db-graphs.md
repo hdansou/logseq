@@ -1,8 +1,8 @@
 # Logseq Plugin Developer Guide: Database Graphs
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
-**Last Updated:** March 2026
+**Last Updated:** May 2026
 **Logseq Version:** 0.2.3+
 **Target Audience:** Plugin developers building for Logseq DB-based graphs
 
@@ -36,6 +36,16 @@ Logseq Database (DB) graphs represent a fundamental shift in how Logseq stores a
 - **Real-time collaboration** - Foundation for multi-user editing (RTC)
 
 This guide focuses on plugin development specifically for DB graphs, highlighting the differences and new capabilities compared to file-based graphs.
+
+## Findings: New Capabilities
+
+Validated against current source in `src/`, `deps/`, and `packages/` on 2026-05-29:
+
+- Property closed-value automation is available via `logseq.Editor.addPropertyValueChoices(propertyId, choices)`.
+- Node-property class restrictions are scriptable via `logseq.Editor.setPropertyNodeTags(propertyId, tagIds)`.
+- Tag/class APIs include `getTagsByName`, `addTagExtends`, and `removeTagExtends` for discovery and hierarchy.
+- Block icon APIs are available: `setBlockIcon` and `removeBlockIcon`.
+- DB query API also exposes `logseq.DB.customQuery(query)`.
 
 ---
 
@@ -234,13 +244,20 @@ await logseq.Editor.upsertProperty('tags', {
 
 Closed values restrict property values to a predefined set:
 
+> **Removed:** The previous claim that closed values were only configurable through the UI is no longer accurate.
+
 ```javascript
-await logseq.Editor.upsertProperty('status', {
+const statusProp = await logseq.Editor.upsertProperty('status', {
   type: 'default',
   cardinality: 'one',
-  // Note: Closed values are typically set through the UI
-  // Plugin API doesn't directly support setting closed values yet
 })
+
+// Add allowed choices by entity ids (pages/blocks that represent choices)
+await logseq.Editor.addPropertyValueChoices(statusProp.id, [
+  todoChoiceId,
+  doingChoiceId,
+  doneChoiceId,
+])
 ```
 
 #### Example: Node Property with Classes
@@ -259,6 +276,12 @@ await logseq.Editor.upsertProperty(
     name: 'Assignee',
   }
 )
+
+// Restrict node values to specific classes/tags by entity id
+const assigneeProp = await logseq.Editor.getProperty('assignee')
+if (assigneeProp) {
+  await logseq.Editor.setPropertyNodeTags(assigneeProp.id, [personTagId])
+}
 ```
 
 ### Setting Property Values on Blocks
@@ -569,7 +592,8 @@ if (newBlock) {
   const projectTag = await logseq.Editor.getTag('Project')
   const taskTag = await logseq.Editor.getTag('Task')
 
-  if (projectTag) await logseq.Editor.addBlockTag(newBlock.uuid, projectTag.uuid)
+  if (projectTag)
+    await logseq.Editor.addBlockTag(newBlock.uuid, projectTag.uuid)
   if (taskTag) await logseq.Editor.addBlockTag(newBlock.uuid, taskTag.uuid)
 }
 ```
@@ -1436,6 +1460,28 @@ Get all properties in the graph.
 
 **Returns:** Promise<Array<Entity>>
 
+#### `addPropertyValueChoices(propertyId, choices)`
+
+Add closed-value choices for a property.
+
+**Parameters:**
+
+- `propertyId` (BlockIdentity) - Property UUID/entity id
+- `choices` (Array<BlockIdentity>) - Choice entity ids
+
+**Returns:** Promise<void>
+
+#### `setPropertyNodeTags(propertyId, tagIds)`
+
+Restrict a `node` property to specific tags/classes.
+
+**Parameters:**
+
+- `propertyId` (BlockIdentity) - Property UUID/entity id
+- `tagIds` (Array<EntityID>) - Tag db ids
+
+**Returns:** Promise<void>
+
 ### Block Properties
 
 #### `upsertBlockProperty(block, key, value, options?)`
@@ -1560,6 +1606,16 @@ Get a tag/class by name or identifier.
 const tag = await logseq.Editor.getTag('Project')
 ```
 
+#### `getTagsByName(tagName)`
+
+Get all matching tags/classes by display name.
+
+**Parameters:**
+
+- `tagName` (string) - Tag/class name
+
+**Returns:** Promise<Array<PageEntity> | null>
+
 #### `getTagObjects(identifier)`
 
 Get all blocks/pages that belong to a class.
@@ -1646,6 +1702,28 @@ Remove a property from a tag/class.
 await logseq.Editor.removeTagProperty(tagUuid, 'priority')
 ```
 
+#### `addTagExtends(tagId, parentTagIdOrName)`
+
+Add a parent class/tag relationship.
+
+**Parameters:**
+
+- `tagId` (BlockIdentity) - Child tag UUID or entity
+- `parentTagIdOrName` (BlockIdentity) - Parent tag UUID, ident, or name
+
+**Returns:** Promise<void>
+
+#### `removeTagExtends(tagId, parentTagIdOrName)`
+
+Remove a parent class/tag relationship.
+
+**Parameters:**
+
+- `tagId` (BlockIdentity) - Child tag UUID or entity
+- `parentTagIdOrName` (BlockIdentity) - Parent tag UUID, ident, or name
+
+**Returns:** Promise<void>
+
 ### Database Queries
 
 #### `DB.q(dsl)`
@@ -1666,6 +1744,16 @@ Run a Datalog query.
 
 - `query` (string) - Datalog query
 - `inputs` (any[]) - Query inputs
+
+**Returns:** Promise<Array<any>>
+
+#### `DB.customQuery(query)`
+
+Run query-react style datalog/simple query execution.
+
+**Parameters:**
+
+- `query` (string) - Query string
 
 **Returns:** Promise<Array<any>>
 

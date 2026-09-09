@@ -3,6 +3,7 @@
 ## Device Compatibility Appendix (Template + Seed Matrix)
 
 **Investigation Date:** February 19, 2026  
+**Last Verified:** May 27, 2026  
 **Status:** Template ready for QA population
 
 ---
@@ -99,12 +100,13 @@ When QA or development verifies a device:
 1. Add/update row in the relevant matrix
 2. Record specific issue IDs under "Known Issues"
 3. Update "Last Verified" with date
-4. If a new systemic issue appears, add a note in Part 2 or Part 3 docs
+4. If a new systemic issue appears, add a note in Part 2 or maintained db-sync guide/protocol docs
 
 ---
 
 ## References
 
-- Investigation index: `ios-development-00-index.md`
-- Features & compatibility: `ios-development-02-features.md`
-- Sync architecture: `ios-development-03-sync.md`
+- Investigation index: [ios-development-00-index.md](./ios-development-00-index.md)
+- Features and compatibility: [ios-development-02-features.md](./ios-development-02-features.md)
+- Sync docs (maintained): [docs/agent-guide/db-sync/db-sync-guide.md](../../../docs/agent-guide/db-sync/db-sync-guide.md)
+- Sync protocol (maintained): [docs/agent-guide/db-sync/protocol.md](../../../docs/agent-guide/db-sync/protocol.md)

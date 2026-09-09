@@ -1,9 +1,9 @@
 # Logseq Plugin Developer Guide: File-Based Graphs
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
-**Last Updated:** March 2026
-**Logseq Version:** 0.2.3+
+**Last Updated:** May 29, 2026
+**Logseq Version:** Current plugin API surface validated from source
 **Target Audience:** Plugin developers building for Logseq file-based graphs (Markdown/Org mode)
 
 ---
@@ -19,8 +19,9 @@
 7. [Content Manipulation](#content-manipulation)
 8. [File System Operations](#file-system-operations)
 9. [Best Practices](#best-practices)
-10. [API Reference](#api-reference)
-11. [Examples](#examples)
+10. [Findings: New Capabilities](#findings-new-capabilities)
+11. [API Reference](#api-reference)
+12. [Examples](#examples)
 
 ---
 
@@ -300,7 +301,7 @@ if (confirm('Delete this block?')) {
 // Create a page
 const page = await logseq.Editor.createPage('My New Page')
 
-// Create with properties (inline in first block)
+// Create with properties
 const pageWithProps = await logseq.Editor.createPage(
   'Project Page',
   { status: 'active', priority: 'high' },
@@ -370,11 +371,34 @@ Properties in file-based graphs are stored as inline text:
   date:: [[2025-10-21]]
 ```
 
-**Important:** Properties are stored as plain text and are untyped.
+Properties still serialize to file content, but plugins now have structured property APIs for block/page property reads and updates.
+
+> **Removed:** "File graphs don't have structured property APIs" is no longer accurate.
+
+### Structured Property APIs (Current)
+
+Use structured APIs when you need robust behavior across value types and plugin-scoped property identifiers:
+
+```javascript
+// Set or update a property on a block
+await logseq.Editor.upsertBlockProperty(block.uuid, 'priority', 'high')
+
+// Get one property
+const priority = await logseq.Editor.getBlockProperty(block.uuid, 'priority')
+
+// Get all properties (normalized map)
+const allProps = await logseq.Editor.getBlockProperties(block.uuid)
+
+// Remove one property
+await logseq.Editor.removeBlockProperty(block.uuid, 'priority')
+
+// Page-level helper
+const pageProps = await logseq.Editor.getPageProperties('Project Page')
+```
 
 ### Reading Properties (Manual Parsing)
 
-Since file-based graphs don't have structured property APIs, you need to parse content:
+Manual parsing is still useful when you specifically need raw line-level control of Markdown/Org content:
 
 ```javascript
 // Helper function to extract properties
@@ -597,10 +621,10 @@ function formatLogseqDate(date) {
     day === 1 || day === 21 || day === 31
       ? 'st'
       : day === 2 || day === 22
-      ? 'nd'
-      : day === 3 || day === 23
-      ? 'rd'
-      : 'th'
+        ? 'nd'
+        : day === 3 || day === 23
+          ? 'rd'
+          : 'th'
 
   return `${month} ${day}${suffix}, ${year}`
 }
@@ -672,14 +696,27 @@ const todos = await logseq.DB.q('(task TODO DOING)')
 const scheduled = await logseq.DB.q('(between -7d +7d)')
 ```
 
+### Datascript and Custom Queries
+
+```javascript
+// Datascript query with inputs
+const datalogResult = await logseq.DB.datascriptQuery(
+  '[:find ?b :where [?b :block/marker "TODO"]]'
+)
+
+// Custom query pipeline
+const custom = await logseq.DB.customQuery(`
+{:query [:find (pull ?b [*])
+         :where [?b :block/marker ?m]
+                [(contains? #{"TODO" "DOING"} ?m)]]}
+`)
+```
+
 ### Query Limitations
 
-**Important:** File-based graphs have limited query capabilities compared to DB graphs:
+File-based graphs still differ from DB graphs in storage/modeling semantics, but plugin query support is broader than older docs indicated.
 
-- No Datascript queries
-- No complex property type checking
-- Properties are treated as strings
-- Limited aggregation functions
+> **Removed:** "No Datascript queries" for file graphs is no longer accurate.
 
 ### Reactive Queries
 
@@ -843,7 +880,7 @@ await storage.setItem('plugin-data', JSON.stringify(data))
 const saved = await storage.getItem('plugin-data')
 ```
 
-### Git Operations
+### Git Operations API
 
 File-based graphs support Git natively:
 
@@ -1056,9 +1093,20 @@ async function testPlugin() {
  * - due-date: [[YYYY-MM-DD]] - journal page reference
  * - tags: [[tag1]], [[tag2]] - comma-separated page refs
  *
- * All properties are stored as plain text strings.
+ * Properties serialize to file content, and structured property APIs are available.
  */
 ```
+
+---
+
+## Findings: New Capabilities
+
+Validated against current source as of 2026-05-29:
+
+- Structured property APIs are available for file graphs: `upsertBlockProperty`, `getBlockProperty`, `getBlockProperties`, `getPageProperties`, and `removeBlockProperty`.
+- Query APIs include `DB.q`, `DB.datascriptQuery`, and `DB.customQuery`.
+- DB-change hooks still power reactive plugin updates (`onChanged`/`onBlockChanged` behavior).
+- Internal related-guide filenames changed in this docs folder; links were updated accordingly.
 
 ---
 
@@ -1077,8 +1125,12 @@ Insert a new block.
 - `opts` (object, optional)
   - `before` (boolean) - Insert before reference
   - `sibling` (boolean) - Insert as sibling
-  - `isPageBlock` (boolean) - Create as page block
-  - `properties` (object) - Properties (formatted as inline text)
+  - `start` (boolean) - Insert at start position when supported
+  - `end` (boolean) - Insert at end position when supported
+  - `customUUID` (string) - Provide custom UUID
+  - `properties` (object) - Property payload handled by the runtime property layer
+
+> **Removed:** `isPageBlock` is no longer part of the `insertBlock` option surface.
 
 **Returns:** Promise\<BlockEntity | null>
 
@@ -1189,6 +1241,14 @@ Run a DSL query.
 - `dsl` (string) - Query string
 
 **Returns:** Promise\<Array\<any>>
+
+#### `DB.datascriptQuery(query, ...inputs)`
+
+Run a Datascript query with optional inputs.
+
+#### `DB.customQuery(query)`
+
+Run a custom query through the query-react pipeline.
 
 #### `DB.onChanged(callback)`
 
@@ -1669,8 +1729,10 @@ async function testQuery(query) {
 
 ### Related Guides
 
-- [Plugin Developer Guide: DB Graphs](./plugin-developer-guide-db-graphs.md)
-- [ClojureScript Plugin SDK Guide](./clojurescript-plugin-sdk-guide.md)
+- [Plugin Developer Guide: DB Graphs](./db-graphs.md)
+- [ClojureScript Plugin SDK Guide](./clojurescript-guide.md)
+
+> **Removed:** Links to `plugin-developer-guide-db-graphs.md` and `clojurescript-plugin-sdk-guide.md` (files no longer exist in this folder).
 
 ---
 

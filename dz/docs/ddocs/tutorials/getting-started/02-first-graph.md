@@ -3,7 +3,7 @@ title: 'Your First Graph'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-03-10'
+last-verified: '2026-05-30'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/01-installation.md'
@@ -13,7 +13,7 @@ related-docs:
 
 # Your First Graph
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 In this tutorial, you'll create your first Logseq graph and understand the basic concepts of graphs, pages, and blocks.
 
@@ -36,45 +36,36 @@ Open the Logseq application you installed in the previous tutorial.
 
 ### Step 2: Choose Graph Type
 
-Logseq offers two graph modes:
+For first-time setup in the current app flow, Logseq creates a **DB graph**.
 
-#### Database Mode (Recommended for New Users)
+#### DB Graph (Default)
 
 - ✅ Better performance with large graphs
-- ✅ Advanced features (semantic search, better queries)
+- ✅ Typed properties and class-based workflows
 - ✅ Automatic schema management
-- ⚠️ Less portable (exports to standard formats available)
+- ✅ Built-in import/export flows for migration
 
-#### File-Based Mode (Markdown/Org)
+> **Removed:** "File-Based Mode (Markdown/Org)" as a first-graph creation option in the onboarding create flow. Current onboarding uses DB graph creation, while file-based content is brought in via import.
 
-- ✅ Human-readable markdown files
-- ✅ Easy to sync with Git or cloud storage
-- ✅ Works with external text editors
-- ⚠️ Performance can degrade with very large graphs
-
-**For this tutorial, we'll use Database Mode.**
+**For this tutorial, we'll use a DB graph.**
 
 ### Step 3: Create the Graph
 
 **Desktop:**
 
 1. Click **"Create new graph"** on the welcome screen
-2. Choose **"Database graph"**
-3. Enter a name (e.g., "My Knowledge Base")
-4. Click **"Create"**
+2. Enter a name (e.g., "My Knowledge Base")
+3. Click **"Create"**
 
 **Mobile:**
 
 1. Tap **"+"** or **"Create new graph"**
-2. Select **"Database graph"**
-3. Enter a name
-4. Tap **"Create"**
+2. Enter a name
+3. Tap **"Create"**
 
-**File-Based Alternative:**
+> **Removed:** "Choose Local folder" in first-graph onboarding steps.
 
-1. Choose **"Local folder"** instead
-2. Select or create a folder on your device
-3. Logseq will initialize the folder with config files
+If you already have file-based notes, use **Import existing notes** and select **File to DB graph**.
 
 ### Step 4: First Look at Your Graph
 
@@ -82,7 +73,7 @@ You should now see:
 
 - **Main Content Area:** The central panel for editing
 - **Left Sidebar:** Navigation menu (journals, favorites, recent pages)
-- **Right Sidebar:** Context panel (backlinks, page graph, etc.)
+- **Right Sidebar:** Context panel (opened pages/blocks, page graph, references)
 - **Top Bar:** Search, settings, and graph switcher
 
 ## Understanding the Interface
@@ -160,29 +151,38 @@ Notice how "Logseq" became a clickable link? You just created a page link!
 
 ### Exercise 3: See the Connection
 
-1. Open the **right sidebar** (click the expand icon `>` if hidden)
-2. You should see a section called **"Linked References"**
+1. Open the **right sidebar** if it's hidden
+2. You should see a section called **"Linked references"**
 3. You'll see your journal entry that mentioned "Logseq"
 
 This is **bidirectional linking** in action! When you link to a page, that page automatically knows what links to it.
 
-## Graph Types Comparison
+## Graph Storage Notes (Current)
 
-| Feature               | Database Mode                     | File-Based Mode                 |
-| --------------------- | --------------------------------- | ------------------------------- |
-| **Storage**           | SQLite database                   | Markdown/Org files              |
-| **Performance**       | Excellent, even with 100k+ blocks | Good, can slow with 50k+ blocks |
-| **Semantic Search**   | ✅ Yes                            | ❌ No                           |
-| **Query Performance** | Fast                              | Slower with large graphs        |
-| **External Editors**  | ❌ No direct editing              | ✅ Use any text editor          |
-| **Git Integration**   | Via export                        | Native                          |
-| **Portability**       | Export to markdown/JSON           | Native markdown                 |
-| **Schema Management** | Automatic                         | Manual                          |
+| Item                    | Current behavior |
+| ----------------------- | ---------------- |
+| **First graph creation** | DB graph flow in app onboarding |
+| **Storage format**       | SQLite for DB graphs |
+| **Import paths**         | SQLite, SQLite+assets zip, File to DB graph, EDN to DB graph, Debug Transit |
+| **Migration strategy**   | Use Import/Export workflows |
 
-**When to choose each:**
+> **Removed:** Fixed performance thresholds like "100k+ blocks" and "50k+ blocks" in beginner guidance. Performance depends on graph shape, plugins, device, and sync conditions.
 
-- **Database:** You want the best performance and advanced features
-- **File-Based:** You need Git integration or external editor support
+> **Removed:** Hard claim that "Semantic Search" is a guaranteed DB-only default capability in first-graph setup.
+
+## Findings: New Capabilities
+
+Validated against current source in `src/`, `deps/`, and `packages/` (2026-05-30):
+
+- Import now exposes multiple DB-oriented entry points: **SQLite**, **SQLite + assets (.zip)**, **File to DB graph**, **EDN to DB graph**, and **Debug Transit**.
+- First-graph creation entry points are DB-oriented in both desktop and mobile flows.
+- Linked and unlinked references remain first-class in page views and the right sidebar workflow.
+
+**When to choose what:**
+
+- **Create first graph:** Use the default DB graph flow.
+- **Bring existing notes:** Use import options (especially File to DB graph).
+- **Move data between graphs/systems:** Use export/import instead of relying on legacy creation paths.
 
 > 💡 **Can I switch later?** Yes! Logseq provides import/export tools to migrate between graph types.
 

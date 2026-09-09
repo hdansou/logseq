@@ -1,6 +1,6 @@
 # Logseq Dynamic Variables: A Detective's Investigation Report
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## 🔍 Case Summary
 
@@ -149,7 +149,7 @@ graph LR
 
 ### The Investigation
 
-**Location**: `src/main/frontend/template.cljs:27-45`
+**Location**: `src/main/frontend/template.cljs:28-46`
 
 ```clojure
 (def template-re #"<%([^%].*?)%>")
@@ -183,18 +183,18 @@ graph LR
 
 ### The Variable Rules
 
-**Location**: `src/main/frontend/template.cljs:11-25`
+**Location**: `src/main/frontend/template.cljs:12-26`
 
 ```clojure
 (defn- variable-rules
   []
-  {"today" (ref/->page-ref (date/today))
-   "yesterday" (ref/->page-ref (date/yesterday))
-   "tomorrow" (ref/->page-ref (date/tomorrow))
+  {"today" (ref/->page-ref (db/get-journal-page-title (date/today)))
+   "yesterday" (ref/->page-ref (db/get-journal-page-title (date/yesterday)))
+   "tomorrow" (ref/->page-ref (db/get-journal-page-title (date/tomorrow)))
    "time" (date/get-current-time)
    "current page" (when-let [current-page (or
                                            (state/get-current-page)
-                                           (date/today))]
+                                           (db/get-journal-page-title (date/today)))]
                     (let [block-uuid (parse-uuid current-page)
                           page (if block-uuid
                                  (db-utils/entity [:block/uuid block-uuid])
@@ -254,6 +254,8 @@ sequenceDiagram
     Note over Template,DB: Works identically for DB and file-based
 ```
 
+> **Note (2026-05-28):** During **template insertion** the `current page` fallback is resolved differently. `outliner.template/variable-rules` (deps/outliner/src/logseq/outliner/template.cljs) computes `current page` from the insertion target block/page directly — it does not use `state/get-current-page`. Only the five built-in variables are resolved there; NLP expressions are left as-is.
+
 ### Mermaid Diagram: Variable Resolution Flow
 
 ```mermaid
@@ -306,14 +308,14 @@ See [Query Syntax: DB vs File-Based](./query-syntax-db-vs-file.md) for complete 
 
 ### The Investigation
 
-**Location**: `src/main/frontend/db/query_dsl.cljs:754-760`
+**Location**: `src/main/frontend/db/query_dsl.cljs:696-705`
 
 ```clojure
 (defn parse-query
-  ([q] (parse-query q {}))
-  ([q options]
+  ([q db] (parse-query q db {}))
+  ([q db options]
    (let [q' (template/resolve-dynamic-template! q)]
-     (parse q' (merge {:db-graph? (config/db-based-graph? (state/get-current-repo))} options)))))
+     (parse q' db options))))
 
 (defn pre-transform-query
   [q]
@@ -327,7 +329,7 @@ See [Query Syntax: DB vs File-Based](./query-syntax-db-vs-file.md) for complete 
 
 The Query DSL also has its own set of time-related keywords that work **without** the `<% %>` syntax:
 
-**Location**: `src/main/frontend/db/query_dsl.cljs:56-83`
+**Location**: `src/main/frontend/db/query_dsl.cljs:44-71`
 
 ```clojure
 (defn- ->journal-day-int [input]
@@ -353,7 +355,7 @@ The Query DSL also has its own set of time-related keywords that work **without*
 
 ### Custom Query Integration
 
-**Location**: `src/main/frontend/db/query_dsl.cljs:804`
+**Location**: `src/main/frontend/db/query_dsl.cljs:743`
 
 ```clojure
 (defn custom-query
@@ -405,91 +407,77 @@ sequenceDiagram
 
 ### The Investigation
 
-**Location**: `src/main/frontend/handler/editor.cljs:2205-2285`
+**Location**: `src/main/frontend/handler/editor.cljs:2136-2161`
 
 ```clojure
 (defn insert-template!
   ([element-id db-id]
    (insert-template! element-id db-id {}))
   ([element-id db-id {:keys [target] :as opts}]
-   (let [repo (state/get-current-repo)
-         db? (config/db-based-graph? repo)]
-     ;; ... fetch template block ...
-     (let [;; ... setup ...
-           content-update-fn (fn [content]
-                               (->> content
-                                    (property-file/remove-property-when-file-based repo format "template")
-                                    (property-file/remove-property-when-file-based repo format "template-including-parent")
-                                    template/resolve-dynamic-template!))
-           ;; ... more setup ...
+   (let [repo (state/get-current-repo)]
+     (p/let [block (db-async/<get-block repo db-id {:children? false})]
+       (when (:db/id block)
+         (let [journal? (ldb/journal? target)
+               target (or target (state/get-edit-block))
+               format (get block :block/format :markdown)]
+           (when element-id
+             (insert-command! element-id "" format {:end-pattern commands/command-trigger}))
+           (try
+             (p/let [result (ui-outliner-tx/transact!
+                             {:outliner-op :apply-template
+                              :created-from-journal-template? journal?}
+                             (when-not (string/blank? (state/get-edit-content))
+                               (save-current-block!))
+                             (outliner-op/apply-template! db-id target opts))]
+               (when result (edit-last-block-after-inserted! result))))))))))
 ```
 
-**🔍 Critical Discovery #6**: Template resolution happens at the **content transformation stage**, after property cleanup but before block insertion.
+**🔍 Critical Discovery #6**: `insert-template!` now delegates all template resolution to the outliner layer via `outliner-op/apply-template!`. The explicit `content-update-fn` calling `template/resolve-dynamic-template!` was removed.
 
-### DB vs File-Based Differences
+> **Removed:** The inline `content-update-fn` that called `frontend.template/resolve-dynamic-template!` directly within `insert-template!`. Template variable resolution during insertion now happens in `deps/outliner/src/logseq/outliner/template.cljs` via `resolve-dynamic-template-blocks`.
 
-The ONLY difference between DB and file-based graphs in template handling is **property storage**:
+> **Removed:** The explicit `if db?` branch in `insert-template!` that distinguished DB-based (add `:logseq.property/used-template` datom) from file-based (remove template properties from text). This logic has moved into the outliner op layer.
 
-**Location**: `src/main/frontend/handler/editor.cljs:2224-2235`
+### Template Resolution in the Outliner Layer
+
+**Primary location**: `deps/outliner/src/logseq/outliner/template.cljs`
+
+The actual variable resolution during insertion is done by:
 
 ```clojure
-(let [sorted-blocks (if db?
-                      ;; DB-based: adds :logseq.property/used-template property
-                      (cons
-                       (-> (first blocks')
-                           (assoc :logseq.property/used-template (:db/id block)))
-                       (rest blocks'))
-                      ;; File-based: removes template properties from text
-                      (cons
-                       (-> (first blocks)
-                           (update :block/properties-text-values dissoc :template)
-                           (update :block/properties-order (fn [keys]
-                                                             (vec (remove #{:template} keys)))))
-                       (rest blocks)))]
+(defn resolve-dynamic-template-blocks
+  [db target blocks]
+  (let [rules (variable-rules db target)]
+    (mapv (fn [block]
+            (-> block
+                normalize-block
+                (resolve-block rules)))
+          blocks)))
 ```
 
-**Key Difference**:
+This resolves `block/title`, `block/raw-title`, and `block/properties-text-values` fields. The `variable-rules` in this module **does not** use chrono-node — only the five built-in variables (`today`, `yesterday`, `tomorrow`, `time`, `current page`) are resolved during template insertion. NLP-based dates (e.g. `<% next monday %>`) are **not** expanded in template blocks.
 
-| Aspect                  | DB-based                               | File-based                 |
-| ----------------------- | -------------------------------------- | -------------------------- |
-| **Template tracking**   | `:logseq.property/used-template` datom | Property removed from text |
-| **Property storage**    | Datascript entity attribute            | Text-based property drawer |
-| **Variable resolution** | ✅ Same function                       | ✅ Same function           |
+**Call chain**: `insert-template!` → `outliner-op/apply-template!` → `logseq.outliner.op/apply-template-op!` → `logseq.outliner.template/resolve-dynamic-template-blocks`
 
 ### Mermaid Diagram: Template Insertion Flow
 
 ```mermaid
 flowchart TD
-    A[User inserts template] --> B[Fetch template block]
-    B --> C[Get block children]
-    C --> D{DB-based?}
+    A[User inserts template] --> B[insert-template! editor.cljs:2136]
+    B --> C[outliner-op/apply-template!]
+    C --> D[logseq.outliner.op/apply-template-op!]
+    D --> E[template-children-blocks]
+    D --> F[resolve-dynamic-template-blocks]
 
-    D -->|Yes| E[Add :used-template property]
-    D -->|No| F[Remove template properties]
+    F --> G[variable-rules db target]
+    G --> H[Replace today/yesterday/tomorrow/time/current page]
+    H --> I[resolve-block on each block]
 
-    E --> G[Content update function]
-    F --> G
+    I --> J[outliner-core/insert-blocks!]
+    J --> K[Template inserted]
 
-    G --> H[Remove property: template]
-    H --> I[Remove property: template-including-parent]
-    I --> J[resolve-dynamic-template!]
-
-    J --> K[Replace <% today %> → [[2025-10-16]]]
-    K --> L[Replace <% current page %> → [[Page Name]]]
-    L --> M[Replace other variables]
-
-    M --> N[Insert blocks]
-    N --> O{DB-based?}
-
-    O -->|Yes| P[SQLite transaction]
-    O -->|No| Q[File write]
-
-    P --> R[Template inserted]
-    Q --> R
-
-    style J fill:#4CAF50,stroke:#2E7D32,color:#fff
-    style D fill:#2196F3,stroke:#1565C0,color:#fff
-    style O fill:#2196F3,stroke:#1565C0,color:#fff
+    style F fill:#4CAF50,stroke:#2E7D32,color:#fff
+    style G fill:#2196F3,stroke:#1565C0,color:#fff
 ```
 
 ---
@@ -504,7 +492,7 @@ flowchart TD
 
 ### The Investigation
 
-**Location**: `src/main/frontend/date.cljs:15-18`
+**Location**: `src/main/frontend/date.cljs:22-25`
 
 ```clojure
 (defn nld-parse
@@ -522,7 +510,7 @@ flowchart TD
 
 ### Supported NLP Patterns
 
-**Location**: `src/main/frontend/date.cljs:186-219`
+**Location**: `src/main/frontend/date.cljs:127-160`
 
 ```clojure
 (def nlp-pages
@@ -589,17 +577,17 @@ flowchart LR
 
 ### The Investigation
 
-**Location**: `src/main/frontend/util/ref.cljs:7-13`
+**Location**: `src/main/frontend/util/ref.cljs:5-9`
 
 ```clojure
 (defn ->block-ref
   [id]
-  (if (config/db-based-graph?)
-    (page-ref/->page-ref id)
-    (block-ref/->block-ref id)))
+  (page-ref/->page-ref id))
 
 (def ->page-ref page-ref/->page-ref)
 ```
+
+> **Removed:** The conditional `if (config/db-based-graph?)` branch — previously `->block-ref` dispatched between `page-ref/->page-ref` (DB) and `block-ref/->block-ref` (file-based). File-based block-ref format `((uuid))` is no longer supported; both graph types now use the same page-ref format.
 
 **🔍 Critical Discovery #8**: Block references differ between DB and file-based graphs, but **page references are identical** across both graph types.
 
@@ -619,15 +607,18 @@ This format is universal and doesn't change based on storage backend.
 
 ## Key Witnesses (Main Files)
 
-| File Path                                 | Role                       | Lines of Interest     | Criticality |
-| ----------------------------------------- | -------------------------- | --------------------- | ----------- |
-| `src/main/frontend/template.cljs`         | Template resolution engine | 11-45                 | 🔴 Critical |
-| `src/main/frontend/db/query_dsl.cljs`     | Query DSL parser           | 754-760, 804          | 🔴 Critical |
-| `src/main/frontend/handler/editor.cljs`   | Template insertion         | 2205-2285             | 🟡 High     |
-| `src/main/frontend/components/block.cljs` | Macro rendering            | 1861                  | 🟢 Medium   |
-| `src/main/frontend/extensions/srs.cljs`   | SRS card queries           | 265                   | 🟢 Medium   |
-| `src/main/frontend/date.cljs`             | Date utilities & NLP       | 15-18, 85-95, 186-219 | 🟡 High     |
-| `src/main/frontend/util/ref.cljs`         | Reference formatting       | 7-13                  | 🟢 Medium   |
+| File Path                                     | Role                       | Lines of Interest     | Criticality   |
+| --------------------------------------------- | -------------------------- | --------------------- | ------------- |
+| `src/main/frontend/template.cljs`             | Template resolution engine | 12-26, 28, 32-46      | 🔴 Critical   |
+| `src/main/frontend/db/query_dsl.cljs`         | Query DSL parser           | 696-705, 743          | 🔴 Critical   |
+| `src/main/frontend/handler/editor.cljs`       | Template insertion         | 2136-2161             | 🟡 High       |
+| ~~`src/main/frontend/components/block.cljs`~~ | ~~Macro rendering~~        | ~~1861~~              | ~~🟢 Medium~~ |
+| ~~`src/main/frontend/extensions/srs.cljs`~~   | ~~SRS card queries~~       | ~~265~~               | ~~🟢 Medium~~ |
+| `src/main/frontend/extensions/fsrs.cljs`      | FSRS card queries          | 96                    | 🟢 Medium     |
+| `src/main/frontend/date.cljs`                 | Date utilities & NLP       | 3, 22-25, 81, 127-160 | 🟡 High       |
+| `src/main/frontend/util/ref.cljs`             | Reference formatting       | 5-9                   | 🟢 Medium     |
+
+> **Note (2026-05-28):** `frontend.extensions.srs.cljs` was split — UI helpers moved to `srs/handler.cljs` and core logic to `fsrs.cljs`. `expand-dyn-macro` no longer exists in `block.cljs`; macro rendering no longer calls `resolve-dynamic-template!` directly. `fsrs.cljs` uses `query-dsl/parse` (bypasses template resolution), not `query-dsl/parse-query`.
 
 ---
 
@@ -643,7 +634,7 @@ The `resolve-dynamic-template!` function has **zero conditional logic** for DB v
 
 ### Finding #2: Pre-Processing Strategy ✅
 
-**Evidence**: All call sites (query_dsl.cljs:754, editor.cljs:2250, block.cljs:1861)
+**Evidence**: All query-DSL call sites (query_dsl.cljs:699, 704, 748); template insertion now via outliner layer (editor.cljs:2154)
 
 Template resolution happens **before** content enters any domain-specific pipeline (parsing, rendering, insertion).
 
@@ -675,15 +666,15 @@ If variable not found and NLP parsing fails, the **original text is returned unc
 
 ### Finding #6: Query Auto-Resolution ✅
 
-**Evidence**: `src/main/frontend/db/query_dsl.cljs:754`
+**Evidence**: `src/main/frontend/db/query_dsl.cljs:699` (`parse-query`), `:704` (`pre-transform-query`), `:748` (`custom-query`)
 
-**Every query string** automatically gets template resolution before parsing.
+**Every query string** through `parse-query` / `pre-transform-query` / `custom-query` automatically gets template resolution before parsing. Exception: `query-dsl/parse` (used directly in `fsrs.cljs:96`) does **not** call `resolve-dynamic-template!`.
 
 **Impact**: Users can use dynamic variables in queries without any special syntax.
 
 ### Finding #7: Chrono-node Dependency 📦
 
-**Evidence**: `src/main/frontend/date.cljs:15-18`
+**Evidence**: `src/main/frontend/date.cljs:3` (import), `src/main/frontend/date.cljs:22-25` (`nld-parse`)
 
 Natural language parsing relies on external library **chrono-node**.
 
@@ -697,21 +688,15 @@ There's **no way to escape** `<% %>` syntax if you want it literally in text.
 
 **Impact**: Cannot write documentation about template variables without them being resolved.
 
-### Finding #9: Macro Integration ✅
+### Finding #9: Macro Integration ❌ REMOVED
 
-**Evidence**: `src/main/frontend/components/block.cljs:1861`
+> **Removed (2026-05-28):** `expand-dyn-macro` no longer exists in `src/main/frontend/components/block.cljs`. Macro rendering at line 1861 uses `macro-cp` which does not call `resolve-dynamic-template!`. Macros do **not** automatically receive template-resolved content.
 
-Macros receive template-resolved content before rendering.
+### Finding #10: SRS Card Support ⚠️ CHANGED
 
-**Impact**: Macros can use dynamic variables in their arguments.
+> **Changed (2026-05-28):** `src/main/frontend/extensions/srs.cljs` was split. Core logic is now in `frontend.extensions.fsrs` (`fsrs.cljs`). The FSRS query at `fsrs.cljs:96` calls `query-dsl/parse` directly — which does **not** invoke `resolve-dynamic-template!`. Dynamic variables in FSRS card queries are **not** resolved automatically.
 
-### Finding #10: SRS Card Support ✅
-
-**Evidence**: `src/main/frontend/extensions/srs.cljs:265`
-
-Spaced repetition queries support dynamic variables for scheduling.
-
-**Impact**: Flashcard queries can reference current dates dynamically.
+**Impact**: Flashcard queries using `<% today %>` syntax will **not** be expanded.
 
 ---
 
@@ -839,12 +824,13 @@ This won't: < % today % >
 ;; => "Unknown <% variable %>" (fails silently)
 ```
 
-**Call Sites**:
+**Call Sites** (as of 2026-05-28):
 
-- `frontend.db.query-dsl/parse-query:754`
-- `frontend.handler.editor/insert-template!:2250`
-- `frontend.components.block/expand-dyn-macro:1861`
-- `frontend.extensions.srs/query:265`
+- `frontend.db.query-dsl/parse-query:699`
+- `frontend.db.query-dsl/pre-transform-query:704`
+- `frontend.db.query-dsl/custom-query:748`
+
+> **Removed call sites:** `frontend.handler.editor/insert-template!` no longer calls this directly (delegated to `outliner.template/resolve-dynamic-template-blocks`). `frontend.components.block/expand-dyn-macro` no longer exists. `frontend.extensions.srs/query` no longer exists (FSRS uses `query-dsl/parse` which bypasses template resolution).
 
 ---
 
@@ -858,10 +844,10 @@ This won't: < % today % >
 
 **Example**: `[[2025-10-16]]` or `[[Oct 16th, 2025]]` depending on config
 
-**Code**: `src/main/frontend/template.cljs:13`
+**Code**: `src/main/frontend/template.cljs:14`
 
 ```clojure
-"today" (ref/->page-ref (date/today))
+"today" (ref/->page-ref (db/get-journal-page-title (date/today)))
 ```
 
 ---
@@ -872,10 +858,10 @@ This won't: < % today % >
 
 **Example**: `[[2025-10-15]]`
 
-**Code**: `src/main/frontend/template.cljs:14`
+**Code**: `src/main/frontend/template.cljs:15`
 
 ```clojure
-"yesterday" (ref/->page-ref (date/yesterday))
+"yesterday" (ref/->page-ref (db/get-journal-page-title (date/yesterday)))
 ```
 
 ---
@@ -886,10 +872,10 @@ This won't: < % today % >
 
 **Example**: `[[2025-10-17]]`
 
-**Code**: `src/main/frontend/template.cljs:15`
+**Code**: `src/main/frontend/template.cljs:16`
 
 ```clojure
-"tomorrow" (ref/->page-ref (date/tomorrow))
+"tomorrow" (ref/->page-ref (db/get-journal-page-title (date/tomorrow)))
 ```
 
 ---
@@ -902,25 +888,21 @@ This won't: < % today % >
 
 **Locale**: Uses browser's locale
 
-**Code**: `src/main/frontend/template.cljs:16`
+**Code**: `src/main/frontend/template.cljs:17`
 
 ```clojure
 "time" (date/get-current-time)
 ```
 
-**Implementation**: `src/main/frontend/date.cljs:111-119`
+**Implementation**: `src/main/frontend/date.cljs:81`
 
 ```clojure
 (defn get-current-time
   []
-  (let [d (js/Date.)]
-    (.toLocaleTimeString
-     d
-     (gobj/get js/window.navigator "language")
-     (bean/->js {:hour "2-digit"
-                 :minute "2-digit"
-                 :hourCycle "h23"}))))
+  (i18n/locale-format-time (js/Date.)))
 ```
+
+where `i18n/locale-format-time` (`src/main/frontend/context/i18n.cljs:198`) delegates to `Intl.DateTimeFormat` with `h23` hour-cycle.
 
 ---
 
@@ -932,12 +914,12 @@ This won't: < % today % >
 
 **Example**: `[[Project Ideas]]`
 
-**Code**: `src/main/frontend/template.cljs:17-25`
+**Code**: `src/main/frontend/template.cljs:18-26`
 
 ```clojure
 "current page" (when-let [current-page (or
                                         (state/get-current-page)
-                                        (date/today))]
+                                        (db/get-journal-page-title (date/today)))]
                  (let [block-uuid (parse-uuid current-page)
                        page (if block-uuid
                               (db-utils/entity [:block/uuid block-uuid])
@@ -978,7 +960,7 @@ This won't: < % today % >
   match)
 ```
 
-**Supported Phrases**: See `src/main/frontend/date.cljs:186-219` for pre-defined list
+**Supported Phrases**: See `src/main/frontend/date.cljs:127-160` for pre-defined list
 
 ---
 
@@ -988,7 +970,7 @@ This won't: < % today % >
 
 **Namespace**: `frontend.db.query-dsl`
 
-**Signature**: `(parse-query q) → map`
+**Signature**: `(parse-query q db) → map` or `(parse-query q db options) → map`
 
 **Description**: Parses a query string, resolving dynamic variables first
 
@@ -1020,7 +1002,7 @@ This won't: < % today % >
 ;; - DB-based: query:: (and <% today %>)
 ```
 
-**Code**: `src/main/frontend/db/query_dsl.cljs:754-755`
+**Code**: `src/main/frontend/db/query_dsl.cljs:696-700`
 
 ---
 
@@ -1137,6 +1119,8 @@ sequenceDiagram
     Note over Template: Already resolved - Parser sees final values
 ```
 
+> **Note (2026-05-28):** Flow #2 (Template Insertion) above shows the legacy structure. The current implementation no longer has a db/file branch inside `insert-template!`. All template insertion goes through `outliner-op/apply-template!` → worker `:apply-template` message → `apply-template-op!` → `resolve-dynamic-template-blocks` (outliner/template.cljs:113). Additionally, `pipeline.cljs:96` calls `resolve-dynamic-template-blocks` directly for tag-triggered template application.
+
 ---
 
 ## Debugging Guide
@@ -1202,7 +1186,6 @@ sequenceDiagram
    ```
 
 2. **Check if editing block vs page**:
-
    - If editing a block, returns the page _containing_ that block
    - This is expected behavior
 

@@ -1,6 +1,6 @@
 # Executive Summary
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 ## Overview
 
@@ -11,7 +11,7 @@ Logseq is a privacy-first, open-source knowledge management and collaboration pl
 ### 🔒 Privacy-First Design
 
 - **Local Data Storage**: All user data remains on the user's device by default
-- **No Vendor Lock-in**: Open file formats (Markdown, Org-mode) ensure data portability
+- **No Vendor Lock-in**: File-based graphs use open text formats (Markdown, Org-mode) for data portability; the newer DB graph mode stores data in SQLite and relies on export for portability
 - **Optional Cloud Sync**: Users control whether and how their data is synchronized
 
 ### 🧠 Knowledge Graph Approach
@@ -22,9 +22,11 @@ Logseq is a privacy-first, open-source knowledge management and collaboration pl
 
 ### 🎨 Flexible Content Creation
 
-- **Multiple Formats**: Support for Markdown and Org-mode
+- **Multiple Formats**: File-based graphs support Markdown and Org-mode; DB graphs store structured data in SQLite independent of file format
 - **Rich Media**: Integration of images, PDFs, videos, and external content
 - **Whiteboard Feature**: Visual canvas for spatial thinking and mind mapping
+
+  > **Removed (in progress):** Whiteboard removal is underway in the codebase (see `src/main/frontend/components/export.cljs` and `src/main/frontend/handler/assets.cljs`). The `logseq.class/Whiteboard` schema class and tldraw data properties still exist but are being phased out.
 
 ### 🔧 Extensible Platform
 
@@ -72,7 +74,9 @@ Logseq occupies a unique position in the knowledge management space by combining
 ### Architecture
 
 - **Frontend**: ClojureScript with React and Rum
-- **Database**: DataScript for in-memory graph database
+- **Database**: Two storage backends co-exist:
+  - **DataScript** (in-memory Datalog DB) — used by legacy file-based graphs
+  - **SQLite** (`@sqlite.org/sqlite-wasm`) — used by the new DB graph mode, which is the primary development target
 - **Desktop**: Electron-based cross-platform application
 - **Mobile**: Capacitor-based (ClojureScript web view)
 
@@ -123,6 +127,15 @@ Logseq occupies a unique position in the knowledge management space by combining
 - Third-party integrations
 - Developer community growth
 - Educational and enterprise adoption
+
+## Findings: New Capabilities
+
+The following capabilities are present in the codebase but not mentioned in this document:
+
+- **DB Graph Mode (SQLite)**: A new primary graph type backed by SQLite (`@sqlite.org/sqlite-wasm`) with a structured schema (`logseq-schema` dependency). This mode replaces the open-file paradigm with a proper relational/entity store and is the active development focus.
+- **FSRS Spaced-Repetition Flashcards**: The `io.github.open-spaced-repetition/cljc-fsrs` library is integrated, enabling flashcard review with the FSRS algorithm. Flashcards are exposed as a dedicated tab in the mobile app.
+- **shadcn-based UI Component Library**: `packages/ui/` provides a shadcn-derived component system used throughout the frontend, representing a significant UI infrastructure layer.
+- **logseq-schema External Dependency**: The DB graph schema (`logseq/logseq-schema` via Git) has been extracted into a dedicated repository, enabling schema versioning independent of the main app.
 
 ---
 

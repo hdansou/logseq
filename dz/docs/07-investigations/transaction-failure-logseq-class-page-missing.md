@@ -1,13 +1,18 @@
 # Investigation: Transaction Failure - "Nothing found for entity id :logseq.class/Page"
 
 **Investigation Date:** December 11, 2025  
-**Status:** ✅ Root Cause Identified  
+**Last Verified:** 2026-05-30  
+**Status:** ✅ Root Cause Identified; mitigations now exist in current source  
 **Severity:** 🔴 High - Prevents journal page creation  
 **Affected Component:** Database initialization, Journal creation
+
+> **Last revised:** 2026-05-30
 
 ---
 
 ## Executive Summary
+
+> Note: This is a historical incident investigation. Core analysis remains useful, but some code locations and line numbers have moved since 2025.
 
 ### Key Findings
 
@@ -16,6 +21,14 @@
 3. **Missing Entity:** `:logseq.class/Page` not found in database during transaction
 4. **Duplicate Tags:** Journal transaction contains duplicate `:logseq.class/Page` tags
 5. **Impact:** Unable to create today's journal page, blocking core functionality
+6. **Current State (2026-05-30):** Initialization and remote-graph repair paths now include explicit built-in sync repair logic, reducing recurrence risk
+
+## Findings: New Capabilities
+
+1. **Remote graph built-in repair queue now exists** in `src/main/frontend/worker/db_core.cljs` via `built-in-sync-repair-tx-data`, `enqueue-built-in-sync-repair!`, and `maybe-enqueue-built-in-sync-repair!`.
+2. **Repair payload is deterministic and idempotent-oriented** with stable UUID tx id, fixed timestamps, and ordered repair items for convergence.
+3. **Bootstrap class set now includes `:logseq.class/Page`** in `deps/db/src/logseq/db/sqlite/create_graph.cljs`, improving initialization ordering for page-class availability.
+4. **Worker page handler API changed**: `src/main/frontend/worker/handler/page.cljs` delegates to `logseq.outliner.page/create!`; transaction metadata construction is in `deps/outliner/src/logseq/outliner/page.cljs`.
 
 ### Critical Issue
 
@@ -45,7 +58,7 @@ Error: Nothing found for entity id :logseq.class/Page
 
 #### Entry Point
 
-**File:** [frontend/handler/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/handler/page.cljs#L327)
+**File:** [frontend/handler/page.cljs](../../../src/main/frontend/handler/page.cljs#L281)
 
 ```clojure
 (defn create-today-journal!
@@ -55,14 +68,12 @@ Error: Nothing found for entity id :logseq.class/Page
 
 #### Page Creation Logic
 
-**File:** [deps/outliner/src/logseq/outliner/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/outliner/src/logseq/outliner/page.cljs#L84-L106)
+**File:** [deps/outliner/src/logseq/outliner/page.cljs](../../../deps/outliner/src/logseq/outliner/page.cljs#L150-L186)
 
 ```clojure
-(defn- build-page-tx [db properties page {:keys [whiteboard? class? tags class-ident-namespace]}]
+(defn- build-page-tx [db properties page {:keys [class? tags class-ident-namespace]}]
   (when (:block/uuid page)
-    (let [type-tag (cond class? :logseq.class/Tag
-                         whiteboard? :logseq.class/Whiteboard
-                         :else :logseq.class/Page)
+    (let [type-tag (if class? :logseq.class/Tag :logseq.class/Page)
           tags' (if (:block/journal-day page) tags (conj tags type-tag))
           page' (update page :block/tags
                         (fnil into [])
@@ -87,21 +98,27 @@ Error: Nothing found for entity id :logseq.class/Page
 
 #### Transaction Metadata
 
-**File:** [frontend/worker/handler/page/file_based/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/worker/handler/page/file_based/page.cljs#L102-L103)
+> **Removed:** Direct transaction metadata construction in `frontend/worker/handler/page.cljs`.
+
+**Current File:** [deps/outliner/src/logseq/outliner/page.cljs](../../../deps/outliner/src/logseq/outliner/page.cljs)
 
 ```clojure
-(ldb/transact! conn txs (cond-> {:persist-op? true
-                                 :outliner-op :create-page}
-                          today-journal?
-                          (assoc :create-today-journal? true
-                                 :today-journal-name page-name)))
+(let [tx-meta (cond-> (outliner-tx-meta/ensure-outliner-ops
+        {:persist-op? persist-op?
+         :outliner-op :create-page}
+        [:create-page [title options]])
+      today-journal?
+      (assoc :create-today-journal? true
+        :today-journal-name title))]
+  {:tx-meta tx-meta
+   :tx-data txs})
 ```
 
 ### 3. Built-in Classes System
 
 #### Class Definition
 
-**File:** [deps/db/src/logseq/db/frontend/class.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/db/src/logseq/db/frontend/class.cljs#L17-L106)
+**File:** [deps/db/src/logseq/db/frontend/class.cljs](../../../deps/db/src/logseq/db/frontend/class.cljs#L17-L106)
 
 ```clojure
 (def ^:large-vars/data-var built-in-classes
@@ -128,7 +145,7 @@ Error: Nothing found for entity id :logseq.class/Page
 
 #### Database Initialization
 
-**File:** [deps/db/src/logseq/db/sqlite/create_graph.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/db/src/logseq/db/sqlite/create_graph.cljs#L145-L171)
+**File:** [deps/db/src/logseq/db/sqlite/create_graph.cljs](../../../deps/db/src/logseq/db/sqlite/create_graph.cljs#L145-L171)
 
 ```clojure
 (defn build-initial-classes*
@@ -148,7 +165,7 @@ Error: Nothing found for entity id :logseq.class/Page
    built-in-classes))
 ```
 
-**File:** [deps/db/src/logseq/db/sqlite/create_graph.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/db/src/logseq/db/sqlite/create_graph.cljs#L232-L249)
+**File:** [deps/db/src/logseq/db/sqlite/create_graph.cljs](../../../deps/db/src/logseq/db/sqlite/create_graph.cljs#L232-L249)
 
 ```clojure
 (defn build-db-initial-data
@@ -160,6 +177,7 @@ Error: Nothing found for entity id :logseq.class/Page
                           (contains? #{:logseq.class/Root
                                        :logseq.class/Property
                                        :logseq.class/Tag
+                                       :logseq.class/Page
                                        :logseq.class/Template}
                                      (:db/ident c)))
         bootstrap-classes (filter bootstrap-class? default-classes)
@@ -176,7 +194,7 @@ Error: Nothing found for entity id :logseq.class/Page
 
 #### DB Worker Initialization
 
-**File:** [frontend/worker/db_worker.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/worker/db_worker.cljs#L290-L304)
+**File:** [frontend/worker/db_core.cljs](../../../src/main/frontend/worker/db_core.cljs#L452-L470)
 
 ```clojure
 (let [;; ...
@@ -260,7 +278,7 @@ The database is missing the built-in classes that should be transacted during in
 
 The transaction data shows `:block/tags [:logseq.class/Page :logseq.class/Page]` - the tag appears twice. This suggests a logic error in tag accumulation.
 
-**Location:** [deps/outliner/src/logseq/outliner/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/outliner/src/logseq/outliner/page.cljs#L84-L86)
+**Location:** [deps/outliner/src/logseq/outliner/page.cljs](../../../deps/outliner/src/logseq/outliner/page.cljs#L150-L153)
 
 ```clojure
 (let [type-tag (cond class? :logseq.class/Tag
@@ -356,67 +374,21 @@ If `tags` already contains `:logseq.class/Page`, this logic will add it again.
 
 #### 🔴 Immediate Fix (Critical)
 
-**Add defensive check before journal creation**
-
-**File:** [frontend/worker/db_worker.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/worker/db_worker.cljs#L541-L544)
-
-```clojure
-;; CURRENT CODE (lines 541-544)
-(when-not (and (:create-today-journal? tx-meta)
-               (:today-journal-name tx-meta)
-               (seq tx-data')
-               (ldb/get-page @conn (:today-journal-name tx-meta))) ; today journal created already
-  (ldb/transact! conn tx-data' tx-meta'))
-
-;; PROPOSED FIX
-(when-not (and (:create-today-journal? tx-meta)
-               (:today-journal-name tx-meta)
-               (seq tx-data')
-               (ldb/get-page @conn (:today-journal-name tx-meta))) ; today journal created already
-  ;; Verify required built-in classes exist before transaction
-  (when-not (d/entity @conn :logseq.class/Page)
-    (log/error "Database missing required built-in classes. Attempting re-initialization.")
-    ;; Re-initialize missing classes
-    (let [initial-data (sqlite-create-graph/build-db-initial-data "" {})]
-      (try
-        (ldb/transact! conn initial-data {:repair-db? true})
-        (catch :default e
-          (log/error "Failed to repair database" e)
-          (throw (ex-info "Database is corrupted and missing required entities"
-                          {:missing-entity :logseq.class/Page
-                           :suggested-action "Please recreate the graph"}
-                          e))))))
-  (ldb/transact! conn tx-data' tx-meta'))
-```
+> **Removed:** Proposed direct pre-transaction repair in this location is stale.
+>
+> Current source implements a dedicated built-in sync repair queue for remote graphs in `src/main/frontend/worker/db_core.cljs` (`built-in-sync-repair-tx-data`, `enqueue-built-in-sync-repair!`, `maybe-enqueue-built-in-sync-repair!`).
 
 #### 🟡 Medium-term Fix
 
-**Ensure database initialization completes before allowing operations**
-
-**File:** [frontend/worker/db_worker.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/worker/db_worker.cljs#L290-L304)
-
-```clojure
-;; Add verification after initialization
-(when (and db-based? (not initial-data-exists?) (not datoms))
-  (let [config (or config "")
-        initial-data (sqlite-create-graph/build-db-initial-data
-                      config (select-keys opts [:import-type :graph-git-sha]))]
-    (ldb/transact! conn initial-data {:initial-db? true})
-
-    ;; VERIFY INITIALIZATION COMPLETED
-    (let [root-exists? (d/entity @conn :logseq.class/Root)
-          page-exists? (d/entity @conn :logseq.class/Page)]
-      (when-not (and root-exists? page-exists?)
-        (throw (ex-info "Database initialization failed - missing required built-in classes"
-                        {:root-exists? (boolean root-exists?)
-                         :page-exists? (boolean page-exists?)}))))))
-```
+> **Removed:** This proposed patch block is stale.
+>
+> Current initialization flow in `src/main/frontend/worker/db_core.cljs` already performs initial bootstrap transaction and then migration handling, with additional remote built-in repair enqueue behavior.
 
 #### 🟢 Long-term Improvement
 
 **Fix duplicate tag issue**
 
-**File:** [deps/outliner/src/logseq/outliner/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/outliner/src/logseq/outliner/page.cljs#L84-L86)
+**File:** [deps/outliner/src/logseq/outliner/page.cljs](../../../deps/outliner/src/logseq/outliner/page.cljs#L84-L86)
 
 ```clojure
 ;; CURRENT CODE
@@ -500,14 +472,14 @@ test('Fresh graph creation and journal access', async ({ page }) => {
 
 ## Code Location Reference
 
-| File                                                                                                                                                             | Purpose                     | Key Functions/Lines                                                     |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
-| [deps/db/src/logseq/db/frontend/class.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/db/src/logseq/db/frontend/class.cljs)                          | Built-in classes definition | `built-in-classes` (L17-106), `page-classes` (L103-106)                 |
-| [deps/db/src/logseq/db/sqlite/create_graph.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/db/src/logseq/db/sqlite/create_graph.cljs)                | Database initialization     | `build-initial-classes*` (L145-169), `build-db-initial-data` (L212-249) |
-| [frontend/worker/db_worker.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/worker/db_worker.cljs)                                       | Worker database setup       | Initialization (L290-304), Transaction guard (L541-544)                 |
-| [deps/outliner/src/logseq/outliner/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/outliner/src/logseq/outliner/page.cljs)                      | Page creation logic         | `build-page-tx` (L84-106), `create` (L236-306)                          |
-| [frontend/worker/handler/page/file_based/page.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/worker/handler/page/file_based/page.cljs) | Journal creation handler    | Transaction (L100-103)                                                  |
-| [deps/db/src/logseq/db.cljs](file:///Users/dzu/Projects/src/github.com/logseq/deps/db/src/logseq/db.cljs)                                                        | Transaction wrapper         | `transact-failed` debug (L146)                                          |
+| File                                                                                                      | Purpose                     | Key Functions/Lines                                                     |
+| --------------------------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------------------------------------------- |
+| [deps/db/src/logseq/db/frontend/class.cljs](../../../deps/db/src/logseq/db/frontend/class.cljs)           | Built-in classes definition | `built-in-classes` (L17-106), `page-classes` (L103-106)                 |
+| [deps/db/src/logseq/db/sqlite/create_graph.cljs](../../../deps/db/src/logseq/db/sqlite/create_graph.cljs) | Database initialization     | `build-initial-classes*` (L145-169), `build-db-initial-data` (L232-273) |
+| [frontend/worker/db_core.cljs](../../../src/main/frontend/worker/db_core.cljs)                            | Worker database setup       | create/open + initial data checks (L410-470)                            |
+| [deps/outliner/src/logseq/outliner/page.cljs](../../../deps/outliner/src/logseq/outliner/page.cljs)       | Page creation logic         | `build-page-tx` (L150-186)                                              |
+| [frontend/worker/handler/page.cljs](../../../src/main/frontend/worker/handler/page.cljs)                  | Journal creation handler    | Transaction path and page creation handlers                             |
+| [deps/db/src/logseq/db.cljs](../../../deps/db/src/logseq/db.cljs)                                         | Transaction wrapper         | `transact-failed` debug (L171)                                          |
 
 ---
 
@@ -519,7 +491,9 @@ This investigation may be related to:
 - Incomplete graph imports
 - Corrupted database files
 - Race conditions during app initialization
-- Issues reported in [dz/docs/product-report/issues_page1.json](file:///Users/dzu/Projects/src/github.com/logseq/dz/docs/product-report/issues_page1.json#L7548) (similar error pattern)
+- Issues reported in [dz/docs/product-report/issues_page1.json](../../../dz/docs/product-report/issues_page1.json#L7548) (similar error pattern)
+- [Pages Under Root Tag Investigation](./pages-under-root-tag.md) (related class/tag data-shape issue)
+- [Schema Integrity Index](./schema-integrity-08-index.md) (broader schema/migration context)
 
 ---
 
@@ -566,6 +540,7 @@ Time                Event
 - **Error Timestamp:** 1765487290780 (2025-12-11 21:08:10 UTC)
 - **Affected Code:** Current main branch
 - **Database Type:** SQLite-based (db-based graphs)
+- **Last revised:** 2026-05-30
 
 ---
 

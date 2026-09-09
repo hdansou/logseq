@@ -7,15 +7,17 @@ description: Create and edit Logseq DB (Database Mode) compatible content. Use w
 
 This guide explains how to work with Logseq Database Mode graphs. Unlike the older file-based mode ("Logseq OG"), database mode stores content in SQLite and uses **UI-driven interactions** rather than text-based syntax for many features.
 
+> **Last revised:** 2026-05-29
+
 ## Overview
 
 **Critical Understanding:** Logseq DB is fundamentally different from file-based Logseq:
 
 - **Storage**: SQLite database (not markdown files)
 - **Properties**: Structured data stored in the database (not `key:: value` text syntax)
-- **Queries**: Created via `/Query` command (not `{{query}}` macros)
-- **Tasks**: UI-based status management (not `TODO/DOING/DONE` text markers)
-- **Block References**: Handled through UI or `[[block-uuid]]` syntax
+- **Queries**: Created via `/Query` command; `{{query}}` remains available in compatibility paths
+- **Tasks**: UI-based status management (not legacy text markers)
+- **Block References**: Handled through UI or `((block-uuid))` syntax
 
 **What Works in DB Mode:**
 
@@ -29,11 +31,16 @@ This guide explains how to work with Logseq Database Mode graphs. Unlike the old
 **What Does NOT Work in DB Mode:**
 
 - ❌ `property:: value` syntax (use UI instead)
-- ❌ `{{query}}` macros (use `/Query` command)
-- ❌ `TODO/DOING/DONE` text markers (use UI)
-- ❌ `((block-id))` text syntax (use `[[UUID]]` instead)
-- ❌ `{{embed ((UUID))}}` (use `{{embed [[UUID]]}}` or UI)
-- ❌ `SCHEDULED: <date>` org-mode syntax (use UI)
+  > **Removed:** `TODO/DOING/DONE`, `NOW/LATER/WAITING/CANCELLED`, and `[#A]/[#B]/[#C]` are file-mode text markers; DB mode uses the Status and Priority properties.
+  > **Removed:** DB mode does not use `[[UUID]]` for block references; block refs still use `((UUID))`.
+  > **Removed:** DB mode does not use `{{embed [[UUID]]}}` for block embeds; use `{{embed ((UUID))}}` or the UI.
+  > **Removed:** `SCHEDULED: <date>` and `DEADLINE: <date>` org-mode text syntax; DB mode uses the Scheduled and Deadline properties.
+
+## Findings: New Capabilities
+
+- DB task status now uses closed values: Backlog, Todo, Doing, In Review, Done, and Canceled.
+- Priority now uses closed values: Low, Medium, High, and Urgent.
+- `/Scheduled`, `/Deadline`, and `/Query` are first-class DB authoring commands.
 
 ## Block Structure
 
@@ -53,64 +60,65 @@ Blocks are created by typing and pressing Enter:
 
 ## UUIDs in DB Mode
 
-### Universal Link Syntax: `[[UUID]]`
+### Page and Block References
 
-**Critical:** In DB mode, both pages AND blocks use the same `[[UUID]]` link syntax.
+**Critical:** In DB mode, pages use `[[Page Name]]` links and blocks use `((UUID))` refs.
 
 **Pages:**
 
 - Normal: `[[Page Name]]`
-- Same name conflict: `[[65abc123-def4-5678-90ab-cdef12345678]]` (displays as page title)
+
+> **Removed:** The guide's earlier same-name UUID page-link rule is not a normal DB authoring pattern; duplicate page names are rejected.
 
 **Blocks:**
 
-- Always: `[[65abc123-def4-5678-90ab-cdef12345678]]`
+- Always: `((65abc123-def4-5678-90ab-cdef12345678))`
 
 **Key Difference from File Mode:**
 
 - File mode: `((block-id))` for blocks, `[[Page]]` for pages
-- DB mode: `[[UUID]]` for BOTH pages and blocks
+- DB mode: `[[Page Name]]` for pages, `((UUID))` for blocks
 
 ### Getting UUIDs
 
 **Via UI:**
 
 1. Right-click a block → "Copy block ref"
-2. Paste: `[[uuid-will-be-here]]`
+2. Paste: `((uuid-will-be-here))`
 
 **Via typing:**
 
 1. Type `[[`
-2. Search for page/block
-3. Select → Logseq inserts `[[UUID]]`
+2. Search for page
+3. Select → Logseq inserts `[[Page Name]]`
 
 OR:
 
 1. Type `((`
 2. Search for block
-3. Select → Logseq inserts `[[UUID]]`
+3. Select → Logseq inserts `((UUID))`
 
 ### Block References
 
-**In DB Mode:** Block references use `[[UUID]]` syntax (same as page links).
+**In DB Mode:** Block references use `((UUID))` syntax.
 
 **How to create:**
 
 1. Type `((` - this triggers block reference search
 2. Search for and select the block you want to reference
-3. Logseq inserts the reference as `[[block-uuid-here]]`
+3. Logseq inserts the reference as `((block-uuid-here))`
 
 **Manual syntax:**
 
 ```markdown
-- Reference to a block: [[65abc123-def4-5678-90ab-cdef12345678]]
+- Reference to a block: ((65abc123-def4-5678-90ab-cdef12345678))
 ```
 
-**Note:** Both pages AND blocks use `[[UUID]]` syntax in DB mode. The `((block-id))` syntax from file-based mode does NOT work.
+**Note:** Block refs are UUID-backed, but they still keep the `((...))` wrapper in DB mode.
 
 ### Block Embeds (UI-Based)
 
-**In DB Mode:** Block embeds are created through the UI and use `[[UUID]]` references.
+**In DB Mode:** Block embeds are created through the UI and use `((UUID))` references.
 
 **How to embed:**
 
@@ -126,10 +134,10 @@ OR:
 **Result:** Logseq may create an embed using the block's UUID:
 
 ```markdown
-{{embed [[65abc123-def4-5678-90ab-cdef12345678]]}}
+{{embed ((65abc123-def4-5678-90ab-cdef12345678))}}
 ```
 
-**Note:** While the embed uses macro-like syntax, the reference inside is `[[UUID]]`, not `((UUID))`.
+**Note:** While the embed uses macro-like syntax, the reference inside is `((UUID))`, not `[[UUID]]`.
 
 ## Page Links
 
@@ -151,7 +159,7 @@ Text before [[Page Name]] and after
 
 Logseq displays the page title but stores the UUID reference.
 
-**Both pages and blocks use `[[UUID]]` syntax in DB mode.**
+**Pages use `[[Page Name]]` links in DB mode. Blocks use `((UUID))` refs.**
 
 ### Namespaced Pages
 
@@ -219,7 +227,7 @@ Page properties appear at the top of a page:
 | URL       | `link:: https://example.com`  | External link          |
 | Checkbox  | `completed:: true`            | Boolean value          |
 | List      | `tags:: tag1, tag2, tag3`     | Comma-separated values |
-| Reference | `ref:: ((block-id))`          | Block reference        |
+| Reference | `ref:: ((UUID))`              | Block reference        |
 
 ### Built-in Properties
 
@@ -243,19 +251,19 @@ Common built-in properties in Logseq:
 **How to set status:**
 
 1. Type `/` in a block
-2. Select a status: Todo, Doing, Done, In Review, Backlog, Canceled
+2. Select a status: Backlog, Todo, Doing, In Review, Done, Canceled
 3. Status appears as a UI element on the left side of the block
 
 **Status Values:**
 
+- **Backlog** - Deferred
 - **Todo** - Not started
 - **Doing** - In progress
-- **Done** - Completed
 - **In Review** - Under review
-- **Backlog** - Deferred
+- **Done** - Completed
 - **Canceled** - Canceled
 
-**Note:** The `TODO/DOING/DONE` text markers from file-based mode do NOT work in DB mode.
+**Note:** Task queries and task UI labels use title-case DB values such as `Todo`, `Doing`, `Done`, `In Review`, `Backlog`, and `Canceled`.
 
 ### Priorities (UI-Based)
 
@@ -278,13 +286,11 @@ Common built-in properties in Logseq:
 
 **How to add scheduled/deadline:**
 
-- `Cmd/Ctrl + P` then `S` - Add scheduled date
-- `Cmd/Ctrl + P` then `D` - Add deadline
 - Or type `/Scheduled` or `/Deadline`
 
 **Storage:** Dates stored as `:logseq.property/scheduled` and `:logseq.property/deadline` (datetime timestamps)
 
-**Note:** The `SCHEDULED: <date>` org-mode syntax does NOT work in DB mode.
+**Note:** The `SCHEDULED: <date>` and `DEADLINE: <date>` org-mode text syntax does NOT work in DB mode.
 
 ### Repeated Tasks
 
@@ -330,9 +336,9 @@ Note: In Logseq, headings are still blocks in the outline structure.
 
 ### Critical: `/Query` Command (Not `{{query}}`)
 
-**In DB Mode:** Queries are created with the `/Query` command, NOT `{{query}}` macros.
+**In DB Mode:** Queries are created with the `/Query` command. `{{query}}` still exists in compatibility paths, but the DB authoring flow uses `/Query`.
 
-**The `{{query}}` macro syntax is DEPRECATED in DB mode and will show warnings.**
+**The `/Query` command writes a query block with the `:logseq.property/query` property.**
 
 ### Simple Queries
 
@@ -349,13 +355,13 @@ Note: In Logseq, headings are still blocks in the outline structure.
 (and [[Project]] [[Active]])
 (task Todo)
 (task Todo Doing)
-(property status done)
+(priority High Urgent)
 ```
 
 **Important:** Task statuses use **title-case** in DB mode:
 
-- ✅ `Todo`, `Doing`, `Done`, `Now`, `Later`
-- ❌ NOT `TODO`, `DOING`, `DONE` (file-based syntax)
+- ✅ `Backlog`, `Todo`, `Doing`, `In Review`, `Done`, `Canceled`
+- ❌ NOT `TODO`, `DOING`, `DONE`, `NOW`, `LATER`, `WAITING`, `CANCELLED` (file-based syntax)
 
 ### Advanced Queries
 
@@ -436,7 +442,7 @@ OR:
 1. Type `/Embed block`
 2. Search for the block
 
-**Note:** The `{{embed ((block-id))}}` text syntax does NOT work in DB mode.
+**Note:** The `{{embed ((UUID))}}` text syntax is the DB block-embed form.
 
 ## Code Blocks
 
@@ -740,8 +746,8 @@ These file-mode text syntaxes do NOT work in DB mode:
 
 - ❌ `property:: value` (use UI to add properties)
 - ❌ `{{query}}` macros (use `/Query` command)
-- ❌ `((block-id))` syntax (use `[[UUID]]` instead)
-- ❌ `{{embed}}` without UUID (use `/Embed` command or `{{embed [[UUID]]}}`)
+- ❌ `[[UUID]]` block references (use `((UUID))` instead)
+- ❌ `{{embed}}` without UUID (use `/Embed` command or `{{embed ((UUID))}}`)
 - ❌ `TODO/DOING/DONE` markers (use `/` status commands)
 - ❌ `[#A]` priorities (use `/Priority` command)
 - ❌ `SCHEDULED: <date>` (use Cmd+P, S)
@@ -974,10 +980,10 @@ Create tags with properties for structured data:
 | -------------------- | ----------------------------------- | ----------------------------------------------- |
 | **Storage**          | Markdown/Org files                  | SQLite database                                 |
 | **Structure**        | File-based                          | Database entities                               |
-| **Page links**       | `[[Page]]` or `[[Page#^block-id]]`  | `[[Page]]` or `[[UUID]]`                        |
-| **Block references** | `((block-id))` text syntax          | `[[UUID]]` (same syntax as page links)          |
+| **Page links**       | `[[Page]]` or `[[Page#^block-id]]`  | `[[Page]]`                                      |
+| **Block references** | `((block-id))` text syntax          | `((UUID))` (UUID-backed)                        |
 | **Properties**       | `property:: value` text             | UI-based (stored in database)                   |
-| **Embeds**           | `![[Page]]` or `{{embed}}`          | `{{embed [[UUID]]}}` or UI `/Embed`             |
+| **Embeds**           | `![[Page]]` or `{{embed}}`          | `{{embed ((UUID))}}` or UI `/Embed`             |
 | **Highlight**        | `^^text^^`                          | `^^text^^` (same)                               |
 | **Tasks**            | `TODO/DOING/DONE` text markers      | UI-based status (Todo/Doing/Done)               |
 | **Priorities**       | `[#A]` `[#B]` `[#C]` text           | UI-based (Low/Medium/High/Urgent)               |
@@ -1004,8 +1010,8 @@ File Mode (Logseq OG) used text syntax for everything. DB Mode stores data in a 
 - Properties: Text syntax → UI-based
 - Queries: `{{query}}` → `/Query` command
 - Tasks: Text markers → UI status
-- Block references: `((UUID))` → `[[UUID]]` (unified with page links)
-- Embeds: `{{embed ((UUID))}}` → `{{embed [[UUID]]}}` or UI commands
+- Block references: legacy file-mode block IDs → UUID-backed `((UUID))` refs
+- Embeds: `{{embed}}` and page-style embed text → `{{embed ((UUID))}}` or UI commands
 
 **What Stayed the Same:**
 
@@ -1015,7 +1021,7 @@ File Mode (Logseq OG) used text syntax for everything. DB Mode stores data in a 
 - Code blocks
 - Math and diagrams
 
-**Critical UUID Change:** In DB mode, BOTH pages and blocks use `[[UUID]]` syntax. This is different from file mode where blocks used `((UUID))` and pages used `[[Page]]`.
+**Critical UUID Change:** In DB mode, pages stay as `[[Page Name]]` links and blocks use UUID-backed `((UUID))` refs. This differs from file mode where block refs used legacy block IDs and pages used `[[Page]]`.
 
 **Bottom Line:** If you're used to typing everything in file mode, DB mode requires adapting to UI-based workflows for properties, tasks, and queries.
 

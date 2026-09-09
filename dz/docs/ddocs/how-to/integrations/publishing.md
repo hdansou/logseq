@@ -14,7 +14,7 @@ relatedDocs:
     - '[Custom JavaScript](custom-js.md)'
 ---
 
-> **Last revised:** 2026-04-24
+> **Last revised:** 2026-05-30
 
 How to publish a page to the web, protect it with an optional password, and customize its public design with `logseq/publish.css` and `logseq/publish.js`.
 
@@ -23,6 +23,10 @@ How to publish a page to the web, protect it with an optional password, and cust
 This guide covers the current **Publish page** workflow in the Logseq app.
 
 It does **not** describe the older static export flow under `deps/publishing`.
+
+## Findings: New Capabilities
+
+- The publish dialog is also exposed from the current page's toolbar dots menu, not just the page menu and `mod+m` shortcut.
 
 You will need:
 

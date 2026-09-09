@@ -1,6 +1,6 @@
 # Application Overview
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 ## What is Logseq?
 
@@ -74,9 +74,10 @@ Built on **DataScript**, a Datalog-based database that naturally represents rela
 ### Multi-Modal Content Support
 
 - **Text**: Markdown and Org-mode formats
-- **Visual**: Whiteboard canvas for spatial thinking
 - **Media**: Images, PDFs, videos, and audio
 - **Interactive**: Embeds, widgets, and plugin-generated content
+
+> **Removed:** Whiteboard canvas (spatial thinking / tldraw integration) has been removed from the application. The `@tldraw/tldraw` package is no longer a dependency. Residual schema attributes (`:logseq.class/Whiteboard`, `:logseq.property.tldraw/page`) remain solely for data-migration compatibility.
 
 ## Application Modes
 
@@ -114,7 +115,6 @@ graph LR
     subgraph "Main Content"
         I[Editor]
         J[Graph View]
-        K[Whiteboard]
     end
 
     subgraph "Right Sidebar"
@@ -123,6 +123,8 @@ graph LR
         N[Block References]
     end
 ```
+
+> **Removed:** Whiteboard has been removed from the Main Content area.
 
 ### Navigation Paradigms
 
@@ -166,7 +168,7 @@ Built-in query language for dynamic content aggregation:
 ### Web Platform
 
 - **Browser Access**: Full functionality in modern browsers
-- **Progressive Web App**: Offline capabilities
+- **Web App**: `resources/index.html` sets mobile-web-app-capable meta tags for home-screen installation; no service worker or PWA manifest (`manifest.json`) is present in the repository, so offline capabilities are not formally implemented.
 
 ### Mobile Applications
 
@@ -177,10 +179,13 @@ Built-in query language for dynamic content aggregation:
 
 ### Built-in Integrations
 
-- **Zotero**: Academic reference management
-- **PDF Annotation**: Direct PDF markup and highlighting
-- **Image Handling**: OCR and annotation capabilities
-- **Video/Audio**: Media playback and annotation
+- **Zotero**: Academic reference management (`src/main/frontend/extensions/zotero.cljs`)
+- **PDF Annotation**: Direct PDF markup and highlighting (`src/main/frontend/extensions/pdf/`)
+- **Image Handling**: Resizable image embeds; no native OCR support (use an external OCR tool to create a searchable PDF first)
+- **Video**: Embedded playback for local files, YouTube, Vimeo, and Bilibili via `{{video <url>}}` macro
+- **Audio** (mobile): Playback and on-device transcription of voice recordings (`transcribeAudio2Text`)
+
+> **Removed:** OCR for images is not implemented in the codebase. The PDF investigation doc (`dz/docs/07-investigations/pdf-feature-platform-compatibility-investigation.md`) explicitly confirms "No OCR Support".
 
 ### Plugin Architecture
 
@@ -203,10 +208,15 @@ Extensive plugin system enabling:
 
 ### Export Capabilities
 
-- Static site generation
-- PDF export
-- Standard formats for data portability
-- Custom export through plugins
+- **Static site generation** – via `deps/publishing` (CLI/Electron HTML export)
+- **Cloud publishing** – per-page publish to logseq.io via `deps/publish` (Cloudflare Worker + Durable Object)
+- **Markdown** – full graph export (desktop/web, not native mobile)
+- **SQLite DB / ZIP / EDN** – graph-level binary and structured data exports
+- **HTML** – public-pages export (Electron only)
+- **OPML** – per-block/page outline export
+- **Custom export through plugins**
+
+> **Removed:** PDF is not an export format. There is no "Export to PDF" functionality in the codebase. PDF files can be _viewed and annotated_ inside Logseq, but not generated as output.
 
 ## Performance Characteristics
 
@@ -221,6 +231,41 @@ Extensive plugin system enabling:
 - **Large Graphs**: Tested with 100,000+ blocks
 - **Concurrent Users**: Multi-user collaboration support
 - **Cross-Device Sync**: Efficient incremental synchronization
+
+---
+
+## Findings: New Capabilities
+
+The following capabilities exist in the codebase but were not present in the previous revision of this document.
+
+### Logseq CLI
+
+Logseq ships a full-featured command-line interface (`logseq`) with commands grouped into four areas:
+
+| Group                | Commands                                              |
+| -------------------- | ----------------------------------------------------- |
+| Graph Inspect & Edit | `list`, `upsert`, `remove`, `query`, `search`, `show` |
+| Graph Management     | `graph`, `server`, `doctor`, `sync`                   |
+| Authentication       | `login`, `logout`                                     |
+| Utilities            | `agent`, `completion`, `debug`, `example`, `skill`    |
+
+Source: `src/main/logseq/cli/command/core.cljs`
+
+### AgentBridge (`logseq agent bridge`)
+
+The `logseq agent bridge` command runs a long-lived process that monitors a graph for tasks or comment mentions addressed to a named AI agent, generates a prompt from a configurable template, dispatches the task to an LLM (Codex), and writes the result back as blocks or comments. An "AgentBridge master" session can act as a routing layer across multiple named agents within a graph.
+
+Source: `src/main/logseq/cli/command/agent.cljs`
+
+### Cloud Publishing
+
+In addition to the existing static-site export (`deps/publishing`), a new cloud publishing path exists via `deps/publish`. Individual pages can be published to logseq.io using a Cloudflare Worker + Durable Object backend that stores transit blobs in R2 and metadata in SQLite. Published URLs are tracked in the `:logseq.property.publish/published-url` property.
+
+Source: `src/main/frontend/handler/publish.cljs`, `deps/publish/`
+
+### Audio Transcription (Mobile)
+
+The mobile recorder (`src/main/mobile/components/recorder.cljs`) calls `transcribeAudio2Text` on-device after a voice recording completes, automatically inserting the transcript as block content alongside the audio asset.
 
 ---
 

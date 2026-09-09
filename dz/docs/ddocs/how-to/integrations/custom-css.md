@@ -2,7 +2,7 @@
 title: 'Custom CSS'
 description: "How to customize Logseq's appearance with custom CSS"
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -15,7 +15,7 @@ relatedDocs:
 
 # Custom CSS
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > How to customize Logseq's appearance with your own CSS styles.
 
@@ -35,7 +35,9 @@ your-graph/
     └── custom.css
 ```
 
-**DB-based graphs:** The `custom.css` file is stored inside the database as a file entity at `logseq/custom.css`. Use the Settings UI (Option 2) or the command palette to edit it.
+**DB-based graphs:** The `custom.css` file is stored inside the database as a file entity at `logseq/custom.css`. Use the Settings UI (Option 2) to edit it. If `:custom-css-url` is set in `config.edn`, that URL takes precedence over the built-in file.
+
+> **Removed:** The command-palette edit path is not exposed in current source.
 
 ### Option 2: Settings UI
 
@@ -47,6 +49,12 @@ your-graph/
 ---
 
 ## Basic Customizations
+
+## Findings: New Capabilities
+
+- `custom.css` is still editable through the Settings UI, and DB graphs now re-apply the stylesheet immediately after saving `logseq/custom.css`.
+- DB graphs expand relative `../assets/...` links before injecting custom CSS, so local asset references continue to work there.
+- Built-in-file APIs now explicitly allow `logseq/custom.css` through `setFileContent` and `getFileContent` for DB-aware tooling.
 
 ### Change Font
 
@@ -301,4 +309,4 @@ a.tag {
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

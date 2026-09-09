@@ -11,11 +11,11 @@ related-docs:
 
 # End-to-End Encryption (E2EE) in Logseq
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## Overview
 
-Logseq's End-to-End Encryption (E2EE) protects your remote graphs by encrypting all data before it leaves your device. Only you can decrypt your content using a password that never reaches our servers. This architecture ensures that even Logseq cannot access your private data stored in the cloud.
+Logseq's End-to-End Encryption (E2EE) protects remote graph content by encrypting selected sync attributes before they leave your device. Only you can decrypt protected content using a password that never reaches Logseq servers. This architecture ensures the server cannot decrypt protected fields without your local key material.
 
 **Key Principles:**
 
@@ -48,7 +48,7 @@ Your Device → Encrypted Data → Server (Cannot Read) → Storage
 
 ✅ **Encrypted in cloud:**
 
-- Block titles/content (`:block/title` attribute)
+- Block textual content (`:block/title` attribute)
 - Page names (`:block/name` attribute)
 
 ❌ **Not encrypted (even in cloud):**
@@ -94,14 +94,14 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 │  Local Edit                                                      │
 │     │                                                            │
 │     ├─► Serialize to Transit format                             │
-│     ├─► Encrypt with AES-256-GCM (generates random IV)          │
-│     ├─► Send encrypted blob to server                           │
-│     └─► Server stores blob (cannot decrypt)                     │
+│     ├─► Encrypt selected attributes with AES-256-GCM            │
+│     ├─► Send sync payload with encrypted protected fields        │
+│     └─► Server stores payload (cannot decrypt protected fields)  │
 │                                                                   │
 │  Remote Update                                                   │
 │     │                                                            │
-│     ├─► Download encrypted blob from server                     │
-│     ├─► Decrypt with AES-256 key                                │
+│     ├─► Download sync payload from server                       │
+│     ├─► Decrypt protected fields with AES-256 key               │
 │     ├─► Parse Transit format                                    │
 │     └─► Apply changes to local database                         │
 │                                                                   │
@@ -135,7 +135,7 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 
 #### 2. AES-GCM (256-bit)
 
-**Purpose**: Encrypt all graph data (blocks, pages, assets)
+**Purpose**: Encrypt selected sync attributes (`:block/title` and `:block/name`)
 
 **Algorithm Details**:
 
@@ -185,14 +185,16 @@ Logseq uses a **hybrid cryptography system** combining RSA-4096 (asymmetric) and
 
 #### Password Storage
 
-Your master password **never leaves your device** and **is never sent to the server**. It is persisted locally by encrypting it with your refresh token and storing the result in the OS keychain (desktop) or secure storage (mobile). On web, it falls back to OPFS (Origin Private File System).
+Your master password **never leaves your device** and **is never sent to the server**. It is persisted locally by encrypting it with your refresh token and storing the result in OS keychain (desktop), native secure storage (Capacitor), or worker secret storage fallback in web runtime.
+
+> **Removed:** Prior wording said web persistence used OPFS for E2EE password storage. Current worker implementation stores secret text via platform crypto storage backed by IndexedDB KV in browser runtime.
 
 ```txt
 User Password
       ↓
 Encrypt with refresh token (PBKDF2 + AES-GCM)
       ↓
-Encrypted password → OS Keychain / Secure Storage / OPFS
+Encrypted password → OS Keychain / Secure Storage / Browser IndexedDB secret storage
 ```
 
 #### OS Keychain Integration
@@ -267,13 +269,13 @@ Step 3: Secure Storage
 ├─► Encrypt password with refresh token, store in OS keychain
 │   (Account: "logseq-encrypted-password")
 │
-└─► Keep AES key in memory for current session
+└─► Cache encrypted AES key and decrypted AES CryptoKey locally for reuse
 
 Step 4: Graph Upload
 ├─► Serialize graph data to Transit format
-├─► Encrypt with AES-256-GCM (random IV per block)
-├─► Upload encrypted blobs to cloud
-└─► Server stores opaque encrypted data
+├─► Encrypt protected attributes with AES-256-GCM (random IV)
+├─► Upload sync payload to cloud
+└─► Server stores encrypted protected fields plus plaintext metadata
 ```
 
 **UI Component** ([`frontend.components.e2ee/e2ee-request-new-password`](../../src/main/frontend/components/e2ee.cljs#L12-L64)):
@@ -307,11 +309,11 @@ Step 2: Key Recovery
 │
 └─► Persist password encrypted with refresh token to OS keychain
 
-Step 3: Graph Decryption
-├─► Download encrypted graph blobs from server
-├─► Decrypt with AES-256 key
-├─► Parse Transit format
-├─► Load into DataScript database
+Step 3: Sync Data Decryption
+├─► Download sync payloads from server
+├─► Decrypt protected values (`:block/title`, `:block/name`) with AES-256 key
+├─► Parse Transit payloads
+├─► Apply into local database
 └─► Ready to use!
 ```
 
@@ -335,13 +337,15 @@ Local Edit → RTC Operation
             ↓
       Generate Random IV (12 bytes)
             ↓
-      AES-256-GCM Encryption
-            ↓
-      Encrypted Blob: [IV || CipherText || AuthTag]
-            ↓
-      WebSocket → Server
-            ↓
-      Server Stores Blob (opaque)
+      Encrypt E2EE Attributes Only
+      (`:block/title`, `:block/name`)
+        ↓
+      Embed encrypted values in tx payload
+        ↓
+      WebSocket/HTTP → Server
+        ↓
+      Server Stores mixed payload
+      (encrypted protected attrs + plaintext metadata)
             ↓
       Broadcast to Other Clients
             ↓
@@ -355,7 +359,8 @@ Local Edit → RTC Operation
 - **IV Uniqueness**: Random 12-byte IV per encryption prevents pattern analysis
 - **AEAD**: GCM mode provides both confidentiality and integrity
 - **Authentication Tag**: 16 bytes, ensures data hasn't been tampered with
-- **Replay Protection**: RTC operation timestamps prevent replay attacks
+
+> **Removed:** The previous statement "RTC operation timestamps prevent replay attacks" was removed because replay protection is not implemented as a documented E2EE cryptographic guarantee in current source.
 
 ## Security Guarantees
 
@@ -363,8 +368,8 @@ Local Edit → RTC Operation
 
 ✅ **Server Compromise**
 
-- Even if Logseq servers are hacked, your data remains encrypted
-- Attacker gets only encrypted blobs and public keys
+- Even if Logseq servers are hacked, protected fields remain encrypted
+- Attacker can access encrypted protected fields, public keys, and plaintext metadata
 
 ✅ **Network Eavesdropping**
 
@@ -373,8 +378,8 @@ Local Edit → RTC Operation
 
 ✅ **Cloud Storage Leaks**
 
-- Database dumps reveal no sensitive information
-- All data is encrypted at rest
+- Protected fields remain unreadable without keys
+- Metadata and non-protected attributes may still be visible
 
 ✅ **Rogue Employees**
 
@@ -541,10 +546,11 @@ window.crypto.subtle
 **Client-side (Web)**:
 
 ```txt
-# OPFS (Origin Private File System)
-# File: "e2ee-password"
-# Content: E2EE password encrypted with refresh token
-# Also: IndexedDB ("localforage" store) for cached encrypted AES keys
+# Worker secret storage (browser platform adapter)
+# Backed by IndexedDB KV for secret text
+# Key: "logseq-encrypted-password"
+# Value: E2EE password encrypted with refresh token
+# Also: IndexedDB KV for cached encrypted AES keys
 ```
 
 **In-memory (all platforms)**:
@@ -596,6 +602,12 @@ window.crypto.subtle
 **Encrypted Attributes**:
 
 - [`frontend.worker.sync.const/encrypt-attr-set`](../../src/main/frontend/worker/sync/const.cljs) — Defines which attributes are encrypted: `#{:block/title :block/name}`
+
+## Findings: New Capabilities
+
+- Password rotation is implemented via `:thread-api/change-e2ee-password`, which re-encrypts the RSA private key with the new password and persists the updated local secret without re-encrypting all graph content.
+- Key reset is available via `:thread-api/reset-user-rsa-key-pair` to generate and upload a new RSA key pair and encrypted private key.
+- Graph sharing key handoff is implemented via `/e2ee/graphs/:id/grant-access` using recipient public keys.
 
 ## Comparison with Other Systems
 
@@ -655,12 +667,12 @@ A: Yes! When you share with collaborators:
 
 **Q: What happens if I change my password?**
 
-A: Currently, changing your E2EE password requires:
+A: Changing your E2EE password re-encrypts your RSA private key and updates persisted local secret storage. It does not re-encrypt graph AES data.
 
-1. Decrypt all data with old password
+1. Decrypt private key with old password
 2. Re-encrypt private key with new password
-3. Update keychain storage
-4. Does NOT require re-encrypting all graph data (AES key stays the same)
+3. Upload updated encrypted private key
+4. Persist new password secret locally
 
 **Q: Are assets (images, PDFs) encrypted?**
 
@@ -668,13 +680,13 @@ A: No. Currently, only block titles (`:block/title`) and page names (`:block/nam
 
 **Q: How does E2EE work with Real-Time Collaboration?**
 
-A: RTC operations are encrypted before being sent over WebSocket:
+A: RTC payloads encrypt protected attributes before sync transport:
 
 1. Local edit → Generate RTC operation
-2. Encrypt operation with AES-256
-3. Send encrypted operation to server
-4. Server broadcasts encrypted operation
-5. Other clients decrypt with shared AES key
+2. Encrypt protected values (`:block/title`, `:block/name`) with AES-256
+3. Send operation payload to server
+4. Server broadcasts payload
+5. Other clients decrypt protected values with shared AES key
 
 See [Real-Time Sync Tutorial](../../tutorials/collaboration/real-time-sync.md) for details.
 
@@ -736,9 +748,10 @@ Check:
 
 🟡 **In Progress**:
 
-- Password change without full re-encryption
 - Export/import encrypted backups
 - Multi-device key synchronization
+
+> **Removed:** "Password change without full re-encryption" moved out of in-progress because password rotation support is already implemented in current worker APIs.
 
 🔜 **Planned**:
 
@@ -759,7 +772,7 @@ Check:
 
 ## Conclusion
 
-Logseq's E2EE implementation provides strong privacy protection using industry-standard cryptography:
+Logseq's E2EE implementation provides strong privacy protection for encrypted sync attributes using industry-standard cryptography:
 
 - **RSA-4096 + AES-256-GCM**: State-of-the-art algorithms
 - **PBKDF2 with 600k iterations**: Resists brute-force attacks
@@ -774,6 +787,6 @@ For user profile configuration, see [User Profiles Reference](../../reference/fe
 
 ---
 
-**Last Updated**: March 2026
+**Last Updated**: May 2026
 **Status**: 🟡 Active Development (E2EE feature evolving with RTC improvements)  
 **Feedback**: Report E2EE issues on [GitHub](https://github.com/logseq/logseq/issues) with `encryption` label

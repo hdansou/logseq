@@ -1,6 +1,6 @@
 # Dynamic Variables & Date Syntax: Cross-System Compatibility Reference
 
-> **Last revised:** 2026-04-09
+> **Last revised:** 2026-05-28
 
 ## Overview
 
@@ -8,7 +8,7 @@ Logseq has **four separate contexts** where date expressions or variables can be
 
 | #   | Context                   | Example Syntax          | Parser                                     | Source File                                  |
 | --- | ------------------------- | ----------------------- | ------------------------------------------ | -------------------------------------------- |
-| 1   | `<% %>` Dynamic Variables | `<% in 7 days %>`       | chrono-node v2.2.4 NLP                     | `src/main/frontend/template.cljs`            |
+| 1   | `<% %>` Dynamic Variables | `<% in 7 days %>`       | chrono-node 2.9.0 NLP                      | `src/main/frontend/template.cljs`            |
 | 2   | Query DSL `between`       | `(between -7d +7d)`     | Custom `->journal-day-int` / `->timestamp` | `src/main/frontend/db/query_dsl.cljs`        |
 | 3   | Advanced Query `:inputs`  | `:inputs [:today :+7d]` | `resolve-keyword-input` multimethod        | `deps/db/src/logseq/db/frontend/inputs.cljs` |
 | 4   | User Macros `{{name}}`    | `{{macro $1 $2}}`       | mldoc AST parser (no date logic)           | `src/main/frontend/components/block.cljs`    |
@@ -278,14 +278,18 @@ Macros defined in `config.edn` under `:macros {}` have **no date variable suppor
 
 ## Plugin API Integration
 
-| API Method                            | Resolves `<% %>`? | Notes                         |
-| ------------------------------------- | :---------------: | ----------------------------- |
-| `logseq.DB.q(dslQuery)`               |        ✅         | Goes through `parse-query`    |
-| `logseq.Editor.insertTemplate()`      |        ❌         | No variable resolution        |
-| `logseq.App.onMacroRendererSlotted()` |        ❌         | Must implement own date logic |
-| `logseq.DB.datascriptQuery()`         |        ❌         | No variable resolution        |
+| API Method                            | Resolves `<% %>`? | Notes                                                               |
+| ------------------------------------- | :---------------: | ------------------------------------------------------------------- |
+| `logseq.DB.q(dslQuery)`               |        ✅         | Goes through `parse-query`                                          |
+| `logseq.Editor.insertTemplate()`      |  ⚠️ **Partial**   | Resolves 5 basic keywords only (no chrono-node NLP); see note below |
+| `logseq.App.onMacroRendererSlotted()` |        ❌         | Must implement own date logic                                       |
+| `logseq.DB.datascriptQuery()`         |        ❌         | No variable resolution                                              |
 
-The only plugin API that automatically resolves `<% %>` is `logseq.DB.q()` because it passes through `query-dsl/parse-query`. Plugins needing date arithmetic in other contexts must implement their own resolution.
+`logseq.DB.q()` fully resolves `<% %>` (including chrono-node NLP fallback) because it passes through `query-dsl/parse-query` → `frontend.template/resolve-dynamic-template!`.
+
+`logseq.Editor.insertTemplate()` resolves **only the five built-in keywords** (`today`, `yesterday`, `tomorrow`, `time`, `current page`) via `logseq.outliner.template/resolve-dynamic-template-blocks` (`deps/outliner/src/logseq/outliner/template.cljs`). chrono-node NLP expressions such as `<% in 7 days %>` are **not** resolved and are left as-is in the inserted blocks.
+
+Plugins needing full chrono-node date arithmetic must call `logseq.DB.q()` or implement their own resolution.
 
 ---
 
@@ -299,6 +303,26 @@ The only plugin API that automatically resolves `<% %>` is `logseq.DB.q()` becau
 | `deps/db/src/logseq/db/frontend/inputs.cljs` | Advanced query `:inputs`              | `resolve-keyword-input`, `resolve-input`                      |
 | `src/main/frontend/db/query_react.cljs`      | Query execution with input resolution | `resolve-input` (wrapper), `react-query`                      |
 | `src/main/frontend/components/block.cljs`    | Macro rendering                       | `macro-cp`, `macro-else-cp`, `render-macro`                   |
+
+---
+
+## Findings: New Capabilities
+
+### Separate Template-Insertion Resolution Path
+
+Template block insertion uses a **separate, lighter resolver** from the query DSL resolver:
+
+| Path                                              | Function                          | Resolves                                        |
+| ------------------------------------------------- | --------------------------------- | ----------------------------------------------- |
+| `deps/outliner/src/logseq/outliner/template.cljs` | `resolve-dynamic-template-blocks` | 5 basic keywords only                           |
+| `src/main/frontend/template.cljs`                 | `resolve-dynamic-template!`       | 5 basic keywords **+ chrono-node NLP fallback** |
+
+`resolve-dynamic-template-blocks` is called from:
+
+- `deps/outliner/src/logseq/outliner/op.cljs` (template insertion)
+- `src/main/frontend/worker/pipeline.cljs` (worker-side template processing)
+
+Unlike `resolve-dynamic-template!`, it does **not** fall back to chrono-node for unrecognised expressions — they are returned verbatim.
 
 ---
 

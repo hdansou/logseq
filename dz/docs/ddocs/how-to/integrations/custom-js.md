@@ -2,7 +2,7 @@
 title: 'Custom JavaScript'
 description: 'How to extend Logseq functionality with custom JavaScript'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
@@ -15,7 +15,7 @@ relatedDocs:
 
 # Custom JavaScript
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > How to add custom functionality to Logseq with JavaScript without creating a full plugin.
 
@@ -46,6 +46,13 @@ your-graph/
 
 ---
 
+## Findings: New Capabilities
+
+- Built-in customization files are now part of the DB graph file set, including `logseq/custom.js`, `logseq/custom.css`, `logseq/publish.js`, and `logseq/publish.css`.
+- The DB API now exposes `getFileContent` and `setFileContent` for those built-in files, which means tools and plugins can read or update `logseq/custom.js` without manual filesystem handling.
+
+---
+
 ## Basic Example
 
 ```javascript
@@ -53,9 +60,7 @@ your-graph/
 console.log('Custom JS loaded!')
 
 // Custom JS runs via js/eval in the main Electron window.
-// It has full access to the DOM and standard browser APIs.
-// The Logseq plugin SDK (logseq.Editor, logseq.DB, etc.) is NOT
-// available in custom.js — that API is only injected into plugin sandboxes.
+// Treat it as DOM/browser scripting rather than a plugin sandbox.
 ```
 
 ---
@@ -194,9 +199,9 @@ document.addEventListener(
 
 ## Accessing Internal APIs
 
-Custom JS runs in the main Electron renderer process via `js/eval`. The `window.logseq` object exists but exposes internal host-side APIs (`window.logseq.api`, `window.logseq.sdk`) — **not** the plugin SDK proxy (i.e., `logseq.Editor.*`, `logseq.DB.*` are not available).
+Custom JS runs in the main Electron renderer process via `js/eval`, after Logseq has loaded the active graph. For most custom.js use cases, stick to standard DOM manipulation and browser APIs.
 
-For most custom.js use cases, stick to standard DOM manipulation and browser APIs. If you need programmatic access to Logseq data and commands, use a proper plugin instead.
+If you need programmatic access to Logseq data, commands, settings UI, or DB events, use a proper plugin instead of depending on `custom.js` for that surface.
 
 ```javascript
 // Custom JS has access to:
@@ -204,15 +209,22 @@ For most custom.js use cases, stick to standard DOM manipulation and browser API
 // - Standard browser APIs (fetch, localStorage, MutationObserver, etc.)
 // - Electron renderer globals
 
-// Custom JS does NOT have access to:
-// - logseq.Editor.registerSlashCommand()
+// Custom JS should not rely on:
+// - Plugin SDK methods such as logseq.Editor.registerSlashCommand()
 // - logseq.Editor.insertAtEditingCursor()
 // - logseq.DB.onChanged()
-// - Any other plugin SDK methods
+// - Any other plugin-only APIs
 //
 // For those capabilities, create a plugin instead.
 // See: Plugin API Reference
 ```
+
+
+## Removed or Stale Claims
+
+> **Removed:** The old assumption that `custom.js` should be treated like a plugin sandbox with stable `logseq.Editor.*` or `logseq.DB.*` access. The supported custom.js surface is DOM/browser scripting, with plugins reserved for SDK-backed workflows.
+
+> **Removed:** Any implication that built-in customization files are only manually managed on disk. Current source also exposes them through the DB file APIs and seeds them as built-in graph files.
 
 ---
 

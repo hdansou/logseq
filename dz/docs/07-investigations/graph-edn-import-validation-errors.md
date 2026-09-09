@@ -1,6 +1,7 @@
 # Graph EDN Import Validation Error Investigation
 
-**Date:** November 25, 2025  
+**Investigation Date:** November 25, 2025  
+**Last Verified:** 2026-05-24  
 **Issue:** "DB write failed with invalid data" during graph EDN import  
 **Error Type:** Malli validation errors for imported entities  
 **Severity:** 🔴 High - Blocks graph import completely
@@ -23,6 +24,12 @@ Users importing graph EDN files encounter validation errors that prevent import 
 - 🔴 **Data loss** - Invalid EDN imports fail completely, no partial import
 - 🟡 **Schema drift** - EDN files from older Logseq versions may be incompatible
 - 🟡 **Manual fixes required** - Users must understand complex schema to fix EDN files
+
+### Status Update (May 2026)
+
+- ✅ Core validation path remains active (`validate-tx-report`, `entity-dispatch-key`, `build-import`).
+- ✅ `validate-export` exists and is used to validate EDN import data shape before persistence paths.
+- ⚠️ Some line references from the original 2025 write-up drifted and are refreshed below.
 
 ---
 
@@ -558,15 +565,15 @@ User Uploads EDN File
 
 ### Critical Files
 
-| File                                                  | Purpose                                | Key Functions                                                                    | Lines                                    |
-| ----------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------- |
-| **deps/db/src/logseq/db.cljs**                        | Core transaction logic with validation | `transact-sync`                                                                  | 118-143                                  |
-| **deps/db/src/logseq/db/frontend/validate.cljs**      | Validation implementation              | `validate-tx-report`<br>`validate-db!`                                           | 25-63<br>80-108                          |
-| **deps/db/src/logseq/db/frontend/malli_schema.cljs**  | Schema definitions                     | `entity-dispatch-key`<br>`property-value-block`<br>`asset-block`<br>`file-block` | 527-558<br>421-429<br>486-500<br>500-512 |
-| **deps/db/src/logseq/db/sqlite/export.cljs**          | EDN import/export                      | `build-import`<br>`build-export`                                                 | 998-1022<br>700-763                      |
-| **deps/outliner/src/logseq/outliner/op.cljs**         | Outliner operations                    | `import-edn-data`<br>`batch-import-edn!`                                         | 154-170<br>119-122                       |
-| **src/main/frontend/handler/db_based/import.cljs**    | UI import handlers                     | `import-from-edn-file!`<br>`import-edn-data-dialog`                              | 48-89<br>120-138                         |
-| **deps/db/src/logseq/db/frontend/property/type.cljs** | Property type validation               | `built-in-validation-schemas`                                                    | 162-220                                  |
+| File                                                  | Purpose                                | Key Functions                                                                    | Lines                        |
+| ----------------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------- |
+| **deps/db/src/logseq/db.cljs**                        | Core transaction logic with validation | `transact-sync`                                                                  | 118-143                      |
+| **deps/db/src/logseq/db/frontend/validate.cljs**      | Validation implementation              | `validate-tx-report`                                                             | 24+                          |
+| **deps/db/src/logseq/db/frontend/malli_schema.cljs**  | Schema definitions                     | `entity-dispatch-key`<br>`property-value-block`<br>`asset-block`<br>`file-block` | 557+<br>428+<br>506+<br>521+ |
+| **deps/db/src/logseq/db/sqlite/export.cljs**          | EDN import/export                      | `build-import`<br>`build-export`<br>`validate-export`                            | 1130+<br>1005+<br>1177+      |
+| **deps/outliner/src/logseq/outliner/op.cljs**         | Outliner operations                    | `import-edn-data`<br>`batch-import-edn!`                                         | 154-170<br>119-122           |
+| **src/main/frontend/handler/db_based/import.cljs**    | UI import handlers                     | `import-from-edn-file!`<br>`import-edn-data-dialog`                              | 189+<br>255+                 |
+| **deps/db/src/logseq/db/frontend/property/type.cljs** | Property type validation               | `built-in-validation-schemas`                                                    | 162-220                      |
 
 ### Key Data Structures
 
@@ -620,11 +627,11 @@ User Uploads EDN File
    ```
 
 2. **Add validation preview** (P1)
-
    - Show validation errors BEFORE attempting import
    - Allow users to see what will fail
 
 3. **Auto-fix common issues** (P1)
+
    ```clojure
    (defn auto-fix-entity [entity]
      (cond
@@ -645,13 +652,11 @@ User Uploads EDN File
 #### Medium-term Improvements (Medium Risk)
 
 1. **Schema migration tool** (P0)
-
    - Detect EDN schema version
    - Auto-migrate to current version
    - Log migrations for user review
 
 2. **Lenient import mode** (P1)
-
    - Skip invalid entities with warnings
    - Allow partial import
    - Generate report of skipped entities
@@ -678,7 +683,6 @@ User Uploads EDN File
    ```
 
 2. **Schema evolution framework** (P1)
-
    - Backward compatibility layer
    - Automatic schema upgrades
    - Migration testing suite
@@ -783,18 +787,21 @@ Is it a :block/uuid entity?
 
 ### Appendix C: Schema Version History
 
-| Version | Date    | Changes                            |
-| ------- | ------- | ---------------------------------- |
-| 65.12   | Current | Current production schema          |
-| 65.11   | 2024-Q4 | Added asset block validation       |
-| 65.10   | 2024-Q3 | Improved property value validation |
-| 65.9    | 2024-Q2 | Initial Malli validation           |
+> Note: This version table is historical context from the original 2025 incident analysis, not a live schema-version source of truth.
+
+| Version | Date    | Changes                                 |
+| ------- | ------- | --------------------------------------- |
+| 65.12   | 2025-Q4 | Production schema at investigation time |
+| 65.11   | 2024-Q4 | Added asset block validation            |
+| 65.10   | 2024-Q3 | Improved property value validation      |
+| 65.9    | 2024-Q2 | Initial Malli validation                |
 
 ### Appendix D: Related Documentation
 
 - [Database Graph Schema Guide](../03-features/database-graphs/schema-guide.md)
 - [Graph Validation Developer Guide](../03-features/graph-validation/developer-guide.md)
 - [Import Validation Error Investigation](./import-validation-error.md) (previous investigation)
+- [Schema Integrity Index](./schema-integrity-08-index.md)
 - [CLI User Guide - import-edn](../06-user-guides/cli-user-guide.md#import-edn---import-from-edn)
 
 ### Appendix E: Example Valid EDN Structures
@@ -842,7 +849,8 @@ Is it a :block/uuid entity?
 ## Investigation Metadata
 
 **Conducted by:** GitHub Copilot  
-**Date:** November 25, 2025  
+**Investigation Date:** November 25, 2025  
+**Last Verified:** 2026-05-24  
 **Logseq Version:** Current `eng-documentation` branch  
 **Tools Used:** Code search, semantic search, file reading  
 **Files Analyzed:** 15+ source files  
@@ -860,8 +868,8 @@ Is it a :block/uuid entity?
 - ✅ Technical terms defined in glossary
 - ✅ Cross-references between sections work
 
-**Status:** ✅ **INVESTIGATION COMPLETE**
+**Status:** ✅ **INVESTIGATION COMPLETE** (maintained with periodic reference refresh)
 
 ---
 
-_This investigation followed the [Code Detective Investigation Framework](.github/prompts/code-detective-investigation.prompt.md)._
+_This investigation followed the [Code Detective Investigation Framework](../../../.github/prompts/code-detective-investigation.prompt.md)._

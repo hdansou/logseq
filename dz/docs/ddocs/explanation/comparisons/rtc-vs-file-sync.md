@@ -2,7 +2,7 @@
 title: 'RTC vs File Sync'
 description: 'Understanding the differences between File Sync and Real-Time Collaboration synchronization methods'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 category: comparisons
 relatedDocs:
@@ -14,13 +14,17 @@ relatedDocs:
 
 # RTC vs File Sync
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > Understanding the two synchronization methods in Logseq and when to use each.
 
 ## Overview
 
-Logseq offers two ways to sync your knowledge across devices:
+Historically, Logseq had two cloud sync approaches. In the current codebase, RTC/db-sync is the active sync implementation.
+
+> **Removed:** File Sync (Markdown cloud sync) is no longer active in current source. The old frontend file-sync runtime path has been removed (for example, `src/main/frontend/fs/sync.cljs` no longer exists). Remaining `/file-sync/` API usage in `src/main/frontend/handler/user.cljs` is used for account/quota checks rather than a full Markdown sync engine.
+
+Historical comparison context:
 
 | Method        | Graph Type      | Sync Speed      | Collaboration   |
 | ------------- | --------------- | --------------- | --------------- |
@@ -49,6 +53,8 @@ Device A          Cloud Storage         Device B
 - Conflicts create `conflict-*.md` files
 - Works with any external Markdown editor
 
+> **Removed:** This section describes historical behavior. The current source tree does not include the old file-sync runtime implementation.
+
 ### RTC (Real-Time Collaboration)
 
 ```
@@ -63,8 +69,8 @@ Device A          RTC Server           Device B
 **Characteristics:**
 
 - Syncs operations (not files)
-- Sub-second updates
-- Automatic conflict resolution (transaction-level merge)
+- Near real-time updates via WebSocket + pull/changed cycles
+- Automatic reconciliation with reverse-apply/rebase of local pending txs
 - Block-level editing presence awareness
 
 ---
@@ -84,6 +90,8 @@ Device A          RTC Server           Device B
 | **Bandwidth usage**       | Higher              | Lower        |
 | **End-to-end encryption** | ❌ No               | ✅ Yes       |
 
+> **Removed:** File Sync feature cells in this table are historical-only and no longer represent an active cloud sync mode in current source.
+
 ---
 
 ## Size Limits
@@ -97,13 +105,24 @@ Device A          RTC Server           Device B
 | Batch upload   | 20 files          | Rate limiting         |
 | Batch download | 100 files         | Memory management     |
 
+> **Removed:** File Sync limits are historical. Current source no longer implements this Markdown cloud sync pipeline.
+
 ### RTC Limits
 
-| Resource          | Limit         | Reason             |
-| ----------------- | ------------- | ------------------ |
-| Per-asset size    | 100 MB        | S3 upload limits   |
-| Flush batch        | 50 txs        | Per flush cycle    |
-| Total graph       | No hard limit | Incremental sync   |
+| Resource          | Limit                        | Reason                      |
+| ----------------- | ---------------------------- | --------------------------- |
+| Per-asset size    | 100 MB                       | S3 upload limits            |
+| Flush batch       | 50 txs                       | Per flush cycle             |
+| Total graph       | Service/account limits apply | Remote quota + graph limits |
+
+## Findings: New Capabilities
+
+Compared with older File Sync vs RTC writeups, current RTC/db-sync source includes additional concrete capabilities:
+
+- Presence payloads include editing block context (`presence` + `editing-block-uuid`) and online user updates (`online-users`).
+- Tx rejection includes richer metadata (`success-tx-ids`, `failed-tx-id`) for partial batch outcomes.
+- Remote tx apply path rebases local pending changes and tracks sync conflicts (stored and broadcast via `:sync-conflicts-updated`).
+- E2EE key-management endpoints include user key pair APIs and graph access-grant flow (`/e2ee/.../grant-access`).
 
 ---
 
@@ -116,6 +135,8 @@ Device A          RTC Server           Device B
 ✅ You're the only user of the graph  
 ✅ You prefer plain text files  
 ✅ You need maximum portability
+
+> **Removed:** This recommendation is historical. Current active cloud sync implementation is RTC/db-sync.
 
 ### Choose RTC When:
 
@@ -140,16 +161,19 @@ When two devices edit the same file:
 
 **Prevention**: Avoid editing same page on multiple devices simultaneously.
 
+> **Removed:** This conflict flow applies to the old File Sync implementation and is not active in current source.
+
 ### RTC Conflict Resolution
 
 When two users edit the same block:
 
 1. Both operations sent to server
-2. Server applies **transaction-level merge** (last-writer-wins per attribute)
-3. Both clients receive merged result
-4. **No user intervention needed**
+2. Server validates/appends tx batches, and clients pull/apply remote txs
+3. Client applies remote txs and rebases pending local txs
+4. Both clients receive merged result
+5. **No user intervention needed**
 
-Conflicting local operations on the same block attributes as incoming remote changes are dropped in favor of the remote version.
+When rebasing cannot safely replay a local pending operation, that pending tx can be dropped/marked non-pending, and conflict details are tracked for affected blocks.
 
 ---
 
@@ -163,6 +187,8 @@ Conflicting local operations on the same block attributes as incoming remote cha
 | Initial sync (1000 pages) | Minutes                 |
 | Change detection          | File watching + polling |
 | Network usage             | Full file on any change |
+
+> **Removed:** These File Sync performance characteristics are historical-only.
 
 ### RTC
 
@@ -185,6 +211,8 @@ Conflicting local operations on the same block attributes as incoming remote cha
 
 **Note**: Some formatting may change during conversion.
 
+> **Removed:** This migration path is historical guidance for older File Sync users.
+
 ### RTC → File Sync
 
 1. Export database to Markdown
@@ -192,6 +220,8 @@ Conflicting local operations on the same block attributes as incoming remote cha
 3. Enable File Sync
 
 **Note**: Typed properties become text properties.
+
+> **Removed:** This migration path is historical; File Sync is not an active cloud sync path in current source.
 
 ---
 
@@ -223,6 +253,8 @@ RTC uses a hybrid encryption model:
 | Large files skipped      | Files >100MB won't sync                  |
 | Slow initial sync        | Large graphs take time, be patient       |
 
+> **Removed:** File Sync troubleshooting is historical-only.
+
 ### RTC Issues
 
 | Problem          | Solution                                  |
@@ -238,12 +270,12 @@ RTC uses a hybrid encryption model:
 
 | Scenario                  | Recommendation |
 | ------------------------- | -------------- |
-| Solo user, simple needs   | File Sync      |
+| Solo user, simple needs   | RTC            |
 | Solo user, power features | RTC            |
 | Team collaboration        | RTC            |
-| Developer (Git workflow)  | File Sync      |
+| Developer (Git workflow)  | RTC + export for Git workflows |
 | Privacy-critical data     | RTC (E2EE)     |
-| Maximum portability       | File Sync      |
+| Maximum portability       | RTC + Markdown export/import |
 
 ---
 
@@ -255,4 +287,4 @@ RTC uses a hybrid encryption model:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

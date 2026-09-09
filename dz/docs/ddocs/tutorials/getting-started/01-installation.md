@@ -3,7 +3,7 @@ title: 'Installation Guide'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-03-10'
+last-verified: '2026-05-30'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/02-first-graph.md'
@@ -11,7 +11,7 @@ related-docs:
 
 # Installation Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 Welcome to Logseq! This tutorial will guide you through installing Logseq on your device in under 10 minutes.
 
@@ -86,7 +86,9 @@ flatpak install flathub com.logseq.Logseq
 3. Tap **Get** → **Install**
 4. Open Logseq from your home screen
 
-**Requirements:** iOS 14.0 or later
+**Requirements:** iOS 15.0 or later
+
+> **Removed:** iOS 14 support. The iOS project now targets iOS 15.0 (`ios/App/Podfile`).
 
 #### Android
 
@@ -95,7 +97,9 @@ flatpak install flathub com.logseq.Logseq
 3. Tap **Install**
 4. Open Logseq from your app drawer
 
-**Requirements:** Android 6.0 (Marshmallow) or later
+**Requirements:** Android 7.0 (API 24) or later
+
+> **Removed:** Android 6.0 support. Android now uses `minSdkVersion = 24` (`android/variables.gradle`).
 
 ### Web Version
 
@@ -122,16 +126,23 @@ When you first open Logseq, you'll see a welcome screen with setup options:
 
 ### Desktop
 
-- **OS:** Windows 10+, macOS 10.15+ (Catalina or later), or modern Linux distribution
+- **OS:** Windows 10+, recent macOS, or modern Linux distribution
 - **RAM:** 4GB minimum, 8GB recommended
 - **Storage:** 500MB for app + storage for your graphs
 - **Display:** 1280x720 minimum resolution
 
+> **Removed:** The explicit macOS 10.15 floor. Current desktop build config (`resources/electron-builder.yml`) does not declare a minimum macOS version.
+
 ### Mobile
 
-- **iOS:** 14.0 or later
-- **Android:** 6.0 (Marshmallow) or later
+- **iOS:** 15.0 or later
+- **Android:** 7.0 (API 24) or later
 - **Storage:** 200MB for app + storage for your graphs
+
+## Findings: New Capabilities
+
+- Mobile platform baselines moved forward in source config: iOS now targets 15.0 (`ios/App/Podfile`) and Android now targets API 24 (`android/variables.gradle`).
+- The project is on Capacitor 8 across mobile dependencies (`package.json`), aligning with current iOS/Android platform support.
 
 ## Troubleshooting
 

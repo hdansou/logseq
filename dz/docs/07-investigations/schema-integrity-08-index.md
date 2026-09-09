@@ -3,9 +3,11 @@
 ## Investigation Index & Quick Reference
 
 **Investigation Date:** December 2024  
-**Schema Version Analyzed:** 65.16  
+**Schema Version Analyzed:** 65.33  
 **Total Files Analyzed:** 25+  
 **Lines of Code Reviewed:** ~3,000
+
+> **Last revised:** 2026-05-30
 
 ---
 
@@ -57,9 +59,10 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 
 **Key Files Covered:**
 
-- [deps/db/src/logseq/db/frontend/schema.cljs](../../deps/db/src/logseq/db/frontend/schema.cljs)
-- [deps/db/src/logseq/db/schema.cljs](../../deps/db/src/logseq/db/schema.cljs)
-- [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
+- [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs)
+- [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
+
+> **Removed:** Reference to `deps/db/src/logseq/db/schema.cljs` (file no longer exists).
 
 **Audience:** Developers working on schema definitions
 
@@ -82,8 +85,9 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 
 **Key Files Covered:**
 
-- [src/main/frontend/worker/db/migrate.cljs](../../src/main/frontend/worker/db/migrate.cljs)
-- [deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs](../../deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs)
+- [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs)
+
+> **Removed:** Reference to `deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs` (file no longer exists).
 
 **Code Examples:**
 
@@ -113,10 +117,10 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 
 **Key Files Covered:**
 
-- [deps/db/src/logseq/db/sqlite/export.cljs](../../deps/db/src/logseq/db/sqlite/export.cljs)
-- [src/main/frontend/handler/db_based/import.cljs](../../src/main/frontend/handler/db_based/import.cljs)
-- [deps/db/src/logseq/db/frontend/validate.cljs](../../deps/db/src/logseq/db/frontend/validate.cljs)
-- [deps/db/src/logseq/db.cljs](../../deps/db/src/logseq/db.cljs)
+- [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs)
+- [src/main/frontend/handler/db_based/import.cljs](../../../src/main/frontend/handler/db_based/import.cljs)
+- [deps/db/src/logseq/db/frontend/validate.cljs](../../../deps/db/src/logseq/db/frontend/validate.cljs)
+- [deps/db/src/logseq/db.cljs](../../../deps/db/src/logseq/db.cljs)
 
 **Critical Finding:** Invalid graphs cannot be exported (blocks backup when most needed)
 
@@ -132,7 +136,7 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 
 **Key Sections:**
 
-- RTC architecture overview
+- RTC / DB sync architecture overview
 - Schema version branching logic
 - Migration operation conversion
 - Sync conflict resolution
@@ -142,8 +146,11 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 
 **Key Files Covered:**
 
-- [src/main/frontend/worker/rtc/branch_graph.cljs](../../src/main/frontend/worker/rtc/branch_graph.cljs)
-- [src/main/frontend/worker/rtc/migrate.cljs](../../src/main/frontend/worker/rtc/migrate.cljs)
+- [src/main/frontend/worker/sync/upload.cljs](../../../src/main/frontend/worker/sync/upload.cljs)
+- [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs)
+- [src/main/frontend/worker/sync/apply_txs.cljs](../../../src/main/frontend/worker/sync/apply_txs.cljs)
+
+> **Removed:** References to `src/main/frontend/worker/rtc/branch_graph.cljs` and `src/main/frontend/worker/rtc/migrate.cljs` (directory no longer exists).
 
 **Decision Matrix:** When to branch vs download vs stay compatible
 
@@ -221,6 +228,15 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 - Glossary
 
 **Audience:** Everyone
+
+---
+
+## Findings: New Capabilities
+
+- Frontend schema and migration chain now run through `65.33` in [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs) and [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs).
+- Migration coverage includes post-`65.16` additions such as comments/reactions/recycle and gallery-view property updates in [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs).
+- Export validation now includes in-memory import-and-validate flow via `validate-export` in [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs).
+- Sync implementation is centered in `worker/sync` (`upload`, `download`, `apply_txs`) instead of the removed `worker/rtc` paths.
 
 ---
 
@@ -306,40 +322,45 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 
 ### Schema Management
 
-| File                                                                                                       | Purpose             | Key Functions                              |
-| ---------------------------------------------------------------------------------------------------------- | ------------------- | ------------------------------------------ |
-| [deps/db/src/logseq/db/frontend/schema.cljs](../../deps/db/src/logseq/db/frontend/schema.cljs)             | Version management  | `schema-version`, `compare-schema-version` |
-| [deps/db/src/logseq/db/schema.cljs](../../deps/db/src/logseq/db/schema.cljs)                               | DataScript schema   | Schema attribute definitions               |
-| [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../deps/db/src/logseq/db/frontend/malli_schema.cljs) | Validation schema   | Entity schemas, property types             |
-| [deps/db/src/logseq/db/frontend/property.cljs](../../deps/db/src/logseq/db/frontend/property.cljs)         | Built-in properties | `built-in-properties` registry             |
+| File                                                                                                          | Purpose             | Key Functions                       |
+| ------------------------------------------------------------------------------------------------------------- | ------------------- | ----------------------------------- |
+| [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs)             | Version management  | `version`, `compare-schema-version` |
+| [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../../deps/db/src/logseq/db/frontend/malli_schema.cljs) | Validation schema   | Entity schemas, property types      |
+| [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs)         | Built-in properties | `built-in-properties` registry      |
+
+> **Removed:** Reference to `deps/db/src/logseq/db/schema.cljs` (file no longer exists).
 
 ### Migration System
 
-| File                                                                                                                                   | Purpose                   | Key Functions                        |
-| -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------ |
-| [src/main/frontend/worker/db/migrate.cljs](../../src/main/frontend/worker/db/migrate.cljs)                                             | Migration orchestration   | `migrate`, `schema-version->updates` |
-| [deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs](../../deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs) | Migration implementations | Version-specific migrations          |
+| File                                                                                          | Purpose                 | Key Functions                        |
+| --------------------------------------------------------------------------------------------- | ----------------------- | ------------------------------------ |
+| [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs) | Migration orchestration | `migrate`, `schema-version->updates` |
+
+> **Removed:** Reference to `deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs` (file no longer exists).
 
 ### Validation System
 
-| File                                                                                               | Purpose              | Key Functions                        |
-| -------------------------------------------------------------------------------------------------- | -------------------- | ------------------------------------ |
-| [deps/db/src/logseq/db/frontend/validate.cljs](../../deps/db/src/logseq/db/frontend/validate.cljs) | Validation logic     | `validate-db!`, `validate-tx-report` |
-| [deps/db/src/logseq/db.cljs](../../deps/db/src/logseq/db.cljs)                                     | Transaction handling | `transact!` (with validation)        |
+| File                                                                                                  | Purpose              | Key Functions                                             |
+| ----------------------------------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------- |
+| [deps/db/src/logseq/db/frontend/validate.cljs](../../../deps/db/src/logseq/db/frontend/validate.cljs) | Validation logic     | `validate-db`, `validate-tx-report`, `validate-local-db!` |
+| [deps/db/src/logseq/db.cljs](../../../deps/db/src/logseq/db.cljs)                                     | Transaction handling | `transact!` (with validation)                             |
 
 ### Import/Export
 
-| File                                                                                                   | Purpose             | Key Functions                  |
-| ------------------------------------------------------------------------------------------------------ | ------------------- | ------------------------------ |
-| [deps/db/src/logseq/db/sqlite/export.cljs](../../deps/db/src/logseq/db/sqlite/export.cljs)             | Export/import logic | `build-export`, `build-import` |
-| [src/main/frontend/handler/db_based/import.cljs](../../src/main/frontend/handler/db_based/import.cljs) | UI import handlers  | Import workflows               |
+| File                                                                                                      | Purpose             | Key Functions                                                                |
+| --------------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------- |
+| [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs)             | Export/import logic | `build-export`, `build-import`, `validate-export`                            |
+| [src/main/frontend/handler/db_based/import.cljs](../../../src/main/frontend/handler/db_based/import.cljs) | UI import handlers  | `import-from-sqlite-db!`, `import-from-sqlite-zip!`, `import-from-edn-file!` |
 
-### RTC Sync
+### RTC / DB Sync
 
-| File                                                                                                   | Purpose       | Key Functions                      |
-| ------------------------------------------------------------------------------------------------------ | ------------- | ---------------------------------- |
-| [src/main/frontend/worker/rtc/branch_graph.cljs](../../src/main/frontend/worker/rtc/branch_graph.cljs) | Branch logic  | `compare-schemas`, `select-branch` |
-| [src/main/frontend/worker/rtc/migrate.cljs](../../src/main/frontend/worker/rtc/migrate.cljs)           | Migration ops | `migration-results=>client-ops`    |
+| File                                                                                                  | Purpose             | Key Functions                           |
+| ----------------------------------------------------------------------------------------------------- | ------------------- | --------------------------------------- |
+| [src/main/frontend/worker/sync/upload.cljs](../../../src/main/frontend/worker/sync/upload.cljs)       | Graph upload/create | `create-remote-graph!`, `upload-graph!` |
+| [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs)   | Snapshot download   | `download-graph-by-id!`                 |
+| [src/main/frontend/worker/sync/apply_txs.cljs](../../../src/main/frontend/worker/sync/apply_txs.cljs) | Remote tx apply     | `apply-remote-txs!`                     |
+
+> **Removed:** References to `src/main/frontend/worker/rtc/branch_graph.cljs` and `src/main/frontend/worker/rtc/migrate.cljs` (directory no longer exists).
 
 ---
 
@@ -348,22 +369,18 @@ This investigation is split into 8 comprehensive documents covering schema evolu
 ### Top 5 Risks (from Part 1)
 
 1. **No Backward Compatibility** (🔴 CRITICAL)
-
    - Older clients cannot open newer graphs
    - Forces all-or-nothing upgrades
 
 2. **Strict Validation Enforcement** (🔴 HIGH)
-
    - All transactions validated
    - Bugs in validation block legitimate operations
 
 3. **Sequential Migration Risk** (🔴 HIGH)
-
    - No rollback on partial failure
    - Failed migration corrupts graph
 
 4. **Export as Last Resort** (🟠 MEDIUM)
-
    - Invalid graphs cannot be exported
    - Blocks backup when most needed
 
@@ -425,10 +442,12 @@ Pre-export      → Before backup (blocks invalid)
 ### RTC Actions
 
 ```
-:compatible     → Join existing branch
-:create-branch  → Create new major version branch
-:download       → Download newer graph version
+upload-graph!         → Create/upload graph snapshot and metadata
+download-graph-by-id! → Download graph snapshot by graph id
+apply-remote-txs!     → Apply and reconcile remote transactions
 ```
+
+> **Removed:** Prior action keywords `:compatible`, `:create-branch`, and `:download` were tied to removed `worker/rtc` files and are no longer directly traceable in current `src/main/frontend/worker/sync` implementation.
 
 ---
 
@@ -436,7 +455,7 @@ Pre-export      → Before backup (blocks invalid)
 
 ### Schema Terms
 
-- **Schema Version:** Major.minor version (e.g., 65.16)
+- **Schema Version:** Major.minor version (e.g., 65.33)
 - **Major Version:** Breaking changes, incompatible with previous
 - **Minor Version:** Additions, backward compatible
 - **DataScript Schema:** Structural constraints (types, cardinality)
@@ -580,8 +599,8 @@ Pre-export      → Before backup (blocks invalid)
 **Test Cases Created:** 20+
 
 **Contributors:** Development Team  
-**Review Status:** Initial Release  
-**Next Review Date:** March 2025
+**Review Status:** Revised against current source (src/, deps/, packages/)  
+**Next Review Date:** August 2026
 
 ---
 

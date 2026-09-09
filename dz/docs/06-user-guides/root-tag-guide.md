@@ -1,11 +1,11 @@
 # Logseq Database: Root Tag Guide
 
-**Last Updated**: October 25, 2025  
+**Last revised:** 2026-05-29
 **Status**: Complete Investigation
 
 ## Executive Summary
 
-**Root Tag** (`:logseq.class/Root`) is a built-in class in Logseq's database system that serves as the **default parent class for all user-created tags/classes** that don't explicitly extend another class. It acts as the root of the class hierarchy for the tag system, enabling class inheritance and ensuring all tags have at least one parent in the hierarchy.
+**Root Tag** (`:logseq.class/Root`) is a built-in class in Logseq's database system that serves as the **default parent class for new user-created tag/class entities when no explicit parent is supplied**. It acts as the root of the class hierarchy for the tag system, enabling class inheritance and ensuring user-created tags have at least one parent in the hierarchy.
 
 ---
 
@@ -20,7 +20,8 @@
 7. [Real-World Usage Scenarios](#real-world-usage-scenarios)
 8. [Important Characteristics](#important-characteristics)
 9. [Code References](#code-references)
-10. [Developer Guidelines](#developer-guidelines)
+10. [Findings: New Capabilities](#findings-new-capabilities)
+11. [Developer Guidelines](#developer-guidelines)
 
 ---
 
@@ -36,7 +37,7 @@
 
 ### Location in Codebase
 
-**File**: `deps/db/src/logseq/db/frontend/class.cljs:22`
+**File**: `deps/db/src/logseq/db/frontend/class.cljs:17`
 
 ```clojure
 (def ^:large-vars/data-var built-in-classes
@@ -59,7 +60,7 @@ Root Tag serves as the **implicit parent class** for all user-created tags/class
 ### Class Hierarchy Role
 
 1. **Top of Hierarchy**: Root Tag sits at the top of the tag class hierarchy
-2. **Default Parent**: Automatically assigned to new tags via the `:logseq.property.class/extends` property
+2. **Default Parent**: Automatically assigned to newly created tag/class entities via the `:logseq.property.class/extends` property when they have no explicit parent
 3. **Inheritance Enabler**: Allows the tag inheritance system to function properly
 
 ### Analogy
@@ -68,7 +69,7 @@ Think of Root Tag as similar to `Object` in Java or `object` in Python - it's th
 
 ### Example from Tests
 
-**File**: `deps/outliner/test/logseq/outliner/page_test.cljs:48`
+**File**: `deps/outliner/test/logseq/outliner/page_test.cljs:52`
 
 ```clojure
 (is (= #{"Root Tag" "c1"}
@@ -110,7 +111,7 @@ From test fixtures (e.g., `src/test/migration/65.2.transit`):
 
 ### 4.1 Automatic Assignment to New Tags
 
-**File**: `src/main/frontend/worker/pipeline.cljs:116`
+**File**: `src/main/frontend/worker/pipeline.cljs:118-143`
 
 When a new tag is created without a `:db/ident`, it's automatically assigned Root Tag as parent:
 
@@ -136,35 +137,17 @@ When a new tag is created without a `:db/ident`, it's automatically assigned Roo
   2. Adds `:logseq.property.class/extends :logseq.class/Root`
   3. Removes the `:logseq.class/Page` tag
 
-### 4.2 Migration Support
+### 4.2 Backfill Behavior for Legacy Tags
 
-**File**: `src/main/frontend/worker/db/migrate.cljs:294`
+**File**: `src/main/frontend/worker/pipeline.cljs:118-143`
 
-During database migrations, tags without `:db/ident` get Root Tag as parent:
+When a tag-class entity is observed without `:db/ident`, pipeline normalization adds a generated user class ident and sets `:logseq.property.class/extends` to `:logseq.class/Root`.
 
-```clojure
-(defn add-missing-db-ident-for-tags
-  [db _sqlite-db]
-  (let [class-ids (d/q
-                   '[:find [?b ...]
-                     :where
-                     [?b :block/tags :logseq.class/Tag]
-                     [(missing? $ ?b :db/ident)]]
-                   db)]
-    (mapcat
-     (fn [id]
-       [[:db/add id :logseq.property.class/extends :logseq.class/Root]
-        [:db/retract id :block/tags :logseq.class/Page]
-        [:db/retract id :block/refs :logseq.class/Page]
-        [:db/retract id :block/path-refs :logseq.class/Page]])
-     class-ids)))
-```
-
-**Purpose**: Ensures backward compatibility when upgrading older databases that didn't have the class hierarchy system.
+**Purpose**: Ensures class hierarchy invariants remain intact for tag entities that are missing modern class attributes.
 
 ### 4.3 Property Management
 
-**File**: `deps/outliner/src/logseq/outliner/property.cljs:503-552`
+**File**: `deps/outliner/src/logseq/outliner/property.cljs:625-646`
 
 When removing the `:logseq.property.class/extends` property entirely, it reverts to Root Tag:
 
@@ -220,7 +203,7 @@ Used when getting parent classes for inheritance checks:
 
 Root Tag is marked as **internal** and **hidden** in certain contexts:
 
-**File**: `deps/db/src/logseq/db/frontend/class.cljs:110-121`
+**File**: `deps/db/src/logseq/db/frontend/class.cljs:109-140`
 
 ```clojure
 (def internal-tags
@@ -272,23 +255,27 @@ non-root-classes (cond-> (remove (fn [c] (= (:db/ident c) :logseq.class/Root)) c
 
 ### Graph Creation
 
-**File**: `deps/db/src/logseq/db/sqlite/create_graph.cljs:238`
+**File**: `deps/db/src/logseq/db/sqlite/create_graph.cljs:263`
 
 Root Tag is one of the bootstrap classes created when initializing a new database graph:
 
 ```clojure
 (defn bootstrap-class?
   [c]
-  (contains? #{:logseq.class/Root :logseq.class/Property :logseq.class/Tag :logseq.class/Template}
+  (contains? #{:logseq.class/Root :logseq.class/Property :logseq.class/Tag :logseq.class/Page :logseq.class/Template}
              (:db/ident c)))
 ```
 
 **Bootstrap process**:
 
 1. New graph is created
-2. Bootstrap classes are created first (Root, Property, Tag, Template)
+2. Bootstrap classes are created first (Root, Property, Tag, Page, Template)
 3. Other built-in classes are created
 4. User content is then loaded/created
+
+> **Removed:** Bootstrap classes are created first (Root, Property, Tag, Template).
+
+The current bootstrap set includes `Root`, `Property`, `Tag`, `Page`, and `Template`; the graph builder still splits them out so Root, Tag, and Property can bootstrap later class/property txs.
 
 ---
 
@@ -353,26 +340,24 @@ Result:
 - This prevents orphaned tags in the hierarchy
 ```
 
-### Scenario 4: Database Migration
+### Scenario 4: Legacy Tag Normalization
 
 ```
-Scenario: Upgrading from old Logseq version without class hierarchy
+Scenario: Existing tag entity lacks class metadata (:db/ident)
 
-Old Data:
-- Tag pages exist with :block/tags [:logseq.class/Tag]
-- No :db/ident or :logseq.property.class/extends properties
+Observed Data:
+- Entity is tagged as :logseq.class/Tag
+- Entity does not yet have :db/ident
 
-Migration Process:
-1. Migration detects tags missing :db/ident
-2. For each tag:
-   - Creates unique :db/ident
-   - Adds :logseq.property.class/extends :logseq.class/Root
-   - Cleans up old :block/tags references
+Pipeline Behavior:
+1. Detect missing :db/ident for tag-class entity
+2. Generate user class ident from title
+3. Add :logseq.property.class/extends :logseq.class/Root
+4. Retract :logseq.class/Page where applicable
 
-New Data:
-- All tags now have proper class hierarchy
-- All user tags extend Root Tag
-- System can now use inheritance queries
+Result:
+- Tag entity becomes a valid class entity
+- Class hierarchy remains connected to Root Tag
 ```
 
 ---
@@ -385,20 +370,21 @@ New Data:
 - It IS included in `internal-tags` and `hidden-tags`
 - This suggests it can be used in some contexts where other built-in classes cannot
 
+> **Removed:** Root Tag itself **cannot be deleted** or modified by users.
+
 ### Immutability
 
-- Root Tag itself **cannot be deleted** or modified by users
-- It's a built-in class with a **fixed UUID**
-- Always present in database graphs
-- Part of the core schema
+- Root Tag is a built-in class with a **fixed UUID**
+- It is always present in database graphs
+- It is part of the core schema
+- It is hidden from most class-selection UI so users do not usually interact with it directly
 
 ### Implicit Behavior
 
 - Users **never manually assign** Root Tag
 - Assignment happens automatically via:
-  - Pipeline processing (new tags)
-  - Migrations (upgrading old data)
-  - Validation (removing extends property)
+  - Pipeline processing (new or legacy tag entities missing class metadata)
+  - Property fallback logic when extends is removed
 - **Hidden from most UI contexts** to avoid confusion
 
 ### Inheritance Rules
@@ -412,20 +398,23 @@ New Data:
 
 ## Code References
 
-| File                                                | Line     | Purpose                                   |
-| --------------------------------------------------- | -------- | ----------------------------------------- |
-| `deps/db/src/logseq/db/frontend/class.cljs`         | 22       | Definition of Root Tag                    |
-| `deps/db/src/logseq/db/frontend/class.cljs`         | 110-121  | Visibility categorization                 |
-| `deps/db/src/logseq/db/frontend/class.cljs`         | 125-140  | Helper functions (get-class-extends, etc) |
-| `src/main/frontend/worker/pipeline.cljs`            | 108-125  | Auto-assignment to new tags               |
-| `src/main/frontend/worker/db/migrate.cljs`          | 285-312  | Migration support for old tags            |
-| `src/main/frontend/worker/db/validate.cljs`         | 67       | Validation fixes                          |
-| `deps/outliner/src/logseq/outliner/property.cljs`   | 495-560  | Property management (set/remove)          |
-| `deps/db/src/logseq/db/frontend/db.cljs`            | 84-98    | Class hierarchy traversal                 |
-| `src/main/frontend/components/property/value.cljs`  | 783, 888 | UI filtering                              |
-| `src/main/frontend/db/model.cljs`                   | 478      | Model-level filtering                     |
-| `deps/db/src/logseq/db/sqlite/create_graph.cljs`    | 238      | Bootstrap class identification            |
-| `deps/outliner/test/logseq/outliner/page_test.cljs` | 48       | Test demonstrating inheritance            |
+| File                                                | Line     | Purpose                                  |
+| --------------------------------------------------- | -------- | ---------------------------------------- |
+| `deps/db/src/logseq/db/frontend/class.cljs`         | 17       | Definition of Root Tag                   |
+| `deps/db/src/logseq/db/frontend/class.cljs`         | 109-140  | Visibility categorization                |
+| `deps/db/src/logseq/db/frontend/class.cljs`         | 144-150  | Helper functions (class traversal start) |
+| `src/main/frontend/worker/pipeline.cljs`            | 118-143  | Auto-assignment and backfill for tags    |
+| `deps/outliner/src/logseq/outliner/property.cljs`   | 625-646  | Property management (set/remove)         |
+| `deps/db/src/logseq/db/frontend/db.cljs`            | 84-98    | Class hierarchy traversal                |
+| `src/main/frontend/components/property/value.cljs`  | 859, 970 | UI filtering                             |
+| `src/main/frontend/db/model.cljs`                   | 357      | Model-level filtering                    |
+| `deps/db/src/logseq/db/sqlite/create_graph.cljs`    | 263      | Bootstrap class identification           |
+| `deps/outliner/test/logseq/outliner/page_test.cljs` | 52       | Test demonstrating inheritance           |
+
+## Findings: New Capabilities
+
+- Class pickers can now exclude Root explicitly via `get-all-classes`' `except-root-class?` option, and some UI flows use it to keep Root out of class suggestions.
+- Class filtering is now split between Root-only hiding and broader hidden/private-class filtering, which gives callers finer control over which built-ins are surfaced.
 
 ---
 
@@ -492,7 +481,7 @@ When writing tests:
 
 1. **Expect Root Tag in parent chains** - Don't be surprised when it appears
 2. **Test tag creation** - Verify Root Tag is automatically assigned
-3. **Test migration scenarios** - Ensure old tags get Root Tag
+3. **Test normalization scenarios** - Ensure legacy tag entities get Root Tag
 4. **Test property removal** - Verify fallback to Root Tag
 5. **Test UI filtering** - Ensure Root Tag is hidden appropriately
 
@@ -553,9 +542,9 @@ Understanding Root Tag is essential for:
 
 ## Related Documentation
 
-- [Class System Overview](./CLASS-SYSTEM-OVERVIEW.md) _(if it exists)_
-- [Database Schema Guide](./DATABASE-SCHEMA.md) _(if it exists)_
-- [Migration Guide](./MIGRATION-GUIDE.md) _(if it exists)_
+- [Database Schema Guide](../../../docs/03-features/database-graphs/schema-guide.md)
+- [Tagging and Classification System](../../../docs/03-features/tagging-classification/system-guide.md)
+- [Advanced Queries](../../../ddocs/how-to/queries/advanced-queries.md)
 
 ## Questions or Issues?
 
@@ -570,5 +559,5 @@ If you encounter issues related to Root Tag or have questions about the class hi
 ---
 
 **Document Status**: ✅ Complete and Verified  
-**Investigation Date**: October 25, 2025  
+**Investigation Date**: 2026-05-25  
 **Maintained By**: Database Team

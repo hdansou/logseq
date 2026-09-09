@@ -1,14 +1,16 @@
 # Logseq ClojureScript Plugin SDK Developer Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## Overview
 
-The Logseq ClojureScript Plugin SDK (`@logseq/cljs-libs`) provides idiomatic ClojureScript wrappers for the JavaScript Logseq Plugin API (`@logseq/libs`). This SDK enables ClojureScript developers to build Logseq plugins with full type safety, automatic data conversion between JavaScript and ClojureScript, and functional programming patterns.
+The Logseq ClojureScript Plugin SDK (`@logseq/cljs-libs`) provides idiomatic ClojureScript wrappers for the JavaScript Logseq Plugin API (`@logseq/libs`). This SDK enables ClojureScript developers to build Logseq plugins with automatic data conversion between JavaScript and ClojureScript and functional programming patterns while preserving JavaScript API shapes.
 
-**Version:** 0.0.11
+**Version:** 0.0.12
 **Package:** `@logseq/cljs-libs`
-**Merged:** PR #12168 (commit d8809f0b7)
+**Underlying JS SDK dependency:** `@logseq/libs` `0.3.2` (from `libs/cljs-sdk/package.json`)
+
+> **Removed:** This guide no longer uses the original merge PR as the version source of truth.
 
 ## Key Features
 
@@ -22,7 +24,7 @@ The Logseq ClojureScript Plugin SDK (`@logseq/cljs-libs`) provides idiomatic Clo
 
 ### Prerequisites
 
-- ClojureScript 1.12.42 or higher
+- ClojureScript 1.12.134 or higher
 - Node.js and npm/yarn
 - Logseq desktop application
 
@@ -41,8 +43,8 @@ npm install @logseq/cljs-libs
 Add to your `deps.edn`:
 
 ```clojure
-{:deps {org.clojure/clojurescript {:mvn/version "1.12.42"}
-        cljs-bean/cljs-bean {:mvn/version "1.5.0"}}}
+{:deps {org.clojure/clojurescript {:mvn/version "1.12.134"}
+  cljs-bean/cljs-bean {:mvn/version "1.9.0"}}}
 ```
 
 ## Architecture
@@ -51,16 +53,25 @@ Add to your `deps.edn`:
 
 The SDK is organized into 8 main namespaces under `com.logseq`:
 
-| Namespace           | Description                        | Functions     |
-| ------------------- | ---------------------------------- | ------------- |
-| `com.logseq.core`   | Core plugin lifecycle and main UI  | 15 functions   |
-| `com.logseq.app`    | Application-level operations       | 72+ functions |
-| `com.logseq.editor` | Block and page manipulation        | 70+ functions |
-| `com.logseq.db`     | Database queries and subscriptions | 4 functions   |
-| `com.logseq.ui`     | User interface utilities           | 6 functions   |
-| `com.logseq.assets` | Asset and file management          | 4 functions   |
-| `com.logseq.git`    | Git operations                     | 3 functions   |
-| `com.logseq.util`   | Data conversion utilities          | Internal use  |
+| Namespace           | Description                       | Functions    |
+| ------------------- | --------------------------------- | ------------ |
+| `com.logseq.core`   | Core plugin lifecycle and main UI | 19 functions |
+| `com.logseq.app`    | Application-level operations      | 50 functions |
+| `com.logseq.editor` | Block and page/tag/property APIs  | 69 functions |
+| `com.logseq.db`     | Queries, subscriptions, file APIs | 7 functions  |
+| `com.logseq.ui`     | User interface utilities          | 6 functions  |
+| `com.logseq.assets` | Asset and file management         | 4 functions  |
+| `com.logseq.git`    | Git operations                    | 3 functions  |
+| `com.logseq.util`   | Data conversion utilities         | Internal use |
+
+## Findings: New Capabilities
+
+Compared with the previous revision, current wrappers in `libs/cljs-sdk/src/com/logseq` include:
+
+- `com.logseq.editor`: richer tag/property APIs including `create-tag`, `get-tag`, `get-tags-by-name`, `add-tag-property`, `remove-tag-property`, `add-tag-extends`, `remove-tag-extends`, `add-block-tag`, `remove-block-tag`, `add-property-value-choices`, and `set-property-node-tags`.
+- `com.logseq.editor`: additional utilities `get-today-page` and `open-pdf-viewer`.
+- `com.logseq.db`: additional APIs `custom-query`, `set-file-content`, and `get-file-content` in addition to DSL and Datascript query helpers.
+- `com.logseq.editor/upsert-block-property`: supports an optional 4th `options` argument.
 
 ### Data Conversion
 
@@ -714,6 +725,7 @@ Create or update a property definition.
 Delete a property definition.
 
 **`(upsert-block-property block key value)`**
+**`(upsert-block-property block key value options)`**
 
 Set a property on a block. Properties are auto-created with inferred types if they don't exist.
 
@@ -726,7 +738,12 @@ Set a property on a block. Properties are auto-created with inferred types if th
 ```
 
 > **Note:** The ClojureScript SDK's `upsert-block-property` takes exactly three
-> arguments (block, key, value). To define a property schema explicitly, use
+> arguments (block, key, value).
+
+> **Removed:** Previous documentation claimed `upsert-block-property` only accepted three arguments.
+
+Use the optional `options` argument when you need to control write behavior. To define a property schema explicitly, use
+
 > `(editor/upsert-property "priority" {:type "number" :cardinality "one"})`
 > before setting the value.
 
@@ -784,6 +801,8 @@ Listen for text selection end events.
 
 Database queries and transaction subscriptions.
 
+In current SDK versions, `com.logseq.db` also includes custom query and graph file content APIs.
+
 **`(q dsl)`**
 
 Run a DSL (simple) query. The argument is a DSL query string (not a Datalog map).
@@ -830,6 +849,18 @@ Subscribe to changes for a specific block.
   "block-uuid"
   (fn [block tx-data]
     (println "Block updated:" (:content block))))
+
+**`(custom-query query)`**
+
+Execute a query via the custom query engine.
+
+**`(set-file-content path content)`**
+
+Set built-in graph file content such as `logseq/custom.css` or `logseq/publish.js`.
+
+**`(get-file-content path)`**
+
+Read file content by graph path.
 ```
 
 ---
@@ -1260,7 +1291,7 @@ The ClojureScript SDK is auto-generated from the JavaScript SDK schema:
 cd /path/to/logseq/libs
 
 # Generate the SDK schema
-yarn run generate:schema
+pnpm generate:schema
 
 # Generate ClojureScript wrappers
 bb libs:generate-cljs-sdk
@@ -1378,6 +1409,6 @@ MIT License - see the Logseq repository for full details.
 
 ---
 
-**Last Updated:** March 2026
-**SDK Version:** 0.0.11
-**Generated from:** PR #12168, commit d8809f0b7
+**Last Updated:** 2026-05-29
+**SDK Version:** 0.0.12
+**Generated from:** `libs/dist/logseq-sdk-schema.json` via `bb libs:generate-cljs-sdk`

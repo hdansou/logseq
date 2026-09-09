@@ -1,6 +1,8 @@
 # Database Garbage Collection: A Detective's Investigation Report
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
+> **Previously revised:** 2026-03-10
+> **Change summary:** GC functions moved from `db_worker.cljs` to `db_core.cljs`; interval changed from 3 days to 30 days; client-ops DB is no longer GC'd by `gc-sqlite-dbs!` — it has a separate cleanup path; VACUUM now only on main db.
 
 ## Case Summary
 
@@ -27,10 +29,10 @@ The GC system solves this by periodically scanning for unreferenced addresses an
 ### Key Discovery Highlights
 
 🔍 **Dual Implementation**: WASM version (browser) and Node.js version (Electron/CLI)
-⚡ **Automatic Scheduling**: Runs every 3 days when opening a graph
+⚡ **Automatic Scheduling**: Runs every 30 days (monthly) when opening a graph
 🔒 **Developer-Only Manual Trigger**: Available via command palette in dev mode
 🎯 **Recursive Cleanup**: Can run multiple GC passes until no garbage remains
-🔄 **Two Databases**: Cleans both main graph database and RTC client-ops database
+�️ **Single Database GC**: Only cleans main graph database; RTC client-ops DB has a separate cleanup (`run-client-ops-cleanup!`)
 📊 **Test Coverage**: Validated with 500,000 blocks, 100,000 retractions
 
 ---
@@ -77,7 +79,7 @@ The GC system operates across three architectural layers:
 ┌─────────────────────────────────────────────────────────┐
 │             Database Worker Thread                       │
 │  • Manages SQLite connections                            │
-│  • Schedules automatic GC (3-day interval)               │
+│  • Schedules automatic GC (30-day interval)              │
 │  • Coordinates dual-database cleanup                     │
 └──────────────────────┬──────────────────────────────────┘
                        │ Direct SQL
@@ -107,14 +109,14 @@ flowchart TB
     end
 
     subgraph Handler["📨 Handler Layer"]
-        RH[repo-handler/gc-graph!<br/>repo.cljs:232]
+        RH[repo-handler/gc-graph!<br/>repo.cljs:194]
         NOTIFY[Success Notification]
     end
 
     subgraph Worker["⚙️ Database Worker Thread"]
-        API[Thread API<br/>:thread-api/gc-graph<br/>db_worker.cljs:740]
-        GCMAIN[gc-sqlite-dbs!<br/>db_worker.cljs:243]
-        CHECK{Last GC<br/>> 3 days?}
+        API[Thread API<br/>:thread-api/gc-graph<br/>db_core.cljs:1568]
+        GCMAIN[gc-sqlite-dbs!<br/>db_core.cljs:385]
+        CHECK{Last GC<br/>> 30 days?}
         METAGET[Get :logseq.kv/graph-last-gc-at]
         METASET[Update GC timestamp]
     end
@@ -178,32 +180,33 @@ flowchart TB
 
 ### The Witness Files
 
-**Location**: `src/main/frontend/modules/shortcut/config.cljs:616-618`
+**Location**: `src/main/frontend/modules/shortcut/config.cljs:484-488`
 
 ```clojure
 :dev/gc-graph {:binding []
+               :desc "(Dev) Garbage collect graph (remove unused data in SQLite)"
                :inactive (not (state/developer-mode?))
                :fn #(repo-handler/gc-graph! (state/get-current-repo))}
 ```
 
 ### Investigation Details
 
-The GC feature is **exclusively a developer tool** - it does not appear in the standard user interface. Access requires:
+The GC feature is **exclusively a developer tool** — it does not appear in the standard user interface. Access requires:
 
 1. ✅ Developer mode must be enabled (`(state/developer-mode?)`)
-2. ✅ Command must be invoked via Command Palette (no keyboard shortcut)
-3. ✅ User must know to search for "gc graph" or similar
+2. ✅ Command must be invoked via Command Palette (no keyboard shortcut assigned)
+3. ✅ User must search for "gc" or "garbage collect graph" in the palette
 
 **Design Decision** 🔍: Why developer-only?
 
-- GC is **automatically scheduled** for production users (every 3 days)
+- GC is **automatically scheduled** for production users (every 30 days)
 - Manual GC is primarily for debugging, testing, or urgent cleanup
 - Prevents accidental triggers by regular users
 - Reduces UI clutter
 
 **Handler Entry Point**:
 
-**Location**: `src/main/frontend/handler/repo.cljs:232-238`
+**Location**: `src/main/frontend/handler/repo.cljs:194-203`
 
 ```clojure
 (defn gc-graph!
@@ -211,14 +214,14 @@ The GC feature is **exclusively a developer tool** - it does not appear in the s
   (p/do!
    (state/<invoke-db-worker :thread-api/gc-graph graph)
    (state/pub-event! [:notification/show
-                      {:content "Graph gc successfully!"
+                      {:content (t :graph/gc-success)
                        :status :success}])))
 ```
 
 **Behavior**:
 
 - Fires worker message `:thread-api/gc-graph` with graph name
-- Immediately shows success notification (⚠️ **optimistic** - doesn't wait for completion)
+- Immediately shows success notification via i18n key `(t :graph/gc-success)` (⚠️ **optimistic** - doesn't wait for completion)
 - Returns a promise that resolves when worker call completes
 
 ⚠️ **Gotcha**: The notification appears before GC actually finishes! This is acceptable because GC runs in a background thread.
@@ -284,13 +287,11 @@ Logseq's database is **DataScript** (an immutable, in-memory Clojure database) p
 DataScript stores its data as a **tree of addresses**:
 
 1. **Root Addresses** (stored at `addr = 0`):
-
    - `:eavt` - Entity-Attribute-Value-Time index address
    - `:avet` - Attribute-Value-Entity-Time index address
    - `:aevt` - Attribute-Entity-Value-Time index address
 
 2. **Internal Addresses** (always protected):
-
    - `addr = 0` - Schema/metadata
    - `addr = 1` - Tail pointer (performance optimization)
 
@@ -435,7 +436,7 @@ WHERE kvs.addr NOT IN (SELECT addr FROM all_referenced)
                                        :rowMode "array"})
                         bean/->clj
                         ffirst
-                        sqlite-util/transit-read)
+                        sqlite-util/read-transit-str)
         ;; 0: Datascript sets 0 as the address to store the db's meta
         ;; 1: Datascript sets 1 for tail, to improve the performance
         internal-addrs (set [0 1 (:eavt schema) (:avet schema) (:aevt schema)])
@@ -495,7 +496,7 @@ WHERE kvs.addr NOT IN (SELECT addr FROM all_referenced)
   [db]
   (let [schema (let [stmt (.prepare db "select content from kvs where addr = ?")
                      content (.-content (.get stmt 0))]
-                 (sqlite-util/transit-read content))
+                 (sqlite-util/read-transit-str content))
         set-addresses #{(:eavt schema) (:avet schema) (:aevt schema)}
         internal-addresses (conj set-addresses 0 1)
         parent->children (let [stmt (.prepare db "select addr, addresses from kvs")]
@@ -579,23 +580,15 @@ flowchart LR
 
 🔍 **Critical Finding**: GC runs automatically every time a graph is opened!
 
-**Location**: `src/main/frontend/worker/db_worker.cljs:258-297`
+**Location**: `src/main/frontend/worker/db_core.cljs`
 
 ```clojure
-(defn- create-or-open-db!
-  [repo {:keys [config datoms] :as opts}]
-  (when-not (worker-state/get-sqlite-conn repo)
-    (p/let [[db search-db client-ops-db :as dbs] (get-dbs repo)
-            storage (new-sqlite-storage db)
-            ;; ... setup code ...
-            ]
-      ;; ... database initialization ...
-
-      (gc-sqlite-dbs! db client-ops-db conn {})  ;; 👈 Line 297: Auto-GC!
-
-      ;; ... migration and listeners ...
-      )))
+;; gc-sqlite-dbs! is called during graph open from create-or-open-db!
+;; Signature: (gc-sqlite-dbs! sqlite-db datascript-conn {:keys [full-gc?]})
+(gc-sqlite-dbs! db conn {})
 ```
+
+````
 
 **When does this run?**
 
@@ -607,24 +600,25 @@ flowchart LR
 
 ### The Scheduling Algorithm
 
-**Location**: `src/main/frontend/worker/db_worker.cljs:243-256`
+**Location**: `src/main/frontend/worker/db_core.cljs:385-404`
 
 ```clojure
 (defn- gc-sqlite-dbs!
   "Gc main db weekly and rtc ops db each time when opening it"
-  [sqlite-db client-ops-db datascript-conn {:keys [full-gc?]}]
+  [sqlite-db datascript-conn {:keys [full-gc?]}]
   (let [last-gc-at (:kv/value (d/entity @datascript-conn :logseq.kv/graph-last-gc-at))]
     (when (or full-gc?
               (nil? last-gc-at)
               (not (number? last-gc-at))
-              (> (- (common-util/time-ms) last-gc-at) (* 3 24 3600 1000))) ; 3 days ago
-      (println :debug "gc current graph")
-      (doseq [db (if @*publishing? [sqlite-db] [sqlite-db client-ops-db])]
-        (sqlite-gc/gc-kvs-table! db {:full-gc? full-gc?})
-        (.exec db "VACUUM"))
-      (d/transact! datascript-conn [{:db/ident :logseq.kv/graph-last-gc-at
-                                     :kv/value (common-util/time-ms)}]))))
-```
+              (> (- (common-util/time-ms) last-gc-at) (* 30 24 3600 1000))) ; 30 days ago
+      (log/info :gc-sqlite-dbs "gc current graph")
+      (sqlite-gc/gc-kvs-table! sqlite-db {:full-gc? full-gc?})
+      (.exec sqlite-db "VACUUM")
+      (ldb/transact! datascript-conn [{:db/ident :logseq.kv/graph-last-gc-at
+                                       :kv/value (common-util/time-ms)}]
+        {:skip-validate-db? true
+         :persist-op? false}))))
+````
 
 **The Guard Conditions**:
 
@@ -633,27 +627,26 @@ GC only runs if **ANY** of these are true:
 1. `full-gc? = true` - Manual trigger always runs
 2. `last-gc-at = nil` - Never been run before
 3. `last-gc-at` is not a number - Corrupted metadata
-4. `(current-time - last-gc-at) > 3 days` - More than 3 days since last GC
+4. `(current-time - last-gc-at) > 30 days` - More than 30 days since last GC
 
-**The 3-Day Calculation**:
+**The 30-Day Calculation**:
 
 ```clojure
-(> (- (common-util/time-ms) last-gc-at) (* 3 24 3600 1000))
-;;                                        └─ 3 days in milliseconds
-;;                                           = 3 × 24 hours × 3600 sec × 1000 ms
-;;                                           = 259,200,000 ms
+(> (- (common-util/time-ms) last-gc-at) (* 30 24 3600 1000))
+;;                                        └─ 30 days in milliseconds
+;;                                           = 30 × 24 hours × 3600 sec × 1000 ms
+;;                                           = 2,592,000,000 ms
 ```
 
-⚠️ **Gotcha**: The comment says "Gc main db **weekly**" but the code uses **3 days**! The comment is outdated.
+⚠️ **Gotcha**: The function docstring says "weekly" but the code enforces **30 days (monthly)**. The comment is stale.
 
 ### Metadata Tracking
 
-**Location**: `deps/db/src/logseq/db/frontend/kv_entity.cljs:33-35`
+**Location**: `deps/db/src/logseq/db/frontend/kv_entity.cljs:30-33`
 
 ```clojure
 :logseq.kv/graph-last-gc-at {:doc "Last time graph gc at"
-                             :rtc {:rtc/ignore-entity-when-init-upload true
-                                   :rtc/ignore-entity-when-init-download true}}
+                             :rtc {:rtc/ignore-entity-when-init-upload true}}
 ```
 
 **Storage**:
@@ -663,48 +656,34 @@ GC only runs if **ANY** of these are true:
 - **Not synced** via RTC (`:rtc/ignore-entity-*`)
 - Each client tracks its own GC schedule
 
-### Dual Database Cleanup
+### Single Database GC + Separate Client-Ops Cleanup
 
 ```mermaid
 flowchart TB
     START[gc-sqlite-dbs! called]
-    CHECK{Check GC conditions}
+    CHECK{Check GC conditions<br/>30-day throttle}
 
     CHECK -->|Skip| NOOP[No GC needed]
-    CHECK -->|Run| DUAL{Publishing mode?}
-
-    DUAL -->|Yes @*publishing?| MAIN[GC main DB only]
-    DUAL -->|No| BOTH[GC both DBs]
-
-    BOTH --> MAINDB[1. Main SQLite DB<br/>gc-kvs-table!]
-    BOTH --> OPSDB[2. Client-Ops DB<br/>gc-kvs-table!]
-
-    MAIN --> MAINDB
+    CHECK -->|Run| MAINDB[GC main SQLite DB<br/>gc-kvs-table!]
 
     MAINDB --> VAC1[VACUUM main DB]
-    OPSDB --> VAC2[VACUUM client-ops DB]
-
     VAC1 --> UPDATE[Update :logseq.kv/graph-last-gc-at]
-    VAC2 --> UPDATE
-
     UPDATE --> DONE[GC Complete]
 
+    SEPARATE[Separate timer<br/>run-client-ops-cleanup!] --> OPSDB[Prune finished<br/>RTC history ops]
+
     style CHECK fill:#fff4e1
-    style DUAL fill:#ffe1f5
     style MAINDB fill:#e1ffe1
     style OPSDB fill:#e1ffe1
     style DONE fill:#ffd700
+    style SEPARATE fill:#ffe1f5
 ```
 
-**Why two databases?**
+**Architecture change from previous version:**
 
-1. **Main DB**: Graph data (blocks, pages, properties)
-2. **Client-Ops DB**: RTC (Real-Time Collaboration) operation log
-
-**Publishing mode exception**:
-
-- When `@*publishing?` is true (graph being exported/published), only the main DB is GC'd
-- Client-ops DB is skipped (not relevant for published graphs)
+- `gc-sqlite-dbs!` now only receives `(sqlite-db datascript-conn opts)` — **no `client-ops-db` parameter**
+- The client-ops database is **no longer GC'd** by the kvs-address GC system
+- RTC history cleanup is handled separately by `run-client-ops-cleanup!` (`db_core.cljs` line 381), which prunes finished operation history entries based on undo/redo references, on its own periodic timer
 
 ---
 
@@ -714,11 +693,13 @@ flowchart TB
 
 `VACUUM` is a **SQLite command** that rebuilds the database file, eliminating dead space and reorganizing data for optimal performance.
 
-**Location**: `src/main/frontend/worker/db_worker.cljs:254`
+**Location**: `src/main/frontend/worker/db_core.cljs:395`
 
 ```clojure
-(.exec db "VACUUM")
+(.exec sqlite-db "VACUUM")
 ```
+
+VACUUM runs on the **main database only**. The client-ops DB does not receive a VACUUM during GC.
 
 ### Why is it necessary?
 
@@ -749,8 +730,8 @@ SQLite uses **copy-on-write** storage:
 **Mitigation in Logseq**:
 
 - ✅ Runs in dedicated worker thread (doesn't block UI)
-- ✅ Only runs every 3 days (not on every graph open)
-- ✅ Runs during graph opening (user expects loading time)
+- ✅ Only runs every 30 days (not on every graph open)
+- ✅ Runs during graph opening (user expects some loading time)
 
 ### VACUUM Execution Flow
 
@@ -794,22 +775,22 @@ SQLite supports automatic vacuum modes:
 - ❌ Auto-vacuum has per-transaction overhead
 - ❌ Incremental vacuum still requires manual triggers
 - ❌ FULL auto-vacuum can slow down DELETE operations significantly
-- ✅ Manual VACUUM every 3 days is more predictable and controllable
+- ✅ Manual VACUUM every 30 days is more predictable and controllable
 
 ---
 
 ## Key Witnesses (Main Files)
 
-| File                                             | Role                     | Lines of Interest                                                        | Criticality  |
-| ------------------------------------------------ | ------------------------ | ------------------------------------------------------------------------ | ------------ |
-| `deps/db/src/logseq/db/sqlite/gc.cljs`           | **Core GC Logic**        | 1-121 (entire file)                                                      | 🔴 Critical  |
-| `src/main/frontend/worker/db_worker.cljs`        | **Worker Orchestration** | 243-256 (gc-sqlite-dbs!)<br/>740-746 (thread API)<br/>297 (auto-trigger) | 🔴 Critical  |
-| `src/main/frontend/handler/repo.cljs`            | **Frontend Handler**     | 232-238 (gc-graph!)                                                      | 🟡 Important |
-| `src/main/frontend/modules/shortcut/config.cljs` | **UI Command**           | 616-618 (command definition)                                             | 🟢 Low       |
-| `deps/db/src/logseq/db/common/sqlite.cljs`       | **Database Schema**      | 10-13 (create-kvs-table!)                                                | 🔴 Critical  |
-| `deps/db/src/logseq/db/frontend/kv_entity.cljs`  | **Metadata Schema**      | 33-35 (last-gc-at entity)                                                | 🟡 Important |
-| `deps/db/src/logseq/db/sqlite/debug.cljs`        | **Debugging Tools**      | 7-37 (find-missing-addresses)                                            | 🟢 Low       |
-| `deps/db/test/logseq/db/sqlite/gc_test.cljs`     | **Test Suite**           | 25-49 (gc-kvs-table-test)                                                | 🟡 Important |
+| File                                             | Role                     | Lines of Interest                                                                          | Criticality  |
+| ------------------------------------------------ | ------------------------ | ------------------------------------------------------------------------------------------ | ------------ |
+| `deps/db/src/logseq/db/sqlite/gc.cljs`           | **Core GC Logic**        | 1-121 (entire file)                                                                        | 🔴 Critical  |
+| `src/main/frontend/worker/db_core.cljs`          | **Worker Orchestration** | 385-404 (gc-sqlite-dbs!)<br/>1568-1578 (thread API)<br/>auto-trigger in create-or-open-db! | 🔴 Critical  |
+| `src/main/frontend/handler/repo.cljs`            | **Frontend Handler**     | 194-203 (gc-graph!)                                                                        | 🟡 Important |
+| `src/main/frontend/modules/shortcut/config.cljs` | **UI Command**           | 484-488 (command definition)                                                               | 🟢 Low       |
+| `deps/db/src/logseq/db/common/sqlite.cljs`       | **Database Schema**      | 10-13 (create-kvs-table!)                                                                  | 🔴 Critical  |
+| `deps/db/src/logseq/db/frontend/kv_entity.cljs`  | **Metadata Schema**      | 30-33 (last-gc-at entity)                                                                  | 🟡 Important |
+| `deps/db/src/logseq/db/sqlite/debug.cljs`        | **Debugging Tools**      | 7-37 (find-missing-addresses)                                                              | 🟢 Low       |
+| `deps/db/test/logseq/db/sqlite/gc_test.cljs`     | **Test Suite**           | 25-49 (gc-kvs-table-test)                                                                  | 🟡 Important |
 
 ---
 
@@ -819,12 +800,12 @@ SQLite supports automatic vacuum modes:
 
 **Evidence**: `src/main/frontend/handler/repo.cljs:234-238`
 
-The UI shows "Graph gc successfully!" **before** GC actually completes:
+The UI shows the i18n string for `:graph/gc-success` **before** GC actually completes:
 
 ```clojure
 (p/do!
  (state/<invoke-db-worker :thread-api/gc-graph graph)  ;; Async worker call
- (state/pub-event! [:notification/show ...])) ;; Immediate notification
+ (state/pub-event! [:notification/show {:content (t :graph/gc-success) ...}])) ;; Immediate notification
 ```
 
 **Impact**: Low - GC is reliable and runs in background. Notification is for user feedback.
@@ -855,28 +836,28 @@ The UI shows "Graph gc successfully!" **before** GC actually completes:
 
 ---
 
-### 🔍 Finding #3: Comment/Code Discrepancy
+### 🔍 Finding #3: Comment/Code Discrepancy (STILL PRESENT)
 
-**Evidence**: `src/main/frontend/worker/db_worker.cljs:244`
+**Evidence**: `src/main/frontend/worker/db_core.cljs:385`
 
 ```clojure
 (defn- gc-sqlite-dbs!
   "Gc main db weekly and rtc ops db each time when opening it"
-  ;; But code uses: (* 3 24 3600 1000) ; 3 days ago
+  ;; But code uses: (* 30 24 3600 1000) ; 30 days ago
 ```
 
-**Impact**: Low - Just a documentation issue.
+**Impact**: Low - Just a documentation issue in the source code docstring.
 
-**Recommendation**: Update comment to say "every 3 days" instead of "weekly".
+**Recommendation**: Update the function docstring to say "every 30 days" instead of "weekly". Also: client-ops DB is no longer GC'd by this function.
 
 ---
 
 ### 🔍 Finding #4: No Error Handling for VACUUM Failures
 
-**Evidence**: `src/main/frontend/worker/db_worker.cljs:254`
+**Evidence**: `src/main/frontend/worker/db_core.cljs:395`
 
 ```clojure
-(.exec db "VACUUM")  ;; No try/catch, no error propagation
+(.exec sqlite-db "VACUUM")  ;; No try/catch, no error propagation
 ```
 
 **Risk Scenarios**:
@@ -895,25 +876,23 @@ The UI shows "Graph gc successfully!" **before** GC actually completes:
 
 ---
 
-### 🔍 Finding #5: Client-Ops DB Always GC'd (Even When Not Needed)
+### 🔍 Finding #5: Client-Ops DB Has Separate Cleanup (Not KVS GC)
 
-**Evidence**: `src/main/frontend/worker/db_worker.cljs:252-254`
+**Evidence**: `src/main/frontend/worker/db_core.cljs:401`
 
 ```clojure
-(doseq [db (if @*publishing? [sqlite-db] [sqlite-db client-ops-db])]
-  (sqlite-gc/gc-kvs-table! db {:full-gc? full-gc?})
-  (.exec db "VACUUM"))
+(defn- run-client-ops-cleanup!
+  [repo]
+  (let [protected-tx-ids (worker-undo-redo/referenced-history-tx-ids repo)]
+    (client-op/cleanup-finished-history-ops! repo protected-tx-ids)
+    nil))
 ```
 
-**Observation**: Client-ops DB is GC'd every 3 days, even if it has minimal data.
+**Observation**: The client-ops DB no longer goes through the kvs-address GC path. It has a dedicated `run-client-ops-cleanup!` function that prunes finished RTC history ops based on undo/redo state, running on its own periodic timer (`ensure-client-ops-cleanup-timer!`).
 
-**RTC Operation Log Characteristics**:
+**Architecture implication**: KVS GC and RTC ops cleanup are now completely separate subsystems.
 
-- Small database (operations log, not full graph data)
-- High churn (operations are frequently added/removed)
-- GC is beneficial but could be scheduled differently
-
-**Verdict**: ✅ Acceptable - Client-ops DB benefits from regular cleanup.
+**Verdict**: ✅ Cleaner separation of concerns.
 
 ---
 
@@ -1037,7 +1016,7 @@ DELETE FROM kvs WHERE addr IN (?, ?, ?, ...)  -- Batch delete
 
 #### `repo-handler/gc-graph!`
 
-**File**: `src/main/frontend/handler/repo.cljs:232-238`
+**File**: `src/main/frontend/handler/repo.cljs:194-203`
 
 ```clojure
 (defn gc-graph! [graph] ...)
@@ -1072,10 +1051,16 @@ DELETE FROM kvs WHERE addr IN (?, ?, ?, ...)  -- Batch delete
 
 #### `:thread-api/gc-graph`
 
-**File**: `src/main/frontend/worker/db_worker.cljs:740-746`
+**File**: `src/main/frontend/worker/db_core.cljs:1568-1578`
 
 ```clojure
-(def-thread-api :thread-api/gc-graph [repo] ...)
+(def-thread-api :thread-api/gc-graph
+  [repo]
+  (let [{:keys [db]} (get @*sqlite-conns repo)
+        conn (get @*datascript-conns repo)]
+    (when (and db conn)
+      (gc-sqlite-dbs! db conn {:full-gc? true})
+      nil)))
 ```
 
 **Purpose**: Worker thread entry point for GC.
@@ -1088,9 +1073,9 @@ DELETE FROM kvs WHERE addr IN (?, ?, ?, ...)  -- Batch delete
 
 **Behavior**:
 
-1. Retrieves SQLite connections for repo
-2. Calls `gc-sqlite-dbs!` with `{:full-gc? true}`
-3. Blocks until GC completes
+1. Retrieves SQLite db and DataScript conn for repo
+2. Calls `gc-sqlite-dbs!` with `{:full-gc? true}` (bypasses 30-day throttle)
+3. Returns `nil` when complete
 
 **Example** (internal use only):
 
@@ -1260,7 +1245,7 @@ sequenceDiagram
 
     State->>Worker: :thread-api/gc-graph message
     Worker->>Conn: Get SQLite connections for repo
-    Conn-->>Worker: {:db main-db :client-ops ops-db}
+    Conn-->>Worker: {:db main-db}
     Worker->>Conn: Get DataScript conn
     Conn-->>Worker: datascript-conn
 
@@ -1271,32 +1256,30 @@ sequenceDiagram
 
     Note over Worker: full-gc? = true, so always run
 
-    loop For each database [main, client-ops]
-        Worker->>GC: gc-kvs-table! db {:full-gc? true}
+    Worker->>GC: gc-kvs-table! main-db {:full-gc? true}
 
-        loop Until no garbage found
-            GC->>SQL: Execute get-non-refed-addrs-sql
-            SQL-->>GC: List of non-referenced addresses
-            GC->>SQL: SELECT schema from addr = 0
-            SQL-->>GC: Schema with internal addresses
-            GC->>GC: Filter out internal addresses
+    loop Until no garbage found
+        GC->>SQL: Execute get-non-refed-addrs-sql
+        SQL-->>GC: List of non-referenced addresses
+        GC->>SQL: SELECT schema from addr = 0
+        SQL-->>GC: Schema with internal addresses
+        GC->>GC: Filter out internal addresses
 
-            alt Unused addresses found
-                GC->>SQL: BEGIN TRANSACTION
-                loop For each unused address
-                    GC->>SQL: DELETE FROM kvs WHERE addr = ?
-                end
-                GC->>SQL: COMMIT
-                GC->>GC: Recurse (full-gc? = true)
-            else No unused addresses
-                GC-->>Worker: GC complete (no garbage)
+        alt Unused addresses found
+            GC->>SQL: BEGIN TRANSACTION
+            loop For each unused address
+                GC->>SQL: DELETE FROM kvs WHERE addr = ?
             end
+            GC->>SQL: COMMIT
+            GC->>GC: Recurse (full-gc? = true)
+        else No unused addresses
+            GC-->>Worker: GC complete (no garbage)
         end
-
-        Worker->>SQL: PRAGMA VACUUM
-        Note over SQL: Database locked during VACUUM
-        SQL-->>Worker: Disk space reclaimed
     end
+
+    Worker->>SQL: PRAGMA VACUUM (main db only)
+    Note over SQL: Database locked during VACUUM
+    SQL-->>Worker: Disk space reclaimed
 
     Worker->>Meta: Update :logseq.kv/graph-last-gc-at
     Meta->>Meta: Store current timestamp
@@ -1329,7 +1312,7 @@ sequenceDiagram
     DB->>SQLite: Create kvs tables if needed
     DB->>DB: Initialize DataScript connection
 
-    DB->>GC: gc-sqlite-dbs! db client-ops-db conn {}
+    DB->>GC: gc-sqlite-dbs! db conn {}
     Note over GC: opts = {} (full-gc? is nil/false)
 
     GC->>Meta: d/entity :logseq.kv/graph-last-gc-at
@@ -1337,17 +1320,15 @@ sequenceDiagram
 
     alt Never run before (last-gc-at = nil)
         GC->>GC: Run GC
-    else last-gc-at > 3 days ago
+    else last-gc-at > 30 days ago
         GC->>GC: Run GC
-    else last-gc-at < 3 days
+    else last-gc-at < 30 days
         GC-->>DB: Skip GC (too recent)
     end
 
     opt GC runs
-        loop For each database
-            GC->>SQLite: gc-kvs-table! (single pass)
-            GC->>SQLite: VACUUM
-        end
+        GC->>SQLite: gc-kvs-table! main-db (single pass)
+        GC->>SQLite: VACUUM main-db
         GC->>Meta: Update :logseq.kv/graph-last-gc-at
     end
 
@@ -1497,7 +1478,7 @@ console.log(
 
 - GC may have run but found no garbage
 - VACUUM may have failed (check console for errors)
-- Last GC was < 3 days ago (automatic GC skipped)
+- Last GC was < 30 days ago (automatic GC skipped)
 
 **Solution**:
 
@@ -1648,7 +1629,6 @@ GC Time ≈ O(N) where N = total addresses in database
    - No indexes on JSON data (SQLite limitation)
 
 2. **DELETE Operations (10-20% of time)**:
-
    - Each DELETE must update indexes
    - Transaction overhead (but necessary for atomicity)
 
@@ -1692,7 +1672,7 @@ GC Time ≈ O(N) where N = total addresses in database
 
 ### 🎯 Improvement #2: Incremental GC
 
-**Current State**: GC runs all-or-nothing every 3 days.
+**Current State**: GC runs all-or-nothing every 30 days.
 
 **Proposal**:
 
@@ -1713,7 +1693,7 @@ GC Time ≈ O(N) where N = total addresses in database
 **Trade-offs**:
 
 - More complex scheduling logic
-- May not be worth it (current 3-day schedule works well)
+- May not be worth it (current 30-day schedule works well)
 
 ---
 
@@ -1859,13 +1839,13 @@ The **Logseq Database Garbage Collection System** is a **well-designed, producti
 2. **Optimistic notification** - Success shown before completion
 3. **No error handling** - VACUUM failures not reported
 4. **No metrics** - Can't measure effectiveness
-5. **Comment drift** - "weekly" vs 3-day discrepancy
+5. **Comment drift** - "weekly" vs 30-day discrepancy
 
 🔍 **Detective's Final Notes**:
 
 The GC system solves a real problem (database bloat from deleted entities) with a pragmatic approach:
 
-- **Frequency**: 3-day interval balances cleanup vs performance
+- **Frequency**: 30-day interval balances cleanup vs performance
 - **Algorithm**: SQL-based approach is faster than tree-walking
 - **Scope**: Cleans both main and client-ops databases
 - **Safety**: Multiple safeguards prevent corruption
@@ -1891,17 +1871,17 @@ logseq/
 ├── src/main/frontend/
 │   ├── handler/
 │   │   └── repo.cljs ................................ 🟡 Frontend handler for gc-graph!
-│   │       └── gc-graph! (lines 232-238)
+│   │       └── gc-graph! (lines 194-203)
 │   │
 │   ├── modules/shortcut/
 │   │   └── config.cljs .............................. 🟢 UI command registration
-│   │       └── :dev/gc-graph (lines 616-618)
+│   │       └── :dev/gc-graph (lines 484-488)
 │   │
 │   └── worker/
-│       └── db_worker.cljs ........................... 🔴 Worker thread orchestration
-│           ├── gc-sqlite-dbs! (lines 243-256) ....... Core scheduling logic
-│           ├── :thread-api/gc-graph (lines 740-746) . Worker API endpoint
-│           └── create-or-open-db! (line 297) ........ Auto-trigger on graph open
+│       └── db_core.cljs ............................ 🔴 Worker thread orchestration
+│           ├── gc-sqlite-dbs! (lines 385-404) ....... Core scheduling logic
+│           ├── :thread-api/gc-graph (lines 1568-1578) Worker API endpoint
+│           └── create-or-open-db! (db_core.cljs) .... Auto-trigger on graph open
 │
 └── deps/db/
     ├── src/logseq/db/
@@ -1929,7 +1909,7 @@ logseq/
     │   │
     │   └── frontend/
     │       └── kv_entity.cljs ....................... 🟡 Metadata entity schemas
-    │           └── :logseq.kv/graph-last-gc-at (33-35)
+    │           └── :logseq.kv/graph-last-gc-at (30-33)
     │
     └── test/logseq/db/sqlite/
         └── gc_test.cljs ............................. 🟡 Test suite

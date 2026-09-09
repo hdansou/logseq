@@ -1,6 +1,6 @@
 # The Case of the ClojureScript SDK: A Developer's Investigation
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 **Case File:** #12168
 **Date Opened:** October 21, 2025
@@ -18,28 +18,45 @@ On October 21, 2025, a significant addition to the Logseq ecosystem emerged from
 **The Perpetrator:** An auto-generated SDK system
 **The Motive:** Enable ClojureScript developers to build Logseq plugins with idiomatic CLJS patterns
 
+## Findings: New Capabilities
+
+Validation against current source (2026-05-29) confirms the CLJS SDK now exposes additional namespaces and APIs beyond the original 2025 snapshot:
+
+- New namespaces: `com.logseq.commands`, `com.logseq.experiments`, `com.logseq.net`
+- New DB wrappers in `com.logseq.db`: `custom-query`, `set-file-content`, `get-file-content`
+- New UI wrapper in `com.logseq.ui`: `resolve-theme-css-props-vals`
+- New app event wrapper in `com.logseq.app`: `on-page-head-actions-slotted`
+- JS SDK now includes `Commands`, `Net`, and `Experiments` surfaces in `libs/src/LSPlugin.user.ts`
+
+> **Removed:** `com.logseq.core/ready` no longer injects CLJS runtime metadata via `setSDKMetadata`; the generated CLJS wrapper now delegates directly to `logseq.ready`.
+
 ---
 
 ## Chapter 1: The Discovery - What We Found
 
 ### 1.1 The Initial Clues
 
-When we first arrived at the scene (commit d8809f0b7), we found a pristine implementation spread across multiple namespaces in `libs/cljs-sdk/src/com/logseq/`:
+When we first arrived at the scene (commit d8809f0b7), we found a pristine implementation spread across multiple namespaces in `libs/cljs-sdk/src/com/logseq/`.
+
+Current inventory (2026-05-29):
 
 ```
 libs/cljs-sdk/
 ├── src/com/logseq/
-│   ├── core.cljs       (149 lines) - The mastermind
-│   ├── app.cljs        (348 lines) - Application control
-│   ├── editor.cljs     (432 lines) - Content manipulation
-│   ├── db.cljs         (34 lines)  - Query operations
+│   ├── core.cljs       (145 lines) - Lifecycle and top-level API wrappers
+│   ├── app.cljs        (354 lines) - Application control
+│   ├── commands.cljs   (26 lines)  - Command registration/execution
+│   ├── editor.cljs     (534 lines) - Content and property manipulation
+│   ├── db.cljs         (54 lines)  - Queries, subscriptions, file content APIs
+│   ├── experiments.cljs (61 lines) - Experimental renderer and host APIs
+│   ├── net.cljs        (90 lines)  - HTTP request wrappers
 │   ├── ui.cljs         (49 lines)  - User interface
 │   ├── assets.cljs     (37 lines)  - Asset management
 │   ├── git.cljs        (23 lines)  - Version control
 │   └── util.cljs       (31 lines)  - Evidence processing
 ```
 
-**First Observation:** Every file except `util.cljs` bears the mark: `Auto-generated via bb libs:generate-cljs-sdk`
+**First Observation:** All API namespaces (`core`, `app`, `commands`, `editor`, `db`, `experiments`, `net`, `ui`, `assets`, `git`) are auto-generated. `util.cljs` remains hand-written.
 
 This is no ordinary SDK. This is a machine-generated artifact.
 
@@ -116,27 +133,21 @@ At the heart of this SDK lies a deceptively simple question: _How do you seamles
 3. Normalize the result back to ClojureScript
 4. Return (potentially a promise of) ClojureScript data
 
-### 2.2 The Special Case: Plugin Initialization
+### 2.2 Plugin Initialization (Current)
 
-**The Mystery:** Why is `ready` the only function with custom implementation instead of pure generation?
+> **Removed:** `ready` is no longer a custom CLJS-only implementation that calls `js/logseq._execCallableAPIAsync("setSDKMetadata", ...)`.
 
-**Evidence:** `libs/cljs-sdk/src/com/logseq/core.cljs:19-35`
+**Current Evidence:** `libs/cljs-sdk/src/com/logseq/core.cljs:19-31`
 
 ```clojure
 (defn- ready-impl
   [model callback]
   (let [method (aget api-proxy "ready")
         args [model callback]]
-    (-> (call-method api-proxy method args)
-        (.then (fn []
-                 (js/logseq._execCallableAPIAsync
-                  "setSDKMetadata"
-                  #js {:runtime "cljs"}))))))
+    (call-method api-proxy method args)))
 ```
 
-**Discovery:** The `ready` function has a critical side effect - it marks the plugin as running in ClojureScript mode by calling `setSDKMetadata`. This allows Logseq to track which plugins use which runtime, potentially for debugging or analytics purposes.
-
-**Location Reference:** `libs/cljs-sdk/src/com/logseq/core.cljs:24-27`
+Runtime metadata is still handled in the JS SDK (`libs/src/LSPlugin.user.ts`) where `ready` calls `setSDKMetadata` with runtime `"js"`.
 
 ---
 
@@ -212,23 +223,30 @@ Functions with rest parameters (varargs) are handled specially:
 **Investigation Timeline:**
 
 1. **Schema Extraction** (`libs/scripts/extract-sdk-schema.js`)
-
    - Parses TypeScript definitions from `@logseq/libs`
    - Extracts interface metadata, method signatures, parameter types
    - Outputs `libs/dist/logseq-sdk-schema.json`
 
-2. **Namespace Detection** (`scripts/src/logseq/libs/sdk_generator.clj:218-220`)
+2. **Namespace Detection** (`scripts/src/logseq/libs/sdk_generator.clj:219-236`)
 
    ```clojure
-   proxy-names (->> getters
-                    (keep #(some-> (getter->interface-name (:returnType %)) keyword))
-                    (remove #{:IUtilsProxy})
-                    distinct)
+     modules (->> getters
+      (remove #(= "Utils" (:name %)))
+      (keep (fn [{:keys [name returnType]}]
+        (let [iface-key (some-> (getter->interface-name returnType) keyword)
+              class-key (some-> (getter->class-name returnType) keyword)
+              api (or (get interfaces iface-key)
+                (get classes class-key))]
+          (when api
+            {:getter-name name
+             :api api}))))
+      distinct)
    ```
 
    - Scans `LSPluginUser` getters (e.g., `App`, `Editor`, `DB`)
-   - Identifies which proxy interfaces to generate
-   - Excludes internal interfaces like `IUtilsProxy`
+
+- Identifies interface-backed and class-backed modules to generate
+- Excludes the getter named `Utils` (not by removing `:IUtilsProxy`)
 
 3. **Code Emission** (`scripts/src/logseq/libs/sdk_generator.clj:169-182`)
    - For each interface: generate namespace with wrapper functions
@@ -243,23 +261,29 @@ bb libs:generate-cljs-sdk
 
 ---
 
-## Chapter 4: The Eight Namespaces - A Complete Breakdown
+## Chapter 4: Namespace Breakdown (Current)
+
+> **Removed:** The SDK is no longer limited to "Eight Namespaces".
+
+Current generated API namespaces: `core`, `app`, `commands`, `editor`, `db`, `experiments`, `net`, `ui`, `assets`, `git`.
+Hand-written utility namespace: `util`.
 
 ### 4.1 `com.logseq.core` - The Foundation
 
 **Role:** Plugin lifecycle, settings management, main UI control
-**Functions:** 15
-**Special Status:** Only namespace with hand-written code (`ready-impl`)
+**Functions:** 19 public wrappers (+ helper/private fns)
+
+> **Removed:** "Only namespace with hand-written code (`ready-impl`)" is no longer accurate.
 
 **Key Evidence:**
 
-| Function                        | Purpose                                      | Location |
-| ------------------------------- | -------------------------------------------- | -------- |
-| `ready`                         | Initialize plugin, set CLJS runtime metadata | :24-27   |
-| `beforeunload`                  | Register cleanup callback                    | :43-47   |
-| `provide-model`                 | Expose methods to UI templates               | :49-53   |
-| `use-settings-schema`           | Define plugin settings structure             | :73-77   |
-| `show-main-ui` / `hide-main-ui` | Control main plugin window                   | :128-137 |
+| Function                        | Purpose                              | Location |
+| ------------------------------- | ------------------------------------ | -------- |
+| `ready`                         | Initialize plugin via `logseq.ready` | :25-31   |
+| `beforeunload`                  | Register cleanup callback            | :43-47   |
+| `provide-model`                 | Expose methods to UI templates       | :49-53   |
+| `use-settings-schema`           | Define plugin settings structure     | :73-77   |
+| `show-main-ui` / `hide-main-ui` | Control main plugin window           | :128-137 |
 
 **Location Reference:** `libs/cljs-sdk/src/com/logseq/core.cljs`
 
@@ -375,7 +399,6 @@ Operations:
 Two-level property system:
 
 1. **Schema Level** (`:354-378`)
-
    - `get-property` / `upsert-property` / `remove-property`
    - Defines property types and allowed values
 
@@ -389,9 +412,9 @@ Two-level property system:
 ### 4.4 `com.logseq.db` - The Query Engine
 
 **Role:** Database queries and transaction monitoring
-**Functions:** 4
+**Functions:** 7
 **Proxy Target:** `js/logseq.DB`
-**File Size:** 34 lines (smallest namespace)
+**File Size:** 54 lines
 
 **Evidence:** `libs/cljs-sdk/src/com/logseq/db.cljs`
 
@@ -440,10 +463,16 @@ Two-level property system:
 
 **Location Reference:** `libs/cljs-sdk/src/com/logseq/db.cljs`
 
+Additional current DB wrappers:
+
+- `custom-query`
+- `set-file-content`
+- `get-file-content`
+
 ### 4.5 `com.logseq.ui` - User Interface
 
 **Role:** Messages, DOM queries, theming
-**Functions:** 6
+**Functions:** 6 (plus `resolve-theme-css-props-vals`)
 **Proxy Target:** `js/logseq.UI`
 
 **Evidence:** `libs/cljs-sdk/src/com/logseq/ui.cljs`
@@ -470,6 +499,38 @@ Two-level property system:
 - `check-slot-valid` - Validate UI slot availability
 
 **Location Reference:** `libs/cljs-sdk/src/com/logseq/ui.cljs`
+
+### 4.9 `com.logseq.commands` - Unified Command API
+
+**Role:** Register and execute commands
+**Functions:** 2 public wrappers
+**Proxy Target:** `js/logseq.Commands`
+
+Key wrappers:
+
+- `register`
+- `execute`
+
+### 4.10 `com.logseq.experiments` - Experimental Surface
+
+**Role:** Experimental renderers and host integrations
+**Functions:** 9 public wrappers
+**Proxy Target:** `js/logseq.Experiments`
+
+Includes wrappers such as:
+
+- `register-sidebar-renderer`
+- `register-route-renderer`
+- `register-extensions-enhancer`
+- `ensure-host-scope`
+
+### 4.11 `com.logseq.net` - Network API
+
+**Role:** HTTP requests from plugin context
+**Functions:** 7 public wrappers
+**Proxy Target:** `js/logseq.Net`
+
+Methods: `request`, `get`, `head`, `post`, `put`, `patch`, `delete`.
 
 ### 4.6 `com.logseq.assets` - File Management
 
@@ -580,26 +641,27 @@ Minimal but complete git interface:
 ```json
 {
   "name": "@logseq/cljs-libs",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Logseq plugin API wrapper",
   "dependencies": {
-    "@logseq/libs": "^0.2.3"
+    "@logseq/libs": "0.3.2"
   }
 }
 ```
 
-**Critical Dependency:** Relies on `@logseq/libs` ^0.2.3 (the JavaScript SDK)
+**Critical Dependency:** Relies on `@logseq/libs` 0.3.2 (the JavaScript SDK)
 
 ### 5.3 Dependencies
 
 **Evidence:** `libs/cljs-sdk/deps.edn`
 
 ```clojure
-{:deps {org.clojure/clojurescript {:mvn/version "1.12.42"}
-        cljs-bean/cljs-bean {:mvn/version "1.5.0"}}}
+{:deps {org.clojure/clojurescript {:mvn/version "1.12.134"}
+  cljs-bean/cljs-bean       {:mvn/version "1.9.0"}}
+ :npm-deps {"@logseq/libs" "0.2.3"}}
 ```
 
-**Key Dependency:** `cljs-bean` 1.5.0 - handles JS↔CLJS conversion
+**Key Dependencies:** `cljs-bean` 1.9.0 and ClojureScript 1.12.134
 
 ---
 
@@ -631,7 +693,7 @@ Minimal but complete git interface:
 
 **Execution Flow:**
 
-1. `logseq/ready` initializes plugin and sets CLJS metadata
+1. `logseq/ready` initializes plugin and establishes host connection
 2. Promise resolves when connection established
 3. Slash command registered with Logseq
 4. User types `/hello` → callback invoked → text inserted
@@ -774,7 +836,7 @@ Minimal but complete git interface:
 
 ### 7.2 Pattern: Rest Parameter Collection
 
-**Occurrence:** 4 functions
+**Occurrence:** Multiple functions across app/db/commands/experiments namespaces
 
 **Template:**
 
@@ -792,6 +854,8 @@ Minimal but complete git interface:
 - `invoke-external-plugin`
 - `datascript-query`
 - `get-current-graph-configs`
+- `commands/execute`
+- `experiments/invoke-exper-method`
 
 **Location References:**
 
@@ -800,7 +864,7 @@ Minimal but complete git interface:
 
 ### 7.3 Pattern: Proxy Delegation
 
-**Occurrence:** All 7 generated namespaces
+**Occurrence:** All generated API namespaces (`core`, `app`, `commands`, `editor`, `db`, `experiments`, `net`, `ui`, `assets`, `git`)
 
 **Template:**
 
@@ -845,10 +909,8 @@ Minimal but complete git interface:
 **Process:**
 
 ```bash
-cd /path/to/logseq/libs
-
 # Step 1: Extract TypeScript schema
-yarn run generate:schema
+pnpm --dir libs generate:schema
 # → Outputs libs/dist/logseq-sdk-schema.json
 
 # Step 2: Generate ClojureScript wrappers
@@ -889,7 +951,7 @@ clojure -T:build jar
 clojure -T:build deploy
 ```
 
-**Artifact:** `com.logseq/libs` version 0.0.11
+**Artifact:** `com.logseq/libs` version 0.0.12
 
 ---
 
@@ -899,13 +961,15 @@ clojure -T:build deploy
 
 **Location:** `libs/cljs-sdk/src/com/logseq/core.cljs:24-27`
 
+> **Removed:** The CLJS wrapper no longer issues this call directly:
+
 ```clojure
 (js/logseq._execCallableAPIAsync
   "setSDKMetadata"
   #js {:runtime "cljs"})
 ```
 
-**Significance:** Logseq can distinguish ClojureScript plugins from JavaScript plugins. This metadata could be used for:
+**Current significance:** Runtime metadata still exists in the JS SDK path (`libs/src/LSPlugin.user.ts`) and currently reports runtime `"js"` during `ready`.
 
 - Debugging (different stack trace handling)
 - Analytics (tracking adoption)
@@ -927,19 +991,19 @@ clojure -T:build deploy
 
 ### 9.3 Discovery 3: Generator Exclusions
 
-**Location:** `scripts/src/logseq/libs/sdk_generator.clj:220`
+**Location:** `scripts/src/logseq/libs/sdk_generator.clj:225`
 
 ```clojure
-(remove #{:IUtilsProxy})
+(remove #(= "Utils" (:name %)))
 ```
 
-**Question:** Why is `IUtilsProxy` excluded from generation?
+**Question:** Why is the `Utils` getter excluded from generation?
 
 **Hypothesis:**
 
-1. Internal-only interface not meant for plugin consumption
-2. Already handled by `util` namespace manually
-3. Would create circular dependencies
+1. The generated SDK already has a hand-written `util` conversion namespace
+2. `Utils` methods in JS SDK are not emitted as a top-level CLJS proxy namespace
+3. Keeps generated surface focused on stable user-facing modules
 
 **Status:** Requires further investigation of TypeScript sources.
 
@@ -1015,14 +1079,17 @@ The ClojureScript SDK is a **sophisticated code generation system** that provide
 ```
 libs/cljs-sdk/
 ├── src/com/logseq/
-│   ├── core.cljs       - Plugin lifecycle, settings, main UI
-│   ├── app.cljs        - Application operations, commands, events
-│   ├── editor.cljs     - Blocks, pages, properties
-│   ├── db.cljs         - Queries, subscriptions
-│   ├── ui.cljs         - Messages, DOM utilities
-│   ├── assets.cljs     - File management
-│   ├── git.cljs        - Version control
-│   └── util.cljs       - Data conversion (hand-written)
+│   ├── core.cljs         - Plugin lifecycle and top-level wrappers
+│   ├── app.cljs          - Application operations, commands, events
+│   ├── commands.cljs     - Unified command registration/execution
+│   ├── editor.cljs       - Blocks, pages, properties
+│   ├── db.cljs           - Queries, subscriptions, file content APIs
+│   ├── experiments.cljs  - Experimental renderers and host APIs
+│   ├── net.cljs          - HTTP wrappers
+│   ├── ui.cljs           - Messages, DOM utilities, theme CSS values
+│   ├── assets.cljs       - File management
+│   ├── git.cljs          - Version control
+│   └── util.cljs         - Data conversion (hand-written)
 ├── build.clj           - JAR build configuration
 ├── deps.edn            - Clojure dependencies
 ├── package.json        - NPM package configuration
@@ -1057,8 +1124,8 @@ libs/dist/
 
 ### 12.1 Unsolved Mysteries
 
-1. **IUtilsProxy Exclusion:** Why is this interface specifically excluded?
-2. **Runtime Metadata Usage:** How does Logseq use the `:runtime "cljs"` metadata?
+1. **`Utils` Getter Exclusion:** Why is the `Utils` getter intentionally skipped during CLJS namespace generation?
+2. **Runtime Metadata Usage:** How does the host use SDK metadata currently set by JS SDK `ready`?
 3. **Schema Extraction Details:** What exactly does `extract-sdk-schema.js` extract?
 4. **Performance Benchmarks:** Conversion overhead compared to direct JS interop?
 5. **Error Handling:** How are JavaScript errors transformed for CLJS consumers?
@@ -1067,7 +1134,7 @@ libs/dist/
 
 1. **Read:** `libs/scripts/extract-sdk-schema.js` to understand schema generation
 2. **Inspect:** Generated `libs/dist/logseq-sdk-schema.json` structure
-3. **Trace:** How `setSDKMetadata` is used in Logseq core
+3. **Trace:** How `setSDKMetadata` is used in `libs/src/LSPlugin.user.ts` and `libs/src/callable.apis.ts`
 4. **Test:** Performance comparison (CLJS SDK vs direct JS interop)
 5. **Explore:** `@logseq/libs` TypeScript definitions
 
@@ -1147,17 +1214,20 @@ npm install @logseq/cljs-libs
 
 ## Appendix B: Namespace Function Count
 
-| Namespace           | Functions | Lines    | Auto-Generated            |
-| ------------------- | --------- | -------- | ------------------------- |
-| `com.logseq.core`   | 15        | 149      | Partial (ready is custom) |
-| `com.logseq.app`    | 72        | 348      | Yes                       |
-| `com.logseq.editor` | 70        | 432      | Yes                       |
-| `com.logseq.db`     | 4         | 34       | Yes                       |
-| `com.logseq.ui`     | 6         | 49       | Yes                       |
-| `com.logseq.assets` | 4         | 37       | Yes                       |
-| `com.logseq.git`    | 3         | 23       | Yes                       |
-| `com.logseq.util`   | 2         | 31       | No (hand-written)         |
-| **TOTAL**           | **176+**  | **1103** | **~98%**                  |
+| Namespace                | Public `defn` | Private/helper | Lines    | Auto-Generated                 |
+| ------------------------ | ------------- | -------------- | -------- | ------------------------------ |
+| `com.logseq.core`        | 19            | 4              | 145      | Yes                            |
+| `com.logseq.app`         | 50            | 6              | 354      | Yes                            |
+| `com.logseq.commands`    | 2             | 1              | 26       | Yes                            |
+| `com.logseq.editor`      | 69            | 17             | 534      | Yes                            |
+| `com.logseq.db`          | 7             | 0              | 54       | Yes                            |
+| `com.logseq.experiments` | 9             | 0              | 61       | Yes                            |
+| `com.logseq.net`         | 7             | 6              | 90       | Yes                            |
+| `com.logseq.ui`          | 6             | 1              | 49       | Yes                            |
+| `com.logseq.assets`      | 4             | 1              | 37       | Yes                            |
+| `com.logseq.git`         | 3             | 0              | 23       | Yes                            |
+| `com.logseq.util`        | 1             | 1              | 31       | No                             |
+| **TOTAL**                | **177**       | **37**         | **1404** | **10/11 namespaces generated** |
 
 ---
 

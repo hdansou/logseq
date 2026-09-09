@@ -6,6 +6,137 @@ quadrant: 'How-To Guide'
 platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
 related-docs:
   - '../multimedia/video-embed.md'
+  - '../../reference/database/schema-overview.md'
+  - '../../tutorials/getting-started/03-basic-editing.md'
+---
+
+# Asset Management in Logseq
+
+> **Last revised:** 2026-05-30
+
+## Overview
+
+Assets are files embedded in a graph: images, PDFs, videos, audio, and other documents. The current implementation resolves asset links by file type and platform, and it supports both file-based graphs and DB graphs.
+
+**Common entry points**:
+
+- Drag and drop a file into a block.
+- Paste an image from the clipboard.
+- Use the asset upload command from the editor UI.
+
+## Findings: New Capabilities
+
+- Asset links now resolve inline images, inline audio/video, PDF viewer links, and generic clickable file links from the same rendering path.
+- Desktop asset aliases are supported through Settings > Assets, with `@alias` directories mapped to real folders.
+- Remote asset sync writes asset bytes through db-sync handlers and records `:logseq.property.asset/remote-metadata` after a successful upload; encryption only applies when E2EE is enabled.
+
+## Asset Rendering
+
+The current block renderer chooses the presentation from the resolved extension.
+
+- Images render inline.
+- PDFs open the PDF viewer.
+- Audio and video use inline media elements when the extension matches the configured media lists.
+- Other files render as clickable asset links.
+
+> **Removed:** the earlier blanket claim that every asset behaves like an inline preview. The renderer is extension-based, and non-media assets remain plain links.
+
+## Storage Model
+
+### File-Based Graphs
+
+Files live under the graph's `assets/` directory.
+
+**Typical layout**:
+
+```text
+/path/to/graph/
+  ├── pages/
+  ├── assets/
+  │   ├── image-1_1234567890.png
+  │   ├── document_abcdef.pdf
+  │   └── video-demo_ghijkl.mp4
+  └── logseq/
+```
+
+### DB Graphs
+
+DB graphs represent assets as `:logseq.class/Asset` blocks. The current class schema requires only these properties:
+
+```clojure
+{:block/uuid "12345678-1234-1234-1234-123456789abc"
+ :block/tags [:logseq.class/Asset]
+ :logseq.property.asset/type "png"
+ :logseq.property.asset/size 524288
+ :logseq.property.asset/checksum "sha256:abcd..."}
+```
+
+Additional asset-related properties exist in the built-in property registry and are used by rendering or sync flows:
+
+- `:logseq.property.asset/external-url`
+- `:logseq.property.asset/external-file-name`
+- `:logseq.property.asset/width`
+- `:logseq.property.asset/height`
+- `:logseq.property.asset/remote-metadata`
+- `:logseq.property.asset/last-visit-page`
+- `:logseq.property.asset/resize-metadata`
+
+> **Removed:** the older example that showed `:logseq.property.asset/path` and `:logseq.property.asset/created-at` is not aligned with the current asset class schema.
+
+## Upload and Sync
+
+### Size Limit
+
+Uploads are capped at 100 MB per asset in both the frontend and db-sync code paths.
+
+### Remote Graph Sync
+
+When db-sync is enabled, the current flow reads the local asset bytes, optionally encrypts them if the graph uses E2EE, and uploads them to the sync bucket with the graph id, asset UUID, and file type in the object path.
+
+After a successful upload, the asset block is updated with remote metadata so the graph knows the asset has a synced remote copy.
+
+> **Removed:** the earlier description of remote graphs as a single generic "encrypted cloud storage" feature was too broad. The implementation is specifically asset-op driven and only encrypts when E2EE is on.
+
+## Asset Aliases
+
+Asset aliases are a desktop-only feature.
+
+1. Open Settings > Assets.
+2. Enable Asset Aliases.
+3. Add a directory and assign it an alias name.
+
+The renderer can then resolve `@alias` paths to the configured directory.
+
+## Troubleshooting
+
+- If an asset breaks, first check the file still exists in `assets/` and the filename matches exactly.
+- If a remote asset does not load on another device, check whether the asset block has `:logseq.property.asset/remote-metadata` and whether the graph is syncing.
+- If a PDF does not open in the viewer, confirm the extension is actually `.pdf` and the file is not corrupted.
+
+## Best Practices
+
+- Prefer relative asset links over absolute filesystem paths.
+- Keep large media out of the graph when an external URL is acceptable.
+- Use aliases for shared desktop-only asset directories.
+- Keep filenames stable after publishing or sharing a graph.
+
+## Code References
+
+- [src/main/frontend/components/block.cljs](../../../../../src/main/frontend/components/block.cljs) - current asset rendering logic
+- [src/main/frontend/handler/assets.cljs](../../../../../src/main/frontend/handler/assets.cljs) - asset path resolution and size checks
+- [src/main/frontend/worker/sync/assets.cljs](../../../../../src/main/frontend/worker/sync/assets.cljs) - db-sync asset upload and remote metadata updates
+- [deps/db/src/logseq/db/frontend/class.cljs](../../../../../deps/db/src/logseq/db/frontend/class.cljs) - current `:logseq.class/Asset` schema
+- [deps/db/src/logseq/db/frontend/property.cljs](../../../../../deps/db/src/logseq/db/frontend/property.cljs) - built-in asset properties
+- [deps/db/src/logseq/db/frontend/asset.cljs](../../../../../deps/db/src/logseq/db/frontend/asset.cljs) - checksum and asset utility helpers
+
+---
+title: 'Asset Management in Logseq'
+status: '🟢 Stable'
+version: 'Since v0.5.0'
+quadrant: 'How-To Guide'
+platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
+related-docs:
+  - '../multimedia/video-embed.md'
   - '../../reference/schema/built-in-classes.md#logseqclassasset'
   - '../../tutorials/getting-started/basic-editing.md'
 ---

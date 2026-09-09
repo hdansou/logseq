@@ -1,6 +1,6 @@
 # Logseq Changelog Generation Workflow
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 This directory contains tools and guidelines for generating professional changelogs for Logseq releases.
 
@@ -30,8 +30,12 @@ For manual workflow or automation:
 ./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
 
 # Then use AI to process the output
-@workspace /new-changelog --from-file changelog_2025-01-05_to_2025-01-15.md
+@workspace /new-changelog 2025-01-05 2025-01-15
 ```
+
+> **Removed:** `@workspace /new-changelog --from-file <file>` is no longer documented or implemented in `.github/skills/new-changelog.md`.
+
+If you want AI to process an existing raw log file, open the file and provide its content to Copilot with the guidelines in `.github/prompts/changelog-generation.prompt.md`.
 
 ## Changelog vs Release Notes
 
@@ -144,6 +148,13 @@ Or manually review the guidelines in `.github/prompts/changelog-generation.promp
 2. Create GitHub release with the content
 3. Publish to blog/announcements if needed
 
+## Findings: New Capabilities
+
+- `dz/scripts/changelog-extend.sh` now supports rolling a changelog window forward to a new end date while preserving file naming and headers.
+- `dz/scripts/changelog-extend.sh` appends a pre-categorized `## TRIAGE` block to speed manual review and categorization of newly included commits.
+- `dz/scripts/changelog-extend.sh` refreshes contributors using `dz/scripts/authors.txt` normalization and `dz/scripts/changelog-exclude.txt` filtering.
+- Changelog workflow implementation currently lives in `.github/skills/` and `dz/scripts/`; `src/`, `deps/`, and `packages/` do not currently contain changelog-generation pipeline code.
+
 ## File Structure
 
 ```txt
@@ -153,7 +164,10 @@ logseq/
 └── dz/
     ├── docs/08-processes/changelog/ # Changelog documentation
     └── scripts/
-        └── generate-changelog-log.sh # Raw commit log generator
+        ├── generate-changelog-log.sh # Raw commit log generator
+        ├── changelog-extend.sh       # Extend current changelog window
+        ├── authors.txt               # Contributor name normalization
+        └── changelog-exclude.txt     # Commit-message exclusion patterns
 ```
 
 ## Changelog Categories

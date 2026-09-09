@@ -1,6 +1,6 @@
 # System Architecture
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 ## Architecture Overview
 
@@ -76,7 +76,7 @@ C4Component
     Component(handlers, "Event Handlers", "ClojureScript", "Business logic")
     Component(db_layer, "Database Layer", "DataScript", "Data access")
     Component(router, "Router", "Reitit", "Navigation")
-    Component(editor, "Editor", "CodeMirror", "Text editing")
+    Component(editor, "Editor", "Custom contenteditable", "Block text editing (CodeMirror used for code blocks only)")
 
     Rel(ui, state, "Subscribes to")
     Rel(ui, handlers, "Triggers events")
@@ -160,16 +160,26 @@ graph TB
 #### Unified Data Model
 
 ```clojure
-;; Block entity structure (common to both modes)
+;; Block entity structure (file-based graphs)
 {:db/id 123
  :block/uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
  :block/content "This is a block of text"
  :block/page {:db/id 456}
  :block/parent {:db/id 122}
+ :block/refs [{:db/id 789} {:db/id 890}]}
+
+;; Block entity structure (database-based graphs)
+;; Note: :block/content is NOT in the DB graph schema.
+;; Block and page text is stored in :block/title.
+{:db/id 123
+ :block/uuid #uuid "550e8400-e29b-41d4-a716-446655440000"
+ :block/title "This is a block of text"
+ :block/page {:db/id 456}
+ :block/parent {:db/id 122}
  :block/refs [{:db/id 789} {:db/id 890}]
- ;; DB-specific attributes (only in database graphs)
- :block/tags [:logseq.class/Card]
- :block/closed-value-property #{:some.property/value}}
+ ;; DB-specific attributes
+ :block/tags [{:db/id 999}]          ; refs to logseq.class/Card entity, etc.
+ :block/closed-value-property [{:db/id 888}]} ; cardinality/many ref type
 ```
 
 #### Storage Abstraction Layer
@@ -275,7 +285,7 @@ graph TD
                                       (when-let [addresses (:addresses data)]
                                         (js/JSON.stringify (bean/->js addresses))))]
                       #js {:$addr addr
-                           :$content (transit-write data')
+                           :$content (sqlite-util/write-transit-str data')
                            :$addresses addresses}))
                   addr+data-seq)]
         (upsert-addr-content! db data)))
@@ -459,16 +469,21 @@ sequenceDiagram
 - **Transit Serialization**: Optimized data serialization for storage
 
 ```clojure
-;; Database garbage collection (every 3 days)
-(defn- gc-sqlite-dbs! [sqlite-db client-ops-db datascript-conn {:keys [full-gc?]}]
+;; Database garbage collection (every 1 month)
+;; src/main/frontend/worker/db_core.cljs
+(defn- gc-sqlite-dbs! [sqlite-db datascript-conn {:keys [full-gc?]}]
   (let [last-gc-at (:kv/value (d/entity @datascript-conn :logseq.kv/graph-last-gc-at))]
     (when (or full-gc?
               (nil? last-gc-at)
               (not (number? last-gc-at))
-              (> (- (time-ms) last-gc-at) (* 3 24 3600 1000))) ; 3 days
-      (doseq [db [sqlite-db client-ops-db]]
-        (sqlite-gc/gc-kvs-table! db {:full-gc? full-gc?})
-        (.exec db "VACUUM")))))
+              (> (- (common-util/time-ms) last-gc-at) (* 30 24 3600 1000))) ; 1 month ago
+      (log/info :gc-sqlite-dbs "gc current graph")
+      (sqlite-gc/gc-kvs-table! sqlite-db {:full-gc? full-gc?})
+      (.exec sqlite-db "VACUUM")
+      (ldb/transact! datascript-conn [{:db/ident :logseq.kv/graph-last-gc-at
+                                       :kv/value (common-util/time-ms)}]
+                     {:skip-validate-db? true
+                      :persist-op? false}))))
 ```
 
 ### Concurrent Operations

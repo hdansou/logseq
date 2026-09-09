@@ -1,6 +1,6 @@
 # Logseq Query Inputs: Complete Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 **Master Advanced Queries with Dynamic Inputs for DB-Based Graphs**
 
@@ -517,8 +517,8 @@ Combine relative dates with timestamps for powerful time-range queries.
 ### Syntax Patterns
 
 ```
-:-Xd-ms     = X days ago at end of day (23:59:59.999)
-:+Xd-ms     = X days from now at start of day (00:00:00.000)
+:-Xd-ms     = X days ago at start of day (00:00:00.000)
+:+Xd-ms     = X days from now at end of day (23:59:59.999)
 
 :-Xd-start  = X days ago at 00:00:00.000
 :-Xd-end    = X days ago at 23:59:59.999
@@ -533,8 +533,8 @@ Combine relative dates with timestamps for powerful time-range queries.
 
 | Input        | Today is Oct 16, 12:00 PM | Returns (ms timestamp) |
 | ------------ | ------------------------- | ---------------------- |
-| `:-1d-ms`    | Oct 16, 2025              | Oct 15, 23:59:59.999   |
-| `:+1d-ms`    | Oct 16, 2025              | Oct 17, 00:00:00.000   |
+| `:-1d-ms`    | Oct 16, 2025              | Oct 15, 00:00:00.000   |
+| `:+1d-ms`    | Oct 16, 2025              | Oct 17, 23:59:59.999   |
 | `:-3d-start` | Oct 16, 2025              | Oct 13, 00:00:00.000   |
 | `:-3d-end`   | Oct 16, 2025              | Oct 13, 23:59:59.999   |
 | `:-1d-0900`  | Oct 16, 2025              | Oct 15, 09:00:00.000   |
@@ -619,8 +619,8 @@ Combine relative dates with timestamps for powerful time-range queries.
 
 | Pattern       | Example       | Description                     |
 | ------------- | ------------- | ------------------------------- |
-| `:-Xd-ms`     | `:-1d-ms`     | X days ago at end of day        |
-| `:+Xd-ms`     | `:+1d-ms`     | X days from now at start of day |
+| `:-Xd-ms`     | `:-1d-ms`     | X days ago at start of day      |
+| `:+Xd-ms`     | `:+1d-ms`     | X days from now at end of day   |
 | `:-Xd-start`  | `:-3d-start`  | X days ago at 00:00:00.000      |
 | `:-Xd-end`    | `:-3d-end`    | X days ago at 23:59:59.999      |
 | `:+Xd-start`  | `:+2d-start`  | X days from now at 00:00:00.000 |
@@ -1283,7 +1283,7 @@ Use `:query-page` for stable context, `:current-page` for dynamic views.
 
 **A**: No, inputs are hardcoded in `logseq.db.frontend.inputs` namespace. You can:
 
-- Use page references: `:inputs [[:page "Page Name"]]`
+- Use page reference strings: `:inputs ["[[Page Name]]"]` (string in `[[...]]` format)
 - Use literals: `:inputs ["string" 42]`
 - But not custom resolved keywords
 
@@ -1424,6 +1424,26 @@ Shows exactly what the input resolves to.
 
 ---
 
+## Findings: New Capabilities
+
+### Namespaced Keyword Form for Relative Dates
+
+The source code and tests confirm a **namespaced keyword form** for relative date inputs:
+
+```clojure
+:today/+1d   ;; equivalent to :+1d  (1 day from now)
+:today/-1d   ;; equivalent to :-1d  (1 day ago)
+:today/+1w   ;; equivalent to :+1w  (1 week from now)
+```
+
+This form exploits the ClojureScript namespaced keyword convention. The namespace (`today`) selects the reference date (currently only `today` is supported), and the name (`+1d`, `-1w`, etc.) specifies the offset. Both forms resolve identically.
+
+**Source**: `resolve-keyword-input :relative-date` — uses `(namespace input)` to determine reference date, `(name input)` for the offset.
+
+**Test coverage**: `deps/db/test/logseq/db/frontend/inputs_test.cljs` — `:today/+1d` tested alongside `:+1d`.
+
+---
+
 ## Resources
 
 ### Documentation
@@ -1471,7 +1491,7 @@ Shows exactly what the input resolves to.
 
 ---
 
-**Last Updated:** 2026-03-10
+**Last Updated:** 2026-05-29
 **Version:** 1.0.1
 **Tested With:** Logseq DB-based graphs (primary), File-based graphs (compatible)
 

@@ -1,6 +1,6 @@
 # File Sync vs. RTC: Feature Comparison & Limitations
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 ## Table of Contents
 
@@ -21,6 +21,8 @@ Logseq offers two synchronization methods for keeping your knowledge graph in sy
 2. **RTC** (Real-Time Collaboration): Database-level synchronization for SQLite-based graphs with live collaboration
 
 This document provides a comprehensive comparison of both approaches, their limitations, and guidance on choosing the right one for your needs.
+
+> **Removed:** File Sync (Markdown-based cloud sync) has been removed from the codebase. The old implementation (`src/main/frontend/fs/sync.cljs`) no longer exists, and the `feature-matrix {:file-sync :beta}` entry is commented out in `src/main/frontend/handler/user.cljs`. All sections in this document that describe File Sync behavior, limits, and implementation reflect historical versions only. The `/file-sync/` REST API endpoint name is retained solely for quota-management calls (storage limit, graph count) that now serve the RTC/DB sync feature.
 
 ## Architecture Comparison
 
@@ -126,11 +128,13 @@ This document provides a comprehensive comparison of both approaches, their limi
 | Batch download size   | 100 files     | Memory management   |
 | Sync interval         | ~10 seconds   | Polling frequency   |
 
+> **Note:** The specific thresholds in this table (1 000 pages, 20 files, 100 files, 10 s interval) could not be confirmed in current source code; they reflect historical documentation and should be treated as approximate.
+
 **Code Reference:**
 
 ```clojure
-;; src/main/frontend/worker/sync.cljs
-(def ^:private upload-kvs-batch-size 500)
+;; src/main/frontend/worker/sync/upload.cljs
+(def upload-kvs-batch-size 500)
 ```
 
 #### Operational Limits
@@ -164,26 +168,41 @@ This document provides a comprehensive comparison of both approaches, their limi
 **Code References:**
 
 ```clojure
-;; src/main/frontend/worker/sync.cljs
-(def ^:private max-asset-size (* 100 1024 1024))
+;; src/main/frontend/worker/sync/assets.cljs
+(def max-asset-size (* 100 1024 1024))
 ```
 
-Note: The RTC implementation has been consolidated into `src/main/frontend/worker/sync.cljs`. Large messages and S3 fallback logic are handled within this module.
+> **Note:** The RTC implementation is organized across multiple sub-modules in `src/main/frontend/worker/sync/`. The parent `sync.cljs` orchestrates connections and reconnect logic; individual concerns are separated into `upload.cljs`, `download.cljs`, `assets.cljs`, `transport.cljs`, `large_title.cljs`, `handle_message.cljs`, and others.
 
 #### Performance Limits
 
-| Metric            | Threshold  | Impact                 |
-| ----------------- | ---------- | ---------------------- |
-| Operations batch  | > 400 ops  | Extended timeout (20s) |
-| WebSocket timeout | 10 seconds | Connection retry       |
-| Large op timeout  | 20 seconds | For > 400 operations   |
-| Retry attempts    | 10 times   | Connection resilience  |
+| Metric                    | Threshold              | Impact                            |
+| ------------------------- | ---------------------- | --------------------------------- |
+| WS stale kill timeout     | 600,000 ms (10 min)    | Stale WebSocket forcibly killed   |
+| Reconnect base delay      | 1,000 ms (1 s)         | Exponential backoff start         |
+| Reconnect max delay       | 30,000 ms (30 s)       | Backoff ceiling                   |
+| Reconnect jitter          | 250 ms                 | Spread reconnect storms           |
+| Retry attempts            | Unlimited              | Reconnects until manually stopped |
+| Large-title offload limit | 4,096 bytes (4 KB)     | Block titles > 4 KB go to S3      |
+| Snapshot batch size       | 1,000,000 bytes (1 MB) | Snapshot upload chunks            |
+
+> **Note:** The previously documented thresholds of "Operations batch > 400 ops → 20 s timeout", "WebSocket timeout 10 s", and "10 retry attempts" could not be confirmed in current source code. The values above are derived from `src/main/frontend/worker/sync.cljs` and sub-modules.
 
 **Code Reference:**
 
 ```clojure
 ;; src/main/frontend/worker/sync.cljs
-;; Large operation batches handled with extended timeouts
+(def ^:private reconnect-base-delay-ms 1000)
+(def ^:private reconnect-max-delay-ms   30000)
+(def ^:private reconnect-jitter-ms      250)
+(def ^:private ws-stale-timeout-ms      600000)
+
+;; src/main/frontend/worker/sync/upload.cljs
+(def upload-kvs-batch-size 500)
+(def snapshot-upload-max-bytes 1000000)
+
+;; src/main/frontend/worker/sync/large_title.cljs
+(def large-title-byte-limit 4096)
 ```
 
 #### Operational Limits
@@ -349,10 +368,11 @@ These limits are enforced by the Logseq cloud service based on your subscription
 
 **Key Components:**
 
+> **Removed:** File Sync (Markdown-based cloud sync) has no implementation in the current codebase. The component list below reflects historical descriptions only.
+
 ```txt
-src/main/frontend/worker/sync.cljs      - Unified sync logic (RTC and file sync)
-src/main/frontend/handler/assets.cljs   - Asset handling
-src/main/frontend/handler/user.cljs     - Auth, storage limits, sync events
+src/main/frontend/handler/assets.cljs   - Asset handling (exceed-limit-size?)
+src/main/frontend/handler/user.cljs     - Auth, storage limits, quota checks
 ```
 
 **Sync Algorithm:**
@@ -374,9 +394,20 @@ src/main/frontend/handler/user.cljs     - Auth, storage limits, sync events
 **Key Components:**
 
 ```txt
-src/main/frontend/worker/sync.cljs              - Unified sync implementation (includes RTC)
-src/main/frontend/worker/sync/log_and_state.cljs - Sync logging and state
-src/main/frontend/worker/sync/crypt.cljs        - Encryption for sync
+src/main/frontend/worker/sync.cljs                   - Entry point: WS lifecycle, reconnect, orchestration
+src/main/frontend/worker/sync/upload.cljs            - Snapshot upload batching (upload-kvs-batch-size, snapshot-upload-max-bytes)
+src/main/frontend/worker/sync/download.cljs          - Snapshot download and import
+src/main/frontend/worker/sync/assets.cljs            - Asset upload/download (max-asset-size)
+src/main/frontend/worker/sync/transport.cljs         - WS message shaping and coercion
+src/main/frontend/worker/sync/large_title.cljs       - Large-title offload to S3 (large-title-byte-limit)
+src/main/frontend/worker/sync/apply_txs.cljs         - Apply remote transactions and conflict resolution
+src/main/frontend/worker/sync/handle_message.cljs    - Incoming WS message dispatch
+src/main/frontend/worker/sync/log_and_state.cljs     - RTC log types and state broadcasting
+src/main/frontend/worker/sync/crypt.cljs             - E2EE key management and encryption
+src/main/frontend/worker/sync/client_op.cljs         - Client-side pending operation tracking
+src/main/frontend/worker/sync/presence.cljs          - Online-user presence tracking
+src/main/frontend/worker/sync/auth.cljs              - WS token resolution
+src/main/frontend/handler/events/rtc_error.cljs      - RTC error classification (download-decrypt-failed?)
 ```
 
 **Sync Algorithm:**
@@ -400,27 +431,70 @@ File > 100MB → Skip with notification
 #### RTC
 
 ```txt
-Message < 100KB → Direct WebSocket
-Message > 100KB → Upload to S3, send reference
-Response < 32KB → Direct WebSocket
-Response > 32KB → Store in S3, return presigned URL
+Block title ≤ 4 KB  → Included inline in transaction
+Block title > 4 KB  → Offloaded to S3 (large-title-byte-limit = 4096 bytes)
+
+Snapshot chunk ≤ 1 MB → Direct HTTP upload
+Snapshot chunk > 1 MB → Split into multiple batches (snapshot-upload-max-bytes = 1 000 000 bytes)
 ```
+
+> **Removed:** The previously documented "100 KB WebSocket auto-split" and "32 KB S3 fallback" thresholds were not found in current source code. The actual large-message strategy is large-title offloading (4 KB threshold) and snapshot chunking (1 MB threshold).
 
 ### Error Handling
 
 #### File Sync Errors
 
-- `storage-limit`: Exceeded storage quota
-- `graph-count-exceed-limit`: Too many graphs
-- `decrypt-failed`: Encryption error
-- Conflicts: Create `conflict-` files
+> **Removed:** File Sync (Markdown-based cloud sync) has been removed from the codebase. The error types below reflect the historical implementation.
+
+- `storage-limit`: Exceeded storage quota (still enforced server-side for RTC graphs via `storage-exceed-limit?`)
+- `graph-count-exceed-limit`: Too many graphs (still enforced server-side for RTC graphs via `graph-count-exceed-limit?`)
+- `decrypt-failed`: Encryption error (historical; RTC now checks for "decrypt-aes-key" / "decrypt-private-key" text)
+- Conflicts: Create `conflict-` files (file-level conflict files no longer produced; RTC uses block-level `sync-conflict-attrs`)
 
 #### RTC Errors
 
-- `:rtc.asset.log/asset-too-large`: Asset > 100MB
-- WebSocket disconnection and reconnection handled with configurable retry delays
+- `:rtc.asset.log/asset-too-large`: Asset > 100 MB (defined in `log_and_state.cljs`)
+- WebSocket disconnection → exponential-backoff reconnect (base 1 s, max 30 s, jitter 250 ms, unlimited retries)
 - Schema version mismatch detection
 - S3 object fetch failures
+- Decrypt errors: checked via `download-decrypt-failed?` in `src/main/frontend/handler/events/rtc_error.cljs`, which looks for "decrypt-aes-key" or "decrypt-private-key" in the error chain
+
+> **Removed:** The generic `decrypt-failed` error code listed in earlier versions of this document was not found in current source code. The actual check inspects error message text for the strings above.
+
+## Findings: New Capabilities
+
+The following capabilities were found in the current source code but were not mentioned in the original document:
+
+### Large-Title Offloading
+
+Block titles that exceed 4,096 bytes (UTF-8) are automatically offloaded to S3 and replaced with a reference object during RTC sync, then re-fetched on download. This is invisible to the user and prevents oversized WebSocket frames without an arbitrary 100 KB limit.
+
+- **Threshold:** `large-title-byte-limit 4096` — `src/main/frontend/worker/sync/large_title.cljs`
+- **Attribute:** `:logseq.property.sync/large-title-object`
+
+### Snapshot Chunking
+
+Database snapshots are split into 1 MB chunks before upload, so very large graphs can be synced without hitting HTTP body limits.
+
+- **Limit:** `snapshot-upload-max-bytes 1000000` — `src/main/frontend/worker/sync/upload.cljs`
+
+### Exponential-Backoff Reconnect
+
+WebSocket reconnections use exponential backoff (not a fixed 10-attempt limit):
+
+- **Base delay:** 1,000 ms · **Max delay:** 30,000 ms · **Jitter:** 250 ms
+- **Max attempts:** unlimited
+- **Stale-kill timeout:** 600,000 ms (10 min) — idle WS connections are forcibly terminated and replaced.
+
+### Real-Time Presence
+
+The `src/main/frontend/worker/sync/presence.cljs` module broadcasts which block each online user is currently editing. This is separate from the data-sync pipeline and has no equivalent in File Sync.
+
+### Block-Level Conflict Resolution (RTC)
+
+Rather than creating `conflict-` files, the RTC sync engine tracks conflicting block attributes in `sync-conflict-attrs` (`src/main/frontend/worker/sync/apply_txs.cljs`). Conflicts are surfaced as inline block annotations in the UI (`ls-sync-conflict-warning`).
+
+---
 
 ## Summary Table
 
@@ -493,9 +567,28 @@ Both synchronization methods are actively developed. Future improvements may inc
   [^js file]
   (> (.-size file) (* 100 1024 1024)))
 
-;; Upload batch size
+;; Upload KV batch size
+;; Location: src/main/frontend/worker/sync/upload.cljs
+(def upload-kvs-batch-size 500)
+
+;; Max snapshot upload bytes per batch
+;; Location: src/main/frontend/worker/sync/upload.cljs
+(def snapshot-upload-max-bytes 1000000)
+
+;; Max asset size
+;; Location: src/main/frontend/worker/sync/assets.cljs
+(def max-asset-size (* 100 1024 1024))
+
+;; Large-title offload threshold
+;; Location: src/main/frontend/worker/sync/large_title.cljs
+(def large-title-byte-limit 4096)
+
+;; WS reconnect parameters
 ;; Location: src/main/frontend/worker/sync.cljs
-(def ^:private upload-kvs-batch-size 500)
+(def ^:private reconnect-base-delay-ms 1000)
+(def ^:private reconnect-max-delay-ms   30000)
+(def ^:private reconnect-jitter-ms      250)
+(def ^:private ws-stale-timeout-ms      600000)
 ```
 
 ### RTC/Asset Limits

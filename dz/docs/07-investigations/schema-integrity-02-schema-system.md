@@ -2,6 +2,291 @@
 
 ## Part 2: Schema System Technical Analysis
 
+> **Last revised:** 2026-05-30
+
+---
+
+## Table of Contents
+
+1. [Schema Version Management](#schema-version-management)
+2. [DataScript Schema](#datascript-schema)
+3. [Malli Validation Schema](#malli-validation-schema)
+4. [Entity Type Classification](#entity-type-classification)
+5. [Built-in Properties System](#built-in-properties-system)
+6. [Schema Comparison Logic](#schema-comparison-logic)
+
+---
+
+## Schema Version Management
+
+### Version Structure
+
+**Location:** [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs)
+
+```clojure
+(def version (parse-schema-version "65.33"))
+```
+
+### Version Parsing
+
+```clojure
+(defn parse-schema-version
+  "Return schema-version({:major <num> :minor <num>}).
+  supported input: 10, \"10.1\", [10 1]"
+  [string-or-compatible-number]
+  ...)
+```
+
+Current parser accepts schema versions as map, vector, integer, or string.
+
+### Version Comparison
+
+```clojure
+(defn compare-schema-version
+  [x y]
+  (apply compare
+         (map (juxt :major :minor)
+              [(parse-schema-version x) (parse-schema-version y)])))
+```
+
+### Major Version Extraction
+
+```clojure
+(defn major-version
+  "Return a number."
+  [schema-version]
+  (if (schema-version? schema-version)
+    (:major schema-version)
+    (:major (parse-schema-version schema-version))))
+```
+
+---
+
+## DataScript Schema
+
+### Purpose
+
+DataScript schema defines structural constraints:
+
+- Entity attributes
+- Ref vs non-ref typing
+- Cardinality rules
+- Identity/index behavior
+
+### Schema Definition Location
+
+**File:** [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs)
+
+### Core Attribute Examples
+
+```clojure
+:db/ident        {:db/unique :db.unique/identity}
+:block/uuid      {:db/unique :db.unique/identity}
+:block/parent    {:db/valueType :db.type/ref :db/index true}
+:block/page      {:db/valueType :db.type/ref :db/index true}
+:block/refs      {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
+:block/tags      {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many}
+:block/alias     {:db/valueType :db.type/ref :db/cardinality :db.cardinality/many :db/index true}
+:block/link      {:db/valueType :db.type/ref :db/index true}
+:block/name      {:db/index true}
+:block/title     {:db/index true}
+:block/journal-day {:db/index true}
+```
+
+---
+
+## Malli Validation Schema
+
+### Purpose
+
+Malli schema defines runtime/business validation rules on top of DataScript structure.
+
+### Schema Definition Location
+
+**File:** [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
+
+### Top-Level DB Schema
+
+```clojure
+(def Data
+  (into
+   [:multi {:dispatch (fn [d] (entity-dispatch-key *db-for-validate-fns* d))}]
+   {...}))
+
+(def DB
+  [:sequential Data])
+```
+
+### Property Types (Current)
+
+```clojure
+;; User property types
+[:default :number :date :datetime :checkbox :url :node :asset]
+
+;; Internal property types
+#{:keyword :map :coll :any :entity :class :page :property :string :json :raw-number}
+```
+
+### Integrity Guardrails
+
+`malli_schema.cljs` now asserts coverage against DataScript-derived sets:
+
+- `db-schema/card-many-ref-type-attributes`
+- `db-schema/card-one-ref-type-attributes`
+- `db-schema/db-non-ref-attributes`
+
+When Malli declarations drift from DataScript schema, startup throws with explicit errors.
+
+---
+
+## Entity Type Classification
+
+### Dispatch System
+
+**Location:** [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
+
+```clojure
+(defn entity-dispatch-key [db ent]
+  (let [d (if (:block/uuid ent) (d/entity db [:block/uuid (:block/uuid ent)]) ent)]
+    (cond
+      (:logseq.property.reaction/target d) :reaction-entity
+      (entity-util/property? d) :property
+      (entity-util/class? d) :class
+      (and (entity-util/page? d) (true? (:logseq.property/hide? d))) :hidden
+      (entity-util/page? d) :normal-page
+      (entity-util/asset? d) :asset-block
+      (:file/path d) :file-block
+      (:logseq.property.history/block d) :property-history-block
+      (:block/closed-value-property d) :closed-value-block
+      (and (:logseq.property/created-from-property d) (:logseq.property/value d)) :property-value-block
+      (= (:db/ident d) :logseq.property/empty-placeholder) :property-value-placeholder
+      (:block/uuid d) :block
+      (:db/ident d) :db-ident-key-value)))
+```
+
+### Current Dispatch Types
+
+1. `:property`
+2. `:class`
+3. `:hidden`
+4. `:normal-page`
+5. `:reaction-entity`
+6. `:property-history-block`
+7. `:closed-value-block`
+8. `:property-value-block`
+9. `:block`
+10. `:asset-block`
+11. `:file-block`
+12. `:db-ident-key-value`
+13. `:property-value-placeholder`
+
+---
+
+## Built-in Properties System
+
+### Property Registry
+
+**Location:** [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs)
+
+```clojure
+(def ^:large-vars/data-var built-in-properties
+  "Map of built in properties for db graphs with their :db/ident as keys.
+   TODO: Move some of these keys to :properties since :schema is a deprecated concept"
+  ...)
+```
+
+Registry remains centralized, with common keys such as `:title`, optional `:attribute`, `:schema`, and optional metadata (`:queryable?`, `:closed-values`, `:rtc`, etc.).
+
+### Adding New Properties (Current Workflow)
+
+1. Define new entry in `built-in-properties`.
+2. If needed, wire/refine DataScript attribute usage and consistency assertions (for db-attribute properties).
+3. Add schema migration entry in `src/main/frontend/worker/db/migrate.cljs` `schema-version->updates`.
+4. Keep Malli coverage in sync (guarded by assertions).
+
+---
+
+## Schema Comparison Logic
+
+### Compatibility Detection
+
+**Locations:**
+
+- [src/main/frontend/handler/repo.cljs](../../../src/main/frontend/handler/repo.cljs)
+- [src/main/frontend/handler/events.cljs](../../../src/main/frontend/handler/events.cljs)
+
+Current behavior is major-version gated for RTC graph compatibility:
+
+- Repo merge/filter logic matches remote `GraphSchemaVersion` against app major schema version.
+- RTC download handler asserts matching major versions before download.
+
+### Decision Matrix (Current)
+
+| App Major | Remote Major | Outcome                                               |
+| --------- | ------------ | ----------------------------------------------------- |
+| Same      | Same         | Eligible for merge/download flow                      |
+| Different | Different    | Excluded from merge or assert-failed on download path |
+
+---
+
+## Schema Version History
+
+### Current Migration Window (65.7 - 65.33)
+
+`src/main/frontend/worker/db/migrate.cljs` currently defines migrations from `65.7` through `65.33`.
+
+Recent highlights:
+
+- `65.30`: adds `:logseq.property/assignee`
+- `65.31`: adds `:logseq.property.agent/session-id`
+- `65.32`: repair fix for comments classes/targets
+- `65.33`: adds gallery-view properties
+
+---
+
+## Findings: Removed or Stale Claims
+
+> **Removed:** `deps/db/src/logseq/db/schema.cljs` as active DataScript schema source for this DB-graph analysis. Current source is `deps/db/src/logseq/db/frontend/schema.cljs`.
+
+> **Removed:** `def schema-version {:major 65 :minor 16}` as current version declaration. Current source uses `def version (parse-schema-version "65.33")`.
+
+> **Removed:** The prior parser description that accepted only `"major.minor"` strings. Current parser supports map/vector/integer/string forms.
+
+> **Removed:** `validate.cljs` `defmulti entity-dispatch` as the active classification mechanism. Current dispatch is `entity-dispatch-key` in `malli_schema.cljs`.
+
+> **Removed:** `src/main/frontend/worker/rtc/branch_graph.cljs` plus standalone `compare-schemas`/`select-graph-version` helper flow as active compatibility path.
+
+> **Removed:** The fixed eight-entity-type model as a complete representation of current validation dispatch categories.
+
+---
+
+## Findings: New Capabilities
+
+1. Schema parsing is now compatibility-oriented across multiple input shapes (map, vector, integer, string).
+2. Malli/DataScript schema alignment checks now fail fast when attribute coverage drifts.
+3. Validation dispatch now includes newer runtime entity categories such as reaction entities, asset blocks, property history blocks, and property-value placeholders.
+4. Frontend migration chain now reaches `65.33`, including newer collaboration/comment and gallery-view schema updates.
+
+---
+
+## Key Takeaways
+
+1. DataScript + Malli remains the core two-layer schema model.
+2. Current schema version is `65.33`.
+3. `schema-version->updates` is the authoritative frontend migration chain.
+4. Entity dispatch is broader and more runtime-aware than older docs indicate.
+5. Compatibility enforcement is currently centered on major-version matching in repo/sync handlers.
+
+---
+
+## Next Steps
+
+Proceed to **Part 3: Migration System Deep Dive** for detailed analysis of migration execution details and data-shape transitions.
+
+# Schema Changes & Data Integrity Investigation
+
+## Part 2: Schema System Technical Analysis
+
 ---
 
 ## Table of Contents

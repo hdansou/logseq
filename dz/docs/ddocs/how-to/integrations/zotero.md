@@ -12,7 +12,7 @@ related-docs:
 
 # Integrating Zotero with Logseq
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## Overview
 
@@ -33,6 +33,12 @@ Zotero is a popular reference management tool for researchers and academics. Log
 - A Zotero API key (create one at [https://www.zotero.org/settings/keys](https://www.zotero.org/settings/keys))
 - Logseq Desktop app
 - Basic familiarity with both tools
+
+## Findings: New Capabilities
+
+- Zotero settings are profile-aware. Logseq stores the active profile separately, so multiple Zotero configurations can coexist in the same graph.
+- The built-in PDF handling now distinguishes imported Zotero files from linked Zotero files, with separate resolution paths for `zotero-path://` and `zotero-link://` assets.
+- The current Zotero settings defaults include citekey preference, attachment and note import toggles, page prefix, extra tags, overwrite mode, and both Zotero attachment directory paths.
 
 ---
 
@@ -66,7 +72,7 @@ The built-in integration requires Zotero cloud syncing to be enabled, since it c
 3. Enter your **API key** and **User ID**
 4. Configure additional options:
    - **Type**: `user` (for personal library) or `group` (for group libraries; use your group ID instead)
-   - **Prefer citekey**: If you have [Better BibTeX for Zotero](https://retorque.re/zotero-better-bibtex/) installed, Logseq will use the citation key as the page name; otherwise it uses the item title
+    - **Prefer citekey**: Use the citation key as the page name when Zotero provides one; otherwise Logseq uses the item title
    - **Include attachments**: Whether to import attachment links
    - **Include notes**: Whether to import Zotero notes
    - **Page insert prefix**: The prefix for imported pages (default: `@`). You can set it to a namespace like `zotero/` for hierarchical organization
@@ -85,10 +91,13 @@ The built-in integration requires Zotero cloud syncing to be enabled, since it c
 
 **Import All Items**:
 
-1. Go to **Settings** > **Zotero settings**
-2. Click **Add all** to import all Zotero items as Logseq pages
+> **Removed:** The current Zotero settings UI no longer exposes a built-in **Add all** bulk-import control.
 
-**Re-importing**: If you import the same item twice, Logseq appends data to the existing page rather than overwriting it. To get a fresh import, delete the page first and re-import.
+Use the `/Zotero` command to import items individually.
+
+**Re-importing**
+
+> **Removed:** The current source does not document an automatic append-on-reimport behavior. If you need a fresh import, delete the existing page first and import it again.
 
 ### Optional: Better BibTeX
 

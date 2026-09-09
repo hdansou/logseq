@@ -1,6 +1,6 @@
 # Logseq Flashcard Implementation Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 ## Overview
 
@@ -26,19 +26,21 @@ Logseq's current flashcard system uses the FSRS algorithm for database-based gra
 
 ### Basic Card Creation
 
-1. **Tag Method**: Add `#card` to any block
+1. **Tag Method**: Add `#Card` to any block (capitalized; matches the built-in `:logseq.class/Card` class)
 
    ```txt
-   What is the capital of France? #card
+   What is the capital of France? #Card
    Paris
    ```
 
-2. **Slash Command**: Use `/cards` to create card queries
+2. **Context Menu**: Right-click any block and choose **Make a Flashcard** to tag it as `#Card`
 3. **Cloze Deletions**: Use `/cloze` for fill-in-the-blank cards
 
-   ```txt
-   The capital of France is {{cloze Paris}}
-   ```
+> **Removed:** The `/cards` slash command was planned but never implemented (marked as `TODO: support {{cards ...}}` in `src/main/frontend/extensions/fsrs.cljs`). To create a card collection query, use the **+** button in the flashcards modal.
+
+```txt
+The capital of France is {{cloze Paris}}
+```
 
 ### Advanced Cloze Cards
 
@@ -67,6 +69,7 @@ The following block properties were used by the old file-based SRS system and ar
 - `:card-last-score` - Previous review performance (1-5)
 
 Configuration keys (still recognized in `config.edn` for legacy graphs):
+
 - `:srs/learning-fraction` (default: 0.5)
 - `:srs/initial-interval` (default: 4 days)
 
@@ -89,10 +92,10 @@ Configuration keys (still recognized in `config.edn` for legacy graphs):
 ### Review Session Flow
 
 1. **Card Selection**: Due cards are identified by algorithm
-2. **Question Phase**: Display question or incomplete cloze
-3. **Answer Phase**: Show answer after user interaction
-4. **Cloze Phase** (if applicable): Progressive cloze revelation
-5. **Rating Phase**: User rates recall difficulty
+2. **Question Phase**: Display question (`s` hides cloze answers, collapses children)
+3. **Cloze Phase** (if applicable): Press `s` to reveal cloze fill-ins (children still hidden)
+4. **Answer Phase**: Press `s` again to show full answer including children
+5. **Rating Phase**: User rates recall difficulty (rating buttons appear once full answer is shown)
 6. **Next Card**: Algorithm schedules next review
 
 ### User Interface Elements
@@ -111,8 +114,7 @@ Configuration keys (still recognized in `config.edn` for legacy graphs):
 
 ### Keyboard Shortcuts
 
-- `s` - Start review session
-- `n` - Next card / Show answer
+- `s` - Show clozes / Show answers / Hide answers (toggle reveal, bound to `:cards/toggle-answers`)
 - `1` - Again
 - `2` - Hard
 - `3` - Good
@@ -198,6 +200,18 @@ Filter cards by properties, tags, or content:
 3. **Query Collections**: Create focused review sets
 4. **Cross-References**: Link related cards and concepts
 
+## Findings: New Capabilities
+
+The following capabilities are present in source code but were not previously documented:
+
+- **Context menu "Make a Flashcard"**: Right-clicking one or more selected blocks exposes a "Make a Flashcard" menu item (`:context-menu/make-a-flashcard`) that calls `fsrs/batch-make-cards!`, tagging the block(s) with `:logseq.class/Card` in one action. Available in both single-block and multi-block selection contexts (`src/main/frontend/components/content.cljs`).
+
+- **"+" button in cards modal**: The flashcards review modal includes a `+` button (`:flashcard/add-query`) that creates a new `:logseq.class/Cards` block on today's journal page and navigates to it, letting users configure a scoped card collection without typing.
+
+- **Card collection selector**: The cards modal contains a dropdown (`shui/select`) listing all Cards collection blocks in the graph. Selecting one scopes the review session to only the due cards matched by that collection's query.
+
+- **Card class inheritance**: The due-card query uses `db-model/get-structured-children` to find all subclasses of `:logseq.class/Card`. This means user-defined classes that extend `Card` are automatically included in review sessions without extra configuration.
+
 ## Migration Path
 
 For users transitioning from file-based to database-based graphs:
@@ -212,7 +226,7 @@ For users transitioning from file-based to database-based graphs:
 
 ### Common Issues
 
-- **Cards Not Appearing**: Check `#card` tags and due dates
+- **Cards Not Appearing**: Check `#Card` tags and due dates
 - **Incorrect Scheduling**: Verify algorithm configuration
 - **UI Problems**: Ensure flashcards are enabled in settings
 - **Performance**: Large card collections may need query optimization

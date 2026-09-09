@@ -1,6 +1,6 @@
 # Changelog Generation System
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > AI-powered changelog generation for Logseq releases
 
@@ -25,7 +25,7 @@ This will:
 
 ```bash
 # Navigate to Logseq repository
-cd ~/Projects/src/github.com/logseq
+cd ~/Projects/src/github.com/logseq-eng-documentation
 
 # Generate raw commit log
 ./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
@@ -59,10 +59,13 @@ Highlights major features and user-facing changes only.
 
 | Document                                                                                               | Purpose                               |
 | ------------------------------------------------------------------------------------------------------ | ------------------------------------- |
-| [CHANGELOG_QUICK_REFERENCE.md](./CHANGELOG_QUICK_REFERENCE.md)                                         | Command cheat sheet and common tasks  |
-| [CHANGELOG_WORKFLOW.md](./CHANGELOG_WORKFLOW.md)                                                       | Complete end-to-end workflow guide    |
-| [CHANGELOG_SYSTEM_SUMMARY.md](./CHANGELOG_SYSTEM_SUMMARY.md)                                           | Technical implementation details      |
-| [../.github/prompts/changelog-generation.prompt.md](../.github/prompts/changelog-generation.prompt.md) | AI processing guidelines and examples |
+| [quick-reference.md](./quick-reference.md)                                                             | Command cheat sheet and common tasks  |
+| [workflow.md](./workflow.md)                                                                           | Complete end-to-end workflow guide    |
+| [system-summary.md](./system-summary.md)                                                               | Technical implementation details      |
+| [../../../../.github/prompts/changelog-generation.prompt.md](../../../../.github/prompts/changelog-generation.prompt.md) | AI processing guidelines and examples |
+
+> **Removed:** `CHANGELOG_QUICK_REFERENCE.md`, `CHANGELOG_WORKFLOW.md`, and `CHANGELOG_SYSTEM_SUMMARY.md` as canonical filenames in this directory. The current files are `quick-reference.md`, `workflow.md`, and `system-summary.md`.
+> **Removed:** `../.github/prompts/changelog-generation.prompt.md` from this document's link path. The correct relative path from this directory is `../../../../.github/prompts/changelog-generation.prompt.md`.
 
 ## Common Commands
 
@@ -131,10 +134,17 @@ Highlights major features and user-facing changes only.
 
 ## Need Help?
 
-1. **Quick commands:** See [CHANGELOG_QUICK_REFERENCE.md](./CHANGELOG_QUICK_REFERENCE.md)
-2. **Complete workflow:** See [CHANGELOG_WORKFLOW.md](./CHANGELOG_WORKFLOW.md)
-3. **Technical details:** See [CHANGELOG_SYSTEM_SUMMARY.md](./CHANGELOG_SYSTEM_SUMMARY.md)
-4. **Formatting guidelines:** See [../.github/prompts/changelog-generation.prompt.md](../.github/prompts/changelog-generation.prompt.md)
+1. **Quick commands:** See [quick-reference.md](./quick-reference.md)
+2. **Complete workflow:** See [workflow.md](./workflow.md)
+3. **Technical details:** See [system-summary.md](./system-summary.md)
+4. **Formatting guidelines:** See [../../../../.github/prompts/changelog-generation.prompt.md](../../../../.github/prompts/changelog-generation.prompt.md)
+
+## Findings: New Capabilities
+
+- Source roots include active functional areas for `Publishing`, `Properties`, `Import and export`, `Media / PDF`, `Window management`, and `Real-time collaboration (RTC)`, so these should be treated as first-class changelog grouping candidates.
+- `src/`, `deps/`, and `packages/` do not currently implement the changelog-generation pipeline itself; generation remains driven by `.github/skills/` and `dz/scripts/`.
+
+> **Removed:** `PDF annotations` as a standalone capability label in this summary. Current source organization centers on broader PDF/media flows.
 
 ## Examples
 

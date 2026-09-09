@@ -1,9 +1,9 @@
 # Schema Change PR Review Checklist
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 **Document Type:** Process Checklist
-**Last Updated:** December 28, 2025
+**Last Updated:** May 30, 2026
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
@@ -14,6 +14,16 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 **Usage:** Copy relevant sections into PR description or use as review guide.
 
+## Findings: New Capabilities
+
+- Frontend DB schema is currently `65.33`, and frontend migrations currently run through `65.33`.
+- Frontend migrations now support `:delete-properties` in addition to `:properties`, `:classes`, and `:fix`.
+- Validation repair now calls `ensure-built-in-data-exists!` before invalid-entity repair.
+- User-facing property types now include `:asset`.
+
+> **Removed:** Legacy RTC review guidance that pointed to `src/main/frontend/worker/rtc/`. Current sync and E2EE review surfaces live under `src/main/frontend/worker/sync/` and `deps/db-sync/`.
+> **Removed:** Migration guidance based on `:rename-db-idents`. The current frontend migration runner does not support that key.
+
 ---
 
 ## Quick Detection: Does This PR Need Schema Review?
@@ -23,10 +33,11 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 - [ ] Files in `deps/db/src/logseq/db/frontend/property/`
 - [ ] `deps/db/src/logseq/db/frontend/schema.cljs`
 - [ ] `src/main/frontend/worker/db/migrate.cljs`
-- [ ] `deps/db/src/logseq/db/frontend/validate.cljs`
+- [ ] `deps/db/src/logseq/db/frontend/validate.cljs`, `src/main/frontend/worker/db/validate.cljs`, or property-value validation helpers in `deps/outliner/src/logseq/outliner/property.cljs`
 - [ ] `deps/db/src/logseq/db/sqlite/build.cljs`
+- [ ] `deps/db/src/logseq/db/sqlite/export.cljs`
 - [ ] Any file with `built-in-properties` or `built-in-classes`
-- [ ] RTC sync configuration in `src/main/frontend/worker/rtc/`
+- [ ] Sync or E2EE behavior in `src/main/frontend/worker/sync/` or `deps/db-sync/`
 
 ❌ **NO - Skip if only:**
 
@@ -45,13 +56,15 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 - [ ] **Migration entry** added to `schema-version->updates` in [src/main/frontend/worker/db/migrate.cljs](src/main/frontend/worker/db/migrate.cljs)
 - [ ] **Schema version** bumped in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
 - [ ] **Version numbers match** between migration entry and schema version
-- [ ] **RTC configuration** explicitly specified (`:rtc` map present)
+- [ ] **Sync behavior reviewed** and `:rtc` configuration added when the property needs non-default sync handling
 - [ ] **Property namespace** follows conventions (`logseq.property.*`, `user.property.*`, etc.)
-- [ ] **Property type** appropriate for use case (`:default`, `:number`, `:date`, etc.)
+- [ ] **Property type** appropriate for use case (`:default`, `:number`, `:date`, `:asset`, etc.)
 - [ ] **Cardinality** correctly set (`:one` or `:many`)
-- [ ] **Validation rules** added if needed in [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
+- [ ] **Validation rules** added or updated in [deps/db/src/logseq/db/frontend/property/type.cljs](deps/db/src/logseq/db/frontend/property/type.cljs), [deps/outliner/src/logseq/outliner/property.cljs](deps/outliner/src/logseq/outliner/property.cljs), or [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs) as appropriate
 - [ ] **Tests** cover property creation, usage, and migration
 - [ ] **Documentation** updated (if user-facing property)
+
+> **Removed:** The old checklist requirement that every property must carry an explicit `:rtc` map. Current source derives ignore sets from property configs when present, but does not enforce `:rtc` on every built-in property.
 
 **Property Definition Template Check:**
 
@@ -65,10 +78,10 @@ This checklist ensures all schema changes are properly reviewed before merging. 
           :view-context :page
           :ui-position :properties}
  :queryable? true
- :rtc {:rtc/ignore-attr-when-init-upload false  ; ✓ RTC config present
-       :rtc/ignore-attr-when-init-download false
-       :rtc/ignore-attr-when-syncing false}}
+ :rtc {:rtc/ignore-attr-when-syncing true}}
 ```
+
+> **Removed:** `:rtc/ignore-attr-when-init-upload` and `:rtc/ignore-attr-when-init-download` are not current source-level keywords in the frontend sync path.
 
 ### 1.2 Property Type Changed
 
@@ -92,11 +105,13 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 ### 1.3 Property Renamed
 
 - [ ] **New property definition** with new ident
-- [ ] **Migration entry** uses `:rename-db-idents` map
+- [ ] **Migration entry** uses a `:fix` function to move or copy existing values to the new ident
 - [ ] **Old property** removed from `built-in-properties`
 - [ ] **All code references** updated to new ident (search codebase)
 - [ ] **Tests** verify rename migration works
 - [ ] **Import/export** handles both old and new idents (if needed)
+
+> **Removed:** `:rename-db-idents` as a supported frontend migration key.
 
 ### 1.4 Property Modified
 
@@ -112,30 +127,36 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 ### 2.1 Version Bump
 
 - [ ] **Version incremented** in [deps/db/src/logseq/db/frontend/schema.cljs](deps/db/src/logseq/db/frontend/schema.cljs)
-- [ ] **Bump type appropriate:**
-  - Minor bump (65.16 → 65.17) for additive changes
-  - Major bump (65.x → 66.0) for breaking changes
+- [ ] **Bump target matches** the new migration entry in `schema-version->updates`
+- [ ] **RTC compatibility impact reviewed** if the change affects remote graph compatibility, because current handlers compare major schema versions during sync and repo flows
 - [ ] **All migrations match version:**
   - Migration entries use same version as schema
   - No version gaps in migration sequence
 - [ ] **CHANGELOG.md updated** with schema version change
 
+> **Removed:** Fixed policy text that prescribed `minor == additive` and `major == breaking`. Current source enforces version comparison and major-version compatibility checks, but does not encode that PR-review rule.
+
 ### 2.2 Migration Entry
 
 - [ ] **Migration entry format correct:**
+
   ```clojure
   ["VERSION" {:properties [...]        ; Or
               :classes [...]           ; Or
-              :rename-db-idents {...}  ; Or
+              :delete-properties [...] ; Or
               :fix function-name}]     ; Or combination
   ```
+
 - [ ] **Migration properties list complete** (all new properties included)
+- [ ] **Deletion list complete** if removing built-in properties
 - [ ] **Fix function exists** if `:fix` specified
 - [ ] **Fix function signature correct:**
+
   ```clojure
   (defn fix-fn [db] ; Takes db, returns tx-data
     [{:db/id ... :attr ...}])
   ```
+
 - [ ] **Fix function is idempotent** (safe to run multiple times)
 - [ ] **Fix function handles edge cases** (nil, missing data, etc.)
 
@@ -146,6 +167,7 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 ### 3.1 Validation Rules Added/Modified
 
 - [ ] **Entity schema updated** in [deps/db/src/logseq/db/frontend/validate.cljs](deps/db/src/logseq/db/frontend/validate.cljs)
+- [ ] **Repair flow reviewed** in [src/main/frontend/worker/db/validate.cljs](src/main/frontend/worker/db/validate.cljs) if the change could affect validation fixes or built-in repair
 - [ ] **Dispatch order considered** if adding new entity type
 - [ ] **Required fields** clearly marked (vs optional with `{:optional true}`)
 - [ ] **Error messages** clear and actionable
@@ -159,17 +181,12 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 ### 3.2 Property Value Validation
 
-- [ ] **Property value schema added** if new type:
-  ```clojure
-  (defmethod property-value-schema :logseq.property/my-prop
-    [property db property-value]
-    [:and
-     [:string {:error/message "Must be string"}]
-     [:fn {:error/message "Custom validation"} predicate]])
-  ```
+- [ ] **Property value validation added** in [deps/db/src/logseq/db/frontend/property/type.cljs](deps/db/src/logseq/db/frontend/property/type.cljs) and wired through [deps/outliner/src/logseq/outliner/property.cljs](deps/outliner/src/logseq/outliner/property.cljs) if introducing a new property type
 - [ ] **Validation appropriate for property type**
 - [ ] **Error messages helpful** for users
 - [ ] **Tests cover valid and invalid values**
+
+> **Removed:** The old `defmethod property-value-schema` example is not the current validation extension point.
 
 ### 3.3 Performance Impact
 
@@ -186,6 +203,7 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 ### 4.1 Export Format Changes
 
 - [ ] **Export includes new properties** in [deps/db/src/logseq/db/sqlite/build.cljs](deps/db/src/logseq/db/sqlite/build.cljs)
+- [ ] **Export builder and round-trip import stay compatible** with [deps/db/src/logseq/db/sqlite/export.cljs](deps/db/src/logseq/db/sqlite/export.cljs)
 - [ ] **Export handles references** correctly (converts to UUIDs)
 - [ ] **Export format version** updated if breaking change
 - [ ] **Backward compatibility** maintained (old exports still import)
@@ -193,7 +211,7 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 ### 4.2 Import Format Changes
 
-- [ ] **Import handles new properties** in build import functions
+- [ ] **Import handles new properties** in [deps/db/src/logseq/db/sqlite/export.cljs](deps/db/src/logseq/db/sqlite/export.cljs) `build-import`
 - [ ] **Import resolves references** correctly (UUIDs to entities)
 - [ ] **Import handles missing properties** gracefully (uses defaults)
 - [ ] **Import validates data** after import
@@ -215,12 +233,12 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 ### 5.1 RTC Configuration Present
 
-- [ ] **Every property** has explicit `:rtc` configuration
+- [ ] **Properties with special sync behavior** have explicit `:rtc` configuration
 - [ ] **RTC behavior appropriate** for property type:
   - User content: sync enabled
   - Device-local: sync disabled
   - Creation metadata: sync initial only
-- [ ] **RTC constants updated** if special handling needed
+- [ ] **Worker sync constants updated** in [src/main/frontend/worker/sync/const.cljs](src/main/frontend/worker/sync/const.cljs) if special handling needed
 - [ ] **Sync behavior documented** in property description
 
 ### 5.2 Multi-Device Compatibility
@@ -255,26 +273,34 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 ### 6.2 Migration Tests
 
 - [ ] **Migration from previous version** tested:
+
   ```clojure
-  (deftest test-migration-65-16-to-65-17
-    (let [db-v16 (create-test-db-with-schema "65.16")
-          migrated-db (migrate-db-graph db-v16 "65.17")]
-      (is (= "65.17" (get-schema-version migrated-db)))
-      (is (validate-db! migrated-db))))
+  (deftest test-migration-65-32-to-65-33
+    (let [conn (d/create-conn db-schema/schema)]
+      (d/transact! conn [{:db/ident :logseq.kv/schema-version
+                          :kv/value {:major 65 :minor 32}}])
+      (db-migrate/migrate conn :target-version {:major 65 :minor 33})
+      (is (= {:major 65 :minor 33}
+             (:kv/value (d/entity @conn :logseq.kv/schema-version))))))
   ```
+
 - [ ] **Data preservation** verified (no data loss)
 - [ ] **Invalid data fix** tested (if fix function provided)
 - [ ] **Performance acceptable** on large datasets
 
+> **Removed:** The old `migrate-db-graph` helper reference is stale. Current tests use `frontend.worker.db.migrate/migrate`.
+
 ### 6.3 Import/Export Tests
 
 - [ ] **Round-trip test** passes:
+
   ```clojure
-  (let [exported-1 (export-db db)
-        imported (import-db exported-1)
-        exported-2 (export-db imported)]
-    (is (= exported-1 exported-2)))
+  (let [exported (sqlite-export/build-export @export-conn {:export-type :graph})
+        {:keys [init-tx block-props-tx misc-tx]} (sqlite-export/build-import exported @import-conn {})]
+    (d/transact! import-conn (concat init-tx block-props-tx misc-tx))
+    (is (nil? (:errors (db-validate/validate-local-db! @import-conn)))))
   ```
+
 - [ ] **Cross-version import** tested (old format → new app)
 - [ ] **Large graph** tested (performance + memory)
 
@@ -375,7 +401,7 @@ For significant schema changes:
 
 If breaking change:
 
-- [ ] **Major version bump** (65.x → 66.0)
+- [ ] **Schema compatibility plan** documented, including whether a major schema-version bump is required for remote compatibility
 - [ ] **Clear communication** in release notes
 - [ ] **Migration tool** provided (if needed)
 - [ ] **Grace period** before removal (3+ releases)
@@ -400,7 +426,7 @@ Every schema change PR must include:
 - Added property `:logseq.property/...`
 - Migration entry added for version X.Y
 - Validation rules updated
-- RTC configuration specified
+- Sync behavior reviewed and RTC configuration specified if needed
 
 ### Migration Strategy
 
@@ -423,7 +449,7 @@ Every schema change PR must include:
 Please pay special attention to:
 
 1. Migration entry matches schema version bump
-2. RTC configuration appropriate for property type
+2. RTC configuration appropriate for property type when special sync handling is needed
 3. Validation rules don't break existing graphs
 4. Tests cover migration path
 5. Documentation complete
@@ -444,7 +470,7 @@ Copy this into PR description:
 - [ ] Migration entry added
 - [ ] Schema version bumped
 - [ ] Versions match
-- [ ] RTC configuration specified
+- [ ] Sync behavior reviewed; RTC configuration added if needed
 
 ### Validation
 
@@ -462,7 +488,7 @@ Copy this into PR description:
 
 ### RTC/Sync
 
-- [ ] RTC configuration appropriate
+- [ ] RTC configuration appropriate when special sync handling is needed
 - [ ] Multi-device tested
 - [ ] Conflict resolution defined
 - [ ] Version mismatch handled
@@ -489,30 +515,11 @@ Copy this into PR description:
 
 **Recommended CI checks to add:**
 
-1. **Migration Entry Validator**
-
-   - Detect changes to `built-in-properties`
-   - Verify corresponding entry in `schema-version->updates`
-   - Verify schema version bumped
-
-2. **RTC Configuration Linter**
-
-   - Check all properties have `:rtc` key
-   - Warn if RTC config missing or suspicious
-
-3. **Version Consistency Check**
-
-   - Ensure migration version matches schema version
-   - Check no version gaps in migration sequence
-
-4. **Round-Trip Test**
-
-   - Automated export → import → export test
-   - Verify output identical
-
-5. **Validation Test**
-   - Run validation on test graphs
-   - Ensure no new errors introduced
+1. **Migration Entry Validator**: detect changes to `built-in-properties`, verify a corresponding entry in `schema-version->updates`, and verify the schema version bumped.
+2. **RTC Configuration Linter**: check properties with special sync behavior have matching `:rtc` handling, and warn if sync-ignore behavior is missing or suspicious.
+3. **Version Consistency Check**: ensure migration version matches schema version and that there are no version gaps in the migration sequence.
+4. **Round-Trip Test**: automate export → import → export coverage and verify the imported graph validates cleanly.
+5. **Validation Test**: run validation on test graphs and ensure no new errors are introduced.
 
 ---
 
@@ -521,13 +528,11 @@ Copy this into PR description:
 ### For PR Author
 
 1. **Before opening PR:**
-
    - Run through relevant checklist sections
    - Include checklist in PR description
    - Document any deviations
 
 2. **During review:**
-
    - Address reviewer questions promptly
    - Update checklist as changes made
    - Add additional tests if requested
@@ -540,13 +545,11 @@ Copy this into PR description:
 ### For PR Reviewer
 
 1. **Initial review:**
-
    - Check PR includes schema change checklist
    - Verify all required items checked
    - Spot check critical items
 
 2. **Deep review:**
-
    - Review migration logic carefully
    - Check validation rules make sense
    - Verify tests comprehensive
@@ -564,35 +567,35 @@ Copy this into PR description:
 
 ### Issue 1: Missing Migration Entry
 
-```
+```text
 ❌ Property added but no migration entry
 ✅ Add migration entry in db/migrate.cljs
 ```
 
 ### Issue 2: Version Mismatch
 
-```
+```text
 ❌ Schema version "65.17" but migration entry "65.16"
 ✅ Update migration entry to match schema version
 ```
 
 ### Issue 3: Missing RTC Configuration
 
-```
-❌ Property definition has no :rtc key
-✅ Add explicit :rtc configuration
+```text
+❌ Property needs sync special-casing but has no matching `:rtc` handling
+✅ Add explicit `:rtc` configuration and verify derived sync constants
 ```
 
 ### Issue 4: No Tests
 
-```
+```text
 ❌ Schema change without tests
 ✅ Add unit, migration, and integration tests
 ```
 
 ### Issue 5: Breaking Backward Compatibility
 
-```
+```text
 ❌ Changed property type without migration
 ✅ Create new property, add migration function
 ```
@@ -612,6 +615,5 @@ Copy this into PR description:
 
 ## Changelog
 
-| Date       | Changes                                         |
-| ---------- | ----------------------------------------------- |
-| 2025-12-28 | Initial version based on investigation findings |
+- 2025-12-28: Initial version based on investigation findings
+- 2026-05-30: Validated against current source; updated sync paths, migration keys, validation entry points, and testing examples

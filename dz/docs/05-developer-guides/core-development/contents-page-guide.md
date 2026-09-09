@@ -1,12 +1,12 @@
 # Contents Page Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
-The Contents page is a special built-in page in Logseq that serves as your knowledge base's main navigation hub. It appears as a dedicated button in the right sidebar and provides a central location for organizing and accessing your most important content.
+The Contents page is a special page target in Logseq's right sidebar. It acts as a practical navigation hub and can be pinned/opened like other sidebar items.
 
-## What is the Contents Page?
+## What Is the Contents Page?
 
-The Contents page is a regular Logseq page with special treatment in the user interface. It functions as:
+The Contents page behaves like a normal page when rendered, with some special UI handling in the right sidebar. It functions as:
 
 - **Navigation Hub**: A central location to organize links to your most important pages
 - **Table of Contents**: A structured overview of your knowledge base
@@ -21,7 +21,13 @@ The Contents page is a regular Logseq page with special treatment in the user in
 - Displays with a list-details icon for easy identification
 - Automatically loads when the right sidebar is empty
 
-### 2. Regular Page Functionality
+### 2. Toggle Command and Shortcut
+
+- You can toggle Contents in the sidebar via command `:ui/toggle-contents`
+- Default shortcut is `alt+shift+c`
+- Plugin API command surface includes `logseq.ui/toggle-contents`
+
+### 3. Regular Page Functionality
 
 Despite its special status, the Contents page works like any other Logseq page:
 
@@ -30,10 +36,12 @@ Despite its special status, the Contents page works like any other Logseq page:
 - Can include queries, block embeds, and references
 - Participates in the graph view like other pages
 
-### 3. Automatic Creation
+### 4. Creation and Recognition Rules
 
-- Created automatically for all graphs (both file-based and database graphs)
-- No manual setup required - it's part of Logseq's initial data
+- **Database graphs**: `Contents` is created in DB graph initialization data.
+- **File-based graphs**: `Contents` is recognized from files like `pages/contents.*` and from sidebar/default-home config references.
+
+> **Removed:** "Created automatically for all graphs (both file-based and database graphs)."
 
 ## How to Use the Contents Page
 
@@ -42,6 +50,7 @@ Despite its special status, the Contents page works like any other Logseq page:
 1. **Right Sidebar**: Click the "Contents" button in the right sidebar
 2. **Direct Navigation**: Search for "Contents" in the global search
 3. **Page Links**: Navigate to it like any other page using `[[Contents]]`
+4. **Shortcut**: Use `alt+shift+c` to toggle it in the right sidebar
 
 ### Best Practices for Organization
 
@@ -146,16 +155,26 @@ Create links between related Contents sections:
 
 ### Code Location
 
-- **Right Sidebar Component**: `src/main/frontend/components/right_sidebar.cljs:113-116`
-- **Initial Data**: `deps/db/src/logseq/db/common/initial_data.cljs:344`
-- **Page Rendering**: Uses the standard `page-cp` component
+- **Right Sidebar render + button + default fallback**: `src/main/frontend/components/right_sidebar.cljs`
+- **Open sidebar fallback-to-contents**: `src/main/frontend/state.cljs`
+- **Toggle command**: `src/main/frontend/handler/ui.cljs`
+- **Shortcut mapping (`alt+shift+c`)**: `src/main/frontend/modules/shortcut/config.cljs`
+- **DB graph built-in page creation**: `deps/db/src/logseq/db/sqlite/create_graph.cljs`
+- **Graph parser recognition for `pages/contents.*`**: `deps/graph-parser/src/logseq/graph_parser/extract.cljc`
+- **Plugin external command type**: `libs/src/LSPlugin.ts`
 
 ### How It Works
 
-1. **Page Creation**: Automatically created as part of graph initialization
+1. **Sidebar Fallback**: When right sidebar has no blocks, Logseq inserts `:contents`.
 2. **Sidebar Integration**: Special `:contents` block type in right sidebar
 3. **Page Rendering**: Renders as a normal page using `page-cp` component
-4. **Default Behavior**: Loads automatically when sidebar is empty
+4. **DB Graphs**: Built-in `Contents` page is present in initial graph data
+5. **File Graphs**: `pages/contents.*` is normalized to title `Contents`
+
+### Special Cases
+
+- The Contents page is protected from delete in page menu logic.
+- Some inline page-reference bracket rendering is suppressed in the Contents page context.
 
 ### Customization
 
@@ -220,8 +239,13 @@ Since Contents is a regular page, you can:
 - Create separate Contents pages for different areas
 - Use queries instead of manual lists for dynamic content
 
+## Findings: New Capabilities
+
+- **Keyboard toggle** for Contents is now explicit and first-class (`alt+shift+c`, command `:ui/toggle-contents`).
+- **Plugin command integration** includes `logseq.ui/toggle-contents`, so plugins can open/close Contents programmatically.
+
 ## Conclusion
 
-The Contents page is a powerful organizational tool that grows with your knowledge base. By treating it as your navigation command center and keeping it well-organized, you'll significantly improve your Logseq workflow and make your knowledge base more accessible and useful.
+The Contents page remains a strong navigation tool, with sidebar-first integration and command-level controls. The key implementation nuance is that automatic creation is guaranteed for DB graphs, while file-based graphs depend on recognized files/config references.
 
-Remember: The Contents page is just a regular page with special sidebar integration, so you can customize it however works best for your specific needs and workflows.
+Remember: treat it as a normal page for content authoring, but account for its special sidebar behavior and protections when documenting or extending the feature.

@@ -1,6 +1,6 @@
 # Logseq Theme Development Documentation
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 Welcome to the Logseq Theme Development documentation! This collection of guides will help you create beautiful, custom themes for Logseq.
 
@@ -11,10 +11,10 @@ Welcome to the Logseq Theme Development documentation! This collection of guides
 **Complete comprehensive guide covering:**
 
 - Understanding Logseq's two modes (File-based & Database)
-- Design system overview (shadcn/ui, Radix Colors, TailwindCSS)
+- Design system overview (Shui components, Radix color tokens, Tailwind utility layers)
 - Theme architecture and file structure
-- CSS variables reference (150+ variables documented)
-- Component styling guide for all shadcn/ui components
+- CSS variables reference
+- Component styling guide for core UI surfaces and components
 - Best practices for accessibility and performance
 - Testing checklist and debugging tips
 - Publishing and distribution workflows
@@ -33,7 +33,7 @@ Welcome to the Logseq Theme Development documentation! This collection of guides
 - Common selectors for blocks, UI components, layout
 - Theme mode detection patterns
 - Quick start template
-- Available shadcn/ui components list
+- Available theme-relevant component hooks and selectors
 - Debugging tips and common patterns
 - Common issues and solutions table
 
@@ -47,7 +47,7 @@ Welcome to the Logseq Theme Development documentation! This collection of guides
 
 **Complete working theme including:**
 
-- Full CSS implementation (500+ lines)
+- Full CSS implementation
 - Ocean-inspired color palette
 - Light and dark mode variants
 - Custom typography with web fonts
@@ -96,21 +96,25 @@ Logseq operates in two modes:
 - **File-based mode**: Traditional markdown files
 - **Database mode**: SQLite database storage
 
-**Good news:** Themes work identically in both modes! No special handling needed.
+**Good news:** Theme authoring is effectively the same in both modes.
+
+> **Removed:** The older wording implied identical storage/runtime internals across modes. Current source keeps the authoring model aligned, but storage and retrieval paths differ between File-based and DB graphs.
 
 ### Design System Stack
 
 ```text
 Your Theme CSS
       ↓
-shadcn/ui Components
+Shui Components (Logseq UI layer)
       ↓
-Radix UI Primitives
+Token and utility layers
       ↓
 Radix Colors
       ↓
 TailwindCSS
 ```
+
+> **Removed:** The previous version described a strict `shadcn/ui -> Radix Primitives -> TailwindCSS` runtime stack. Current source uses `logseq.shui` wrappers plus tokenized variables and utility layers, so this should be treated as a conceptual chain.
 
 ### CSS Variable Hierarchy
 
@@ -121,6 +125,11 @@ TailwindCSS
    ↓
 --rx-* (Radix Base) ← Don't modify directly
 ```
+
+## Findings: New Capabilities
+
+- Published graph theming supports both custom `logseq/publish.css` and custom `logseq/publish.js` assets in the publishing pipeline.
+- Published pages include built-in theme initialization and toggling via `data-theme`, persisted in local storage (`publish-theme`) with system-preference fallback.
 
 ---
 
@@ -170,11 +179,11 @@ By following these guides, you'll be able to create:
 
 1. **Introduction** - Overview and setup
 2. **Understanding Logseq Modes** - File-based vs Database
-3. **Design System Overview** - shadcn/ui, Radix, Tailwind
+3. **Design System Overview** - Shui, token layers, Radix, Tailwind
 4. **Theme Architecture** - File structure and organization
 5. **Quick Start Guide** - Get coding in 5 minutes
 6. **CSS Variables Reference** - Complete variable documentation
-7. **Component Styling** - shadcn/ui components guide
+7. **Component Styling** - core UI component styling guide
 8. **Best Practices** - Accessibility, performance, patterns
 9. **Testing Your Theme** - Checklist and debugging
 10. **Publishing Your Theme** - Distribution workflows
@@ -252,6 +261,12 @@ Found issues with these docs? Suggestions for improvement?
 ---
 
 ## 🔄 Version History
+
+### v1.1.0 (May 2026)
+
+- Updated terminology to match current implementation (`logseq.shui` and token-layer model)
+- Added validated note on File-based vs DB mode internals
+- Added published-theme capability findings for custom `publish.css` and `publish.js`
 
 ### v1.0.0 (October 2025)
 

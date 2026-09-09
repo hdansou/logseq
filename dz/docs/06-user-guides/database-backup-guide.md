@@ -1,14 +1,16 @@
 # Database Graph Backup Guide
 
 **For:** Logseq Desktop Users (Windows & macOS)  
-**Graph Type:** Database Graphs  
-**Last Updated:** January 11, 2026
+**Graph Type:** Database Graphs
+
+> **Last revised:** 2026-05-29
 
 ---
 
 ## What Are Database Backups?
 
-Logseq automatically creates backup copies of your database graphs to protect your data. Think of backups as snapshots of your graph at different points in time - if something goes wrong, you can restore a previous version.
+Logseq Desktop creates backup snapshots of database graphs to protect your data. Each graph backup is stored as a directory that contains a SQLite copy of the graph plus metadata about when and how it was created.
+Desktop and CLI graph backups use the same on-disk `backup/` layout.
 
 ### Why Backups Matter
 
@@ -22,49 +24,55 @@ Logseq automatically creates backup copies of your database graphs to protect yo
 
 ### Automatic Backups
 
-Logseq automatically creates backups whenever it saves your database. **You don't need to do anything** - it just works!
+Logseq Desktop creates hourly automatic backups for active graphs. The backup is produced through the db-worker-backed SQLite backup flow, so the live database and the backup snapshot are separate files.
 
-**When backups are created:**
+**When a backup can be created:**
 
-- ✅ Every time you manually save (CMD+S / Ctrl+S)
-- ✅ Automatically every 30 seconds (if you made changes)
-- ✅ When you close Logseq
+- ✅ Every hour for active Desktop graphs
+- ✅ When you use the save shortcut and Logseq forces a backup
+- ✅ Through the CLI `graph backup` commands, which share the same storage layout
 
 **How many backups are kept:**
 
-- 12 backup copies total
-- 6 recent backups (one per hour)
-- 6 older backups (one per day)
+- 12 automatic Desktop backups per source
+- Manual and CLI backups are stored separately from the automatic-retention bucket
 
-**Example timeline:**
+> **Removed:** Backups are not created on every manual save, every 30 seconds, or when you close Logseq.
 
-```txt
-Today 3:30 PM  ← Most recent
-Today 2:15 PM
-Today 1:45 PM
-Today 12:30 PM
-Today 11:15 PM
-Today 10:00 AM
-Yesterday 11:45 PM
-2 days ago 6:30 PM
-3 days ago 2:15 PM
-4 days ago 9:45 AM
-5 days ago 4:30 PM
-6 days ago 8:15 PM  ← Oldest kept
-```
+> **Removed:** The old 6-hourly + 6-daily retention split does not match the current graph backup code.
 
 ### Where Backups Are Stored
 
 **Backup Location:**
 
-- **Windows:** `C:\Users\<YourName>\.logseq\graphs\<YourGraph>\backups\`
-- **macOS:** `/Users/<YourName>/.logseq/graphs/<YourGraph>/backups/`
+- **Windows:** `C:\Users\<YourName>\.logseq\graphs\<YourGraph>\backup\`
+- **macOS:** `/Users/<YourName>/.logseq/graphs/<YourGraph>/backup/`
+
+Each listable backup lives in its own directory:
+
+```text
+~/.logseq/graphs/<encoded-graph-dir>/
+├── db.sqlite
+└── backup/
+    └── <backup-name>/
+        ├── db.sqlite
+        └── metadata.edn
+```
 
 **Important:**
 
-- `.logseq` folder is hidden by default
-- Don't manually edit or delete files in this folder
-- Each backup is a complete copy of your database
+- `backup/` is the graph-backup root
+- `backups/` is only used by the separate emergency write-failure backup helper
+- Do not edit `db.sqlite` or `metadata.edn` by hand unless you are restoring on purpose
+
+---
+
+## Findings: New Capabilities
+
+- Graph backups now store `metadata.edn` alongside `db.sqlite`, so the backup system can track source, creation time, and path metadata.
+- Desktop automatic backups and CLI-created backups share the same `backup/` layout.
+- The CLI can list, create, restore, and remove backups from the same storage tree.
+- Source-scoped retention means automatic backups can be pruned without removing CLI or manual backups.
 
 ---
 
@@ -76,7 +84,7 @@ Yesterday 11:45 PM
 2. Type in the address bar: `%USERPROFILE%\.logseq\graphs`
 3. Press Enter
 4. Find your graph folder (named after your graph)
-5. Open the `backups` folder
+5. Open the `backup` folder
 
 **Tip:** You may need to show hidden files/folders:
 
@@ -89,28 +97,24 @@ Yesterday 11:45 PM
 3. Type: `~/.logseq/graphs`
 4. Press Enter
 5. Find your graph folder
-6. Open the `backups` folder
+6. Open the `backup` folder
 
 **Tip:** Hidden files/folders appear dimmed in Finder.
 
 ### Understanding Backup Names
 
-Backup files are named with timestamps:
+Backup directories are named automatically and encoded for filesystem safety.
+
+Examples:
 
 ```text
-2026-01-11T14_30_45.123Z.sqlite
-└─┬─┘ └┬┘ └┬┘ └─┬──┘
-  │    │   │     │
-  │    │   │     └─ Milliseconds
-  │    │   └─ Time (14:30:45)
-  │    └─ Month and Day (Jan 11)
-  └─ Year (2026)
+my-graph-20260529T143045Z
+my-graph-nightly-20260529T143045Z
 ```
 
-**Reading the timestamp:**
-
-- `2026-01-11` = January 11, 2026
-- `14_30_45` = 2:30:45 PM (underscores replace colons)
+- The timestamp is UTC
+- Optional labels may appear in CLI-created backups
+- The actual SQLite file inside the directory is always `db.sqlite`
 
 ---
 
@@ -144,7 +148,7 @@ You should see:
 db.sqlite          ← Your current database
 db.sqlite-wal      ← May be present
 db.sqlite-shm      ← May be present
-backups/           ← Backup folder
+backup/            ← Backup folder
 ```
 
 #### Step 3: Backup the Current Database (Optional but Recommended)
@@ -156,15 +160,15 @@ Before restoring, save your current database:
 
 #### Step 4: Choose a Backup to Restore
 
-1. Open the `backups` folder
-2. Find the backup you want (look at the timestamp)
-3. Copy that file (e.g., `2026-01-11T10_30_45.123Z.sqlite`)
+1. Open the `backup` folder
+2. Find the backup you want (look at the timestamp or label)
+3. Copy that backup directory's `db.sqlite` file
 
 #### Step 5: Restore the Backup
 
 1. Go back to the graph folder (where `db.sqlite` is)
 2. Delete or rename the current `db.sqlite`
-3. Paste the backup file you copied
+3. Paste the backup file you copied from `backup/<backup-name>/db.sqlite`
 4. Rename it to exactly: `db.sqlite`
 
 #### Step 6: Clean Up (Optional)
@@ -181,6 +185,8 @@ These are temporary files that will be recreated.
 1. Launch Logseq
 2. Open your graph
 3. Check that your data looks correct
+
+> **Removed:** The old instructions that referenced restoring from a flat `backups/` file list no longer match the current graph backup layout.
 
 ---
 
@@ -204,46 +210,22 @@ While Logseq backs up automatically, you should also create your own backups for
 - Can be opened on any computer with Logseq
 - Perfect for sharing or archiving
 
-### Option 2: Scheduled Folder Backup (Advanced)
+> **Removed:** The old "Schedule backup" folder workflow is not present in the current source.
 
-**Best for:** Automated external backups
-
-1. Go to **Settings** → **Export**
-2. Under "Schedule backup", click **Set backup folder first**
-3. Choose a location (external drive, network drive)
-4. Click **Backup now** to create initial backup
-5. Backups will run automatically every hour
-
-**Advantages:**
-
-- Automatic (runs every hour)
-- Stores outside Logseq folder
-- Protected from disk failures
-
-**Requirements:**
-
-- Chromium-based browser (Chrome, Edge, Brave)
-- File System Access API support
-
-### Option 3: Copy the Entire Graph Folder
+### Option 2: Copy the Entire Graph Folder
 
 **Best for:** Complete backup with all history
 
-1. Close Logseq
-2. Navigate to `~/.logseq/graphs/`
-3. Copy your entire graph folder
-4. Paste to external drive or cloud storage
+1. Go to **Settings** → **Export**
+2. Close Logseq
+3. Navigate to `~/.logseq/graphs/<YourGraph>/`
+4. Copy your entire graph folder to an external drive or cloud storage
 
 **Advantages:**
 
-- Includes all 12 automatic backups
-- Complete restoration possible
-- Simple to understand
-
-**Disadvantages:**
-
-- Large file size (13× your database size)
-- Must close Logseq first
+- Includes the live `db.sqlite` plus the `backup/` directory
+- Simple to understand and restore
+- Keeps every backup you copied
 
 ---
 
@@ -251,12 +233,12 @@ While Logseq backs up automatically, you should also create your own backups for
 
 ### How Much Space Do Backups Use?
 
-Each backup is a complete copy of your database:
+Each automatic Desktop backup is a complete copy of your database:
 
 ```text
 Database size: 50 MB
-× 12 backups
-= 600 MB total for backups
+× 12 automatic backups
+= 600 MB total for automatic backups
 + 50 MB for current database
 = 650 MB total
 ```
@@ -267,6 +249,8 @@ Database size: 50 MB
 - Medium graph (50 MB): ~650 MB total
 - Large graph (200 MB): ~2.6 GB total
 
+Manual and CLI-created backups add to that total until you remove them.
+
 ### Checking Your Backup Space
 
 **Find your graph size:**
@@ -274,7 +258,11 @@ Database size: 50 MB
 1. Navigate to `~/.logseq/graphs/<YourGraph>/`
 2. Right-click `db.sqlite` → Properties (Windows) / Get Info (macOS)
 3. Look at the file size
-4. Multiply by 13 for total space used
+4. Multiply by 13 for a rough automatic-backup estimate
+
+**Note:** manual backups you create are additional to that estimate.
+
+**Note:** CLI-created backups are additional to that estimate too.
 
 ### What If I'm Running Out of Space?
 
@@ -282,13 +270,13 @@ Database size: 50 MB
 
 1. Export your graph (Settings → Export → Export SQLite DB)
 2. Save the export somewhere safe
-3. Clear the backups folder (Logseq will rebuild it)
+3. Remove old backup directories you no longer need
 
 **Option 2: Move to Larger Drive**
 The `.logseq` folder can't be moved easily, but you can:
 
-- Use external backups (scheduled backup feature)
-- Export regularly to external drive
+- Keep exports on an external drive
+- Copy the graph folder to external storage
 - Free up space on your main drive
 
 **Option 3: Split Your Graphs**
@@ -317,29 +305,30 @@ If your graph is very large:
 2. Press **CMD+Shift+.** (dot)
 3. Hidden files now appear dimmed
 
-### Problem: No Backups Folder
+### Problem: No Backup Directory
 
-**Cause:** You've never saved changes to this graph
+**Cause:** No backup has been created yet
 
 **Solution:**
 
 1. Make any edit in your graph
-2. Wait 30 seconds or press CMD+S
-3. The `backups` folder will be created automatically
+2. Press the save shortcut or wait for the next hourly auto-backup
+3. The `backup` folder will be created automatically
 
 ### Problem: Backup Folder Is Empty
 
 **Possible causes:**
 
 - This is a brand new graph (never saved)
-- Less than 1 hour has passed since graph creation
-- Someone manually deleted the backups
+- No hourly auto-backup has run yet
+- No manual save backup or CLI backup has been created yet
+- Someone manually deleted the backup directories
 
 **Solution:**
 
 - Make an edit and save
-- Backups will start accumulating
-- Future edits will be protected
+- Wait for the next hourly backup if you only rely on automatic backups
+- Backups will start accumulating once the first backup completes
 
 ### Problem: Restored Backup but Data Still Wrong
 
@@ -374,7 +363,7 @@ If your graph is very large:
 **Solutions:**
 
 1. This is normal for large graphs (>100 MB)
-2. Backups happen in background, shouldn't affect regular use
+2. Backups happen in the background and should not block normal editing for long
 3. If severely impacted, consider splitting your graph
 
 ---
@@ -383,10 +372,10 @@ If your graph is very large:
 
 ### What Backups DON'T Protect Against
 
-❌ **Hard drive failure** - Backups are on same drive as original  
+❌ **Hard drive failure** - Backups are usually on the same drive as the original graph
 ❌ **Computer loss/theft** - Everything is on your computer  
 ❌ **Ransomware** - May encrypt backups too  
-❌ **Accidental deletion of .logseq folder** - All backups gone
+❌ **Accidental deletion of `.logseq` folder** - All local backups are gone
 
 ### What You Should Also Do
 
@@ -419,6 +408,8 @@ If your graph is very large:
 - Manually export (Settings → Export → Export SQLite DB)
 - Keep the export until you're sure changes are good
 
+> **Removed:** The old hourly/daily bucket retention description does not apply to the current graph backup code.
+
 ---
 
 ## Advanced: Backup File Technical Details
@@ -433,35 +424,26 @@ Backups are standard SQLite database files:
 
 ### Backup Frequency Rules
 
-**Throttling:** Maximum 1 backup per hour
+**Throttling:** Maximum 1 automatic backup per hour
 
-- If you save at 2:10 PM and 2:30 PM, only 2:10 PM is backed up
-- Next backup can be created after 3:10 PM
-- Prevents creating hundreds of backups
+- If an automatic backup was created at 2:10 PM, the next automatic backup can be skipped until 3:10 PM
+- Manual forced backups can bypass the hourly throttle
+- This prevents creating hundreds of automatic backups
 
 **Why hourly?**
 
 - Balances protection vs. disk space
 - Most users don't need minute-by-minute backups
-- Can still recover recent work (auto-save protects last 30 seconds)
+- Manual saves can still force a backup when needed
 
 ### Retention Algorithm
 
-**Phase 1 - Hourly (newest 6 backups):**
+**Automatic source retention:**
 
-- Keeps one backup per hour
-- Example: 3 PM, 2 PM, 1 PM, 12 PM, 11 AM, 10 AM
+- Keeps the newest 12 automatic backups
+- Retention is source-scoped, so automatic and manual backups are tracked separately
 
-**Phase 2 - Daily (older 6 backups):**
-
-- Keeps one backup per day
-- Example: Yesterday, 2 days ago, 3 days ago, etc.
-
-**Why this strategy?**
-
-- Recent changes: More granular (hourly)
-- Older changes: Less granular (daily)
-- Balances space vs. recovery options
+> **Removed:** The old hourly-plus-daily dedupe strategy no longer applies to graph backups.
 
 ---
 
@@ -469,35 +451,35 @@ Backups are standard SQLite database files:
 
 ### Q: Do backups work if Logseq crashes?
 
-**A:** Yes! The current database is always saved before backup. If Logseq crashes:
+**A:** Yes. The backup system writes a separate SQLite snapshot, so a crash does not overwrite your most recent backup. If Logseq crashes:
 
-- Your last auto-save (within 30 seconds) is in the database
+- Your live database remains separate from the backup snapshots
 - Previous backups remain intact
-- You can restore if database is corrupted
+- You can restore if the current database is corrupted
 
 ### Q: Can I disable automatic backups?
 
-**A:** No, backups are automatic and cannot be disabled. This is by design to protect your data.
+**A:** There is no user-facing setting in current source to turn off the hourly Desktop auto-backup timer.
 
 ### Q: Do backups sync with Logseq Sync?
 
-**A:** No, backups are local only. Logseq Sync provides separate cloud backup. The two systems work independently.
+**A:** No. Backups are local snapshots. Logseq Sync is a separate cloud feature.
 
 ### Q: Can I change how many backups are kept?
 
-**A:** Not currently. The 12-backup limit is fixed (6 hourly + 6 daily).
+**A:** Not from the UI. Desktop automatic backups keep 12 snapshots by default.
 
 ### Q: What happens if my backup folder grows too large?
 
-**A:** Backups are automatically deleted when they exceed the retention policy. The folder will never grow beyond 12 copies.
+**A:** Automatic backups are pruned to the retention limit, but any manual backups you create add to the total until you remove them.
 
 ### Q: Can I restore a backup on a different computer?
 
-**A:** Yes! Copy the backup file to the new computer:
+**A:** Yes. Copy the backup directory or an exported SQLite file to the new computer:
 
 1. Install Logseq on new computer
-2. Place backup file in appropriate `.logseq/graphs/<name>/` folder
-3. Rename to `db.sqlite`
+2. Copy the graph backup directory into `.logseq/graphs/<name>/backup/`
+3. Or use an exported SQLite file and restore it as `db.sqlite`
 4. Open Logseq
 
 ### Q: Are backups encrypted?
@@ -514,20 +496,20 @@ Backups are standard SQLite database files:
 
 ### Backup Locations
 
-| OS          | Location                                          |
-| ----------- | ------------------------------------------------- |
-| **Windows** | `C:\Users\<Name>\.logseq\graphs\<Graph>\backups\` |
-| **macOS**   | `/Users/<Name>/.logseq/graphs/<Graph>/backups/`   |
+| OS          | Location                                         |
+| ----------- | ------------------------------------------------ |
+| **Windows** | `C:\Users\<Name>\.logseq\graphs\<Graph>\backup\` |
+| **macOS**   | `/Users/<Name>/.logseq/graphs/<Graph>/backup/`   |
 
 ### Common Tasks
 
-| Task               | Steps                                              |
-| ------------------ | -------------------------------------------------- |
-| **View backups**   | Navigate to backups folder using paths above       |
-| **Export graph**   | ⋯ menu → Export graph → Export SQLite DB           |
-| **Restore backup** | Close Logseq → Copy backup → Rename to `db.sqlite` |
-| **Manual save**    | CMD+S (macOS) or Ctrl+S (Windows)                  |
-| **Check space**    | Right-click `db.sqlite` → Properties/Get Info      |
+| Task               | Steps                                                                 |
+| ------------------ | --------------------------------------------------------------------- |
+| **View backups**   | Navigate to the `backup` folder using paths above                     |
+| **Export graph**   | ⋯ menu → Export graph → Export SQLite DB                              |
+| **Restore backup** | Close Logseq → Copy `backup/<name>/db.sqlite` → Rename to `db.sqlite` |
+| **Manual save**    | Save shortcut, or use the menu action that forces a backup            |
+| **Check space**    | Right-click `db.sqlite` in a backup directory → Properties/Get Info   |
 
 ### When to Restore
 
@@ -575,13 +557,13 @@ If your database is corrupted:
 
 **Key Takeaways:**
 
-✅ Backups happen automatically - you don't need to do anything  
-✅ 12 backups are kept (6 hourly, 6 daily)  
-✅ Backups are stored in `.logseq/graphs/<name>/backups/`  
-✅ You can restore by copying a backup file over `db.sqlite`  
-✅ Also create external backups (export weekly)  
+✅ Desktop graph backups run hourly for active graphs
+✅ 12 automatic backups are retained by default
+✅ Backups are stored in `.logseq/graphs/<name>/backup/`
+✅ Restore by copying `backup/<name>/db.sqlite` over the live `db.sqlite`
+✅ Export SQLite files or copy the whole graph folder for extra safety
 ✅ Backups protect against corruption and mistakes  
-✅ They DON'T protect against drive failure or computer loss
+✅ They don't protect against drive failure or computer loss
 
 **Remember:** Backups are your safety net. Understanding how they work helps you sleep better at night!
 
@@ -595,6 +577,6 @@ If your database is corrupted:
 
 ---
 
-**Last Updated:** January 11, 2026  
+**Last revised:** 2026-05-29
 **Version:** 1.0  
 **Investigation Source:** [Database Backup Investigation](../07-investigations/database-backup-electron.md)

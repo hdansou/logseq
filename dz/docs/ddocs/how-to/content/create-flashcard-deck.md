@@ -2,7 +2,7 @@
 title: 'Create a Flashcard Deck'
 description: 'How to organize flashcards into focused study decks'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -15,11 +15,17 @@ relatedDocs:
 
 # Create a Flashcard Deck
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > How to organize flashcards into focused study decks for efficient learning.
 
 Logseq uses FSRS (Free Spaced Repetition Scheduler) for its flashcard system. In DB-based graphs, cards are blocks tagged with the built-in `#Card` class, and decks are managed through `Cards` objects that contain queries.
+
+## Findings: New Capabilities
+
+- Flashcards can now be opened with both `g f` and `t c`.
+- Mobile has a dedicated Flashcards tab, plus deck selection state in the mobile flashcards viewer.
+- Creating a new deck still uses the `+` button in the flashcard viewer to create a `Cards` block on today's journal page.
 
 ## Creating Cards
 
@@ -56,7 +62,8 @@ Insert a cloze via the `/Cloze` slash command.
 Access the flashcard review modal in one of these ways:
 
 1. Click the flashcard icon in the left sidebar (if enabled in settings)
-2. Use the keyboard shortcut `t c`
+2. Use the keyboard shortcut `g f` or `t c`
+3. On mobile, open the Flashcards tab
 
 The viewer shows due cards and lets you rate recall with **Again** (1), **Hard** (2), **Good** (3), or **Easy** (4).
 
@@ -137,9 +144,19 @@ Select multiple blocks, then use the command palette or right-click context menu
 Logseq uses the FSRS algorithm to schedule card reviews. The scheduling state is stored in two built-in properties on each card block:
 
 - `logseq.property.fsrs/due` -- the next review date (as a timestamp)
-- `logseq.property.fsrs/state` -- the full FSRS card state (stability, difficulty, reps, lapses, etc.)
+- `logseq.property.fsrs/state` -- the persisted FSRS card state; Logseq keeps the internal card map here and records the last rating automatically
 
 These properties are managed automatically when you rate cards during review. You do not need to edit them manually.
+
+> **Removed:** The legacy file-based `:card-last-interval`, `:card-repeats`, `:card-ease-factor`, `:card-next-schedule`, and `:card-last-score` fields do not apply to DB flashcards.
+
+## Configuration
+
+### Enable Flashcards
+
+Settings → Features → Enable Flashcards
+
+> **Removed:** Legacy `:srs/learning-fraction`, `:srs/initial-interval`, `:srs/new-cards-limit`, and `:srs/review-limit` options are not used in DB graphs.
 
 ---
 
@@ -219,4 +236,4 @@ For multiple decks:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

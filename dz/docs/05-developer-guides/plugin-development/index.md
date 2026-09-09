@@ -1,6 +1,6 @@
 # Logseq Plugin Developer Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 **Welcome to Logseq Plugin Development!**
 
@@ -40,19 +40,19 @@ Logseq supports two types of graphs, each with different capabilities and APIs:
 
 ### Comparison Table
 
-| Feature             | File-Based Graphs             | DB Graphs                                 |
-| ------------------- | ----------------------------- | ----------------------------------------- |
-| **Storage**         | Markdown/Org files on disk    | SQLite database                           |
-| **Properties**      | Inline text (`key:: value`)   | Structured schema with types              |
-| **Property Types**  | All strings (untyped)         | Typed (number, date, url, checkbox, etc.) |
-| **Tags/Classes**    | Simple page references        | First-class entities with metadata        |
-| **Queries**         | Basic DSL only                | DSL + Full Datascript/Datalog             |
-| **File Access**     | ✅ Direct file system access  | ❌ No file system access                  |
-| **Git Integration** | ✅ Native Git support         | ⚠️ Requires export                        |
-| **Collaboration**   | Git-based                     | Real-time (upcoming)                      |
-| **Portability**     | ✅ Plain text, works anywhere | ⚠️ Requires Logseq                        |
-| **Performance**     | File I/O dependent            | Database optimized                        |
-| **Maturity**        | Stable, well-established      | Newer, actively developed                 |
+| Feature             | File-Based Graphs             | DB Graphs                                  |
+| ------------------- | ----------------------------- | ------------------------------------------ |
+| **Storage**         | Markdown/Org files on disk    | SQLite database                            |
+| **Properties**      | Inline text (`key:: value`)   | Structured schema with types               |
+| **Property Types**  | All strings (untyped)         | Typed (number, date, url, checkbox, etc.)  |
+| **Tags/Classes**    | Simple page references        | First-class entities with metadata         |
+| **Queries**         | DSL + Datascript query APIs   | DSL + Datascript query APIs                |
+| **File Access**     | ✅ Direct file system access  | ❌ No file system access                   |
+| **Git Integration** | ✅ Native Git support         | ⚠️ Requires export                         |
+| **Collaboration**   | Git-based                     | Real-time sync supported (setup-dependent) |
+| **Portability**     | ✅ Plain text, works anywhere | ⚠️ Requires Logseq                         |
+| **Performance**     | File I/O dependent            | Database optimized                         |
+| **Maturity**        | Stable, well-established      | Newer, actively developed                  |
 
 ### When to Support Both
 
@@ -80,6 +80,8 @@ if (isDbGraph) {
 }
 ```
 
+> **Removed:** Previous wording said DB graph collaboration was "Real-time (upcoming)". This is stale.
+
 ---
 
 ## Available Guides
@@ -87,7 +89,6 @@ if (isDbGraph) {
 ### Core Guides
 
 1. **[Plugin Developer Guide: File-Based Graphs](./file-graphs.md)**
-
    - Working with Markdown/Org files
    - Manual property parsing and formatting
    - Basic DSL queries
@@ -104,7 +105,6 @@ if (isDbGraph) {
 ### Language-Specific Guides
 
 1. **[ClojureScript Plugin SDK Guide](./clojurescript-guide.md)**
-
    - Complete API reference for ClojureScript developers
    - Idiomatic ClojureScript patterns
    - Works with both graph types
@@ -123,7 +123,6 @@ Build a custom plugin command that sets the current block's `Scheduled` property
 ### Additional Resources
 
 1. **Library and Namespace User Guide** (see architecture docs)
-
    - Namespace organization in DB graphs
    - Page hierarchies
 
@@ -302,7 +301,8 @@ async function initPlugin() {
 
 - ✅ Block CRUD (create, read, update, delete)
 - ✅ Page CRUD
-- ✅ Basic queries (`DB.q` with DSL)
+- ✅ `DB.q()` (DSL queries)
+- ✅ `DB.datascriptQuery()` (Datascript queries; model/schema differs by graph type)
 - ✅ Database change subscriptions
 - ✅ UI operations (messages, commands, etc.)
 - ✅ Application info
@@ -318,15 +318,30 @@ async function initPlugin() {
 - 🗄️ `Editor.getAllTags()` - List all tags/classes
 - 🗄️ `Editor.createTag()` - Create new tags/classes (Added November 2025)
 - 🗄️ `Editor.getTag()` - Get tag by name or identifier (Added November 2025)
+- 🗄️ `Editor.getTagsByName()` - Get all class entities matching a tag name
 - 🗄️ `Editor.getTagObjects()` - Get all blocks tagged with a specific class
 - 🗄️ `Editor.addBlockTag()` - Add tag to block programmatically (Added November 2025)
 - 🗄️ `Editor.removeBlockTag()` - Remove tag from block (Added November 2025)
 - 🗄️ `Editor.addTagProperty()` - Add property to tag/class (Added November 2025)
 - 🗄️ `Editor.removeTagProperty()` - Remove property from tag/class (Added November 2025)
+- 🗄️ `Editor.addTagExtends()` - Add class inheritance (`extends`) relation
+- 🗄️ `Editor.removeTagExtends()` - Remove class inheritance relation
+- 🗄️ `Editor.setBlockIcon()` - Set block icon (`tabler-icon` or `emoji`)
+- 🗄️ `Editor.removeBlockIcon()` - Remove block icon
 - 🗄️ `Editor.upsertBlockProperty()` - Set typed property values (with optional schema)
 - 🗄️ `Editor.getBlockProperty()` - Get typed property values
 - 🗄️ `Editor.getPageProperties()` - Get all properties of a page
-- 🗄️ `DB.datascriptQuery()` - Advanced Datalog queries
+
+> **Removed:** The previous matrix listed `DB.datascriptQuery()` as DB-only. Current source exports it generally for the current graph.
+
+## Findings: New Capabilities
+
+Validation against `src/`, `deps/`, and `packages/` shows capabilities not previously called out in this index:
+
+- `Editor.getTagsByName()` for name-based class lookups
+- `Editor.addTagExtends()` and `Editor.removeTagExtends()` for class inheritance
+- `Editor.setBlockIcon()` and `Editor.removeBlockIcon()` for icon metadata on blocks
+- `logseq.Experiments.registerBlockRenderer()` for custom block-body rendering in experimental APIs
 
 ### 📁 File-Based Graphs Only
 
@@ -474,17 +489,14 @@ See detailed examples in:
 ### Stuck? Here's What to Do:
 
 1. **Check the relevant guide:**
-
    - [File-Based Guide](./file-graphs.md)
    - [DB Graph Guide](./db-graphs.md)
 
 2. **Search existing issues:**
-
    - [Logseq Issues](https://github.com/logseq/logseq/issues)
    - Filter by `plugin` label
 
 3. **Ask the community:**
-
    - Discord #plugin-dev channel
    - Include: graph type, plugin code snippet, error message
 

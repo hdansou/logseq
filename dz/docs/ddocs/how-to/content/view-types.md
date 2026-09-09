@@ -2,7 +2,7 @@
 title: 'View Functions'
 description: 'How to create custom view functions for advanced query results'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -15,9 +15,13 @@ relatedDocs:
 
 # View Functions
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > How to use `:view` functions to create custom presentations of query results.
+
+## Findings: New Capabilities
+
+- `:query/result-transforms` is supported in `config.edn`, and `:result-transform` is handled at query time, so you can sort or reshape results before `:view` renders them.
 
 ## What is :view?
 
@@ -120,7 +124,7 @@ In a DB graph, replace `(get-in item [:block/properties :priority] "None")` with
 | Page       | `:block/page`       | Page entity       |
 | Parent     | `:block/parent`     | Parent block      |
 
-**DB graphs (0.11.x+):** In DB graphs, `:block/marker` and `:block/priority` do not exist. Tasks use `:logseq.property/status` (with entity values like `:logseq.property/status.todo`, `:logseq.property/status.doing`, `:logseq.property/status.done`, etc.) and `:logseq.property/priority` (with values `:logseq.property/priority.high`, `.medium`, `.low`). Properties are stored as direct attributes on the entity rather than inside a `:block/properties` map.
+**DB graphs (0.11.x+):** In DB graphs, `:block/marker` and `:block/priority` do not exist. Tasks use `:logseq.property/status` (with entity values like `:logseq.property/status.backlog`, `:logseq.property/status.todo`, `:logseq.property/status.doing`, `:logseq.property/status.in-review`, `:logseq.property/status.done`, and `:logseq.property/status.canceled`) and `:logseq.property/priority` (with values `:logseq.property/priority.low`, `.medium`, `.high`, and `.urgent`). Properties are stored as direct attributes on the entity rather than inside a `:block/properties` map.
 
 | Field    | Access                     | Description                        |
 | -------- | -------------------------- | ---------------------------------- |

@@ -1,7 +1,10 @@
 # Logseq Investigation — Block/Node History Query Scenarios
 
-**Investigation Date:** February 19, 2026  
-**Status:** Query reference for history-related debugging and feature design
+**Investigation Date:** February 19, 2026
+
+> **Last revised:** 2026-05-30
+
+**Status:** Validated against current source in `src/`, `deps/`, and `packages/` for history-related debugging and feature design
 
 ---
 
@@ -27,13 +30,7 @@ Use worker API:
  token graph-uuid block-uuid)
 ```
 
-Underlying websocket payload shape:
-
-```clojure
-{:action "query-block-content-versions"
- :block-uuids [block-uuid]
- :graph-uuid graph-uuid}
-```
+> **Removed:** The previously documented underlying websocket payload shape is not verifiable from the current `src/`, `deps/`, and `packages/` sources. The worker API entry point and dev-menu call site still exist, but the transport payload contract is no longer documented at this layer.
 
 **When to use**
 
@@ -101,6 +98,14 @@ Use this to derive:
 - Transition count (`TODO -> DOING -> DONE`)
 - Last status change timestamp
 
+Current source also exposes a higher-level helper for this scenario:
+
+```clojure
+(frontend.db.async/<task-spent-time graph block-id)
+```
+
+That helper reads property history, filters `:logseq.property/status`, and derives spent time from the ordered status transitions.
+
 ---
 
 ## 5) Scenario E — Latest change timestamp per property on a node
@@ -146,17 +151,31 @@ Use for:
 ## 7) Operational Notes / Caveats
 
 - Property history is generated only for properties with `:logseq.property/enable-history? = true`.
+- Built-in `:logseq.property/status` and `:logseq.property/priority` currently ship with `:logseq.property/enable-history? true`.
 - Undo/redo stack is separate from persisted property-history entities.
 - RTC block content versions and local property history are complementary.
-- Current schema docs indicate property history storage exists before full end-user timeline UI.
+- Property history entries are stored as first-class `property-history-block` entities with their own Malli schema.
+
+---
+
+## Findings: New Capabilities
+
+- Property history now has an explicit Malli entity shape, including required timestamps and a validation rule that one of `:logseq.property.history/ref-value` or `:logseq.property.history/scalar-value` must be present.
+- Graph export/import preserves property history entries, including scalar values, referenced-node values, and built-in property values.
+- Deleting entities now retracts related property-history entries, including entries attached to deleted blocks, deleted pages used as ref-values, and views associated with deleted blocks.
 
 ---
 
 ## 8) Code References
 
-- RTC block content version query API: `src/main/frontend/worker/rtc/core.cljs`
-- Dev menu invocation example: `src/main/frontend/components/content.cljs`
-- Property-history creation logic: `src/main/frontend/worker/commands.cljs`
-- Property-history query helper: `src/main/frontend/db/async.cljs`
-- Property-history schema/properties: `deps/db/src/logseq/db/frontend/property.cljs`
-- Schema docs: `dz/docs/03-features/database-graphs/schema-reference.md`
+- RTC block content version worker API registration: [src/main/frontend/worker/db_worker_node.cljs](../../../src/main/frontend/worker/db_worker_node.cljs)
+- Dev menu invocation example: [src/main/frontend/components/content.cljs](../../../src/main/frontend/components/content.cljs)
+- Property-history creation logic: [src/main/frontend/worker/commands.cljs](../../../src/main/frontend/worker/commands.cljs)
+- Property-history query helpers: [src/main/frontend/db/async.cljs](../../../src/main/frontend/db/async.cljs)
+- Property-history schema/properties: [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs)
+- Property-history Malli entity schema: [deps/db/src/logseq/db/frontend/malli_schema.cljs](../../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
+- Property-history graph export support: [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs)
+- Property-history deletion cleanup: [deps/db/src/logseq/db/common/delete_blocks.cljs](../../../deps/db/src/logseq/db/common/delete_blocks.cljs)
+- Property-history export/import test coverage: [deps/db/test/logseq/db/sqlite/export_test.cljs](../../../deps/db/test/logseq/db/sqlite/export_test.cljs)
+- Property-history deletion cleanup tests: [deps/db/test/logseq/db/common/delete_blocks_test.cljs](../../../deps/db/test/logseq/db/common/delete_blocks_test.cljs)
+- Schema docs: [dz/docs/03-features/database-graphs/schema-reference.md](../03-features/database-graphs/schema-reference.md)

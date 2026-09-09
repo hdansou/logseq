@@ -3,7 +3,7 @@ title: 'Flashcards Basics'
 description: "Learn to create and study flashcards with Logseq's spaced repetition system"
 type: tutorial
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -19,7 +19,7 @@ relatedDocs:
 
 # Flashcards Basics
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > Learn to create flashcards and use spaced repetition for effective learning.
 
@@ -61,7 +61,7 @@ Paris
 The text before `#Card` becomes the **front** (question).
 Child blocks become the **back** (answer).
 
-You can also select one or more blocks, right-click, and choose "Make Flashcard" from the context menu.
+You can also select one or more blocks, right-click, and choose "Make a flashcard" from the context menu.
 
 ### Try It Now
 
@@ -94,6 +94,15 @@ The {{cloze capital}} of France is Paris.
 
 When studying, you'll see: "The **[...]** of France is Paris."
 
+You can also add an optional cloze cue by separating the hidden answer and cue with `\\`:
+
+```
+The {{cloze mitochondria \\ powerhouse of the cell}} generates ATP.
+#Card
+```
+
+This displays the cue in study mode before reveal: `(powerhouse of the cell)`.
+
 ### Multiple Clozes
 
 You can use multiple cloze deletions in a single card:
@@ -123,7 +132,7 @@ All clozes are revealed together as part of a single card.
 
 1. A card appears showing the front (question)
 2. Think of the answer
-3. Click "Show Answer" (or press `s`)
+3. Click `Show answer` (or press `s`)
 4. Rate how well you remembered:
    - **Again** (press `1`) - Forgot completely
    - **Hard** (press `2`) - Struggled but got it
@@ -133,6 +142,8 @@ All clozes are revealed together as part of a single card.
 ### Review Schedule
 
 Based on your rating, FSRS calculates when to show the card again. Each rating button displays the projected next review time so you can see how your choice affects scheduling.
+
+For cloze cards, pressing `s` advances in two phases: `Show clozes` then `Show answers`.
 
 ---
 
@@ -270,6 +281,13 @@ In **Settings**, you can enable or disable the flashcards feature with the **Ena
 
 ---
 
+## Findings: New Capabilities
+
+- Cloze cues are supported with `\\` inside `{{cloze ...}}`, for example `{{cloze answer \\ cue}}`.
+- Cloze review uses a two-step reveal flow: `Show clozes` -> `Show answers`.
+
+---
+
 ## Summary
 
 - Created basic flashcards with `#Card`
@@ -280,4 +298,4 @@ In **Settings**, you can enable or disable the flashcards feature with the **Ena
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

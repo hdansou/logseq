@@ -1,6 +1,6 @@
 # Technical Stack
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-28
 
 ## Technology Overview
 
@@ -101,7 +101,7 @@ graph TD
 
 ## Build Tools and Development
 
-### Shadow-CLJS (2.28.23)
+### Shadow-CLJS (3.4.6)
 
 **Primary Build Tool**:
 
@@ -123,7 +123,7 @@ graph TD
                                         :depends-on #{:main}}}}}}
 ```
 
-### Gulp (4.0.2)
+### Gulp (5.0.1)
 
 **Asset Processing**:
 
@@ -132,7 +132,7 @@ graph TD
 - Development server setup
 - Build task orchestration
 
-### Webpack (5.98.0)
+### Webpack (5.106.2)
 
 **Module Bundling**:
 
@@ -220,7 +220,7 @@ ipcRenderer.on('file-changed', (event, filePath) => {
 
 ### Mobile Architecture
 
-**Capacitor (7.2.0)**:
+**Capacitor (8.3.1)**:
 
 The mobile app runs the same ClojureScript application inside a Capacitor web view, with native functionality provided through Capacitor plugins. This is not a React Native app.
 
@@ -233,16 +233,16 @@ The mobile app runs the same ClojureScript application inside a Capacitor web vi
 
 **Key Capacitor Plugins**:
 
-- `@capacitor/filesystem` (7.0.1) - File system access
-- `@capacitor/camera` (7.0.1) - Camera integration
-- `@capacitor/clipboard` (7.0.2) - Clipboard operations
-- `@capacitor/haptics` (7.0.1) - Tactile feedback
-- `@capacitor/keyboard` (7.0.1) - Keyboard management
-- `@aparajita/capacitor-secure-storage` (7.1.6) - Secure storage
+- `@capacitor/filesystem` (8.1.2) - File system access
+- `@capacitor/camera` (8.2.0) - Camera integration
+- `@capacitor/clipboard` (8.0.1) - Clipboard operations
+- `@capacitor/haptics` (8.0.2) - Tactile feedback
+- `@capacitor/keyboard` (8.0.3) - Keyboard management
+- `@aparajita/capacitor-secure-storage` (8.0.0) - Secure storage
 
 ## Testing and Quality Assurance
 
-### Testing Framework: Playwright (1.51.0)
+### Testing Framework: Playwright (1.58.2)
 
 **End-to-End Testing**:
 
@@ -260,11 +260,7 @@ test('should create new block', async ({ page }) => {
 
 ### Code Quality Tools
 
-**Karma (6.4.4)**:
-
-- Unit test runner
-- Browser testing environment
-- Coverage reporting
+> **Removed:** Karma has been removed as the unit test runner. Tests are now compiled with shadow-cljs to a `:node-test` target and executed via Node.js (`pnpm test` → `clojure -M:cljs compile test` + `bb dev:run-test-namespaces`).
 
 **Clj-kondo**:
 
@@ -272,7 +268,7 @@ test('should create new block', async ({ page }) => {
 - Static analysis
 - Code quality enforcement
 
-**Stylelint (13.8.0)**:
+**Stylelint (13.13.1)**:
 
 - CSS linting and formatting
 - Style guide enforcement
@@ -284,12 +280,12 @@ test('should create new block', async ({ page }) => {
 ```json
 {
   "devDependencies": {
-    "@playwright/test": "1.51.0",
-    "shadow-cljs": "2.28.23",
-    "gulp": "4.0.2",
-    "webpack": "5.98.0",
+    "@playwright/test": "1.58.2",
+    "shadow-cljs": "3.4.6",
+    "gulp": "5.0.1",
+    "webpack": "5.106.2",
     "tailwindcss": "3.3.5",
-    "typescript": "4.4.3"
+    "typescript": "5.9.3"
   }
 }
 ```
@@ -300,16 +296,16 @@ test('should create new block', async ({ page }) => {
 
 ```bash
 # Development mode
-yarn watch
+pnpm watch
 
 # Production build
-yarn release
+pnpm release
 
 # Mobile development
-yarn mobile-watch
+pnpm mobile-watch
 
 # Testing
-yarn test
+pnpm test
 ```
 
 ## Runtime Dependencies
@@ -349,7 +345,7 @@ yarn test
 - IndexedDB storage
 - File System Access API
 
-**Mobile (Capacitor 7.2.0)**:
+**Mobile (Capacitor 8.3.1)**:
 
 - Native camera access
 - File system integration
@@ -433,6 +429,24 @@ yarn test
 - App store distribution
 - Over-the-air updates
 - Platform-specific optimizations
+
+---
+
+## Findings: New Capabilities
+
+The following capabilities are present in the current codebase but were not documented:
+
+- **SQLite WASM** (`@sqlite.org/sqlite-wasm` 3.51.2-build9): Client-side SQLite compiled to WebAssembly, used as the storage backend for DB-mode graphs.
+- **Pixi.js** (`pixi.js` ^8.18.1): GPU-accelerated 2D graphics renderer, used for graph visualization.
+- **`db-worker-node` build target**: A Node.js build of the database worker (`frontend.worker.db-worker-node/main`) that enables server-side and CLI use of the DB engine.
+- **`logseq-cli` build target**: A dedicated shadow-cljs build for the Logseq CLI tool (`deps/cli/`).
+- **Comlink** (`comlink` ^4.4.2): RPC-style web worker communication library wrapping `postMessage`.
+- **Vite** (`vite` ^8.0.10): Additional build tooling present alongside Webpack.
+- **Sentry** (`@sentry/react` ^10.51.0): Error and performance monitoring integration.
+- **better-sqlite3** (^12.9.0, devDep): Native SQLite bindings used for desktop/CLI builds.
+- **`@zvec/zvec`** (0.4.0, optional): Native vector-operation bindings with platform-specific pre-built binaries (darwin-arm64, linux-x64, linux-arm64, win32-x64).
+- **Package manager is pnpm** (10.33.0), not yarn. All `yarn` commands in the Build Scripts section have been updated to `pnpm`.
+- **Node.js ≥ 22.20.0** is the required engine version (not documented previously).
 
 ---
 

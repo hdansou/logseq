@@ -3,7 +3,7 @@ title: 'How Text Embeddings Work'
 description: "Understanding the technology behind Logseq's semantic search"
 type: explanation
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 relatedDocs:
   tutorials:
@@ -14,7 +14,7 @@ relatedDocs:
 
 # How Text Embeddings Work
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > Understanding the AI technology that powers Logseq's semantic search.
 
@@ -54,36 +54,40 @@ Vector similarity finds meaning:
 
 ## Logseq's Architecture
 
-### Three-Worker System
+### Current Runtime Flow (Desktop)
 
-Logseq uses separate threads to keep the UI responsive:
+For desktop DB graphs, embeddings are served by a local Python process and consumed by the Node db-worker runtime:
 
 ```
 ┌─────────────────┐
 │   Main Thread   │ ← React UI
-│   (Browser UI)  │
 └────────┬────────┘
-         │
-    ┌────┴────┐
-    │         │
-    ▼         ▼
-┌───────┐ ┌──────────┐
-│  DB   │ │Inference │
-│Worker │→│ Worker   │ ← ML Operations
-└───────┘ └──────────┘
-    │         │
-    ▼         ▼
-DataScript   HNSW Index
+     │ IPC
+     ▼
+┌─────────────────┐
+│ Electron Main   │
+│ embedding_server│
+└───────┬─────────┘
+    │ HTTP /v1/embeddings
+    ▼
+┌─────────────────┐      ┌───────────────────────┐
+│ Python sidecar  │      │ db-worker-node        │
+│ sentence-       │◄────►│ @zvec/zvec HNSW index │
+│ transformers    │      │ + SQLite FTS index    │
+└─────────────────┘      └───────────────────────┘
 ```
+
+> **Removed:** The older Inference Worker + `@huggingface/transformers` + `hnswlib-wasm` browser path described here is no longer the active implementation for desktop DB graph semantic search.
 
 ### Components
 
 | Component        | Purpose                          |
 | ---------------- | -------------------------------- |
-| DB Worker        | Database operations, orchestrates embedding tasks |
-| Inference Worker | SharedWorker for ML model execution (via Comlink) |
-| HNSW Index       | Fast vector search (hnswlib-wasm)  |
-| Transformers.js  | Model framework (`@huggingface/transformers`) |
+| Electron embedding server | Starts/stops local embedding endpoint and publishes `LOGSEQ_EMBEDDINGS_URL` |
+| Python sidecar (`sidecar/embedding_server.py`) | Serves `/v1/embeddings` and `/healthz` using `sentence-transformers` |
+| db-worker-node platform | Calls embedding endpoint, builds vectors, queries vector index |
+| ZVEC index (`@zvec/zvec`) | HNSW + cosine vector retrieval with persisted metadata |
+| SQLite FTS index | Keyword retrieval (trigram FTS5) combined with vector results |
 
 ---
 
@@ -91,20 +95,21 @@ DataScript   HNSW Index
 
 ### MiniLM-L6-v2
 
-Logseq uses a compact, efficient model:
+Current default model:
 
-- **Name**: Xenova/all-MiniLM-L6-v2
-- **Size**: ~23MB (fp32)
+- **Name**: `all-MiniLM-L6-v2`
 - **Output**: 384-dimensional vectors
-- **Speed**: ~50ms per query
-- **Quality**: Excellent for semantic similarity
+
+Configured alternatives in source:
+
+- `BAAI/bge-m3` (1024)
+- `Qwen/Qwen3-Embedding-4B` (1024)
 
 ### Why This Model?
 
-- Small enough for browsers
-- Fast enough for real-time search
-- Accurate enough for note-taking
-- WebGPU acceleration when available
+- Good default quality/speed tradeoff for note search
+- Matches current vector dimension defaults and metadata checks
+- Can be overridden via `LOGSEQ_EMBEDDING_MODEL`
 
 ---
 
@@ -112,28 +117,28 @@ Logseq uses a compact, efficient model:
 
 ### 1. Indexing (Background)
 
-When you write content:
+When blocks are indexed/reindexed:
 
 ```
-Your text → Tokenize → Model → Embedding → HNSW Index
+Block + local context → Embedding endpoint → ZVEC upsert
 ```
 
-1. **Tokenize**: Split text into model-friendly pieces
-2. **Encode**: Convert tokens to numbers
-3. **Embed**: Generate 384-dimension vector
-4. **Store**: Add to HNSW index
+1. Build a `vector-title` string from page/path/siblings/children context
+2. Batch and embed via HTTP endpoint (`/v1/embeddings`)
+3. Validate embedding count and upsert to ZVEC collection
+4. Persist vector metadata (`embedding-model-id`, `embedding-dimension`, `context-version`)
 
 ### 2. Searching (Real-time)
 
 When you search:
 
 ```
-Query → Embedding → HNSW Search → Results
+Query → FTS candidates + query embedding → Vector query → Re-rank
 ```
 
 1. **Embed query**: Same process as indexing
-2. **HNSW search**: Find nearest neighbors
-3. **Rank results**: Combine with keyword scores
+2. **Vector query**: HNSW cosine search against ZVEC
+3. **Combine results**: Reciprocal Rank Fusion (RRF) + match/tie-break scoring
 
 ---
 
@@ -150,7 +155,7 @@ Logseq uses **cosine similarity** measured as distance:
 
 ### Filtering
 
-Results with distance ≥ 0.6 are excluded as not relevant enough.
+Vector candidates with `vector-score <= 0.5` are filtered out.
 
 ### Score Conversion
 
@@ -175,16 +180,18 @@ Hierarchical Navigable Small World is a data structure for fast approximate near
 - **Fast**: O(log n) search time
 - **Scalable**: Handles millions of vectors
 - **Accurate**: >95% recall of true nearest neighbors
-- **Memory efficient**: Fits in browser memory
+- **Memory efficient**: Supports mmap-backed local collections
 
 ### Configuration
 
-Logseq initializes HNSW with these parameters (see `init-index!` in `text_embedding.cljs`):
+Current exposed configuration in code:
 
-- **M** (max connections per node): 16
-- **ef_construction** (index build quality): 200
-- **ef_search** (search quality): 32
-- **Initial max elements**: 100 (auto-resized as needed)
+- **Index type**: HNSW
+- **Metric**: cosine
+- **Query `ef`**: 300
+- **Vector field**: fp32 with model-specific dimension
+
+> **Removed:** Legacy docs about fixed hnswlib params (`M`, `ef_construction`, `ef_search`) no longer map to the current ZVEC-backed implementation.
 
 ### How It Works
 
@@ -201,22 +208,28 @@ Imagine a network of connected vectors:
 
 ### Combining Methods
 
-Logseq uses weighted combination:
+When vector results are available, Logseq uses Reciprocal Rank Fusion (RRF):
 
 ```
-final_score = (0.9 × keyword_score) + (0.1 × semantic_score) + bonuses
+rrf_score(id) = Σ(weight_i / (k + rank_i + 1)),  k = 60
 ```
+
+Current weights:
+
+- keyword list: `1.25`
+- vector list: `1.0`
+
+Then small boosts/tie-breakers are added (for term matches in title/context and source scores).
 
 ### Why This Balance?
 
-- **Exact matches are important**: Users often know what they want
-- **Semantic helps discovery**: Surfaces related content
-- **Graceful degradation**: Works even if semantic fails
+- Exact FTS matches remain strong
+- Vector results improve semantic recall
+- If query embedding fails, search falls back to keyword pipeline
 
 ### Bonuses
 
-- Page match: +0.02
-- Tagged block: +0.01
+- Non-RRF fallback path still includes small bonuses (page/tag)
 
 ---
 
@@ -225,24 +238,38 @@ final_score = (0.9 × keyword_score) + (0.1 × semantic_score) + bonuses
 ### Included
 
 - Page titles
-- Block content (title text with UUID references resolved)
+- Block titles with UUID references resolved
+- Vector context payload that includes:
+  - Page title
+  - Parent path
+  - Previous sibling title
+  - Current block text
+  - First child titles
+  - Next sibling title
 
 ### Excluded
 
 - Hidden entities
-- View-for blocks (internal property views)
-- Empty blocks (blank titles)
-- Blocks currently being indexed
+- Blank titles
+- Closed values and oversized titles
 
-Note: Tags and property descriptions are not currently included in the embedding text, though support for them is planned (code exists but is commented out).
+Note: Vector context is capped/truncated to reduce oversized payloads (segment and title length limits, batched char budget).
 
 ### Staleness Detection
 
-Blocks are re-indexed when:
+Reindexing is trigger-driven from changed datoms and tree/context-affecting attributes.
 
-- Content changes
-- Title updates
-- Last update > last embedding time
+- Title/content/alias/property changes
+- Parent/page/order changes (because vector context depends on structure)
+
+> **Removed:** The old DB properties `:logseq.property.embedding/hnsw-label` and `:logseq.property.embedding/hnsw-label-updated-at` were deleted in migration 65.25 and are no longer used for staleness tracking.
+
+## Findings: New Capabilities
+
+- Local embedding service lifecycle is managed by Electron (`setup!`, `ensure-endpoint!`, `stop!`) and injected into db-worker runtime.
+- Model dimension compatibility is validated using persisted vector metadata; index rebuilds occur when model/context metadata changes.
+- Context-aware vector text is now first-class (`vector-context-version`), improving retrieval beyond plain block text.
+- Search ranking moved to RRF-based fusion with explicit keyword/vector weights and deterministic tie-breaks.
 
 ---
 
@@ -250,11 +277,12 @@ Blocks are re-indexed when:
 
 ### Initial Indexing
 
-First-time indexing processes all blocks:
+Search indexing is batched and progress-reported from db-worker:
 
-- ~100 blocks/second
-- 10,000 blocks ≈ 2 minutes
-- Progress shown in UI
+- FTS indexing batch size: `200`
+- Vector embedding batch size: `32`
+- Vector embedding parallelism: `2`
+- Build progress is staged (FTS then vector) and emitted to clients
 
 ### Incremental Updates
 
@@ -266,48 +294,42 @@ After initial index:
 
 ### Memory Usage
 
-| Graph Size     | Approximate Memory |
-| -------------- | ------------------ |
-| 1,000 blocks   | ~5MB               |
-| 10,000 blocks  | ~50MB              |
-| 100,000 blocks | ~500MB             |
+> **Removed:** The old fixed memory table was not source-backed for the current ZVEC implementation and has been removed.
 
 ---
 
 ## Storage
 
-### Emscripten Virtual Filesystem (via hnswlib-wasm)
+### Search DB + Vector Index Files
 
-The HNSW index is persisted using hnswlib-wasm's built-in Emscripten filesystem manager:
+Current persistence uses:
 
-- Uses `writeIndex`/`readIndex` for serialization
-- Synced via `EmscriptenFileSystemManager.isSynced()`
-- Per-graph storage (keyed by repo name)
-- Survives browser restarts
+- SQLite search DB (`search/db.sqlite` logical path via platform storage)
+- ZVEC vector collection (`search/vector`)
+- Vector metadata file (`metadata.json`) storing model/dimension/context version
+- mmap-enabled index open/create in node platform
 
 ---
 
 ## Limitations
 
-### Language Support
-
-- Best performance: English
-- Good: European languages
-- Limited: CJK, RTL languages
-
 ### Context Window
 
-- MiniLM-L6-v2 supports up to 256 tokens (model limit)
-- Logseq does not explicitly truncate; the model's tokenizer handles overflow
-- Very long blocks may lose tail content during tokenization
+- Embedding payload text is truncated and batched by character limits in db-worker
+- Effective token handling is delegated to the embedding model/tokenizer
 
 ### Semantic Gaps
 
-Model may not understand:
+Embedding quality can still vary for:
 
 - Domain-specific jargon
 - Personal abbreviations
 - Very recent concepts
+
+### Platform Scope
+
+- Vector embeddings are enabled in node runtime only when running on macOS arm64
+- Non-vector environments continue to use keyword search
 
 ---
 
@@ -315,10 +337,8 @@ Model may not understand:
 
 ### Planned Enhancements
 
-- Larger models for better accuracy
-- Local fine-tuning
-- Multi-lingual models
-- Longer context windows
+- Optional larger embedding models are already wired by model-id/dimension map
+- Further quality work can build on context-versioned vector metadata and rebuild logic
 
 ### Research Areas
 
@@ -336,4 +356,4 @@ Model may not understand:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

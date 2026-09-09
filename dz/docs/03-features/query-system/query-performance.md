@@ -1,12 +1,14 @@
 # Query Performance Optimization: The Complete Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 **Make your Logseq queries 10-1000x faster with proper clause ordering**
 
 This guide will teach you how to write blazingly fast queries by understanding and optimizing clause ordering. Whether you're dealing with slow queries or want to build efficient ones from the start, this guide has you covered.
 
-> **Note:** The examples in this guide use file-based graph attributes (`:block/marker`, `:block/priority`, `:block/scheduled`). In DB-based graphs, these attributes do not exist; the equivalent properties live under the `:logseq.property/` namespace (e.g., `:logseq.property/priority`). The optimization principles apply equally to both graph types.
+> **Note:** The examples in this guide use file-based graph attributes (`:block/marker`, `:block/priority`, `:block/scheduled`). In DB-based graphs, these attributes do not exist; equivalent values are queried via DB rules and `:logseq.property/*` idents (for example, task status and priority resolve through `ref-property-with-default` rules).
+>
+> For text matching in DB graphs, the DSL `block-content` rule reads `:block/title` (not `:block/content`).
 
 ---
 
@@ -265,12 +267,12 @@ Negation needs bound variables.
 
 ## Measuring Query Performance
 
-### Method 1: Browser DevTools
+### Method 1: Browser DevTools Console Timing
 
-1. Open DevTools (F12 or Cmd+Option+I)
+1. Open DevTools (Cmd+Option+I)
 2. Go to Console tab
-3. Run your query
-4. Look at the time in the Network/Performance tab
+3. Use `console.time` / `console.timeEnd` around query execution
+4. Compare timings after clause reordering
 
 ### Method 2: Add Timing to Query
 
@@ -944,36 +946,30 @@ Final: Same 60 blocks
 
 ---
 
-### Technique 3: Index Usage Optimization
+### Technique 3: Index-Aware Query Shaping
 
-Datascript indexes certain attributes for fast lookup:
+Source-backed DB schema highlights:
 
-**Fast (indexed):**
+- `:block/name`, `:block/title`, `:block/journal-day`, `:block/page`, `:block/parent`, `:block/created-at`, and `:block/updated-at` are indexed in DB graphs.
+- New DB properties are created with `:db/index true` by default.
+- `block-content` DSL matching uses `(clojure.string/includes? ...)` on `:block/title`, so text filters are still more expensive than highly selective exact matches.
 
-- `:block/uuid`
-- `:block/name`
-- `:block/title`
-- Properties with unique values
+> **Removed:** The older "indexed vs not indexed" list that labeled custom properties as generally unindexed and used `:block/content` as the primary text field is stale for current DB graphs.
 
-**Slower (not indexed):**
-
-- `:block/content` (full-text)
-- Custom properties
-- Calculated values
-
-**Strategy:** Use indexed attributes early:
+**Strategy:** Prefer selective exact matches and graph-link constraints before text functions:
 
 ```clojure
-;; ✅ Good: Uses indexed attribute first
+;; ✅ Better: narrow first, then text predicate
 :where
-[?p :block/name "page"]        ;; Indexed lookup: fast
+[?p :block/name "project-alpha"]
 [?b :block/refs ?p]
-[?b :block/content ?c]         ;; Not indexed: slower
+[?b :block/title ?t]
+[(clojure.string/includes? ?t "urgent")]
 
-;; ❌ Bad: Searches all content first
+;; ❌ Slower: broad text scan first
 :where
-[?b :block/content ?c]         ;; Scans all content
-[(clojure.string/includes? ?c "page")]
+[?b :block/title ?t]
+[(clojure.string/includes? ?t "urgent")]
 [?b :block/refs ?p]
 ```
 
@@ -1049,6 +1045,29 @@ For frequently-used slow queries:
 [?b :block/project-root ?project]
 [?project :block/name "project-alpha"]
 ```
+
+---
+
+## Findings: New Capabilities
+
+The query runtime now includes behavior that improves performance safety and rule ergonomics:
+
+1. **Auto rule injection for advanced queries**
+
+- Advanced queries scan `:where` for DB DSL rules and automatically append required rule clauses.
+- If query inputs already include `%` rules, runtime merges detected rules into the existing rules input.
+
+2. **Stable rule arity when `%` is expected**
+
+- When a query expects `%` but no rules are passed, runtime appends an empty rules vector to keep Datascript arity correct.
+
+3. **Negation-aware DSL query normalization**
+
+- DSL parsing now pushes `(not ...)` clauses after positive binders in `and` groups, reducing unbound-variable failures and improving execution shape.
+
+4. **Automatic domain bindings for negative-only vars**
+
+- DSL query construction inserts minimal binder clauses when variables appear only in negative positions, preventing invalid or overly broad plans.
 
 ---
 
@@ -1176,8 +1195,8 @@ The same query, different order = massive performance difference.
 
 **Happy querying!**
 
-_Last updated: 2026-03-10_
-_Version: 1.1_
+_Last updated: 2026-05-29_
+_Version: 1.2_
 
 ---
 

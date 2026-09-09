@@ -2,6 +2,8 @@
 
 ## Part 6: Failure Patterns & Recommendations
 
+> **Last revised:** 2026-05-30
+
 ---
 
 ## Table of Contents
@@ -46,25 +48,29 @@ User loses access to graph
 
 ### Pattern 2: Invalid Graph Export Block
 
-**Description:** Graph with validation errors cannot be exported for backup
+**Description:** Export can fail on structural export-map validation; full-graph validation is available as a separate validation path
 
-**Trigger:** Schema validation detects errors
+**Trigger:** Missing/undefined export references or invalid export shape during export-map build
 
 **Impact Chain:**
 
 ```
-Graph becomes invalid (bug/corruption)
+Graph contains inconsistent references
         ↓
 User tries to export for backup
         ↓
-Pre-export validation fails
+Structural export validation fails
         ↓
 Export blocked
         ↓
 User cannot create backup
 ```
 
-**Evidence:** [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs#L1100-L1113)
+**Evidence:**
+
+- [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs#L1010-L1053) (`basic-validate-export` in `build-export`)
+- [src/main/frontend/worker/db_core.cljs](../../../src/main/frontend/worker/db_core.cljs#L1496-L1512) (`:thread-api/export-edn` uses `build-export`)
+- [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs#L1200-L1220) (`validate-export` exists as separate full import+validate helper)
 
 **Risk Level:** 🔴 CRITICAL
 
@@ -98,9 +104,9 @@ User locked out of graph
 
 ### Pattern 4: Old Export Import Failure
 
-**Description:** Old backups become unusable with newer app versions
+**Description:** Import can fail on property/type conflicts or invalid imported entities, but old backups are not categorically rejected
 
-**Trigger:** Schema validation changes make old data invalid
+**Trigger:** Import-time conflicts (e.g. property schema mismatch) or tx validation failures
 
 **Impact Chain:**
 
@@ -111,14 +117,15 @@ Time passes (6 months)
         ↓
 User tries to import with v65.16
         ↓
-Validation rules changed (stricter)
-        ↓
-Old valid data now invalid
+Import detects property/type conflict
         ↓
 Import rejected
 ```
 
-**Evidence:** [deps/db/src/logseq/db/frontend/validate.cljs](../../../deps/db/src/logseq/db/frontend/validate.cljs#L25-L63)
+**Evidence:**
+
+- [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs#L1080-L1162) (`build-import` conflict checks)
+- [deps/db/src/logseq/db/frontend/validate.cljs](../../../deps/db/src/logseq/db/frontend/validate.cljs#L24-L126) (transaction/local DB validation paths)
 
 **Risk Level:** 🟠 HIGH
 
@@ -126,27 +133,36 @@ Import rejected
 
 ### Pattern 5: RTC Branch Divergence
 
-**Description:** Clients on different branches cannot sync
+> **Removed:** Legacy evidence path `src/main/frontend/worker/rtc/branch_graph.cljs` no longer exists in current source layout.
+>
+> **Replacement (current behavior):** Sync failure/recovery now centers on websocket message handling (`tx/reject`, `pull`, checksum mismatch logging) under `src/main/frontend/worker/sync/`.
+>
+> **Evidence:**
+>
+> - [src/main/frontend/worker/sync/handle_message.cljs](../../../src/main/frontend/worker/sync/handle_message.cljs#L169-L231)
+> - [src/main/frontend/worker/sync/log_and_state.cljs](../../../src/main/frontend/worker/sync/log_and_state.cljs#L13-L24)
 
-**Trigger:** One client upgrades to new major version
+**Description:** Rejected or stale tx batches can stall collaboration until pull/retry resolves divergence
+
+**Trigger:** Server rejects inflight txs (`tx/reject`) or reports stale state
 
 **Impact Chain:**
 
 ```
-Team collaboration on graph (v65 branch)
+Team collaboration active
         ↓
-One user upgrades to v66
+Client sends tx batch
         ↓
-Client creates v66 branch
+Server responds `tx/reject` / stale
         ↓
-Other users still on v65 branch
+Client marks failed/inflight txs and requests pull
         ↓
-Users cannot see each other's changes
+Local state appears stuck until pull/apply catches up
         ↓
-Team collaboration broken
+Collaboration disrupted
 ```
 
-**Evidence:** [src/main/frontend/worker/rtc/branch_graph.cljs](../../../src/main/frontend/worker/rtc/branch_graph.cljs#L13-L40)
+**Evidence:** [src/main/frontend/worker/sync/handle_message.cljs](../../../src/main/frontend/worker/sync/handle_message.cljs#L169-L231)
 
 **Risk Level:** 🟡 MEDIUM
 
@@ -154,25 +170,30 @@ Team collaboration broken
 
 ### Pattern 6: Partial Migration Sync Failure
 
-**Description:** Migration operations fail to sync to some RTC clients
+> **Removed:** Legacy evidence path `src/main/frontend/worker/rtc/migrate.cljs` no longer exists.
+>
+> **Replacement:** Snapshot download/import and tx application are handled by `src/main/frontend/worker/sync/download.cljs` and `src/main/frontend/worker/sync/apply_txs.cljs`.
 
-**Trigger:** Network interruption during migration sync
+**Description:** Snapshot download/import failure can leave client behind until retry succeeds
+
+**Trigger:** Snapshot transfer/decrypt/import failure during sync bootstrap
 
 **Impact Chain:**
 
 ```
-Client A migrates to v65.16
+Client requests snapshot download
         ↓
-Sends migration ops to server
+Download/decrypt/import fails
         ↓
-Client B receives partial ops (network issue)
+Client remains stale
         ↓
-Client B in inconsistent state
-        ↓
-Client B crashes or shows errors
+Retry/reconnect required
 ```
 
-**Evidence:** [src/main/frontend/worker/rtc/migrate.cljs](../../../src/main/frontend/worker/rtc/migrate.cljs#L8-L45)
+**Evidence:**
+
+- [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs#L468-L559)
+- [src/main/frontend/worker/sync/apply_txs.cljs](../../../src/main/frontend/worker/sync/apply_txs.cljs)
 
 **Risk Level:** 🟡 MEDIUM
 
@@ -224,24 +245,31 @@ Client B crashes or shows errors
 
 ### Cascade 2: Strict Validation → Data Rejection
 
+> **Removed:** Previous example claiming `:block/priority` changed from string to number is stale.
+>
+> **Current evidence:** Priority is modeled as a closed-value default property in current schema definitions.
+>
+> **Evidence:** [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs#L323-L341)
+
 ```
 ┌─────────────────────┐
-│  Schema v65.15      │
-│  Priority: string   │
-│  (e.g., "high")     │
+│  Imported data uses │
+│  old/conflicting    │
+│  property shape     │
 └──────────┬──────────┘
            │
            ↓
 ┌─────────────────────┐
-│  Schema v65.16      │
-│  Priority: number   │
-│  (stricter rules)   │
+│  Current schema     │
+│  validates tx/import│
+│  shape and conflicts│
 └──────────┬──────────┘
            │
            ↓
 ┌─────────────────────┐
-│  Validation Fails   │
-│  ("high" != number) │
+│  Import/tx validate │
+│  or conflict checks │
+│  reject data        │
 └──────────┬──────────┘
            │
            ↓
@@ -259,49 +287,54 @@ Client B crashes or shows errors
 
 **Recovery Options:**
 
-1. ✅ Migration transforms data (string → number)
+1. ✅ Migration or import transforms for known incompatibilities
 2. ⚠️ Validation relaxation (temporary)
 3. ✅ User manually fixes data
 
 ### Cascade 3: Version Mismatch → Collaboration Breakdown
 
+> **Removed:** The older branch-based v65/v66 narrative referenced removed RTC implementation files.
+>
+> **Current compatibility gate:** local DB migration explicitly warns and blocks edits when app schema is older than graph schema.
+>
+> **Evidence:** [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L292-L301)
+
 ```
 ┌─────────────────────┐
-│  Team on v65.16     │
-│  (All synced)       │
+│  Graph schema       │
+│  already upgraded   │
 └──────────┬──────────┘
            │
            ↓
 ┌─────────────────────┐
-│  User A Upgrades    │
-│  to v66.0           │
+│  User opens graph   │
+│  with older app     │
 └──────────┬──────────┘
            │
            ↓
 ┌─────────────────────┐
-│  v66 Branch Created │
-│  (User A isolated)  │
+│  Incompatible       │
+│  version detected   │
 └──────────┬──────────┘
            │
            ↓
 ┌─────────────────────┐
-│  Changes Diverge    │
-│  (No cross-sync)    │
+│  Editing blocked    │
+│  with update notice │
 └──────────┬──────────┘
            │
            ↓
 ┌─────────────────────┐
-│  Manual Merge       │
-│  Required           │
+│  User must upgrade  │
+│  app before edits   │
 └─────────────────────┘
 ```
 
 **Recovery Options:**
 
-1. ✅ User A downgrades to v65.16
-2. ✅ All users upgrade to v66.0
-3. ⚠️ Manual export/import merge
-4. ❌ Automatic merge (not supported)
+1. ❌ Downgrade further (still incompatible)
+2. ✅ Upgrade app to current schema-compatible version
+3. ⚠️ Use backup/export workflow only after opening with compatible app
 
 ---
 
@@ -576,6 +609,8 @@ Client B crashes or shows errors
    (rollback-to-version conn last-good-version)
    ```
 
+   > **Removed:** `complete-partial-migration` and `rollback-to-version` are not present in current source; this remains a conceptual recommendation, not an existing supported API.
+
 4. **Verify Graph Health**
 
    ```clojure
@@ -606,6 +641,8 @@ Client B crashes or shows errors
    (export-with-option @conn "backup.edn" {:force? true})
    ```
 
+   > **Removed:** `export-with-option` force-export flow is not implemented in current export API.
+
 3. **Fix Data Issues**
 
    ```clojure
@@ -633,7 +670,6 @@ Client B crashes or shows errors
    ```
 
 2. **Options:**
-
    - **Option A:** Upgrade app to v66+
    - **Option B:** Find v66 export and import into v65 graph
    - **Option C:** Use dev tools to force downgrade (RISKY)
@@ -656,6 +692,8 @@ Client B crashes or shows errors
    ```
 
 ### Procedure 4: Merge Diverged RTC Branches
+
+> **Removed:** This procedure assumes explicit RTC branch-export merge functions (`export-branch`, `merge-exports`) that are not present in current source tree.
 
 **Symptoms:** Team members cannot see each other's changes
 
@@ -696,6 +734,24 @@ Client B crashes or shows errors
 ---
 
 ## Monitoring & Detection
+
+## Findings: New Capabilities
+
+1. **Schema head advanced to 65.33**
+   - Migration table now includes versions through `65.33`, including fixes for comment class/target repair and newer view/gallery properties.
+   - Evidence: [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L116-L170)
+
+2. **Sync stack migrated to `worker/sync/*` architecture**
+   - Legacy `worker/rtc/*` evidence paths are obsolete; active logic now uses websocket handlers, pull/retry queues, checksum diagnostics, and staged sync tasks.
+   - Evidence: [src/main/frontend/worker/sync.cljs](../../../src/main/frontend/worker/sync.cljs), [src/main/frontend/worker/sync/handle_message.cljs](../../../src/main/frontend/worker/sync/handle_message.cljs)
+
+3. **Explicit tx rejection and checksum-mismatch logging in sync pipeline**
+   - Current sync logic records and reacts to rejected tx batches and checksum mismatches, improving failure detection and triage.
+   - Evidence: [src/main/frontend/worker/sync/handle_message.cljs](../../../src/main/frontend/worker/sync/handle_message.cljs#L169-L231), [src/main/frontend/worker/sync/log_and_state.cljs](../../../src/main/frontend/worker/sync/log_and_state.cljs#L13-L24)
+
+4. **Dedicated graph download bootstrap pipeline for sync recovery**
+   - Snapshot-based download/import path exists for recovery/bootstrap instead of older RTC migration-file assumptions.
+   - Evidence: [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs#L468-L559)
 
 ### Key Metrics to Monitor
 
@@ -791,13 +847,11 @@ Client B crashes or shows errors
 ### Immediate Actions (Priority: 🔴 CRITICAL)
 
 1. **Add Migration Rollback**
-
    - Implement checkpoint/restore mechanism
    - Test rollback in development
    - Deploy in next release
 
 2. **Enable Force Export**
-
    - Add `--force` flag to export
    - Show validation warnings
    - Document risks
@@ -810,13 +864,11 @@ Client B crashes or shows errors
 ### Short-term Actions (Priority: 🟠 HIGH)
 
 4. **Implement Import Transforms**
-
    - Auto-transform old data formats
    - Maintain compatibility layer
    - Document transforms
 
 5. **Add Schema Change Impact Analysis**
-
    - Analyze breaking changes
    - Estimate affected entities
    - Generate migration preview
@@ -829,13 +881,11 @@ Client B crashes or shows errors
 ### Medium-term Actions (Priority: 🟡 MEDIUM)
 
 7. **Build Schema Evolution Dashboard**
-
    - Monitor migration health
    - Track validation errors
    - Alert on anomalies
 
 8. **Implement Gradual Rollout**
-
    - Beta test migrations
    - Staged deployment
    - Rollback capability
@@ -848,13 +898,11 @@ Client B crashes or shows errors
 ### Long-term Actions (Priority: 🟢 LOW)
 
 10. **Design Schema Versioning V2**
-
     - Support backward compatibility
     - Graceful degradation
     - Automatic transforms
 
 11. **Implement Branch Auto-Merge**
-
     - Detect mergeable branches
     - Auto-merge when safe
     - Notify users of merge

@@ -2,9 +2,11 @@
 
 ## Part 1: Executive Summary & Overview
 
-**Investigation Date:** December 2024  
-**Schema Version Analyzed:** 65.16  
+**Investigation Date:** 2026-05-30  
+**Schema Version Analyzed:** 65.33  
 **Investigator:** Development Team
+
+> **Last revised:** 2026-05-30
 
 ---
 
@@ -24,30 +26,40 @@ This investigation examines how schema changes impact data integrity across Logs
 #### 2. **Strict Validation Enforcement**
 
 - **Impact:** HIGH
-- **Finding:** All transactions are validated against Malli schemas; invalid data cannot be saved
-- **Consequence:** Bugs in validation logic can prevent legitimate operations
-- **Evidence:** [deps/db/src/logseq/db.cljs](../../../deps/db/src/logseq/db.cljs#L118-L143) - Every transaction runs through validation
+- **Finding:** DB-graph transactions are validated by default against Malli schemas, with explicit skip flags for specific internal flows
+- **Consequence:** Validation regressions can block legitimate writes unless operations are in explicitly exempted paths
+- **Evidence:** [deps/db/src/logseq/db.cljs](../../../deps/db/src/logseq/db.cljs#L103-L172) - Validation gate and `validate-tx-report` path
 
 #### 3. **Sequential Migration Risk**
 
 - **Impact:** HIGH
 - **Finding:** Migrations run sequentially without rollback mechanism
-- **Consequence:** A single failed migration can corrupt the entire graph
-- **Evidence:** [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L329-L366) - Migration execution is transactional but no rollback on partial failure
+- **Consequence:** A failed later step can leave the graph only partially upgraded across versions
+- **Evidence:** [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L287-L324) - Per-version upgrades run in order with no cross-version rollback wrapper
 
 #### 4. **Export as Last Resort Backup**
 
 - **Impact:** MEDIUM
-- **Finding:** Export validation prevents saving corrupt graphs
-- **Consequence:** Users with invalid graphs cannot create backups
-- **Evidence:** [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs#L1100-L1113) - Pre-export validation blocks invalid graphs
+- **Finding:** Export performs structural validation and fails on undefined refs/classes/properties by default
+- **Consequence:** Invalid graph structures can still block standard exports
+- **Evidence:** [deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs#L1010-L1054) - `basic-validate-export` and `build-export` validation flow
 
-#### 5. **RTC Version Branching**
+#### 5. **Expanded Migration Surface (65.17-65.33)**
 
 - **Impact:** MEDIUM
-- **Finding:** RTC servers support multiple schema versions through branching
-- **Consequence:** Mixed-version clients can coexist but may have sync conflicts
-- **Evidence:** [src/main/frontend/worker/rtc/branch_graph.cljs](../../../src/main/frontend/worker/rtc/branch_graph.cljs#L13-L40) - Schema comparison determines branch or download
+- **Finding:** Migration coverage now includes delete-property migrations, comment model/class migrations, and view-gallery property additions through 65.33
+- **Consequence:** Schema evolution support is broader, but migration test coverage remains critical
+- **Evidence:** [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L116-L152) - Current `schema-version->updates`
+
+> **Removed:** Previous RTC branching references to `src/main/frontend/worker/rtc/branch_graph.cljs` and `src/main/frontend/worker/rtc/migrate.cljs` are stale; these files are no longer present.
+
+## Findings: New Capabilities
+
+- **Schema advanced to 65.33:** Current frontend DB schema version is now `65.33` ([deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs#L33)).
+- **Delete-property migrations:** Migration maps now support `:delete-properties` (used at 65.25) to actively retract deprecated attributes ([src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L142-L147)).
+- **Comment domain migrations:** New class/property and repair migrations cover comments data integrity (65.27-65.32) ([src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L148-L151)).
+- **Gallery view property migrations:** 65.33 adds gallery view configuration properties ([src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs#L151-L152)).
+- **Export validation control hook:** Export supports an optional `:graph-options :catch-validation-errors?` path for controlled error handling ([deps/db/src/logseq/db/sqlite/export.cljs](../../../deps/db/src/logseq/db/sqlite/export.cljs#L1047-L1052)).
 
 ---
 
@@ -58,7 +70,6 @@ This investigation examines how schema changes impact data integrity across Logs
 Logseq uses two complementary schema systems:
 
 1. **DataScript Schema** (Structural)
-
    - Defines entity attributes, cardinality, types
    - Enforces referential integrity
    - Controls indexing behavior
@@ -74,20 +85,20 @@ Logseq uses two complementary schema systems:
 
 ```clojure
 {:major 65  ;; Breaking changes - increment forces all clients to upgrade
- :minor 16} ;; Non-breaking additions - backward compatible within major version
+ :minor 33} ;; Non-breaking additions - backward compatible within major version
 ```
 
-**Current Version:** 65.16  
-**Location:** [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs#L40)
+**Current Version:** 65.33  
+**Location:** [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs#L33)
 
 ### Version Comparison Logic
 
 ```clojure
-(defn compare-schema-version [v1 v2]
-  (let [major-cmp (compare (:major v1) (:major v2))]
-    (if (zero? major-cmp)
-      (compare (:minor v1) (:minor v2))
-      major-cmp)))
+(defn compare-schema-version
+   [x y]
+   (apply compare
+             (map (juxt :major :minor)
+                     [(parse-schema-version x) (parse-schema-version y)])))
 ```
 
 **Key Insight:** Major version mismatches always reject compatibility, regardless of minor version.
@@ -130,22 +141,24 @@ Schema changes cascade through these systems:
 
 - **Purpose:** Real-time multi-client collaboration
 - **Trigger:** Continuous background sync
-- **Key Files:** [src/main/frontend/worker/rtc/branch_graph.cljs](../../../src/main/frontend/worker/rtc/branch_graph.cljs), [src/main/frontend/worker/rtc/migrate.cljs](../../../src/main/frontend/worker/rtc/migrate.cljs)
-- **Risk:** Schema version conflicts require branching or re-download
+- **Key Files:** [src/main/frontend/worker/sync/upload.cljs](../../../src/main/frontend/worker/sync/upload.cljs), [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs)
+- **Risk:** Schema/version mismatches across clients and server can require full snapshot re-sync flows
+
+> **Removed:** Legacy RTC worker path references under `src/main/frontend/worker/rtc/`.
 
 ---
 
 ## Schema Change Impact Matrix
 
-| Change Type             | Migration | Validation | Import    | Export    | RTC Sync        |
-| ----------------------- | --------- | ---------- | --------- | --------- | --------------- |
-| **New Entity Type**     | Optional  | Required   | Required  | Auto      | Branch/Migrate  |
-| **New Property**        | Required  | Required   | Required  | Auto      | Ops Conversion  |
-| **Rename Property**     | Required  | Required   | Required  | Auto      | Ops Conversion  |
-| **Change Cardinality**  | Required  | Required   | Break     | Break     | Branch          |
-| **New Validation Rule** | Optional  | Required   | May Break | May Break | Compatible      |
-| **Remove Entity Type**  | Required  | Required   | Break     | Break     | Branch          |
-| **Schema Version Bump** | Trigger   | Check      | Check     | Record    | Branch Decision |
+| Change Type             | Migration | Validation | Import    | Export    | RTC Sync            |
+| ----------------------- | --------- | ---------- | --------- | --------- | ------------------- |
+| **New Entity Type**     | Optional  | Required   | Required  | Auto      | Re-sync/Migrate Ops |
+| **New Property**        | Required  | Required   | Required  | Auto      | Ops Conversion      |
+| **Rename Property**     | Required  | Required   | Required  | Auto      | Ops Conversion      |
+| **Change Cardinality**  | Required  | Required   | Break     | Break     | Re-sync Required    |
+| **New Validation Rule** | Optional  | Required   | May Break | May Break | Compatible          |
+| **Remove Entity Type**  | Required  | Required   | Break     | Break     | Re-sync Required    |
+| **Schema Version Bump** | Trigger   | Check      | Check     | Record    | Snapshot Decision   |
 
 **Legend:**
 
@@ -153,7 +166,7 @@ Schema changes cascade through these systems:
 - **Optional:** May need update for data transform
 - **Auto:** System handles automatically
 - **Break:** Old data incompatible
-- **Branch:** RTC creates new branch
+- **Re-sync Required:** RTC requires snapshot/re-download to recover compatibility
 - **May Break:** Depends on strictness
 
 ---
@@ -164,8 +177,8 @@ This investigation analyzed:
 
 - **25+ source files** across 5 subsystems
 - **~3,000 lines of ClojureScript code**
-- **9 schema versions** (65.7 through 65.16)
-- **4 migration types** (properties, classes, rename, fix)
+- **27 schema versions** (65.7 through 65.33)
+- **4 migration types** (properties, classes, fix, delete-properties)
 - **3 validation modes** (transaction, full-graph, pre-export)
 - **2 import formats** (EDN, SQLite)
 - **1 export format** (EDN with Transit serialization)
@@ -175,14 +188,14 @@ This investigation analyzed:
 ## Key Terminology
 
 - **Graph:** A Logseq database (SQLite file + DataScript in-memory)
-- **Schema Version:** Major.Minor version (e.g., 65.16)
+- **Schema Version:** Major.Minor version (e.g., 65.33)
 - **Migration:** Code that transforms data from one schema version to another
 - **DataScript:** In-memory Datalog database used by Logseq
 - **Malli:** Data-driven schema validation library
 - **EDN:** Extensible Data Notation (Clojure's data format)
 - **Transit:** Serialization format for EDN
 - **RTC:** Real-Time Collaboration (sync system)
-- **Branch:** Separate schema version maintained on RTC server
+- **Snapshot Re-sync:** Full download/import path used when incremental sync can't safely continue
 
 ---
 
@@ -212,7 +225,8 @@ This investigation is split across multiple documents:
 ### Migration System
 
 - [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs) - Migration registry
-- [deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs](../../../deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs) - Migration implementations
+
+> **Removed:** [deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs](../../../deps/db/src/logseq/db/frontend/migrate_65_7_through_65_16.cljs) (no longer present; migrations are maintained in the registry and linked handlers)
 
 ### Validation
 
@@ -226,8 +240,10 @@ This investigation is split across multiple documents:
 
 ### RTC Sync
 
-- [src/main/frontend/worker/rtc/branch_graph.cljs](../../../src/main/frontend/worker/rtc/branch_graph.cljs) - Schema branching
-- [src/main/frontend/worker/rtc/migrate.cljs](../../../src/main/frontend/worker/rtc/migrate.cljs) - Migration ops conversion
+- [src/main/frontend/worker/sync/upload.cljs](../../../src/main/frontend/worker/sync/upload.cljs) - Upload/create-graph sync path (includes schema version in graph creation)
+- [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs) - Snapshot/datoms download and import ordering
+
+> **Removed:** [src/main/frontend/worker/rtc/branch_graph.cljs](../../../src/main/frontend/worker/rtc/branch_graph.cljs) and [src/main/frontend/worker/rtc/migrate.cljs](../../../src/main/frontend/worker/rtc/migrate.cljs) (paths removed).
 
 ---
 

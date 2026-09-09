@@ -1,8 +1,13 @@
 # Plugin Development Guides
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 Comprehensive guides for developing Logseq plugins in TypeScript, JavaScript, or ClojureScript.
+
+Current source-verified SDKs in this repository:
+
+- `@logseq/libs` `0.3.3` (`libs/package.json`)
+- `@logseq/cljs-libs` `0.0.12` (`libs/cljs-sdk/package.json`)
 
 ## 🚀 Quick Start
 
@@ -16,19 +21,25 @@ Comprehensive guides for developing Logseq plugins in TypeScript, JavaScript, or
    - **[File-Based Graphs Guide](file-graphs.md)**
    - **[Database Graphs Guide](db-graphs.md)**
 4. Follow a tutorial:
+   - **[Tutorial: Schedule Task Today (DB Graph)](tutorial-schedule-task-today.md)**
+   - **[Tutorial: Custom Block Renderer (Kanban)](tutorial-custom-block-renderer.md)**
    - **[Tutorial: Duplicate Block Plugin](tutorial-duplicate-block.md)**
+
+> **Removed:** Treating `tutorial-duplicate-block.md` as the only recommended tutorial path.
 
 ## 📚 All Guides
 
-| Guide                                                      | Description                                     | Language      | Difficulty            |
-| ---------------------------------------------------------- | ----------------------------------------------- | ------------- | --------------------- |
-| [index.md](index.md)                                       | Master index and decision guide                 | N/A           | Beginner              |
-| [typescript-guide.md](typescript-guide.md)                 | Complete TypeScript plugin development guide    | TypeScript    | Beginner-Intermediate |
-| [clojurescript-guide.md](clojurescript-guide.md)           | ClojureScript SDK developer guide               | ClojureScript | Intermediate          |
-| [clojurescript-detective.md](clojurescript-detective.md)   | Detective-style ClojureScript SDK investigation | ClojureScript | Advanced              |
-| [file-graphs.md](file-graphs.md)                           | Developing for file-based (Markdown) graphs     | Any           | Intermediate          |
-| [db-graphs.md](db-graphs.md)                               | Developing for database graphs                  | Any           | Intermediate          |
-| [tutorial-duplicate-block.md](tutorial-duplicate-block.md) | Step-by-step plugin tutorial                    | TypeScript    | Beginner              |
+| Guide                                                                  | Description                                     | Language      | Difficulty            |
+| ---------------------------------------------------------------------- | ----------------------------------------------- | ------------- | --------------------- |
+| [index.md](index.md)                                                   | Master index and decision guide                 | N/A           | Beginner              |
+| [typescript-guide.md](typescript-guide.md)                             | Complete TypeScript plugin development guide    | TypeScript    | Beginner-Intermediate |
+| [clojurescript-guide.md](clojurescript-guide.md)                       | ClojureScript SDK developer guide               | ClojureScript | Intermediate          |
+| [clojurescript-detective.md](clojurescript-detective.md)               | Detective-style ClojureScript SDK investigation | ClojureScript | Advanced              |
+| [file-graphs.md](file-graphs.md)                                       | Developing for file-based (Markdown) graphs     | Any           | Intermediate          |
+| [db-graphs.md](db-graphs.md)                                           | Developing for database graphs                  | Any           | Intermediate          |
+| [tutorial-schedule-task-today.md](tutorial-schedule-task-today.md)     | DB graph command tutorial                       | TypeScript    | Beginner              |
+| [tutorial-custom-block-renderer.md](tutorial-custom-block-renderer.md) | Experimental block renderer tutorial            | TypeScript    | Advanced              |
+| [tutorial-duplicate-block.md](tutorial-duplicate-block.md)             | Step-by-step plugin tutorial                    | TypeScript    | Beginner              |
 
 ## 🎯 Choose Your Path
 
@@ -80,9 +91,20 @@ The Plugin API provides:
 - Block operations (create, update, delete)
 - Page operations
 - Database queries
+- DB graph tag/class management (`createTag`, `getTag`, `addBlockTag`, `removeBlockTag`, `addTagProperty`, `removeTagProperty`)
 - UI components
 - Event system
 - Settings management
+
+## Findings: New Capabilities
+
+Source validation against `src/`, `deps/`, and `packages/` shows capabilities that are newer than this README's prior revision:
+
+1. **DB graph tag/class management APIs are available in the Editor namespace.**
+   - Implemented and typed in the current SDK/runtime (`createTag`, `getTag`, `getTagsByName`, `addTagProperty`, `removeTagProperty`, `addBlockTag`, `removeBlockTag`).
+2. **Experimental block body rendering is available via `logseq.Experiments.registerBlockRenderer`.**
+   - Exposed in `libs/src/modules/LSPlugin.Experiments.ts` and handled in runtime at `src/main/logseq/sdk/experiments.cljs`.
+   - `when` must be a synchronous predicate function.
 
 Full API reference: [../../04-api-reference/plugin-api/](../../04-api-reference/plugin-api/)
 
@@ -118,7 +140,7 @@ Full API reference: [../../04-api-reference/plugin-api/](../../04-api-reference/
 ### Required Tools
 
 - Node.js (v18+)
-- npm or yarn
+- npm, yarn, or pnpm
 - TypeScript (for TS plugins)
 - Clojure tooling (for CLJS plugins)
 
@@ -207,7 +229,7 @@ Before publishing:
 
 - **Maintainer**: Plugin Developer Community
 - **Review**: As needed based on API changes
-- **Last Updated**: March 10, 2026
+- **Last Updated**: May 29, 2026
 
 ---
 

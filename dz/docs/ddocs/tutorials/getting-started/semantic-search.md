@@ -3,7 +3,7 @@ title: 'Semantic Search'
 description: 'Learn to use AI-powered semantic search to find content by meaning'
 type: tutorial
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [db]
@@ -21,7 +21,7 @@ relatedDocs:
 
 # Semantic Search
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > Learn to find content by meaning, not just keywords.
 
@@ -70,7 +70,7 @@ Semantic search finds meaning:
 3. Select a model (e.g., `Xenova/all-MiniLM-L6-v2`)
 4. Wait for model download (progress is shown inline)
 
-> **Note:** WebGPU support is required. If your browser does not support WebGPU, a warning will appear instead of the model selector.
+> **Removed:** WebGPU support is required for semantic search setup in Desktop.
 
 ### First-Time Setup
 
@@ -78,7 +78,7 @@ After selecting a model:
 
 1. Model files download automatically
 2. Your graph is indexed (may take minutes for large graphs)
-3. Indexing status shows as "Embedding..." in the header bar
+3. Indexing status appears as `Indexing {n}%` in the header bar
 
 ---
 
@@ -102,10 +102,14 @@ Try:
 
 ### CLI Search
 
-The CLI `search` command uses keyword-based (FTS) search, not semantic search. Semantic search is currently only available in the desktop app UI.
+The CLI `search` command does not use semantic/vector search. Semantic search is currently only available in the desktop app UI.
+
+> **Removed:** `logseq search "..."` (single positional query) as the semantic-search example for CLI.
+
+Current CLI search uses explicit subcommands with `--content`:
 
 ```bash
-logseq search "concepts related to learning"
+logseq search block --content "concepts related to learning"
 ```
 
 ---
@@ -114,12 +118,9 @@ logseq search "concepts related to learning"
 
 ### Hybrid Scoring
 
-Search results combine keyword and semantic scores with the following weights:
+Search combines keyword and vector candidates, then re-ranks using reciprocal rank fusion (RRF).
 
-- **0.9 weight**: Normalized keyword match score
-- **0.1 weight**: Semantic similarity score
-
-Pages and tagged blocks receive a small additional boost.
+> **Removed:** Fixed 0.9 keyword + 0.1 semantic weighting as the default hybrid scoring formula.
 
 ### Result Display
 
@@ -204,6 +205,8 @@ For exact matches, use quotes:
 "exact phrase match"
 ```
 
+> **Removed:** Quoting as a guaranteed way to disable semantic ranking.
+
 ### Tag/Property Search
 
 Combine with structured queries:
@@ -233,6 +236,7 @@ If search seems off, use the general **Rebuild search indices** action. This reb
 Indexed:
 
 - Block content (including page titles, which are blocks)
+- Additional vector context (page, parent path, nearby siblings, and first children)
 
 Not indexed:
 
@@ -241,7 +245,14 @@ Not indexed:
 - View-for blocks (internal UI blocks)
 - Description property blocks (created-from-property)
 
-> **Note:** Tags and property descriptions are not currently included in the embedding text, though support for this is planned.
+> **Note:** Tags and property descriptions are not currently included in embedding text.
+
+## Findings: New Capabilities
+
+- Hybrid search ranking now uses reciprocal rank fusion (RRF), not a fixed weighted average.
+- Embeddings include structured context (page/path/neighbor/children snippets), which improves semantic recall for short block text.
+- Index rebuild progress is reported continuously as `Indexing {n}%` in the header bar.
+- CLI search supports scoped commands: `search block`, `search page`, `search property`, and `search tag` with `--content`.
 
 ---
 
@@ -249,23 +260,24 @@ Not indexed:
 
 ### Index Size
 
-- ~384 dimensions per block
-- ~1.5KB per block average
-- 10,000 blocks ≈ 15MB index
+- Embedding dimension is 384 for the default desktop model
+
+> **Removed:** Fixed per-block and per-graph memory size estimates as guaranteed values.
 
 ### Search Speed
 
-- Query embedding: ~50ms
-- Vector search: ~10ms
-- Total: ~100ms for most queries
+Performance depends on graph size, hardware, and runtime configuration.
+
+> **Removed:** Fixed latency numbers (for example, ~50ms/~10ms/~100ms) as default guarantees.
 
 ### Large Graphs
 
 For graphs with 50,000+ blocks:
 
 - Initial indexing: 5-15 minutes
-- Indexing can be cancelled from the developer sidebar if needed
 - Results may be slightly delayed after major edits
+
+> **Removed:** Indexing cancellation from the developer sidebar as a documented capability.
 
 ---
 
@@ -285,7 +297,7 @@ For graphs with 50,000+ blocks:
 
 ### "Indexing stuck"
 
-1. Check "Embedding..." status in the header bar
+1. Check `Indexing {n}%` status in the header bar
 2. Restart Logseq
 3. If persists, try rebuilding search indices
 
@@ -308,23 +320,25 @@ Reduce by:
 
 ### Embedding Model
 
-- **Model**: Xenova/all-MiniLM-L6-v2
+- **Model (default desktop)**: all-MiniLM-L6-v2
 - **Dimensions**: 384
-- **Technology**: HuggingFace Transformers.js
-- **Acceleration**: WebGPU when available
+- **Runtime configuration**: model/endpoint can be configured in node runtime
+
+> **Removed:** `Xenova/...` model naming and WebGPU acceleration as universal defaults for desktop.
 
 ### Vector Index
 
-- **Algorithm**: HNSW (Hierarchical Navigable Small World)
-- **Library**: hnswlib-wasm
-- **Distance metric**: Cosine
-- **Storage**: Emscripten virtual filesystem (persisted via IDBFS)
+- Hybrid ranking fuses keyword and vector candidate lists using reciprocal rank fusion (RRF)
+- Default fusion weights: 1.25 (keyword), 1.0 (vector)
+
+> **Removed:** Hard-coding one vector index library/algorithm/storage path as the only runtime implementation.
 
 ### Distance Threshold
 
-- **Max distance**: 0.6
-- **Score formula**: `1 / (1 + distance)`
-- **Higher score** = more relevant
+- Vector results below score threshold 0.5 are filtered
+- Higher vector score = more relevant
+
+> **Removed:** Distance-based formula and `0.6` max-distance threshold as current default behavior.
 
 ---
 
@@ -364,4 +378,4 @@ Reduce by:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

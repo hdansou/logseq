@@ -3,7 +3,10 @@
 ## Features in Scope & Compatibility Matrix
 
 **Investigation Date:** February 19, 2026  
+**Last Verified:** May 29, 2026  
 **Status:** Development planning baseline
+
+> **Last revised:** 2026-05-29
 
 ---
 
@@ -12,6 +15,11 @@
 iOS has strong coverage for core note-taking, graph editing, and database graph workflows, but there are hard platform/runtime constraints compared to desktop Electron.
 
 Most planning errors come from assuming desktop plugin/PDF/git capabilities carry over to iOS. They do not.
+
+## Findings: New Capabilities
+
+- Native iOS graph actions are routed through the LiquidTabs plugin path, including graph list updates, tab readiness, and open/download/delete/leave actions.
+- Flashcards are wired as a first-class mobile tab with FSRS-backed UI and mobile-specific header/selector state.
 
 ---
 
@@ -23,10 +31,9 @@ The following are in active scope for iOS development and support:
 - Journals, page links, block references, templates
 - Database graph support (SQLite-backed graph mode)
 - File-based graph support (with limitations)
-- Whiteboards and flashcards (as documented in platform differences)
 - Query execution (DSL and advanced query paths where supported by UI/workflow)
 - Real-time sync/collaboration integration (RTC path)
-- Theme usage/custom CSS where mobile runtime permits
+- Flashcards (native mobile tab, FSRS-backed)
 
 ---
 
@@ -38,10 +45,12 @@ The following are in active scope for iOS development and support:
 - Git integration for file-based workflows on mobile
 - Desktop HTTP API server behavior
 - MCP tooling and desktop devtool-only integration paths
+- Whiteboards as a standalone mobile feature claim; current mobile source has no dedicated whiteboard surface or iOS-specific whiteboard flow.
+- Theme usage/custom CSS via the desktop plugin/theme path; current theme customisation is gated behind `config/lsp-enabled?`, which is false on mobile.
 
 ### Known major platform gap
 
-- PDF annotation/viewer feature parity is not available on iOS (tracked issue: #11046)
+- PDF annotation/viewer feature parity is not available on iOS (see maintained platform-differences reference)
 
 ---
 
@@ -65,16 +74,17 @@ The following are in active scope for iOS development and support:
 | Database graphs     | ✅ Supported             | Primary modern path               |
 | File-based graphs   | ⚠️ Supported with limits | No git sync on mobile             |
 | RTC Sync            | ✅ Supported             | With mobile lifecycle constraints |
+| Flashcards          | ✅ Supported             | Native mobile tab + FSRS          |
 | PDF annotations     | ❌ Not supported         | Known issue on iOS                |
 
 ### Version / Dependency Matrix (Current Repo Baseline)
 
-| Component                                      | Value / Range                     | Source                             |
-| ---------------------------------------------- | --------------------------------- | ---------------------------------- |
-| iOS platform target (Podfile baseline)         | iOS 14.0                          | `ios/App/Podfile`                  |
-| iOS deployment target seen in project settings | up to iOS 16.6 for active targets | iOS Xcode project config           |
-| Capacitor core packages                        | 7.2.0 family                      | `package.json`                     |
-| CocoaPods                                      | required                          | `docs/develop-logseq-on-mobile.md` |
+| Component                               | Value / Range                         | Source                                  |
+| --------------------------------------- | ------------------------------------- | --------------------------------------- |
+| iOS platform target (Podfile baseline)  | iOS 15.0                              | `ios/App/Podfile`                       |
+| iOS deployment targets in Xcode project | 15.0 / 16.6 / 26.0 (target-dependent) | `ios/App/App.xcodeproj/project.pbxproj` |
+| Capacitor core packages                 | 8.3.1 family                          | `package.json`                          |
+| CocoaPods                               | required                              | `docs/develop-logseq-on-mobile.md`      |
 
 > Note: device-model coverage is tracked in the new appendix: `ios-development-04-device-compatibility-appendix.md`.
 
@@ -111,8 +121,8 @@ When implementing new features, add/verify iOS-specific paths explicitly instead
 
 ## 8) References
 
-- Platform differences: `ddocs/reference/platforms/mobile-differences.md`
-- Mobile helpers: `src/main/frontend/mobile/util.cljs`
-- Mobile onboarding: `docs/develop-logseq-on-mobile.md`
-- Investigation index: `ios-development-00-index.md`
-- Device matrix appendix: `ios-development-04-device-compatibility-appendix.md`
+- Platform differences: [ddocs/reference/platforms/mobile-differences.md](../../../ddocs/reference/platforms/mobile-differences.md)
+- Mobile helpers: [src/main/frontend/mobile/util.cljs](../../../src/main/frontend/mobile/util.cljs)
+- Mobile onboarding: [docs/develop-logseq-on-mobile.md](../../../docs/develop-logseq-on-mobile.md)
+- Investigation index: [ios-development-00-index.md](./ios-development-00-index.md)
+- Device matrix appendix: [ios-development-04-device-compatibility-appendix.md](./ios-development-04-device-compatibility-appendix.md)

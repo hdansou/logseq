@@ -2,8 +2,10 @@
 
 ## Setup & Build Pipeline for New Developers
 
-**Investigation Date:** February 19, 2026  
-**Status:** Actionable onboarding baseline
+**Investigation Date:** February 19, 2026
+
+> **Last revised:** 2026-05-29  
+> **Status:** Actionable onboarding baseline
 
 ---
 
@@ -18,13 +20,19 @@ The quickest stable path to iOS development is:
 
 The major failure points are usually CocoaPods/ffi on Apple Silicon, stale Capacitor sync state, and local server misconfiguration in `capacitor.config.ts`.
 
+## Findings: New Capabilities
+
+- `bb dev:mobile-https-cert` is now a standalone helper for generating the HTTPS trust chain used by mobile development.
+- `bb dev:ios-app` remains the one-command iOS dev path, and it now wraps certificate generation, `pnpm mobile-watch`, `pnpm exec cap sync ios`, and `pnpm exec cap open ios`.
+- `bb release:ios-app` remains available and delegates to `pnpm run-ios-release` for the release install flow.
+
 ---
 
 ## 1) Environment Prerequisites
 
 From `docs/develop-logseq-on-mobile.md` and project config:
 
-- Xcode 13+ installed
+- Xcode 26.x installed; current CI baseline uses Xcode 26.0.1
 - CocoaPods installed (`sudo gem install cocoapods`)
 - Node compatible with project (`package.json` engines)
 - Capacitor iOS dependencies present (`@capacitor/ios` and peers)
@@ -50,14 +58,14 @@ arch -x86_64 pod install
 From repository root:
 
 ```sh
-yarn && yarn mobile-watch
+pnpm install && pnpm mobile-watch
 ```
 
 In another terminal:
 
 ```sh
-npx cap sync ios
-npx cap open ios
+pnpm exec cap sync ios
+pnpm exec cap open ios
 ```
 
 Then build/run from Xcode on simulator or device.
@@ -68,7 +76,7 @@ Then build/run from Xcode on simulator or device.
 bb dev:ios-app
 ```
 
-This wraps the development setup steps when the machine has required dependencies.
+This wraps the development setup steps when the machine has required dependencies, including the HTTPS cert helper and the iOS Capacitor sync/open steps.
 
 ---
 
@@ -79,14 +87,10 @@ Before release build, ensure the development server override is disabled in `cap
 Release path:
 
 ```sh
-yarn run-ios-release
+pnpm run-ios-release
 ```
 
-or
-
-```sh
-bb release:ios-app
-```
+This is wrapped by `bb release:ios-app`, which calls the release task used across the repository.
 
 ---
 
@@ -138,10 +142,10 @@ Likely stale sync/build state. Restart watch process and resync:
 
 ```sh
 # terminal 1
-yarn mobile-watch
+pnpm mobile-watch
 
 # terminal 2
-npx cap sync ios
+pnpm exec cap sync ios
 ```
 
 ### Symptom: pod install fails with ffi errors on Apple Silicon
@@ -157,16 +161,17 @@ Verify development server settings in `capacitor.config.ts` and that local IP/po
 ## 8) New Developer Checklist
 
 - [ ] Can run `yarn mobile-watch` successfully
-- [ ] Can run `npx cap sync ios` without plugin/pod errors
+- [ ] Can run `pnpm mobile-watch` successfully
+- [ ] Can run `pnpm exec cap sync ios` without plugin/pod errors
 - [ ] Can launch and build iOS project from Xcode
-- [ ] Can run bb-based shortcut commands (optional but recommended)
+- [ ] Can run bb-based shortcut commands, including `bb dev:mobile-https-cert`, `bb dev:ios-app`, and `bb release:ios-app` (optional but recommended)
 - [ ] Understands where platform-specific code lives (`src/main/frontend/mobile/` and `ios/App/App/`)
 
 ---
 
 ## 9) References
 
-- Main mobile dev guide: `docs/develop-logseq-on-mobile.md`
-- iOS project root: `ios/App/`
-- Shared frontend mobile helpers: `src/main/frontend/mobile/`
-- Investigation index: `ios-development-00-index.md`
+- Main mobile dev guide: [docs/develop-logseq-on-mobile.md](../../../docs/develop-logseq-on-mobile.md)
+- iOS project root: [ios/App/](../../../ios/App/)
+- Shared frontend mobile helpers: [src/main/frontend/mobile/](../../../src/main/frontend/mobile/)
+- Investigation index: [ios-development-00-index.md](./ios-development-00-index.md)

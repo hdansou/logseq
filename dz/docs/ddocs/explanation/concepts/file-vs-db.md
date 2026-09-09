@@ -2,7 +2,7 @@
 title: 'File vs Database Graphs'
 description: 'Understanding the differences between file-based and database-backed graphs in Logseq'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 category: concepts
 relatedDocs:
@@ -14,7 +14,7 @@ relatedDocs:
 
 # File vs Database Graphs
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 > Understanding the two storage architectures in Logseq and choosing the right one for your needs.
 
@@ -25,7 +25,7 @@ Logseq supports two fundamentally different ways to store your knowledge:
 | Aspect               | File-Based         | Database-Based      |
 | -------------------- | ------------------ | ------------------- |
 | **Storage**          | Markdown/Org files | SQLite database     |
-| **Introduced**       | Original (v0.0.1)  | Modern (v0.10.0)    |
+| **Introduced**       | Original mode       | Modern DB mode (v0.10.x era) |
 | **Prefix**           | `logseq_local_`    | `logseq_db_`        |
 | **External editing** | ✅ Yes             | ❌ No               |
 | **Typed properties** | ❌ Text only       | ✅ Full type system |
@@ -109,7 +109,7 @@ Data is stored as entities with typed attributes:
 
 ✅ **Typed properties**: Dates, numbers, checkboxes, references  
 ✅ **Built-in classes**: Task, Card, Asset with behaviors  
-✅ **Unlimited scale**: Handle millions of blocks  
+✅ **Higher scalability**: SQLite-backed storage and indexing for larger graphs  
 ✅ **Real-time sync**: RTC with automatic conflict resolution  
 ✅ **E2EE**: End-to-end encryption available  
 ✅ **Better queries**: Type-aware filtering and sorting
@@ -143,7 +143,7 @@ Data is stored as entities with typed attributes:
 | ----------------------- | --------- | ----------------------- |
 | **Tags**                | ✅ `#tag` | ✅ `#[[Class]]`         |
 | **Inheritance**         | ❌        | ✅ Classes can extend   |
-| **Required properties** | ❌        | ✅ Schema enforcement   |
+| **Required properties** | ❌        | ✅ Required properties for class schemas |
 | **Built-in classes**    | ❌        | ✅ Task, Card, Asset... |
 
 ### Queries
@@ -212,7 +212,7 @@ Data is stored as entities with typed attributes:
 
 ### File → Database
 
-Logseq provides a built-in import feature (`frontend.components.imports/import-file-graph`) that handles the conversion:
+Logseq provides a built-in import flow from the app's import dialog that handles conversion from file graphs to DB graphs.
 
 1. Use the import dialog in the app (or CLI)
 2. Select the file-based graph folder
@@ -221,10 +221,14 @@ Logseq provides a built-in import feature (`frontend.components.imports/import-f
 
 **Notes**:
 
-- The exporter (`logseq.graph-parser.exporter`) handles property type inference
-- Priority values are mapped (e.g., "A" → `:logseq.property/priority.high`)
+- Property conversion is handled by the graph parser import/export pipeline used by the import flow
 - Some formatting may change
-- Block UUIDs are regenerated
+
+> **Removed:** `frontend.components.imports/import-file-graph` as a stable public migration API reference. The UI flow exists, but relying on private symbol names here is brittle.
+
+> **Removed:** "Block UUIDs are regenerated." Current importer/exporter paths do not document this as a guaranteed behavior.
+
+> **Removed:** Specific priority mapping example (`"A" -> :logseq.property/priority.high`) as a fixed migration guarantee.
 
 ### Database → File
 
@@ -269,6 +273,16 @@ Logseq provides a built-in import feature (`frontend.components.imports/import-f
 
 ---
 
+## Findings: New Capabilities
+
+Validated against current `src/`, `deps/`, and `packages/` code (2026-05-30):
+
+- DB sync config now explicitly strips auth fields from `set-db-sync-config`; auth state is synced via `sync-app-state`.
+- DB sync has explicit graph readiness gates (`graph not ready`, 409) during bootstrap/import windows.
+- E2EE flows for DB sync are expanded and typed, including explicit missing-password errors and verify-and-save password APIs.
+
+These are DB-graph runtime capabilities and are not available in file-based graph mode.
+
 ## Identifying Graph Type
 
 In code (from `logseq.db.sqlite.util`):
@@ -298,4 +312,4 @@ In the UI:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

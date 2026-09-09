@@ -3,7 +3,7 @@ title: 'Basic Note-Taking'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-03-10'
+last-verified: '2026-05-30'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/02-first-graph.md'
@@ -14,7 +14,7 @@ related-docs:
 
 # Basic Note-Taking
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 Learn the fundamentals of editing blocks, formatting text, and organizing your thoughts in Logseq.
 
@@ -134,8 +134,8 @@ Type `/` to open the command menu for quick insertions:
 
 ### Common Commands
 
-- `/Node reference` — Create a backlink to a page or block
-- `/Node embed` — Embed a block or page inline
+- `/Node reference` — Insert a page reference (`[[...]]`)
+- `/Node embed` — Open block embed search
 - `/Code block` — Insert a code block
 - `/Query` — Insert a query
 - `/Link` — Create a HTTP link
@@ -143,6 +143,10 @@ Type `/` to open the command menu for quick insertions:
 - `/Upload an asset` — Upload a file (image, PDF, etc.)
 - `/Quote` — Create a quote block
 - `/Math block` — Insert a LaTeX math block
+
+> **Removed:** `/Node reference` creating block references via slash command. Use `((` to create block references.
+
+> **Removed:** `/Node embed` embedding pages from slash command. For page embeds, use `{{embed [[Page Name]]}}`.
 
 Task statuses (e.g., Todo, Doing, Done) appear as slash commands under **Task Status** when your graph has status properties configured.
 
@@ -382,6 +386,12 @@ Create a project note with everything you've learned:
 | Block reference | `((`                   | `((`                  |
 | Page link       | `[[`                   | `[[`                  |
 | Search          | `Ctrl + K`             | `Cmd + K`             |
+
+## Findings: New Capabilities
+
+- `/Add property` is available in the slash menu for quickly creating a property on the current block.
+- Task date commands (for Scheduled and Deadline) are available directly in slash commands under task-date grouping.
+- `Ctrl/Cmd + Shift + E` copies the current block embed snippet for reuse.
 
 ## What You've Learned
 

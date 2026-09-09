@@ -3,6 +3,7 @@
 ## Investigation Index & Quick Reference
 
 **Investigation Date:** February 19, 2026  
+**Last Verified:** May 27, 2026  
 **Audience:** New developers onboarding to Logseq iOS app work  
 **Scope:** Setup, feature scope, compatibility matrix, sync and self-hosted sync enablement
 
@@ -52,17 +53,17 @@ The most important architectural constraint is that iOS runs inside Capacitor/We
 
 ## Core Code & Config Entry Points
 
-- Mobile development guide: `docs/develop-logseq-on-mobile.md`
-- Capacitor config: `capacitor.config.ts`
-- iOS native project: `ios/App/`
-- Platform detection helpers: `src/main/frontend/mobile/util.cljs`
-- RTC worker implementation: `src/main/frontend/worker/rtc/`
-- Local/self-hosted sync test guide: `deps/db-sync/test-db-sync-local.md`
+- Mobile development guide: [docs/develop-logseq-on-mobile.md](../../../docs/develop-logseq-on-mobile.md)
+- Capacitor config: [capacitor.config.ts](../../../capacitor.config.ts)
+- iOS native project: [ios/App/](../../../ios/App/)
+- Platform detection helpers: [src/main/frontend/mobile/util.cljs](../../../src/main/frontend/mobile/util.cljs)
+- Sync worker implementation: [src/main/frontend/worker/sync/](../../../src/main/frontend/worker/sync/)
+- Local/self-hosted sync test guide: [dz/scripts/self-host/test-db-sync-local.md](../../scripts/self-host/test-db-sync-local.md)
 
 ---
 
 ## Known Gaps (Still Needing Follow-up)
 
-- Device-model test matrix is not centrally documented (iPhone/iPad model-by-model)
+- Device-model test matrix is captured in this investigation series (Part 4), but not yet promoted to a canonical maintained doc.
 - Production self-hosted sync deployment runbook is not documented in-repo
 - iOS version deprecation/support lifecycle policy is not explicitly documented

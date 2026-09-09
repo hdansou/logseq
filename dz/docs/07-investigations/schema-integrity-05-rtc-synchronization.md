@@ -2,658 +2,146 @@
 
 ## Part 5: RTC Synchronization Analysis
 
----
-
-## Table of Contents
-
-1. [RTC Architecture Overview](#rtc-architecture-overview)
-2. [Schema Version Branching](#schema-version-branching)
-3. [Migration Operation Conversion](#migration-operation-conversion)
-4. [Sync Conflict Resolution](#sync-conflict-resolution)
-5. [Multi-Client Scenarios](#multi-client-scenarios)
-6. [Branch Management](#branch-management)
-7. [Failure Recovery](#failure-recovery)
+> **Last revised:** 2026-05-30
 
 ---
 
-## RTC Architecture Overview
+## Scope
 
-### Purpose
+This document validates RTC/db-sync behavior against current source in `src/`, `deps/`, and `packages/`.
 
-RTC (Real-Time Collaboration) enables multiple clients to work on the same graph simultaneously. Schema versioning adds complexity: clients may be running different app versions with different schema requirements.
+Primary implementation references:
 
-**Key Files:**
+- `src/main/frontend/handler/db_based/sync.cljs`
+- `src/main/frontend/worker/sync.cljs`
+- `src/main/frontend/worker/sync/apply_txs.cljs`
+- `src/main/frontend/worker/sync/handle_message.cljs`
+- `src/main/frontend/worker/sync/client_op.cljs`
+- `src/main/frontend/worker/sync/upload.cljs`
+- `src/main/frontend/worker/db/migrate.cljs`
+- `deps/db-sync/src/logseq/db_sync/malli_schema.cljs`
+- `deps/db-sync/src/logseq/db_sync/protocol.cljs`
 
-- [src/main/frontend/worker/rtc/branch_graph.cljs](../../../src/main/frontend/worker/rtc/branch_graph.cljs) - Branching logic
-- [src/main/frontend/worker/rtc/migrate.cljs](../../../src/main/frontend/worker/rtc/migrate.cljs) - Migration ops
-
-### RTC Components
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       RTC Server                            │
-│                                                             │
-│  ┌────────────┐    ┌────────────┐    ┌────────────┐       │
-│  │ Branch 65  │    │ Branch 66  │    │ Branch 67  │       │
-│  │ (v65.16)   │    │ (v66.0)    │    │ (v67.2)    │       │
-│  └────────────┘    └────────────┘    └────────────┘       │
-│         ↑                 ↑                 ↑              │
-└─────────│─────────────────│─────────────────│──────────────┘
-          │                 │                 │
-          │                 │                 │
-    ┌─────┴────┐      ┌─────┴────┐      ┌─────┴────┐
-    │ Client A │      │ Client B │      │ Client C │
-    │ v65.16   │      │ v66.0    │      │ v67.2    │
-    └──────────┘      └──────────┘      └──────────┘
-```
-
-### Sync Flow
-
-```
-Client makes change
-        ↓
-Create operation
-        ↓
-Send to RTC server
-        ↓
-Server validates schema compatibility
-        ↓
-Broadcast to other clients in same branch
-        ↓
-Clients apply operation
-        ↓
-Resolve conflicts if needed
-```
+`packages/` currently contains no RTC synchronization implementation in scope for this investigation.
 
 ---
 
-## Schema Version Branching
+## Current RTC Architecture (Validated)
 
-### Branch Decision Logic
+RTC is implemented as DB sync over websocket + HTTP APIs (Cloudflare Durable Objects backend), not as client-managed schema branches.
 
-**Location:** [src/main/frontend/worker/rtc/branch_graph.cljs](../../../src/main/frontend/worker/rtc/branch_graph.cljs#L13-L40)
+High-level flow:
 
-```clojure
-(defn compare-schemas
-  "Compare client schema with server graph schema.
-   Returns action to take based on version compatibility."
-  [client-schema server-schema]
-  (let [client-major (:major client-schema)
-        server-major (:major server-schema)
-        client-minor (:minor client-schema)
-        server-minor (:minor server-schema)]
-    (cond
-      ;; Client has older major version - must download
-      (< client-major server-major)
-      :download
-
-      ;; Client has newer major version - create new branch
-      (> client-major server-major)
-      :create-branch
-
-      ;; Same major version - compatible regardless of minor
-      (= client-major server-major)
-      :compatible)))
-```
-
-### Branch Creation
-
-```clojure
-(defn create-branch
-  "Create new schema version branch on server"
-  [graph-id client-schema]
-  {:graph-id graph-id
-   :branch-id (str "v" (:major client-schema))
-   :schema-version client-schema
-   :created-at (js/Date.now)
-   :created-by (get-user-id)
-   :base-branch (get-current-branch graph-id)})
-```
-
-### Branch Selection
-
-```clojure
-(defn select-branch
-  "Select which branch to connect to"
-  [graph-id client-schema available-branches]
-  (let [compatible-branches
-        (filter #(= (:major (:schema-version %))
-                   (:major client-schema))
-               available-branches)]
-    (cond
-      ;; No compatible branches - create new one
-      (empty? compatible-branches)
-      {:action :create-branch
-       :reason "No compatible branch exists"}
-
-      ;; Single compatible branch - use it
-      (= 1 (count compatible-branches))
-      {:action :join-branch
-       :branch (first compatible-branches)}
-
-      ;; Multiple compatible branches - choose latest
-      :else
-      {:action :join-branch
-       :branch (apply max-key #(-> % :schema-version :minor)
-                     compatible-branches)})))
-```
-
-### Decision Matrix
-
-| Client | Server | Action           | Result                |
-| ------ | ------ | ---------------- | --------------------- |
-| 65.16  | 65.16  | `:compatible`    | Join existing branch  |
-| 65.15  | 65.16  | `:compatible`    | Join existing branch  |
-| 65.16  | 65.15  | `:compatible`    | Join existing branch  |
-| 66.0   | 65.16  | `:create-branch` | Create new v66 branch |
-| 65.16  | 66.0   | `:download`      | Download v66 graph    |
-| 64.5   | 65.16  | `:download`      | Download v65 graph    |
+1. UI/handler layer starts/stops sync via thread APIs in `src/main/frontend/handler/db_based/sync.cljs`.
+2. Worker entrypoints in `src/main/frontend/worker/db_core.cljs` dispatch to `frontend.worker.sync`.
+3. `src/main/frontend/worker/sync.cljs` manages websocket lifecycle, reconnect, stale connection handling, and presence.
+4. `src/main/frontend/worker/sync/handle_message.cljs` processes server messages (`hello`, `pull/ok`, `changed`, `tx/batch/ok`, `tx/reject`, etc.).
+5. `src/main/frontend/worker/sync/apply_txs.cljs` applies remote txs, rebases local pending txs, and tracks sync conflicts.
+6. `src/main/frontend/worker/sync/client_op.cljs` persists client sync state in SQLite (`client_ops`, `sync_conflicts`, `sync_meta`).
 
 ---
 
-## Migration Operation Conversion
+## Schema Version Behavior (Validated)
 
-### Purpose
+Schema migration is local DB migration logic (`src/main/frontend/worker/db/migrate.cljs`) driven by `schema-version->updates` as an ordered vector of `["<version>" {:migration ...}]` entries.
 
-When a local migration runs, it must be converted to RTC operations that can be synced to other clients in the same branch.
+For remote graph creation/listing, schema version is exchanged as graph metadata:
 
-**Location:** [src/main/frontend/worker/rtc/migrate.cljs](../../../src/main/frontend/worker/rtc/migrate.cljs#L8-L45)
+- Graph create request includes optional `:schema-version` (`deps/db-sync/src/logseq/db_sync/malli_schema.cljs`).
+- Graph list response includes optional `:schema-version` metadata (`deps/db-sync/src/logseq/db_sync/malli_schema.cljs`).
 
-### Migration to Ops Conversion
-
-```clojure
-(defn migration-results=>client-ops
-  "Convert local migration results to RTC operations"
-  [migration-results]
-  (for [result migration-results]
-    (case (:type result)
-      :properties
-      (property-migration=>ops result)
-
-      :classes
-      (class-migration=>ops result)
-
-      :rename-db-idents
-      (rename-migration=>ops result)
-
-      :fix
-      (fix-migration=>ops result)
-
-      :version-update
-      (version-update=>op result))))
-```
-
-### Property Migration Ops
-
-```clojure
-(defn property-migration=>ops
-  "Convert property migration to RTC ops"
-  [{:keys [properties]}]
-  (for [[prop-key prop-def] properties]
-    {:op-type :create-property
-     :property-name (name prop-key)
-     :property-schema (:schema prop-def)
-     :timestamp (js/Date.now)}))
-```
-
-### Class Migration Ops
-
-```clojure
-(defn class-migration=>ops
-  "Convert class migration to RTC ops"
-  [{:keys [classes]}]
-  (for [[class-key class-def] classes]
-    {:op-type :create-class
-     :class-name (name class-key)
-     :schema-properties (:schema-properties class-def)
-     :extends (:extends class-def)
-     :timestamp (js/Date.now)}))
-```
-
-### Rename Migration Ops
-
-```clojure
-(defn rename-migration=>ops
-  "Convert rename migration to RTC ops"
-  [{:keys [renames]}]
-  (for [[old-attr new-attr] renames]
-    {:op-type :rename-attribute
-     :old-name (name old-attr)
-     :new-name (name new-attr)
-     :timestamp (js/Date.now)}))
-```
-
-### Fix Migration Ops
-
-```clojure
-(defn fix-migration=>ops
-  "Convert fix migration to RTC ops"
-  [{:keys [entities-modified]}]
-  (for [entity entities-modified]
-    {:op-type :update-entity
-     :entity-id (:db/id entity)
-     :changes (:modifications entity)
-     :timestamp (js/Date.now)}))
-```
-
-### Version Update Op
-
-```clojure
-(defn version-update=>op
-  "Create version update operation"
-  [{:keys [new-version]}]
-  {:op-type :update-schema-version
-   :version new-version
-   :timestamp (js/Date.now)})
-```
+Client-side branch-per-major-version logic is not present in current RTC worker code paths.
 
 ---
 
-## Sync Conflict Resolution
+## Conflict and Rebase Model (Validated)
 
-### Conflict Types
+Current synchronization conflict handling is tx-based and rebase-oriented:
 
-1. **Schema Conflict:** Different clients in same branch apply conflicting migrations
-2. **Data Conflict:** Two clients edit same attribute simultaneously
-3. **Version Conflict:** Client's local version diverges from server
-4. **Operation Conflict:** Operations applied in different order
+1. Remote txs are sanitized and transacted (`transact-remote-txs!` in `src/main/frontend/worker/sync/apply_txs.cljs`).
+2. If local pending txs exist, worker performs reverse -> apply remote -> rebase local.
+3. Conflict extraction currently focuses on selected attrs (`sync-conflict-attrs` includes `:block/title`).
+4. Conflicts are persisted in SQLite table `sync_conflicts` via `client-op/add-sync-conflicts!`.
+5. UI receives `:sync-conflicts-updated` broadcasts with per-block conflict payload.
 
-### Conflict Detection
-
-```clojure
-(defn detect-conflicts
-  "Detect conflicts in incoming operations"
-  [local-state remote-ops]
-  (for [op remote-ops
-        :let [conflict (check-conflict local-state op)]
-        :when conflict]
-    conflict))
-
-(defn check-conflict
-  "Check if operation conflicts with local state"
-  [local-state op]
-  (case (:op-type op)
-    :create-property
-    (when (property-exists? local-state (:property-name op))
-      {:type :duplicate-property
-       :op op})
-
-    :rename-attribute
-    (when-not (attribute-exists? local-state (:old-name op))
-      {:type :missing-attribute
-       :op op})
-
-    :update-entity
-    (when (entity-modified-locally? local-state (:entity-id op))
-      {:type :concurrent-modification
-       :op op})))
-```
-
-### Resolution Strategies
-
-#### Last-Write-Wins (LWW)
-
-```clojure
-(defn resolve-lww
-  "Resolve conflict by timestamp"
-  [local-op remote-op]
-  (if (> (:timestamp remote-op) (:timestamp local-op))
-    {:winner :remote
-     :action :accept-remote
-     :discard :local}
-    {:winner :local
-     :action :reject-remote
-     :keep :local}))
-```
-
-#### Schema Merge
-
-```clojure
-(defn resolve-schema-merge
-  "Merge non-conflicting schema changes"
-  [local-changes remote-changes]
-  (let [local-properties (set (keys (:properties local-changes)))
-        remote-properties (set (keys (:properties remote-changes)))
-        overlapping (clojure.set/intersection local-properties remote-properties)]
-    (if (empty? overlapping)
-      {:merged-properties (merge (:properties local-changes)
-                                (:properties remote-changes))
-       :conflicts nil}
-      {:merged-properties nil
-       :conflicts overlapping})))
-```
-
-#### Operational Transformation (OT)
-
-```clojure
-(defn transform-operations
-  "Transform operations to resolve conflicts"
-  [local-op remote-op]
-  (case [(:op-type local-op) (:op-type remote-op)]
-    [:rename-attribute :rename-attribute]
-    (if (= (:old-name local-op) (:old-name remote-op))
-      ;; Both rename same attribute - keep remote's target
-      {:transformed-local nil
-       :transformed-remote remote-op}
-      ;; Different attributes - both can proceed
-      {:transformed-local local-op
-       :transformed-remote remote-op})
-
-    [:update-entity :update-entity]
-    (if (= (:entity-id local-op) (:entity-id remote-op))
-      ;; Same entity - merge changes
-      (merge-entity-updates local-op remote-op)
-      ;; Different entities - no conflict
-      {:transformed-local local-op
-       :transformed-remote remote-op})))
-```
+This is not a generic LWW/OT engine as previously documented; it is a targeted pending-tx rebase pipeline.
 
 ---
 
-## Multi-Client Scenarios
+## Failure Recovery and Reliability (Validated)
 
-### Scenario 1: All Clients Same Version
+### Message-level reject handling
 
-```
-Server: Branch v65 (v65.16)
-Client A: v65.16 ← Connected to v65 branch
-Client B: v65.16 ← Connected to v65 branch
-Client C: v65.16 ← Connected to v65 branch
+`tx/reject` supports structured reasons including:
 
-Result: All clients share operations seamlessly
-```
+- `stale`
+- `empty tx data`
+- `invalid tx`
+- `invalid t-before`
+- `db transact failed`
+- `snapshot upload in progress`
 
-### Scenario 2: Mixed Minor Versions
+When rejected, client updates pending/failed tx state and may trigger pull recovery.
 
-```
-Server: Branch v65 (v65.16)
-Client A: v65.16 ← Connected to v65 branch
-Client B: v65.15 ← Connected to v65 branch (compatible)
-Client C: v65.14 ← Connected to v65 branch (compatible)
+### Reconnect and stale websocket handling
 
-Result: All compatible, but newer features unavailable to older clients
-```
+`src/main/frontend/worker/sync.cljs` implements:
 
-### Scenario 3: New Major Version Client
+- Exponential backoff reconnect with jitter.
+- WS stale watchdog (`ws-stale-kill-interval-ms`, `ws-stale-timeout-ms`) that closes stale sockets.
+- Online-user + rtc-state broadcast updates on disconnect/reconnect.
 
-```
-Server: Branch v65 (v65.16)
-        Branch v66 (v66.0) ← Created by Client B
-Client A: v65.16 ← Connected to v65 branch
-Client B: v66.0  ← Created v66 branch, connected
-Client C: v65.16 ← Connected to v65 branch
+### Snapshot upload/download path
 
-Result: Clients on different branches, no sync between A/C and B
-```
+`src/main/frontend/worker/sync/upload.cljs` provides snapshot upload with:
 
-### Scenario 4: Client Upgrades Mid-Session
+- Size-aware batching and optional gzip compression.
+- Oversized datom filtering for selected attrs.
+- Optional encryption flow for E2EE graphs.
 
-```
-Initial:
-  Server: Branch v65 (v65.16)
-  Client A: v65.16 ← Connected
-
-User upgrades app:
-  Client A: v66.0 ← Disconnected from v65
-                  ← Server detects major version change
-                  ← Creates new v66 branch
-                  ← Runs migration locally
-                  ← Syncs migration ops to v66 branch
-                  ← Reconnects to v66 branch
-
-Result: Client A now on separate v66 branch
-```
+Download/start flows are handled through `src/main/frontend/handler/db_based/sync.cljs` and worker thread APIs.
 
 ---
 
-## Branch Management
+## Findings: Removed or Stale Claims
 
-### Branch Lifecycle
+> **Removed:** References to non-existent files `src/main/frontend/worker/rtc/branch_graph.cljs` and `src/main/frontend/worker/rtc/migrate.cljs`.
 
-```
-1. Creation
-   └─ Client with new major version connects
-   └─ Server creates new branch
-   └─ Initial graph state copied to branch
+> **Removed:** Branch decision matrix and helper functions such as `compare-schemas`, `create-branch`, `select-branch` in the client RTC flow.
 
-2. Active Use
-   └─ Multiple clients connect to branch
-   └─ Operations synced within branch
-   └─ Schema evolves through minor versions
+> **Removed:** Migration-to-RTC-op conversion helpers such as `migration-results=>client-ops`, `property-migration=>ops`, `class-migration=>ops`, and related pseudo-code.
 
-3. Merge (Optional)
-   └─ Newer branch migrated to even newer version
-   └─ Both branches become compatible
-   └─ Branches merged
+> **Removed:** Branch lifecycle and branch merge/pruning procedures in client runtime documentation.
 
-4. Archival
-   └─ No clients using branch
-   └─ Branch marked inactive
-   └─ Preserved for historical access
-```
-
-### Branch Merging
-
-```clojure
-(defn can-merge-branches?
-  "Check if two branches can be merged"
-  [branch-a branch-b]
-  (let [schema-a (:schema-version branch-a)
-        schema-b (:schema-version branch-b)]
-    (cond
-      ;; Same major version - can merge
-      (= (:major schema-a) (:major schema-b))
-      {:can-merge? true
-       :strategy :minor-version-merge}
-
-      ;; Different major - need migration
-      (not= (:major schema-a) (:major schema-b))
-      {:can-merge? false
-       :reason "Major version mismatch"
-       :suggestion "Migrate lower version branch"})))
-
-(defn merge-branches
-  "Merge two compatible branches"
-  [target-branch source-branch]
-  (let [operations (get-operations-since source-branch
-                                        (:last-merge-point source-branch))]
-    ;; Replay operations into target branch
-    (doseq [op operations]
-      (apply-operation target-branch op))
-
-    ;; Update merge metadata
-    (update-branch-metadata! target-branch
-                            {:merged-from (:branch-id source-branch)
-                             :merged-at (js/Date.now)})))
-```
-
-### Branch Pruning
-
-```clojure
-(defn prune-inactive-branches
-  "Remove branches with no active clients"
-  [graph-id]
-  (let [branches (get-branches graph-id)
-        inactive (filter #(zero? (count-active-clients %)) branches)
-        old (filter #(> (days-since-activity %) 90) inactive)]
-    (doseq [branch old]
-      (archive-branch! branch))))
-```
+> **Removed:** Generic LWW/OT conflict algorithm examples as authoritative RTC implementation details.
 
 ---
 
-## Failure Recovery
+## Findings: New Capabilities
 
-### Scenario 1: Sync Interrupted During Migration
-
-```
-Client A running migration v65.15 -> v65.16
-  Step 1: Add property ✅ (synced)
-  Step 2: Add class ✅ (synced)
-  Step 3: Fix data ❌ (connection lost)
-
-Recovery:
-  Client A: Completes migration locally
-  Client A: Reconnects to server
-  Client A: Resumes sync from last successful op
-  Client A: Sends remaining migration ops
-  Other clients: Receive and apply remaining ops
-```
-
-### Scenario 2: Conflicting Migrations
-
-```
-Client A and Client B both at v65.15
-Both independently upgrade to v65.16 simultaneously
-
-Client A migrations:
-  - Add property :block/priority
-  - Add class :task
-
-Client B migrations:
-  - Add property :block/priority (same name!)
-  - Add class :task (same name!)
-
-Server resolution:
-  - Detect duplicate property/class creation
-  - Keep first client's version (Client A)
-  - Transform Client B's ops to no-ops
-  - Notify Client B of conflict
-```
-
-### Scenario 3: Branch Version Rollback
-
-```
-Problem: v66 branch has critical bug
-Solution: Revert users to v65 branch
-
-Process:
-1. Mark v66 branch as deprecated
-2. When v66 clients connect, force disconnect
-3. Present "please downgrade app" message
-4. Users downgrade to v65 client
-5. Users reconnect to v65 branch
-6. Data from v66 branch migrated back (if possible)
-```
-
-### Recovery Strategies
-
-```clojure
-(defn recover-from-sync-failure
-  "Recover from sync failure"
-  [client-state server-state]
-  (cond
-    ;; Client ahead of server
-    (> (:version client-state) (:version server-state))
-    {:action :push-missing-ops
-     :ops (get-ops-after client-state (:version server-state))}
-
-    ;; Server ahead of client
-    (< (:version client-state) (:version server-state))
-    {:action :pull-missing-ops
-     :ops (get-ops-after server-state (:version client-state))}
-
-    ;; Diverged (conflict)
-    (diverged? client-state server-state)
-    {:action :resolve-divergence
-     :strategy :rebase-on-server}))
-```
+1. SQLite-backed client-op persistence with explicit schema initialization and indexes (`client_ops`, `sync_conflicts`, `sync_meta`) in `src/main/frontend/worker/sync/client_op.cljs`.
+2. Structured sync conflict storage + retrieval + clear APIs exposed via thread APIs (`db-sync-get-block-conflicts`, `db-sync-clear-block-conflicts`) in `src/main/frontend/worker/db_core.cljs`.
+3. Rebase pipeline that preserves pending local tx intent when remote txs arrive (`apply-remote-tx-with-local-changes!`) in `src/main/frontend/worker/sync/apply_txs.cljs`.
+4. Protocol/schema coercion via Malli for websocket and HTTP messages in `deps/db-sync/src/logseq/db_sync/malli_schema.cljs` and `src/main/frontend/worker/sync/transport.cljs`.
+5. Improved tx reject handling with per-tx metadata (`success-tx-ids`, `failed-tx-id`) and legacy-normalization support in `src/main/frontend/worker/sync/handle_message.cljs` and `src/main/frontend/worker/sync/transport.cljs`.
+6. Stale websocket detection and auto-reconnect scheduling in `src/main/frontend/worker/sync.cljs`.
+7. Snapshot upload hardening: payload splitting, optional gzip, oversized datom drop rules, and checksum-driven completion in `src/main/frontend/worker/sync/upload.cljs`.
+8. Explicit graph readiness / operation gating in sync handler flows (`graph-ready-for-use?`, active upload/download operation checks) in `src/main/frontend/handler/db_based/sync.cljs`.
 
 ---
 
-## Key Insights
+## Practical Takeaways for Schema/RTC Reviews
 
-### 1. Branch-Based Isolation
-
-**Benefit:** Different major versions can coexist without conflicts  
-**Cost:** Users on different branches cannot collaborate
-
-### 2. Minor Version Flexibility
-
-**Benefit:** Clients with different minor versions can sync  
-**Cost:** Feature availability varies by client version
-
-### 3. Migration Op Sync
-
-**Benefit:** All clients see schema changes in real-time  
-**Cost:** Migration failures affect all clients in branch
-
-### 4. No Automatic Branch Merge
-
-**Limitation:** Manual intervention needed to merge diverged branches  
-**Workaround:** Export/import or migrate to common version
-
-### 5. Last-Write-Wins Simplicity
-
-**Benefit:** Simple conflict resolution, no complex OT  
-**Cost:** Potential data loss on concurrent edits
+1. Treat schema migrations (`src/main/frontend/worker/db/migrate.cljs`) and RTC tx sync (`src/main/frontend/worker/sync/*.cljs`) as separate systems with integration points, not one branch-manager subsystem.
+2. For RTC regressions, inspect pending tx persistence + `tx/reject` handling + rebase path first.
+3. For collaboration conflicts, use sync-conflict APIs/events rather than assuming global branch divergence logic.
+4. For compatibility issues, validate graph metadata (`schema-version`, `graph-ready-for-use?`, `graph-e2ee?`) and startup gating in handler + worker start flows.
 
 ---
 
-## RTC Schema Evolution Best Practices
+## Evidence Notes
 
-### 1. Coordinate Major Version Upgrades
-
-```clojure
-;; Notify all clients before major version upgrade
-(defn prepare-major-upgrade
-  [graph-id new-major-version]
-  (broadcast-to-all-clients graph-id
-    {:type :major-upgrade-pending
-     :new-version new-major-version
-     :deadline (+ (js/Date.now) (* 7 24 60 60 1000))  ;; 7 days
-     :message "Please upgrade to latest version"}))
-```
-
-### 2. Test Migrations on Branches
-
-```clojure
-;; Create test branch for migration testing
-(defn create-test-branch
-  [graph-id target-version]
-  {:branch-id (str "test-v" (:major target-version))
-   :schema-version target-version
-   :is-test? true
-   :auto-delete-after (* 24 60 60 1000)})  ;; 24 hours
-```
-
-### 3. Graceful Degradation
-
-```clojure
-;; Handle features not available in older clients
-(defn sync-entity-to-client
-  [entity client-version]
-  (if (supports-feature? client-version :block/priority)
-    entity
-    (dissoc entity :block/priority)))  ;; Remove unsupported attributes
-```
-
-### 4. Monitor Branch Health
-
-```clojure
-(defn branch-health-metrics
-  [branch]
-  {:active-clients (count-active-clients branch)
-   :schema-version (:schema-version branch)
-   :ops-per-minute (calculate-op-rate branch)
-   :conflict-rate (calculate-conflict-rate branch)
-   :last-activity (:last-activity branch)})
-```
-
----
-
-## Key Takeaways
-
-1. **Major Version = New Branch:** Different major versions cannot sync
-2. **Minor Version = Compatible:** Same major, different minor versions can coexist
-3. **Migration Ops:** Local migrations converted to sync operations
-4. **Conflict Resolution:** Last-write-wins for simplicity
-5. **Branch Isolation:** Protects against incompatible changes
-6. **No Auto-Merge:** Manual intervention required for branch merging
-7. **Graceful Degradation:** Older clients ignore newer features
-
----
-
-## Next Steps
-
-Proceed to **Part 6: Failure Patterns & Recommendations** for comprehensive analysis of common failure scenarios and mitigation strategies.
+- Migration path: `migrate` and `upgrade-version!` in `src/main/frontend/worker/db/migrate.cljs`.
+- Start/stop orchestration: `<rtc-start!`, `<rtc-stop!` in `src/main/frontend/handler/db_based/sync.cljs` and `start!`, `stop!` in `src/main/frontend/worker/sync.cljs`.
+- WS protocol messages: `ws-client-message-schema`, `ws-server-message-schema` in `deps/db-sync/src/logseq/db_sync/malli_schema.cljs`.
+- Conflict/rebase path: `remote-sync-conflicts`, `apply-remote-tx-with-local-changes!`, `apply-remote-txs!` in `src/main/frontend/worker/sync/apply_txs.cljs`.

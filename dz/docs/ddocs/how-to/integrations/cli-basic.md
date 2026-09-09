@@ -2,9 +2,9 @@
 title: 'CLI Basics'
 description: 'How to use the Logseq command-line interface for automation and scripting'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
-cliVersion: '0.4.3'
+cliVersion: 'source-backed'
 platforms: [desktop]
 graphType: [db]
 relatedDocs:
@@ -15,388 +15,183 @@ relatedDocs:
 
 # CLI Basics
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
-> How to use the Logseq CLI to interact with your graphs from the terminal.
+> Source-backed Logseq CLI basics for working with DB graphs from the terminal.
+
+## Scope
+
+This page matches the current command surface implemented in `src/main/logseq/cli/`.
+
+> **Removed:** The old `@logseq/cli` npm install/update/uninstall story is not current for this source-backed CLI.
+> **Removed:** The old flat command model (`logseq list`, `logseq show my-graph`, `logseq export`, `logseq import-edn`, `logseq validate`, `logseq append`, `logseq mcp-server`) does not match the current command table.
+> **Removed:** Positional graph syntax such as `logseq search my-graph "term"` and `logseq query my-graph '[:find ...]'` is no longer current; use `--graph`.
+> **Removed:** The older `-a/--api-server-token` workflow for graph operations is not part of the current source-backed CLI surface.
+
+## Findings: New Capabilities
+
+- `graph create --enable-sync` can create a graph, upload it, and start sync in one command.
+- `graph backup list/create/restore/remove` is part of the current graph management surface.
+- `graph export --type sqlite` is supported alongside EDN export.
+- `query list` exposes built-in queries such as `task-search`, `recent-updated`, `list-status`, and `list-priority`.
+- `show` now supports `--page-hierarchy`, `--linked-references`, and `--ref-id-footer`.
+- `sync download --progress` streams realtime download progress when requested.
+- `agent bridge`, `completion`, `debug pull`, `skill show`, `skill install`, and `example` are current utility commands.
 
 ## Prerequisites
 
-- Node.js 22.17.0 or higher
-- Logseq Desktop installed
-- Database graph (CLI works with DB graphs only)
+- Node.js 22.20.0 or higher
+- A local DB graph under the CLI root directory
 
----
+> **Removed:** Logseq Desktop installed is not required for local graph commands; the CLI starts and manages `db-worker-node` itself.
 
-## Install the CLI
-
-```bash
-npm install -g @logseq/cli
-```
-
-Verify installation:
+## Quick Start
 
 ```bash
+logseq --help
 logseq --version
+logseq graph list
+logseq graph info --graph my-graph
+logseq list page --graph my-graph
+logseq search page --graph my-graph --content "meeting notes"
+logseq query --graph my-graph --name recent-updated --inputs '[30]'
+logseq show --graph my-graph --page Home
+logseq sync status --graph my-graph
 ```
 
----
+## Core Commands
 
-## List Your Graphs
+### Listing
 
-See all available local DB graphs:
+Current list subcommands:
 
-```bash
-logseq list
-```
+- `list page`
+- `list tag`
+- `list property`
+- `list task`
+- `list node`
+- `list asset`
 
-**Output:**
+### Search
 
-```
-my-notes
-work-journal
-personal
-```
+Search is scoped by entity type and requires `--content`:
 
----
+- `search block --graph my-graph --content "task"`
+- `search page --graph my-graph --content "home"`
+- `search property --graph my-graph --content "owner"`
+- `search tag --graph my-graph --content "quote"`
 
-## Search Your Notes
+### Query
 
-Search for content in a graph:
+Current query shapes:
 
-```bash
-# Search a local graph
-logseq search -g my-notes "meeting notes"
+- `query --graph my-graph --query '[:find ?title :where [?p :block/title ?title]]'`
+- `query --graph my-graph --name recent-updated --inputs '[30]'`
+- `query list --graph my-graph`
 
-# Search the current in-app graph (requires HTTP API Server)
-logseq search -a YOUR_TOKEN "meeting notes"
-```
+### Show
 
-**Options:**
+`show` is a tree inspector, not a graph metadata command:
 
-- `-g, --graph <name>` - Local graph to search
-- `-a, --api-server-token <token>` - API server token to search current in-app graph
-- `-r, --raw` - Print raw response
-- `-l, --limit <n>` - Limit max number of results (default: 100)
+- `show --graph my-graph --page Home`
+- `show --graph my-graph --page Home --page-hierarchy true`
+- `show --graph my-graph --id 123 --level 2`
+- `show --graph my-graph --uuid 11111111-1111-1111-1111-111111111111`
 
-When using `-g`, the search matches against `:block/title` of blocks. When using `-a`, a full-text search is performed via the app's API.
+### Upsert and remove
 
-You can also set the `$LOGSEQ_API_SERVER_TOKEN` environment variable instead of passing `-a` each time.
+- `upsert page --graph my-graph --page Home`
+- `upsert block --graph my-graph --content "New block"`
+- `upsert task --graph my-graph --page Home --status doing`
+- `remove page --graph my-graph --page Home`
 
----
+Use `upsert block` for generic tag/property mutation. Use `upsert task` for task-specific status and priority fields.
 
-## Query Your Graph
+## Graph Management
 
-Run queries against a graph. Supports Datalog queries and entity queries:
+### Graph create, info, export, import
 
-```bash
-# Datalog query on a local graph
-logseq query -g my-notes '[:find ?title :where [?p :block/title ?title]]'
+- `graph create --graph my-graph`
+- `graph create --graph my-graph --enable-sync --e2ee-password "my-secret"`
+- `graph info --graph my-graph`
+- `graph export --graph my-graph --type edn --file /tmp/my-graph.edn --include-timestamps --exclude-built-in-pages --exclude-namespaces user,project`
+- `graph export --graph my-graph --type sqlite --file /tmp/my-graph.sqlite`
+- `graph import --graph my-graph --type edn --input /tmp/my-graph.edn`
+- `graph validate --graph my-graph`
 
-# Entity query by id, :db/ident, or UUID
-logseq query -g my-notes 10 :logseq.class/Tag
+### Backups
 
-# Query the current in-app graph via API (supports advanced and simple queries)
-logseq query -a YOUR_TOKEN '(task DOING)'
-```
+- `graph backup list --graph my-graph`
+- `graph backup create --graph my-graph --name nightly`
+- `graph backup restore --src my-graph-nightly --dst my-graph-restore`
+- `graph backup remove --src my-graph-nightly`
 
-**Options:**
+### Server and sync
 
-- `-g, --graphs <name>` - Local graph(s) to query (can specify multiple)
-- `-a, --api-server-token <token>` - API server token to query current in-app graph
-- `-p, --properties-readable` - Show property values instead of ids (local entity queries)
-- `-t, --title-query` - Invoke local query on `:block/title`
+- `server list`
+- `server cleanup`
+- `server start --graph my-graph`
+- `server stop --graph my-graph`
+- `server restart --graph my-graph`
+- `sync status --graph my-graph`
+- `sync start --graph my-graph --e2ee-password "my-secret"`
+- `sync upload --graph my-graph`
+- `sync download --graph my-graph --progress`
+- `sync asset download --graph my-graph --id 123`
+- `sync remote-graphs`
+- `sync ensure-keys`
+- `sync grant-access --graph my-graph --graph-id <uuid> --email teammate@example.com`
+- `sync config set ws-url wss://sync.example`
+- `sync config get ws-url`
+- `sync config unset ws-url`
 
-**Common Datalog queries:**
+`login` and `logout` manage persisted cloud auth in `~/logseq/auth.json`.
 
-```bash
-# Get all page titles
-logseq query -g my-notes '[:find ?title :where [?p :block/name] [?p :block/title ?title]]'
+## Utilities
 
-# Find all tasks
-logseq query -g my-notes '[:find ?title :where [?b :block/tags ?t] [?t :db/ident :logseq.class/Task] [?b :block/title ?title]]'
-
-# Count blocks
-logseq query -g my-notes '[:find (count ?b) :where [?b :block/uuid]]'
-```
-
----
-
-## Export Your Graph
-
-### Export as Markdown
-
-Export a local graph to Markdown. Creates a ZIP file with all pages:
-
-```bash
-# Export to auto-named ZIP
-logseq export -g my-notes
-
-# Export to a specific file
-logseq export -g my-notes -f ~/backups/my-notes.zip
-```
-
-**Options:**
-
-- `-g, --graph <name>` - Local graph to export (required)
-- `-f, --file <path>` - File to save export
-
-### Export as EDN
-
-Export a graph to EDN format:
-
-```bash
-# Export a local graph
-logseq export-edn -g my-notes -f my-notes.edn
-
-# Export the current in-app graph
-logseq export-edn -a YOUR_TOKEN
-```
-
-**Options:**
-
-- `-g, --graph <name>` - Local graph to export
-- `-a, --api-server-token <token>` - API server token to export current in-app graph
-- `-f, --file <path>` - File to save export
-- `-T, --include-timestamps?` - Include timestamps in export
-- `-b, --exclude-built-in-pages?` - Exclude built-in pages
-- `-e, --exclude-namespaces <ns>` - Namespaces to exclude from properties and classes
-
----
-
-## Import Data
-
-Import EDN data into a graph:
-
-```bash
-# Import into a local graph
-logseq import-edn -g my-notes -f backup.edn
-
-# Import into the current in-app graph
-logseq import-edn -a YOUR_TOKEN -f backup.edn
-```
-
-**Options:**
-
-- `-g, --graph <name>` - Local graph to import into
-- `-a, --api-server-token <token>` - API server token to import into current in-app graph
-- `-f, --file <path>` - EDN file to import (required)
-
----
-
-## Show Graph Info
-
-View graph metadata (takes graph names as positional arguments):
-
-```bash
-logseq show my-notes
-```
-
-**Output:**
-
-```
-|                         Name |                                              Value |
-|------------------------------+----------------------------------------------------|
-|              Graph directory |                    /Users/you/.logseq/graphs/my-notes |
-|             Graph created at |                                     Jan 15th, 2025 |
-|         Graph schema version |                              {:major 65, :minor 7} |
-| Graph initial schema version |                              {:major 65, :minor 7} |
-|      Graph created by commit | https://github.com/logseq/logseq/commit/abcdef1234 |
-|            Graph imported by |                                  :cli/create-graph |
-```
-
-Note: "Graph created by commit" and "Graph imported by" rows only appear if the graph has that metadata.
-
----
-
-## Validate Graph
-
-Check for data integrity issues:
-
-```bash
-logseq validate -g my-notes
-```
-
-The `-g` flag accepts multiple graphs:
-
-```bash
-logseq validate -g my-notes -g work-journal
-```
-
-**Options:**
-
-- `-g, --graphs <name>` - Local graph(s) to validate (required)
-- `-o, --open-schema` - Validate with open schema to allow extra keys/attributes
-
-**Output (success):**
-
-```
-Valid!
-```
-
-**Output (errors):**
-
-```
-Found 3 entities with errors:
-[... entity details ...]
-```
-
----
-
-## Append Content
-
-Add text to the currently focused page in the running Logseq app:
-
-```bash
-logseq append "New task text" -a YOUR_TOKEN
-```
-
-**Options:**
-
-- `-a, --api-server-token <token>` - API server token (required, or set `$LOGSEQ_API_SERVER_TOKEN`)
-
-The text is appended as a new block on the currently focused page. Requires the Logseq desktop app to be running with the HTTP API Server enabled.
-
----
-
-## MCP Server
-
-Run a Model Context Protocol (MCP) server for AI integration:
-
-```bash
-# Start against a local graph (HTTP Streamable transport)
-logseq mcp-server -g my-notes
-
-# Start against the current in-app graph
-logseq mcp-server -a YOUR_TOKEN
-
-# Run as stdio server (for editor integrations)
-logseq mcp-server -g my-notes --stdio
-```
-
-**Options:**
-
-- `-g, --graph <name>` - Local graph to use
-- `-a, --api-server-token <token>` - API server token to connect to current in-app graph
-- `-s, --stdio` - Run as stdio server instead of HTTP Streamable
-- `-p, --port <n>` - Port for HTTP Streamable server (default: 12315)
-- `--host <addr>` - Host for HTTP Streamable server (default: 127.0.0.1)
-
----
-
-## Scripting Examples
-
-### Daily Backup Script
-
-```bash
-#!/bin/bash
-DATE=$(date +%Y-%m-%d)
-logseq export -g my-notes -f ~/backups/logseq-$DATE.zip
-```
-
-### Query to JSON
-
-```bash
-logseq query -g my-notes '[:find ?title :where [?p :block/name] [?p :block/title ?title]]' | jq '.'
-```
-
-### Search Multiple Graphs
-
-```bash
-for graph in notes work personal; do
-  echo "=== $graph ==="
-  logseq search -g $graph "project"
-done
-```
-
----
+- `agent bridge --graph my-graph`
+- `completion zsh`
+- `debug pull --uuid 11111111-1111-1111-1111-111111111111 --graph my-graph`
+- `skill show`
+- `skill install --global`
+- `example upsert page`
 
 ## Working Modes
 
-### Local Mode (Offline)
+### Local Mode
 
-When using `-g` to specify a local graph:
+Local graph commands work directly against the DB graph on disk and start `db-worker-node` as needed.
 
-- Works directly with local database files
-- Queries, exports, search, and validation
-- No running Logseq instance required
+### Connected Mode
 
-### API Mode (Connected)
+Sync and login flows use the configured cloud and sync settings, with `~/logseq/auth.json` as the persisted auth file.
 
-When using `-a` or `$LOGSEQ_API_SERVER_TOKEN`:
+## Notes
 
-- Connects to the running Logseq desktop app
-- Communicates via HTTP API Server on port 12315
-- Supports search, query, export-edn, import-edn, append, and mcp-server
-- The HTTP API Server must be enabled in the desktop app
-
-Note: `export` (Markdown) and `validate` work only in local mode. `append` works only in API mode.
-
----
+- `graph info` is the current graph metadata command.
+- `graph export` supports EDN and SQLite output.
+- `query list` includes built-in and custom queries.
+- `sync download` can stream progress when `--progress` is enabled.
+- `show` is for entity trees, not graph metadata.
 
 ## Troubleshooting
 
 ### "Graph not found"
 
 ```bash
-# List available graphs
-logseq list
-
-# Use exact name from list
-logseq show "exact-graph-name"
+logseq graph list
+logseq graph info --graph exact-graph-name
 ```
 
 ### "Cannot connect to Logseq"
 
-- Ensure Logseq desktop is running
-- Check the HTTP API Server is enabled in the desktop app
-- Verify port 12315 is not blocked
-- Make sure you are providing a valid API server token via `-a` or `$LOGSEQ_API_SERVER_TOKEN`
-
-### "Permission denied"
-
-```bash
-# Check Node.js version
-node --version  # Must be 22.17.0+
-
-# Reinstall with correct permissions
-sudo npm install -g @logseq/cli
-```
+- Ensure the graph exists and the CLI root directory is correct.
+- Check the relevant sync config with `logseq sync config get`.
+- Use `logseq login` when a cloud-authenticated sync flow is required.
 
 ### "Invalid query syntax"
 
 ```bash
-# Wrap query in single quotes
-logseq query -g my-notes '[:find ...]'
-
-# Escape special characters
-logseq query -g my-notes '[:find ?t :where [?b :block/title ?t]]'
+logseq query --graph my-graph --query '[:find ?t :where [?b :block/title ?t]]'
+logseq query --graph my-graph --name task-search --inputs '[:logseq.property/status.todo ""]'
 ```
-
----
-
-## Command Reference
-
-| Command      | Description                | Example                                |
-| ------------ | -------------------------- | -------------------------------------- |
-| `list`       | List local DB graphs       | `logseq list`                          |
-| `show`       | Show graph info            | `logseq show my-notes`                 |
-| `search`     | Search graph content       | `logseq search -g name "term"`         |
-| `query`      | Query graph (Datalog/entity) | `logseq query -g name '[...]'`       |
-| `export`     | Export graph as Markdown   | `logseq export -g name`               |
-| `export-edn` | Export graph as EDN        | `logseq export-edn -g name -f out.edn`|
-| `import-edn` | Import EDN into graph      | `logseq import-edn -g name -f file`   |
-| `validate`   | Validate graph integrity   | `logseq validate -g name`             |
-| `append`     | Append text to current page| `logseq append "text" -a token`        |
-| `mcp-server` | Run MCP server             | `logseq mcp-server -g name`           |
-
----
-
-## See Also
-
-- **HTTP API**: [http-api.md](../../reference/api/http-api.md) for programmatic access
-- **MCP Server**: [mcp-server.md](../../reference/api/mcp-server.md) for AI integration
-- **Backup Guide**: [backup-restore.md](../backup/backup-restore.md)
-
----
-
-_Last updated: 2026-03-10_

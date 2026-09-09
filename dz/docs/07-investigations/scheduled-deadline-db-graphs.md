@@ -2,8 +2,11 @@
 
 **Purpose:** Comprehensive code investigation of how scheduled and deadline tasks work in Logseq DB-based graphs, including query syntax and examples.
 
-**Version:** 1.0  
-**Last Updated:** 2025-01-15  
+**Version:** 1.1  
+**Last Updated:** 2026-05-30
+
+> **Last revised:** 2026-05-30
+
 **Graph Mode:** Database (DB-based graphs)  
 **Platform:** Cross-platform (Electron, Web)
 
@@ -29,8 +32,8 @@
 
 1. **Property-Based System**: DB graphs use `:logseq.property/scheduled` and `:logseq.property/deadline` properties (not org-mode timestamps)
 2. **Datetime Storage**: Values are stored as **millisecond timestamps** (epoch), not integer dates
-3. **Query Syntax**: Use `(property scheduled today)` and `(between deadline today +7d)` without quotes
-4. **UI Integration**: Set via shortcuts `Cmd/Ctrl+P` then `S`/`D` or UI date picker
+3. **Query Syntax**: Use `(between scheduled today tomorrow)` and `(between deadline today +7d)` without quotes
+4. **UI Integration**: Set via slash commands (`Scheduled`/`Deadline`), property picker, or deadline shortcut (`p d`)
 5. **Task Status Format**: Use title-case (`Todo`, `Doing`, `Done`) without quotes
 
 ### Working Query Example
@@ -41,7 +44,7 @@
 
 ```clojure
 (and
-  (task Doing)
+  (task Todo)
   (between scheduled today tomorrow))
 ```
 
@@ -99,6 +102,15 @@
 
 ## Context
 
+## Findings: New Capabilities
+
+- `inputs.cljs` now supports `:relative-date-time` inputs like `:+7d-ms`, `:+2w-start`, and explicit time suffixes such as `:today-1400`.
+- DB query DSL property matching now routes through specialized scalar/ref/default-aware rules (`:scalar-property`, `:ref-property`, and `*-with-default`) instead of a single simple property rule.
+- Task filtering in DB queries uses the status property via `ref-property-with-default`, so `(task ...)` is status-driven.
+
+> **Removed:** `task` rule no longer requires `:block/tags :logseq.class/Task` in DB query DSL rules.
+> **Removed:** `simple-query-property`/`private-simple-query-property` are no longer the main path for `(property key value)` DB matching in `query_dsl.cljs`.
+
 ### Feature Overview
 
 Scheduled and deadline properties allow users to:
@@ -119,13 +131,13 @@ Both are **datetime properties** supporting:
 
 1. **Keyboard Shortcuts**:
 
-   - `Cmd/Ctrl + P` → `S` for Scheduled
-   - `Cmd/Ctrl + P` → `D` for Deadline
+- `mod+p` opens property insertion
+- `p d` inserts Deadline directly (`:editor/add-property-deadline`)
 
 2. **Slash Commands**:
 
-   - `/Scheduled` - Opens date picker
-   - `/Deadline` - Opens date picker
+- `Scheduled` - Opens date picker (`:editor/set-scheduled`)
+- `Deadline` - Opens date picker (`:editor/set-deadline`)
 
 3. **Property UI**: Click property icon → Select date/time
 
@@ -228,28 +240,28 @@ Both are **datetime properties** supporting:
 
 #### Query DSL: `property` Operator
 
-**Location:** `src/main/frontend/db/query_dsl.cljs:342-356`
+**Location:** `src/main/frontend/db/query_dsl.cljs` (`build-property-two-arg`)
 
 ```clojure
 (defn- build-property-two-arg
-  [e {:keys [db-graph? private-property?]}]
-  (let [k (if db-graph? (->db-keyword-property (nth e 1)) (->file-keyword-property (nth e 1)))
+  [e {:keys [private-property?]}]
+  (let [k (->db-keyword-property (nth e 1))
         v (nth e 2)
-        v' (if db-graph? (->db-property-value k v) (->file-property-value v))]
-    (if db-graph?
-      (if private-property?
-        {:query (list 'private-simple-query-property '?b k v')
-         :rules [:private-simple-query-property]}
-        {:query (list 'simple-query-property '?b k v')
-         :rules [:simple-query-property]})
-      {:query (list 'property '?b k v')
-       :rules [:property]})))
+        v' (->db-property-value k v)
+        property (when (qualified-keyword? k)
+                   (d/entity *current-db* k))
+        ref-type? (= :db.type/ref (:db/valueType property))
+        rule (if private-property?
+               (if ref-type? :private-ref-property :private-scalar-property)
+               (if ref-type? :ref-property :scalar-property))]
+    {:query (list (symbol (name rule)) '?b k v')
+     :rules [rule]}))
 ```
 
 **For datetime properties (scheduled/deadline):**
 
 - **CANNOT use `property` operator**: It does exact value matching, but datetime properties store milliseconds while date keywords resolve to integers - they never match!
-- **MUST use `between` operator**: `(between scheduled today today)` for exact day, `(between scheduled today +7d)` for ranges
+- **MUST use `between` operator**: `(between scheduled today tomorrow)` for today, `(between scheduled today +7d)` for ranges
 - **How `between` works**: Recognizes timestamp properties and converts date integers (like `20251122`) to millisecond ranges
 - **Millisecond timestamps**: Only available in advanced queries via `:inputs` (e.g., `:start-of-today-ms`)
 
@@ -259,7 +271,7 @@ Both are **datetime properties** supporting:
 
 #### Example: Get Scheduled/Deadline Tasks for Date Range
 
-**Location:** `src/main/frontend/db/async.cljs:200-219`
+**Location:** `src/main/frontend/db/async.cljs:228-257`
 
 ```clojure
 (defn <get-date-scheduled-or-deadlines
@@ -275,24 +287,21 @@ Both are **datetime properties** supporting:
           future-time (tc/to-long future-date)]
       (when-let [repo (and future-day (state/get-current-repo))]
         (p/let [result
-                (if (config/db-based-graph? repo)
-                  (<q repo {}
-                      '[:find [(pull ?block ?block-attrs) ...]
-                        :in $ ?start-time ?end-time ?block-attrs
-                        :where
-                        (or [?block :logseq.property/scheduled ?n]
-                            [?block :logseq.property/deadline ?n])
-                        [(>= ?n ?start-time)]
-                        [(<= ?n ?end-time)]
-                        [?block :logseq.property/status ?status]
-                        [?status :db/ident ?status-ident]
-                        [(not= ?status-ident :logseq.property/status.done)]
-                        [(not= ?status-ident :logseq.property/status.canceled)]]
-                      start-time
-                      future-time
-                      '[*])
-                  ; ... file-based query ...
-                  )]
+                (<q repo {}
+                    '[:find [(pull ?block ?block-attrs) ...]
+                      :in $ ?start-time ?end-time ?block-attrs
+                      :where
+                      (or [?block :logseq.property/scheduled ?n]
+                          [?block :logseq.property/deadline ?n])
+                      [(>= ?n ?start-time)]
+                      [(<= ?n ?end-time)]
+                      [?block :logseq.property/status ?status]
+                      [?status :db/ident ?status-ident]
+                      [(not= ?status-ident :logseq.property/status.done)]
+                      [(not= ?status-ident :logseq.property/status.canceled)]]
+                    start-time
+                    future-time
+                    '[*])]
           (->> result
                db-model/sort-by-order-recursive
                db-utils/group-by-page))))))
@@ -357,22 +366,18 @@ Both are **datetime properties** supporting:
 
 ### 6. Task Status Integration
 
-**Location:** `src/main/frontend/db/query_dsl.cljs:376-389`
+**Location:** `src/main/frontend/db/query_dsl.cljs:365-373`
 
 ```clojure
 (defn- build-task
-  [e {:keys [db-graph?]}]
+  [e]
   (let [markers (if (coll? (first (rest e)))
                   (first (rest e))
                   (rest e))]
     (when (seq markers)
-      (if db-graph?
-        (let [markers' (set (map (comp common-util/capitalize-all name) markers))]
-          {:query (list 'task '?b (set markers'))
-           :rules [:task]})
-        (let [markers (set (map (comp string/upper-case name) markers))]
-          {:query (list 'task '?b markers)
-           :rules [:task]})))))
+      (let [markers' (set (map (comp common-util/capitalize-all name) markers))]
+        {:query (list 'task '?b (set markers'))
+         :rules [:task]}))))
 ```
 
 **Task Status Transformation:**
@@ -382,23 +387,20 @@ Both are **datetime properties** supporting:
 
 **Query Rule:**
 
-**Location:** `deps/db/src/logseq/db/frontend/rules.cljc:236-240`
+**Location:** `deps/db/src/logseq/db/frontend/rules.cljc` (`:task`)
 
 ```clojure
 :task
-'[(task ?b ?markers)
-  [?b :block/tags :logseq.class/Task]
-  [?b :logseq.property/status ?status-e]
-  [?status-e :logseq.property/value ?status]
-  [(contains? ?markers ?status)]]
+'[(task ?b ?statuses)
+  (ref-property-with-default ?b :logseq.property/status ?val)
+  [(contains? ?statuses ?val)]]
 ```
 
 **How it works:**
 
-1. Block must have `:logseq.class/Task` tag
-2. Extract status property value entity
-3. Get the actual status string from `:logseq.property/value`
-4. Check if status is in the requested markers set
+1. Resolve block status through `ref-property-with-default`
+2. Include both explicit and default status values
+3. Check if resolved status is in the requested marker set
 
 ---
 
@@ -407,13 +409,13 @@ Both are **datetime properties** supporting:
 ### Setting Scheduled Property
 
 ```text
-User Action: Cmd+P → S → Select Date (March 15, 2024)
+User Action: /Scheduled (or Add Property) → Select Date (March 15, 2024)
    [0ms]
     ├─→ UI: Open date picker
     │    └─→ User selects: 2024-03-15
     │
-    ├─→ Command Handler (src/main/frontend/worker/commands.cljs:186-197)
-    │    └─→ Convert date to timestamp: 1710489600000
+    ├─→ Command Handler (src/main/frontend/commands.cljs)
+    │    └─→ :editor/set-scheduled → [:editor/new-property {:property-key "Scheduled"}]
     │
     ├─→ Transaction Builder (deps/db/src/logseq/db/frontend/property/build.cljs:68-94)
     │    ├─→ Create journal page if needed
@@ -431,35 +433,34 @@ Display: [[2024-03-15]] shown in property UI
 ### Query Execution Timeline
 
 ```text
-Query: (and (task Todo) (property scheduled today))
+Query: (and (task Todo) (between scheduled today tomorrow))
   [0ms]
     │
     ├─→ Parse Query String (src/main/frontend/db/query_dsl.cljs)
-    │    ├─→ Resolve "today" → 20240115 (integer)
+    │    ├─→ Resolve timestamp bounds for `today` and `tomorrow`
     │    ├─→ Build task clause: (task ?b #{"Todo"})
-    │    └─→ Build property clause: (simple-query-property ?b :logseq.property/scheduled 20240115)
+    │    └─→ Build range clauses: [?b :logseq.property/scheduled ?v] [(>= ?v start)] [(< ?v end)]
     │
     ├─→ Generate DataScript Query
     │    {:query [:find [(pull ?b [*]) ...]
-    │             :in $ ?today
+    │             :in $ ?start ?end
     │             :where
-    │             [?b :block/tags :logseq.class/Task]
-    │             [?b :logseq.property/status ?status-e]
-    │             [?status-e :logseq.property/value "Todo"]
-    │             (simple-query-property ?b :logseq.property/scheduled ?today)]
-    │     :inputs [20240115]}
+    │             (task ?b #{"Todo"})
+    │             [?b :logseq.property/scheduled ?v]
+    │             [(>= ?v ?start)]
+    │             [(< ?v ?end)]
+    │     :inputs [start-ms end-ms]}
     │
     ├─→ Execute Query (DataScript)
-    │    └─→ Match blocks where:
-    │         - Has Task tag
-    │         - Status = "Todo"
-    │         - Scheduled property matches today
+    │    └─→ Match blocks where status matches Todo and scheduled is within today's range
     │
     └─→ Return Results
          └─→ List of matching blocks
 
 Display: Results rendered in query block
 ```
+
+> **Removed:** The earlier timeline that used `(property scheduled today)` as a working path was stale.
 
 ---
 
@@ -477,7 +478,7 @@ Display: Results rendered in query block
 
 **What it does:**
 
-- Finds blocks tagged with `:logseq.class/Task`
+- Finds blocks whose status matches `Todo`
 - Filters to `Todo` status
 - Uses `between scheduled today tomorrow` to match **all times during today**
 - How it works: `today` = midnight start of today, `tomorrow` = midnight start of tomorrow
@@ -644,16 +645,17 @@ Display: Results rendered in query block
 
 ## Code Location Reference
 
-| File                                                 | Purpose              | Key Functions/Data                                       | Lines           |
-| ---------------------------------------------------- | -------------------- | -------------------------------------------------------- | --------------- |
-| `deps/db/src/logseq/db/frontend/property.cljs`       | Property definitions | Built-in properties including scheduled/deadline         | 323-338         |
-| `src/main/frontend/db/async.cljs`                    | Query functions      | `<get-date-scheduled-or-deadlines` - fetch tasks by date | 200-219         |
-| `src/main/frontend/db/query_dsl.cljs`                | Query DSL parser     | `build-between`, `build-property`, `build-task`          | 248-389         |
-| `deps/db/src/logseq/db/frontend/rules.cljc`          | DataScript rules     | `:between`, `:task` query rules                          | 85-115, 236-240 |
-| `deps/db/src/logseq/db/frontend/inputs.cljs`         | Input resolution     | Date keyword to timestamp conversion                     | 103-123         |
-| `src/main/frontend/worker/commands.cljs`             | Command handlers     | Set scheduled/deadline property                          | 186-197         |
-| `deps/db/src/logseq/db/frontend/property/build.cljs` | Property TX builder  | Build property value transactions                        | 68-130          |
-| `src/main/frontend/components/property/value.cljs`   | Property UI          | Display datetime values, overdue highlighting            | 401-433         |
+| File                                                 | Purpose              | Key Functions/Data                                                         | Lines            |
+| ---------------------------------------------------- | -------------------- | -------------------------------------------------------------------------- | ---------------- |
+| `deps/db/src/logseq/db/frontend/property.cljs`       | Property definitions | Built-in properties including scheduled/deadline                           | 340-353          |
+| `src/main/frontend/db/async.cljs`                    | Query functions      | `<get-date-scheduled-or-deadlines` - fetch tasks by date                   | 228-257          |
+| `src/main/frontend/db/query_dsl.cljs`                | Query DSL parser     | `db-based-build-between-three-arg`, `build-property-two-arg`, `build-task` | 254-373          |
+| `deps/db/src/logseq/db/frontend/rules.cljc`          | DataScript rules     | `:between`, `:task`, property helper rules                                 | 97-304           |
+| `deps/db/src/logseq/db/frontend/inputs.cljs`         | Input resolution     | Date/relative-date-time keyword conversion                                 | 71-140           |
+| `src/main/frontend/commands.cljs`                    | Command handlers     | Slash command actions for scheduled/deadline                               | 261-271, 654-658 |
+| `src/main/frontend/modules/shortcut/config.cljs`     | Shortcut bindings    | Deadline shortcut binding                                                  | 268-271          |
+| `deps/db/src/logseq/db/frontend/property/build.cljs` | Property TX builder  | Build property value transactions                                          | 68-130           |
+| `src/main/frontend/components/property/value.cljs`   | Property UI          | Display datetime values, overdue highlighting                              | 401-433          |
 
 ---
 
@@ -671,12 +673,12 @@ Display: Results rendered in query block
 
 ### Query Syntax Differences
 
-| Query                  | File-Based                                                 | DB-Based                                         |
-| ---------------------- | ---------------------------------------------------------- | ------------------------------------------------ |
-| **Today's scheduled**  | `{{query (and (task TODO) (property scheduled today))}}`   | `(and (task Todo) (property scheduled today))`   |
-| **Next week deadline** | `{{query (and (task TODO) (between deadline today +7d))}}` | `(and (task Todo) (between deadline today +7d))` |
-| **Task status format** | `TODO`, `DOING`, `DONE`                                    | `Todo`, `Doing`, `Done`                          |
-| **Wrapper syntax**     | `{{query ...}}` macro                                      | `/Query` command (no wrapper)                    |
+| Query                  | File-Based                                                 | DB-Based                                               |
+| ---------------------- | ---------------------------------------------------------- | ------------------------------------------------------ |
+| **Today's scheduled**  | `{{query (and (task TODO) (property scheduled today))}}`   | `(and (task Todo) (between scheduled today tomorrow))` |
+| **Next week deadline** | `{{query (and (task TODO) (between deadline today +7d))}}` | `(and (task Todo) (between deadline today +7d))`       |
+| **Task status format** | `TODO`, `DOING`, `DONE`                                    | `Todo`, `Doing`, `Done`                                |
+| **Wrapper syntax**     | `{{query ...}}` macro                                      | `/Query` command (no wrapper)                          |
 
 ### Data Structure Comparison
 
@@ -705,7 +707,7 @@ Display: Results rendered in query block
 
 ### For Users
 
-1. **Use Keyboard Shortcuts**: `Cmd/Ctrl+P` → `S`/`D` is fastest
+1. **Use Command Entry Points**: Slash commands are the most direct for both properties; shortcut `p d` is available for Deadline.
 2. **Set Both Properties**: Use scheduled (start) + deadline (finish) for better planning
 3. **Check Overdue Daily**: Run overdue query in your journal template
 4. **Use Timestamp Inputs**: For precise day matching, use `:start-of-today-ms :end-of-today-ms`
@@ -782,7 +784,6 @@ Display: Results rendered in query block
    ```
 
 2. **Verify query syntax:**
-
    - Check for spaces after operators: `(and (task ...))` not `(and(task...))`
    - Use lowercase operators: `task`, `between`, `property`
    - Use title-case status: `Todo`, `Doing`, `Done`
@@ -915,9 +916,10 @@ query:: (and (task Done) (between scheduled -7d today))
 
 ## Change History
 
-| Version | Date       | Changes               | Author         |
-| ------- | ---------- | --------------------- | -------------- |
-| 1.0     | 2025-01-15 | Initial investigation | Code Detective |
+| Version | Date       | Changes                                                                                                | Author         |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------ | -------------- |
+| 1.1     | 2026-05-30 | Validated against current `src/`, `deps/`, and `packages/`; corrected stale query/task/shortcut claims | Code Detective |
+| 1.0     | 2025-01-15 | Initial investigation                                                                                  | Code Detective |
 
 ---
 

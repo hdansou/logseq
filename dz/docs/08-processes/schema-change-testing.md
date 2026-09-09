@@ -1,1294 +1,342 @@
 # Schema Change Testing Strategies
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 **Document Type:** Testing Guide
-**Last Updated:** December 28, 2025
+**Last Updated:** May 30, 2026
 **Related Investigation:** [Schema Evolution and Data Migration](../07-investigations/schema-evolution-and-data-migration.md)
 
 ---
 
 ## Overview
 
-Comprehensive testing is critical for schema changes to prevent data loss, validation errors, and sync conflicts. This guide provides testing strategies, patterns, and examples for all aspects of schema evolution.
+Schema changes in the current Logseq codebase are tested across three concrete layers:
 
-**Key Principle:** Test migration paths, not just final state. Users upgrade from various versions.
+1. Datascript schema and built-in definitions in `deps/db/`
+2. Frontend migration and validation flows in `src/main/frontend/worker/db/`
+3. End-to-end import/export and sync-oriented behavior in `deps/db/test/` and `src/test/`
+
+The main rule is still correct: test upgrade paths, not just the final shape. What changed since the previous revision is the actual implementation surface. The codebase now exposes a narrower, more concrete set of migration and validation entry points than this document previously described.
 
 ---
 
-## Table of Contents
+## Current Source Of Truth
 
-1. [Testing Philosophy](#testing-philosophy)
-2. [Test Environment Setup](#test-environment-setup)
-3. [Unit Testing](#unit-testing)
-4. [Migration Testing](#migration-testing)
-5. [Validation Testing](#validation-testing)
-6. [Import/Export Testing](#import-export-testing)
-7. [RTC/Sync Testing](#rtcsync-testing)
-8. [Performance Testing](#performance-testing)
-9. [Integration Testing](#integration-testing)
-10. [Manual Testing](#manual-testing)
-11. [Test Data Generation](#test-data-generation)
-12. [CI/CD Integration](#cicd-integration)
+For schema change work, validate against these current anchors:
+
+- Current DB schema version: `logseq.db.frontend.schema/version` in `deps/db/src/logseq/db/frontend/schema.cljs`.
+- Current frontend migration registry: `frontend.worker.db.migrate/schema-version->updates` in `src/main/frontend/worker/db/migrate.cljs`.
+- Migration entry point: `frontend.worker.db.migrate/migrate`.
+- Built-in graph bootstrap data: `logseq.db.sqlite.create-graph/build-db-initial-data` in `deps/db/src/logseq/db/sqlite/create_graph.cljs`.
+- Schema repair helper: `frontend.worker.db.fix/check-and-fix-schema!`.
+- Transaction validation path: `logseq.db/transact!` and transact-time validation handling in `deps/db/src/logseq/db.cljs`.
+- Property value validation logic: `logseq.db.frontend.malli-schema/validate-property-value` in `deps/db/src/logseq/db/frontend/malli_schema.cljs`.
+- DB-sync message schemas: `deps/db-sync/src/logseq/db_sync/malli_schema.cljs`.
+- Import/export round-trip tests: `deps/db/test/logseq/db/sqlite/export_test.cljs`.
+- Frontend migration tests: `src/test/frontend/worker/migrate_test.cljs`.
+- Frontend validation tests: `src/test/frontend/worker/db_validate_test.cljs` and `src/test/frontend/worker/db_worker_test.cljs`.
+
+As of 2026-05-30, the current schema version is `65.33`.
+
+---
+
+## Findings: Removed Or Stale Claims
+
+> **Removed:** The previous revision treated schema versions in tests as string literals like `"65.16"` and `"65.17"` as if that were the current testing interface. Current migrations store and compare schema versions as maps such as `{:major 65 :minor 33}` in the database, while `schema-version->updates` still uses string literals as migration table keys.
+> **Removed:** The example helpers `get-schema-for-version`, `create-test-db-with-schema`, `create-test-db-with-data`, `generate-test-data!`, `get-current-schema-version`, and `migrate-db-graph` are not current public helpers in `src/`, `deps/`, or `packages/`.
+> **Removed:** The document previously referenced `validate-db!` and `validate-tx-report` as simple standalone helpers available at the guide level. Current validation is centered around the transact pipeline in `deps/db/src/logseq/db.cljs`, worker validation entry points, and dedicated validation tests rather than the helper surface shown in the old examples.
+> **Removed:** The old RTC examples assumed a generic mock server/device API and broad property RTC config keys such as `:rtc/ignore-attr-when-init-upload` and `:rtc/ignore-attr-when-init-download`. Current built-in property definitions verified in `deps/db/src/logseq/db/frontend/property.cljs` only clearly show `:rtc/ignore-attr-when-syncing` on the relevant helper path used by those properties.
+> **Removed:** The previous import/export examples used generic `export-db` and `import-db` functions. Current source-of-truth coverage for schema-sensitive import/export behavior is in the SQLite export/import pipeline and its tests, especially `deps/db/test/logseq/db/sqlite/export_test.cljs`.
+> **Removed:** The sample CI section referenced commands such as `bb test:unit`, `bb test:migration`, `bb test:validation`, `bb test:import-export`, and `bb lint:schema-version`. No current evidence for those repo commands was found. The validated repo-level commands are `bb dev:lint-and-test` and focused unit runs via `bb dev:test -v ...`.
+
+---
+
+## Findings: New Capabilities
+
+- Frontend migrations now cover schema updates through `65.33`, including additive property/class migrations and destructive cleanup via `:delete-properties` entries in `schema-version->updates`.
+- `frontend.worker.db.migrate/ensure-built-in-data-exists!` explicitly preserves graph bootstrap keys like `:logseq.kv/graph-initial-schema-version` and `:logseq.kv/graph-created-at` while backfilling missing built-in data.
+- Import/export round-trip coverage is broader than this guide previously described. Current tests cover timestamps, excluded namespaces, property history preservation, class property ordering, graph file ordering, asset handling, and the rule that `:logseq.kv/schema-version` is intentionally not copied from export back into the target graph.
+- Worker validation coverage now includes sync diagnostics plumbing. `thread-api/validate-db` tests verify that validation receives sync context rather than operating as a blind local-only check.
+- `logseq.db/batch-transact-with-temp-conn!` explicitly defers validation during inner batch operations and validates on the final transact, which matters when testing larger schema-changing workflows.
 
 ---
 
 ## Testing Philosophy
 
-### Testing Pyramid for Schema Changes
+Use a narrower testing pyramid than the old guide suggested:
 
-```
-                    ┌─────────────────┐
-                    │  Manual Testing │  ← Few, critical paths
-                    │   (UI, E2E)     │
-                    └─────────────────┘
-                  ┌───────────────────────┐
-                  │  Integration Tests    │  ← Some, key flows
-                  │  (Multi-component)    │
-                  └───────────────────────┘
-              ┌─────────────────────────────────┐
-              │      Migration Tests            │  ← Many, all versions
-              │   (Version transitions)         │
-              └─────────────────────────────────┘
-          ┌─────────────────────────────────────────┐
-          │           Unit Tests                    │  ← Most, fast & focused
-          │  (Property, validation, individual)     │
-          └─────────────────────────────────────────┘
-```
+1. Migration unit tests for each schema bump in `src/test/frontend/worker/migrate_test.cljs`
+2. Validation tests for invalid or repaired DB state in `src/test/frontend/worker/db_validate_test.cljs` and worker thread API tests
+3. Import/export round-trip tests in `deps/db/test/logseq/db/sqlite/export_test.cljs`
+4. DB-sync schema and diagnostics checks when the change affects sync payloads or checksum behavior
+5. Manual graph-open and cross-device checks only when the change affects user-visible migration behavior
 
-### Test Coverage Requirements
-
-**Minimum coverage for schema changes:**
-
-- ✅ **100%** migration paths tested (all version transitions)
-- ✅ **100%** validation rules tested (valid + invalid cases)
-- ✅ **90%+** code coverage for new property code
-- ✅ **All** RTC configurations tested with multi-device scenarios
-- ✅ **All** import/export format changes tested with round-trips
-
-### Testing Priorities
-
-**Priority 1 - Critical (Must Test):**
-
-- Migration from previous 3 schema versions
-- Validation rules on existing data
-- Import/export round-trip
-- RTC sync with concurrent edits
-
-**Priority 2 - Important (Should Test):**
-
-- Edge cases (nil, empty, special characters)
-- Performance with large datasets
-- Error recovery scenarios
-- Cross-version compatibility
-
-**Priority 3 - Nice to Have (Can Test):**
-
-- UI rendering of new properties
-- All possible data combinations
-- Stress testing beyond typical use
+Prefer adding one focused test per concrete behavior change instead of generic helper-heavy test scaffolding.
 
 ---
 
 ## Test Environment Setup
 
-### Test Database Creation
+For current schema work, prefer these real setup patterns over bespoke helpers.
+
+### Create a fresh current-schema conn
 
 ```clojure
-(ns logseq.db.test-helpers
-  (:require [datascript.core :as d]
-            [logseq.db.schema :as db-schema]
-            [logseq.db.frontend.create-graph :as create-graph]))
-
-(defn create-test-db
-  "Create empty test database with current schema"
-  []
-  (let [conn (d/create-conn db-schema/schema)]
-    conn))
-
-(defn create-test-db-with-schema
-  "Create test database with specific schema version"
-  [schema-version]
-  (let [conn (d/create-conn (get-schema-for-version schema-version))]
-    ;; Initialize with that version
-    (create-graph/create-db-graph-from-scratch! conn schema-version)
-    conn))
-
-(defn create-test-db-with-data
-  "Create test database with sample data"
-  [schema-version & [{:keys [pages blocks properties]
-                      :or {pages 10 blocks 100 properties 5}}]]
-  (let [conn (create-test-db-with-schema schema-version)]
-    (generate-test-data! conn {:pages pages
-                               :blocks blocks
-                               :properties properties})
-    conn))
+(let [conn (d/create-conn db-schema/schema)]
+  ...)
 ```
 
-### Test Data Fixtures
+### Seed an explicit graph schema version before migration
 
 ```clojure
-(def sample-block
-  {:block/uuid (d/squuid)
-   :block/type "block"
-   :block/content "Sample block content"
-   :block/parent {:db/id 2}
-   :block/left {:db/id 1}
-   :block/order "a0"
-   :block/created-at 1234567890
-   :block/updated-at 1234567890})
+(d/transact! conn [{:db/ident :logseq.kv/schema-version
+                    :kv/value {:major 65 :minor 32}}])
 
-(def sample-page
-  {:block/uuid (d/squuid)
-   :block/type "page"
-   :block/original-name "Sample Page"
-   :block/created-at 1234567890
-   :block/updated-at 1234567890})
-
-(def sample-property
-  {:db/ident :test.property/test-prop
-   :block/type "property"
-   :block/original-name "Test Property"
-   :block/schema {:type :default
-                  :cardinality :one}
-   :block/created-at 1234567890
-   :block/updated-at 1234567890})
+(db-migrate/migrate conn :target-version {:major 65 :minor 33})
 ```
 
-### Mock RTC Environment
+### Build a fresh graph with bootstrap key-values
 
 ```clojure
-(defn create-mock-rtc-server
-  "Create mock RTC server for testing sync"
-  []
-  (atom {:connected-devices []
-         :message-queue []}))
-
-(defn create-mock-device
-  "Create mock device for RTC testing"
-  [& [{:keys [schema-version name]
-       :or {schema-version "65.17"
-            name "Test Device"}}]]
-  {:name name
-   :schema-version schema-version
-   :conn (create-test-db-with-schema schema-version)
-   :pending-ops (atom [])
-   :received-ops (atom [])})
+(sqlite-create-graph/build-db-initial-data "")
 ```
 
----
-
-## Unit Testing
-
-### Property Definition Tests
-
-```clojure
-(deftest test-property-definition
-  (testing "Property definition is valid"
-    (let [prop (get-property-definition :logseq.property/test-prop)]
-      (is (some? prop) "Property should exist")
-      (is (= :default (get-in prop [:schema :type])))
-      (is (= :one (get-in prop [:schema :cardinality])))
-      (is (contains? prop :rtc) "Property must have RTC config")))
-
-  (testing "Property RTC configuration is explicit"
-    (let [prop (get-property-definition :logseq.property/test-prop)
-          rtc-config (:rtc prop)]
-      (is (contains? rtc-config :rtc/ignore-attr-when-init-upload))
-      (is (contains? rtc-config :rtc/ignore-attr-when-init-download))
-      (is (contains? rtc-config :rtc/ignore-attr-when-syncing)))))
-```
-
-### Property Usage Tests
-
-```clojure
-(deftest test-property-usage
-  (let [conn (create-test-db)
-        page-uuid (d/squuid)]
-
-    (testing "Can set property on page"
-      (d/transact! conn [{:block/uuid page-uuid
-                          :block/type "page"
-                          :block/original-name "Test Page"
-                          :logseq.property/test-prop "test value"}])
-      (let [page (d/entity @conn [:block/uuid page-uuid])]
-        (is (= "test value" (:logseq.property/test-prop page)))))
-
-    (testing "Property value validates correctly"
-      (let [page (d/entity @conn [:block/uuid page-uuid])
-            [valid? errors] (validate-entity @conn page)]
-        (is valid? "Page with property should be valid")
-        (is (empty? errors))))
-
-    (testing "Can update property value"
-      (d/transact! conn [{:block/uuid page-uuid
-                          :logseq.property/test-prop "updated value"}])
-      (let [page (d/entity @conn [:block/uuid page-uuid])]
-        (is (= "updated value" (:logseq.property/test-prop page)))))
-
-    (testing "Can remove property value"
-      (d/transact! conn [[:db/retract [:block/uuid page-uuid]
-                          :logseq.property/test-prop]])
-      (let [page (d/entity @conn [:block/uuid page-uuid])]
-        (is (nil? (:logseq.property/test-prop page)))))))
-```
-
-### Property Type Tests
-
-```clojure
-(deftest test-property-type-number
-  (let [conn (create-test-db)]
-
-    (testing "Accepts valid number"
-      (is (valid-property-value? @conn :logseq.property/number-prop 42)))
-
-    (testing "Rejects invalid number"
-      (is (not (valid-property-value? @conn :logseq.property/number-prop "not-a-number"))))
-
-    (testing "Handles cardinality many"
-      (is (valid-property-value? @conn :logseq.property/number-many-prop [1 2 3])))))
-```
+This path initializes both `:logseq.kv/schema-version` and `:logseq.kv/graph-initial-schema-version` with the current schema version.
 
 ---
 
 ## Migration Testing
 
-### Basic Migration Test
+Current migration tests are version-specific and should stay that way.
+
+Verified current examples already exist for:
+
+- deleting legacy properties in the `65.25` upgrade
+- adding the repeat-type property
+- adding comment-related properties and classes
+- tagging existing comment blocks during migration
+- backfilling comment targets
+- adding assignee and agent-session-id properties
+- repairing comment class inheritance
+- adding gallery view properties in `65.33`
+
+### Recommended pattern
 
 ```clojure
-(deftest test-migration-65-16-to-65-17
-  (testing "Migration from 65.16 to 65.17 succeeds"
-    (let [conn (create-test-db-with-schema "65.16")
-          _ (generate-test-data! conn {:pages 100 :blocks 1000})
-          pre-migration-count (count-entities @conn)]
+(let [conn (d/create-conn db-schema/schema)]
+  (d/transact! conn [{:db/ident :logseq.kv/schema-version
+                      :kv/value {:major 65 :minor 32}}])
 
-      ;; Run migration
-      (migrate-db-graph conn "65.17")
-
-      (testing "Schema version updated"
-        (is (= "65.17" (get-schema-version @conn))))
-
-      (testing "No data loss"
-        (is (= pre-migration-count (count-entities @conn))))
-
-      (testing "New property exists"
-        (is (d/entity @conn :logseq.property/new-prop-65-17)))
-
-      (testing "Database validates"
-        (let [[valid? errors] (validate-db! @conn)]
-          (is valid? "Database should be valid after migration")
-          (when errors
-            (println "Validation errors:" errors)))))))
+  (let [result (db-migrate/migrate conn :target-version {:major 65 :minor 33})]
+    (is (= {:major 65 :minor 33}
+           (:kv/value (d/entity @conn :logseq.kv/schema-version))))
+    (is (seq (:upgrade-result-coll result)))))
 ```
 
-### Multi-Version Migration Path
+Test these properties for each migration entry you add:
 
-```clojure
-(deftest test-migration-path-from-older-versions
-  (testing "Can migrate from multiple older versions"
-    (doseq [old-version ["65.14" "65.15" "65.16"]]
-      (testing (str "Migration from " old-version " to current")
-        (let [conn (create-test-db-with-schema old-version)
-              _ (generate-test-data! conn {:pages 50 :blocks 500})
-              current-version (get-current-schema-version)]
+- the graph version changes to the expected target
+- the new property or class exists after migration, if the migration adds one
+- deleted properties are actually removed from both schema usage and property entities, if the migration removes them
+- fix functions preserve unrelated user data
+- `ensure-built-in-data-exists!` does not clobber graph bootstrap metadata
 
-          ;; Run migration
-          (migrate-db-graph conn current-version)
-
-          ;; Verify success
-          (is (= current-version (get-schema-version @conn))
-              (str "Should migrate from " old-version " to " current-version))
-
-          (let [[valid? errors] (validate-db! @conn)]
-            (is valid?
-                (str "Database should be valid after migration from " old-version))))))))
-```
-
-### Migration Fix Function Test
-
-```clojure
-(deftest test-migration-fix-function
-  (testing "Fix function transforms data correctly"
-    (let [conn (create-test-db-with-schema "65.16")
-          ;; Add data that needs fixing
-          block-uuid (d/squuid)]
-
-      (d/transact! conn [{:block/uuid block-uuid
-                          :block/type "block"
-                          :block/content "test"
-                          :block/old-property "old-value"}])
-
-      ;; Run migration with fix function
-      (migrate-db-graph conn "65.17")
-
-      (testing "Fix function applied transformation"
-        (let [block (d/entity @conn [:block/uuid block-uuid])]
-          (is (nil? (:block/old-property block))
-              "Old property should be removed")
-          (is (some? (:block/new-property block))
-              "New property should be added")
-          (is (= "transformed-old-value" (:block/new-property block))
-              "Value should be transformed")))))
-
-  (testing "Fix function handles nil values"
-    (let [conn (create-test-db-with-schema "65.16")
-          block-uuid (d/squuid)]
-
-      (d/transact! conn [{:block/uuid block-uuid
-                          :block/type "block"
-                          :block/content "test"}])
-
-      (migrate-db-graph conn "65.17")
-
-      (let [block (d/entity @conn [:block/uuid block-uuid])]
-        (is (some? block) "Block should still exist")))))
-```
-
-### Migration Performance Test
-
-```clojure
-(deftest test-migration-performance
-  (testing "Migration completes in reasonable time"
-    (let [conn (create-test-db-with-data "65.16"
-                                         {:pages 1000
-                                          :blocks 10000
-                                          :properties 50})
-          start-time (js/Date.now)]
-
-      (migrate-db-graph conn "65.17")
-
-      (let [duration (- (js/Date.now) start-time)]
-        (is (< duration 30000)
-            (str "Migration should complete in < 30s (took " duration "ms)"))))))
-```
-
-### Migration Idempotency Test
-
-```clojure
-(deftest test-migration-idempotency
-  (testing "Running migration twice is safe"
-    (let [conn (create-test-db-with-schema "65.16")]
-
-      ;; First migration
-      (migrate-db-graph conn "65.17")
-      (let [after-first (export-db @conn)]
-
-        ;; Second migration (should be no-op)
-        (migrate-db-graph conn "65.17")
-        (let [after-second (export-db @conn)]
-
-          (is (= after-first after-second)
-              "Running migration twice should not change data"))))))
-```
+Add multi-hop migration coverage when a new migration depends on side effects from earlier migrations. Otherwise, a focused test for the new target version is the cheapest reliable check.
 
 ---
 
 ## Validation Testing
 
-### Valid Data Tests
+Current validation behavior is tied to transaction flow and worker validation entry points, not just ad hoc helper calls.
 
-```clojure
-(deftest test-validation-valid-data
-  (testing "Valid block passes validation"
-    (let [conn (create-test-db)
-          valid-block {:db/id -1
-                       :block/uuid (d/squuid)
-                       :block/type "block"
-                       :block/content "Valid content"
-                       :block/parent {:db/id 2}
-                       :block/created-at 123456
-                       :block/updated-at 123456}]
-      (d/transact! conn [valid-block])
-      (let [[valid? errors] (validate-tx-report @conn (d/tx-report))]
-        (is valid? "Valid block should pass validation")
-        (is (empty? errors)))))
+Validate these scenarios:
 
-  (testing "Valid page passes validation"
-    (let [conn (create-test-db)
-          valid-page {:db/id -1
-                      :block/uuid (d/squuid)
-                      :block/type "page"
-                      :block/original-name "Valid Page"
-                      :block/created-at 123456
-                      :block/updated-at 123456}]
-      (d/transact! conn [valid-page])
-      (let [[valid? errors] (validate-tx-report @conn (d/tx-report))]
-        (is valid?)))))
-```
+- invalid data should fail during transact unless the path explicitly uses `:skip-validate-db? true`
+- repair paths should be covered by dedicated validation tests
+- worker validation should preserve sync diagnostics context when invoked from the thread API
+- schema repair helpers should only normalize schema mismatches, not mutate unrelated data
 
-### Invalid Data Tests
+Recommended focus areas:
 
-```clojure
-(deftest test-validation-invalid-data
-  (testing "Missing required field fails validation"
-    (let [conn (create-test-db)
-          invalid-block {:db/id -1
-                         :block/uuid (d/squuid)
-                         :block/type "block"}]  ; Missing content
-      (d/transact! conn [invalid-block])
-      (let [[valid? errors] (validate-tx-report @conn (d/tx-report))]
-        (is (not valid?) "Block without content should fail")
-        (is (some #(str/includes? % "content") errors)
-            "Error should mention missing content"))))
+- `src/test/frontend/worker/db_validate_test.cljs` for DB repair and validation outcomes
+- `src/test/frontend/worker/db_worker_test.cljs` for thread API validation and diagnostics behavior
+- `deps/db/src/logseq/db.cljs` when the schema change alters transact-time invariants
 
-  (testing "Invalid type fails validation"
-    (let [conn (create-test-db)
-          invalid-block {:db/id -1
-                         :block/uuid "not-a-uuid"  ; Should be UUID
-                         :block/type "block"
-                         :block/content "Content"}]
-      (d/transact! conn [invalid-block])
-      (let [[valid? errors] (validate-tx-report @conn (d/tx-report))]
-        (is (not valid?) "Invalid UUID should fail")
-        (is (some #(str/includes? % "UUID") errors)))))
+> **Removed:** The previous guide claimed a stable `fix-invalid-blocks!` flow. The currently verified repair path is centered on worker validation tests and `frontend.worker.db.fix/check-and-fix-schema!`, not that named helper.
 
-  (testing "Invalid enum value fails"
-    (let [conn (create-test-db)]
-      (d/transact! conn [{:db/id -1
-                          :block/uuid (d/squuid)
-                          :logseq.property/status "invalid-status"}])
-      (let [[valid? errors] (validate-tx-report @conn (d/tx-report))]
-        (is (not valid?))))))
-```
+---
 
-### Property Value Validation Tests
+## Property And Schema Definition Testing
 
-```clojure
-(deftest test-property-value-validation
-  (testing "URL property validates URL format"
-    (is (valid-property-value? :url "https://example.com"))
-    (is (not (valid-property-value? :url "not-a-url"))))
+When adding or changing a built-in property:
 
-  (testing "Number property validates numeric values"
-    (is (valid-property-value? :number 42))
-    (is (valid-property-value? :number 3.14))
-    (is (not (valid-property-value? :number "not-a-number"))))
+1. Update the built-in property definition in `deps/db/src/logseq/db/frontend/property.cljs`.
+2. If the change is schema-visible for existing graphs, add a migration entry in `src/main/frontend/worker/db/migrate.cljs`.
+3. Test the property's post-migration existence and core shape.
+4. If the property uses closed values, defaults, or special validation, add focused assertions around those behaviors.
 
-  (testing "Date property validates date format"
-    (is (valid-property-value? :date 20250101))
-    (is (not (valid-property-value? :date "2025-01-01")))
-    (is (not (valid-property-value? :date 99999999)))))
-```
+Useful checks include:
 
-### Validation Fix Tests
+- `:db/ident`
+- `:logseq.property/type`
+- `:db/cardinality`
+- `:logseq.property/public?`
+- `:logseq.property/hide?`
+- default closed values and default value entities
 
-```clojure
-(deftest test-validation-fix-function
-  (testing "Fix function corrects invalid data"
-    (let [conn (create-test-db)]
-      ;; Insert invalid data (bypassing validation)
-      (binding [validate/*validate-db?* false]
-        (d/transact! conn [{:db/id -1
-                            :block/uuid (d/squuid)
-                            :block/type "block"
-                            :block/invalid-attr "should not exist"}]))
-
-      ;; Validate (should fail)
-      (let [[valid? errors] (validate-db! @conn)]
-        (is (not valid?) "Should detect invalid data"))
-
-      ;; Run fix
-      (fix-invalid-blocks! conn (validate-db! @conn))
-
-      ;; Re-validate (should pass)
-      (let [[valid? errors] (validate-db! @conn)]
-        (is valid? "Fix function should correct invalid data")))))
-```
+For property value validation rules, the closest source of truth is `logseq.db.frontend.malli-schema/validate-property-value`.
 
 ---
 
 ## Import/Export Testing
 
-### Round-Trip Test
+The current codebase has strong evidence for schema-sensitive round-trip testing in `deps/db/test/logseq/db/sqlite/export_test.cljs`.
 
-```clojure
-(deftest test-export-import-round-trip
-  (testing "Export and import preserves all data"
-    (let [original-conn (create-test-db-with-data "65.17"
-                                                   {:pages 100
-                                                    :blocks 1000
-                                                    :properties 20})
-          ;; Export
-          exported (export-db @original-conn)
+Use that suite as the model for schema changes that affect persisted graph shape.
 
-          ;; Import into new database
-          imported-conn (create-test-db)
-          _ (import-db imported-conn exported)
+Current verified round-trip coverage includes:
 
-          ;; Re-export
-          re-exported (export-db @imported-conn)]
+- full graph import/export
+- timestamp-preserving import/export
+- excluded namespace handling
+- property history preservation
+- class property ordering preservation
+- graph file ordering preservation
+- mixed property-value cases
+- assets
 
-      (testing "Exported data structure matches"
-        (is (= exported re-exported)
-            "Re-export should match original export"))
+Two current rules are especially important for schema work:
 
-      (testing "Entity count preserved"
-        (is (= (count-entities @original-conn)
-               (count-entities @imported-conn))))
+1. Export data includes graph content, ontology, files, key-values, and property history.
+2. `:logseq.kv/schema-version` is intentionally excluded from exported KV restoration, because the importing side sets the target graph schema itself.
 
-      (testing "All UUIDs preserved"
-        (is (= (get-all-uuids @original-conn)
-               (get-all-uuids @imported-conn))))
-
-      (testing "Validation passes after import"
-        (let [[valid? errors] (validate-db! @imported-conn)]
-          (is valid? "Imported database should be valid"))))))
-```
-
-### Cross-Version Import Test
-
-```clojure
-(deftest test-import-from-older-version
-  (testing "Can import exports from previous versions"
-    (doseq [old-version ["65.14" "65.15" "65.16"]]
-      (testing (str "Import from version " old-version)
-        (let [;; Create and export old version
-              old-conn (create-test-db-with-data old-version
-                                                 {:pages 50 :blocks 500})
-              exported (export-db @old-conn)
-
-              ;; Import to current version
-              new-conn (create-test-db)
-              _ (import-db new-conn exported)]
-
-          (testing "Import succeeds"
-            (is (pos? (count-entities @new-conn))))
-
-          (testing "Validation passes"
-            (let [[valid? errors] (validate-db! @new-conn)]
-              (is valid?
-                  (str "Import from " old-version " should produce valid database")))))))))
-```
-
-### Large Graph Import/Export
-
-```clojure
-(deftest test-large-graph-import-export
-  (testing "Can handle large graphs efficiently"
-    (let [large-conn (create-test-db-with-data "65.17"
-                                               {:pages 5000
-                                                :blocks 50000
-                                                :properties 100})]
-
-      (testing "Export completes in reasonable time"
-        (let [start (js/Date.now)
-              exported (export-db @large-conn)
-              duration (- (js/Date.now) start)]
-          (is (< duration 60000)
-              (str "Export should complete in < 60s (took " duration "ms)"))))
-
-      (testing "Import completes in reasonable time"
-        (let [exported (export-db @large-conn)
-              new-conn (create-test-db)
-              start (js/Date.now)
-              _ (import-db new-conn exported)
-              duration (- (js/Date.now) start)]
-          (is (< duration 120000)
-              (str "Import should complete in < 120s (took " duration "ms)")))))))
-```
-
-### Circular Reference Import Test
-
-```clojure
-(deftest test-circular-reference-import
-  (testing "Handles circular references correctly"
-    (let [;; Create graph with circular references
-          conn (create-test-db)
-          uuid-a (d/squuid)
-          uuid-b (d/squuid)]
-
-      (d/transact! conn [{:block/uuid uuid-a
-                          :block/type "block"
-                          :block/content "Block A"
-                          :block/parent {:block/uuid uuid-b}}
-                         {:block/uuid uuid-b
-                          :block/type "block"
-                          :block/content "Block B"
-                          :block/parent {:block/uuid uuid-a}}])
-
-      ;; Export and import
-      (let [exported (export-db @conn)
-            new-conn (create-test-db)]
-        (import-db new-conn exported)
-
-        (testing "Both entities exist"
-          (is (d/entity @new-conn [:block/uuid uuid-a]))
-          (is (d/entity @new-conn [:block/uuid uuid-b])))
-
-        (testing "Circular reference preserved"
-          (let [block-a (d/entity @new-conn [:block/uuid uuid-a])
-                block-b (d/entity @new-conn [:block/uuid uuid-b])]
-            (is (= uuid-b (:block/uuid (:block/parent block-a))))
-            (is (= uuid-a (:block/uuid (:block/parent block-b))))))))))
-```
-
-### Export Format Validation Test
-
-```clojure
-(deftest test-export-format-validation
-  (testing "Export format is valid EDN"
-    (let [conn (create-test-db-with-data "65.17")
-          exported (export-db @conn)
-          edn-string (pr-str exported)]
-
-      (testing "Can parse as EDN"
-        (is (some? (edn/read-string edn-string))))
-
-      (testing "Has required keys"
-        (is (contains? exported :blocks))
-        (is (contains? exported :properties))
-        (is (contains? exported :classes)))
-
-      (testing "UUIDs are tagged literals"
-        (is (every? uuid? (map :uuid (:blocks exported))))))))
-```
+> **Removed:** The old guide asserted a fixed exported EDN shape with top-level keys like `:blocks`, `:properties`, and `:classes`. Current export shape is richer and is built through the SQLite export pipeline rather than that simplified example contract.
 
 ---
 
-## RTC/Sync Testing
+## RTC And Sync Testing
 
-### Basic Sync Test
+Schema changes only need sync-specific tests when they affect:
 
-```clojure
-(deftest test-basic-rtc-sync
-  (testing "Changes sync from device A to device B"
-    (let [server (create-mock-rtc-server)
-          device-a (create-mock-device {:name "Device A"})
-          device-b (create-mock-device {:name "Device B"})
-          block-uuid (d/squuid)]
+- checksum inputs
+- transmitted datom ordering
+- validation diagnostics
+- DB-sync message schema
+- migration behavior during sync/download flows
 
-      ;; Connect devices
-      (connect-device device-a server)
-      (connect-device device-b server)
+Current validated anchors include:
 
-      ;; Device A creates block
-      (d/transact! (:conn device-a)
-                   [{:block/uuid block-uuid
-                     :block/type "block"
-                     :block/content "Synced content"}])
+- DB-sync Malli message schemas in `deps/db-sync/src/logseq/db_sync/malli_schema.cljs`
+- import ordering and schema-before-data tests in `src/test/frontend/worker/db_worker_test.cljs`
+- validation diagnostics plumbing in `thread-api-validate-db-passes-sync-diagnostics-test`
 
-      ;; Sync to server
-      (sync-to-server device-a server)
+Prefer these checks over generic mock device simulations:
 
-      ;; Sync from server to device B
-      (sync-from-server device-b server)
+- schema datoms are imported before dependent data datoms
+- validation entry points receive sync diagnostics context
+- checksum-related behavior remains stable when schema-visible attributes change
 
-      ;; Verify block appears on device B
-      (let [block-on-b (d/entity @(:conn device-b) [:block/uuid block-uuid])]
-        (is (some? block-on-b) "Block should exist on device B")
-        (is (= "Synced content" (:block/content block-on-b)))))))
-```
-
-### Concurrent Edit Conflict Test
-
-```clojure
-(deftest test-concurrent-edit-conflict
-  (testing "Concurrent edits resolve correctly"
-    (let [server (create-mock-rtc-server)
-          device-a (create-mock-device)
-          device-b (create-mock-device)
-          block-uuid (d/squuid)]
-
-      ;; Setup: both devices have same block
-      (doseq [device [device-a device-b]]
-        (d/transact! (:conn device)
-                     [{:block/uuid block-uuid
-                       :block/type "block"
-                       :block/content "Original content"}]))
-
-      ;; Concurrent edits
-      (d/transact! (:conn device-a)
-                   [{:block/uuid block-uuid
-                     :block/content "Edit from A"
-                     :block/updated-at 1000}])
-
-      (d/transact! (:conn device-b)
-                   [{:block/uuid block-uuid
-                     :block/content "Edit from B"
-                     :block/updated-at 1001}])
-
-      ;; Sync both to server
-      (sync-to-server device-a server)
-      (sync-to-server device-b server)
-
-      ;; Sync down to both devices
-      (sync-from-server device-a server)
-      (sync-from-server device-b server)
-
-      ;; Both should converge to same content (last-write-wins)
-      (let [content-a (:block/content (d/entity @(:conn device-a) [:block/uuid block-uuid]))
-            content-b (:block/content (d/entity @(:conn device-b) [:block/uuid block-uuid]))]
-        (is (= content-a content-b) "Both devices should have same content after sync")
-        (is (or (= content-a "Edit from A")
-                (= content-a "Edit from B"))
-            "Content should be one of the edits")))))
-```
-
-### Property Sync Test
-
-```clojure
-(deftest test-property-rtc-sync
-  (testing "Property with RTC sync enabled syncs correctly"
-    (let [server (create-mock-rtc-server)
-          device-a (create-mock-device)
-          device-b (create-mock-device)
-          page-uuid (d/squuid)]
-
-      ;; Device A sets property
-      (d/transact! (:conn device-a)
-                   [{:block/uuid page-uuid
-                     :block/type "page"
-                     :block/original-name "Test Page"
-                     :logseq.property/synced-prop "value-from-a"}])
-
-      (sync-to-server device-a server)
-      (sync-from-server device-b server)
-
-      ;; Verify property synced to device B
-      (let [page-on-b (d/entity @(:conn device-b) [:block/uuid page-uuid])]
-        (is (= "value-from-a" (:logseq.property/synced-prop page-on-b))))))
-
-  (testing "Property with RTC sync disabled does not sync"
-    (let [server (create-mock-rtc-server)
-          device-a (create-mock-device)
-          device-b (create-mock-device)
-          page-uuid (d/squuid)]
-
-      ;; Device A sets non-synced property
-      (d/transact! (:conn device-a)
-                   [{:block/uuid page-uuid
-                     :block/type "page"
-                     :block/original-name "Test Page"
-                     :logseq.property/local-only-prop "local-value"}])
-
-      (sync-to-server device-a server)
-      (sync-from-server device-b server)
-
-      ;; Verify property NOT synced to device B
-      (let [page-on-b (d/entity @(:conn device-b) [:block/uuid page-uuid])]
-        (is (nil? (:logseq.property/local-only-prop page-on-b)))))))
-```
-
-### Schema Version Mismatch Test
-
-```clojure
-(deftest test-schema-version-mismatch-sync
-  (testing "New property on newer version handled gracefully by older version"
-    (let [server (create-mock-rtc-server)
-          device-new (create-mock-device {:schema-version "65.17"})
-          device-old (create-mock-device {:schema-version "65.16"})
-          page-uuid (d/squuid)]
-
-      ;; New device sets property from v65.17
-      (d/transact! (:conn device-new)
-                   [{:block/uuid page-uuid
-                     :block/type "page"
-                     :block/original-name "Test Page"
-                     :logseq.property/v65-17-only "new-property-value"}])
-
-      (sync-to-server device-new server)
-      (sync-from-server device-old server)
-
-      ;; Old device should not error
-      (is (no-sync-errors? device-old))
-
-      ;; Old device should not have the property (gracefully ignored)
-      (let [page-on-old (d/entity @(:conn device-old) [:block/uuid page-uuid])]
-        (is (nil? (:logseq.property/v65-17-only page-on-old)))))))
-```
-
-### Order Conflict Test
-
-```clojure
-(deftest test-order-conflict-resolution
-  (testing "Concurrent block reordering resolves without data loss"
-    (let [server (create-mock-rtc-server)
-          device-a (create-mock-device)
-          device-b (create-mock-device)
-          uuids [(d/squuid) (d/squuid) (d/squuid)]
-          parent-uuid (d/squuid)]
-
-      ;; Setup: both devices have same blocks
-      (doseq [device [device-a device-b]]
-        (d/transact! (:conn device)
-                     (cons {:block/uuid parent-uuid
-                            :block/type "page"
-                            :block/original-name "Parent"}
-                           (map-indexed
-                            (fn [idx uuid]
-                              {:block/uuid uuid
-                               :block/type "block"
-                               :block/content (str "Block " idx)
-                               :block/parent {:block/uuid parent-uuid}
-                               :block/order (str "a" idx)})
-                            uuids))))
-
-      ;; Concurrent reordering
-      ;; Device A: reverse order
-      (d/transact! (:conn device-a)
-                   (map-indexed
-                    (fn [idx uuid]
-                      {:block/uuid uuid
-                       :block/order (str "b" idx)})
-                    (reverse uuids)))
-
-      ;; Device B: different order
-      (d/transact! (:conn device-b)
-                   [{:block/uuid (nth uuids 1) :block/order "c0"}
-                    {:block/uuid (nth uuids 0) :block/order "c1"}
-                    {:block/uuid (nth uuids 2) :block/order "c2"}])
-
-      ;; Sync
-      (sync-to-server device-a server)
-      (sync-to-server device-b server)
-      (sync-from-server device-a server)
-      (sync-from-server device-b server)
-
-      ;; All blocks should still exist on both devices
-      (doseq [device [device-a device-b]
-              uuid uuids]
-        (is (d/entity @(:conn device) [:block/uuid uuid])
-            "All blocks should exist after sync"))
-
-      ;; Orders should converge
-      (let [order-a (get-block-orders (:conn device-a) parent-uuid)
-            order-b (get-block-orders (:conn device-b) parent-uuid)]
-        (is (= order-a order-b) "Block orders should converge")))))
-```
+> **Removed:** The previous mock RTC server/device examples are not representative of the current tested sync surface.
 
 ---
 
 ## Performance Testing
 
-### Migration Performance Benchmarks
+No current repository-local performance command or benchmark harness specifically for schema changes was verified in `src/`, `deps/`, or `packages/`.
 
-```clojure
-(deftest test-migration-performance-benchmarks
-  (testing "Migration performance across graph sizes"
-    (doseq [[size pages blocks] [["small" 100 1000]
-                                  ["medium" 1000 10000]
-                                  ["large" 5000 50000]]]
-      (testing (str "Migration performance on " size " graph")
-        (let [conn (create-test-db-with-data "65.16"
-                                             {:pages pages
-                                              :blocks blocks})
-              start (js/Date.now)]
+Treat performance testing as targeted follow-up work when a migration:
 
-          (migrate-db-graph conn "65.17")
+- touches large numbers of entities
+- rewrites existing attribute values
+- changes import/export payload volume
+- changes sync ordering or checksum inputs
 
-          (let [duration (- (js/Date.now) start)
-                expected-max (case size
-                               "small" 5000    ; 5s
-                               "medium" 15000  ; 15s
-                               "large" 30000)] ; 30s
-            (is (< duration expected-max)
-                (str size " graph migration should complete in < "
-                     expected-max "ms (took " duration "ms)"))))))))
-```
-
-### Validation Performance
-
-```clojure
-(deftest test-validation-performance
-  (testing "Validation overhead is acceptable"
-    (let [conn (create-test-db-with-data "65.17" {:pages 1000 :blocks 10000})]
-
-      (testing "Full DB validation"
-        (let [start (js/Date.now)]
-          (validate-db! @conn)
-          (let [duration (- (js/Date.now) start)]
-            (is (< duration 10000)
-                (str "Full DB validation should complete in < 10s (took " duration "ms)")))))
-
-      (testing "Transaction validation overhead"
-        (let [start (js/Date.now)
-              _ (dotimes [_ 100]
-                  (d/transact! conn [{:block/uuid (d/squuid)
-                                      :block/type "block"
-                                      :block/content "test"}]))
-              duration (- (js/Date.now) start)
-              avg-per-tx (/ duration 100)]
-          (is (< avg-per-tx 50)
-              (str "Average validation overhead should be < 50ms per tx (was " avg-per-tx "ms)")))))))
-```
-
-### Import/Export Performance
-
-```clojure
-(deftest test-import-export-performance
-  (testing "Import/export performance scales linearly"
-    (let [sizes [[1000 10000]
-                 [2000 20000]
-                 [4000 40000]]
-          results (atom [])]
-
-      (doseq [[pages blocks] sizes]
-        (let [conn (create-test-db-with-data "65.17" {:pages pages :blocks blocks})
-
-              ;; Measure export
-              export-start (js/Date.now)
-              exported (export-db @conn)
-              export-time (- (js/Date.now) export-start)
-
-              ;; Measure import
-              new-conn (create-test-db)
-              import-start (js/Date.now)
-              _ (import-db new-conn exported)
-              import-time (- (js/Date.now) import-start)]
-
-          (swap! results conj {:pages pages
-                               :blocks blocks
-                               :export-time export-time
-                               :import-time import-time})))
-
-      ;; Check that time scales roughly linearly with data size
-      (let [[r1 r2 r3] @results
-            export-ratio-1-2 (/ (:export-time r2) (:export-time r1))
-            export-ratio-2-3 (/ (:export-time r3) (:export-time r2))]
-        (is (< 1.5 export-ratio-1-2 2.5)
-            "Export time should scale linearly (ratio close to 2)")
-        (is (< 1.5 export-ratio-2-3 2.5)
-            "Export time should scale linearly (ratio close to 2)")))))
-```
+When needed, add a focused long-running test near the owning migration or export suite instead of inventing a generic benchmark layer.
 
 ---
 
 ## Integration Testing
 
-### Full Migration + Validation + Import/Export Flow
+For current code, a practical integration slice is:
 
-```clojure
-(deftest test-full-migration-workflow
-  (testing "Complete migration workflow"
-    (let [;; 1. Start with old version
-          old-conn (create-test-db-with-data "65.16" {:pages 100 :blocks 1000})]
+1. seed a graph at an older schema version
+2. run `frontend.worker.db.migrate/migrate`
+3. verify the new property/class/deletion behavior
+4. export and import through the SQLite export/import test path when persistence shape changed
+5. validate worker diagnostics if sync code is involved
 
-      ;; 2. Export old version
-      (let [exported-old (export-db @old-conn)]
-
-        ;; 3. Migrate to new version
-        (migrate-db-graph old-conn "65.17")
-
-        (testing "Migration validation"
-          (let [[valid? errors] (validate-db! @old-conn)]
-            (is valid? "Migrated database should be valid")))
-
-        ;; 4. Export new version
-        (let [exported-new (export-db @old-conn)]
-
-          ;; 5. Import to fresh database
-          (let [fresh-conn (create-test-db)]
-            (import-db fresh-conn exported-new)
-
-            (testing "Import validation"
-              (let [[valid? errors] (validate-db! @fresh-conn)]
-                (is valid? "Imported database should be valid")))
-
-            ;; 6. Re-export and verify consistency
-            (let [re-exported (export-db @fresh-conn)]
-              (is (= exported-new re-exported)
-                  "Re-export should match"))))))))
-```
-
-### Multi-Device Migration Scenario
-
-```clojure
-(deftest test-multi-device-migration-scenario
-  (testing "Multi-device migration and sync"
-    (let [server (create-mock-rtc-server)
-
-          ;; Device A starts on old version
-          device-a (create-mock-device {:schema-version "65.16"})
-
-          ;; Device B already on new version
-          device-b (create-mock-device {:schema-version "65.17"})]
-
-      ;; Both connected and syncing
-      (connect-device device-a server)
-      (connect-device device-b server)
-
-      ;; Device B uses new property
-      (d/transact! (:conn device-b)
-                   [{:block/uuid (d/squuid)
-                     :block/type "page"
-                     :block/original-name "Test"
-                     :logseq.property/v65-17-only "new-value"}])
-
-      (sync-to-server device-b server)
-      (sync-from-server device-a server)
-
-      ;; Device A should not error (graceful degradation)
-      (is (no-sync-errors? device-a))
-
-      ;; Device A upgrades
-      (migrate-db-graph (:conn device-a) "65.17")
-
-      ;; Now resync
-      (sync-from-server device-a server)
-
-      ;; Device A should now see new property
-      ;; (depends on sync strategy - may need to re-request data)
-      )))
-```
+This keeps the test near the real persistence and migration code instead of depending on synthetic helpers.
 
 ---
 
 ## Manual Testing
 
-### Manual Test Checklist
+Use manual checks only for behaviors automated tests cannot cheaply cover.
 
-**Before release, manually verify:**
+### Manual checklist for schema changes
 
-#### Graph Creation
-
-- [ ] Create new graph with new schema version
-- [ ] Verify all built-in properties present
-- [ ] Check no console errors
-- [ ] Verify validation passes on new graph
-
-#### Migration
-
-- [ ] Open graph from previous version (automatic migration)
-- [ ] Verify migration completes without errors
-- [ ] Check all pages/blocks still accessible
-- [ ] Verify properties visible and editable
-- [ ] Check no validation errors after migration
-
-#### Import/Export
-
-- [ ] Export graph with new schema
-- [ ] Import exported graph in clean environment
-- [ ] Verify all data imported correctly
-- [ ] Check validation passes on imported graph
-- [ ] Re-export and compare (should be identical)
-
-#### RTC Sync (if applicable)
-
-- [ ] Connect two devices to same graph
-- [ ] Edit property on device A
-- [ ] Verify change appears on device B
-- [ ] Perform concurrent edits
-- [ ] Verify conflict resolution
-- [ ] Check no sync errors in console
-
-#### Compatibility
-
-- [ ] Test with graph from 3 versions ago
-- [ ] Verify migration path works
-- [ ] Check all historical data preserved
-- [ ] Test export from old version, import to new
-
-#### Performance
-
-- [ ] Test migration on large graph (10K+ pages)
-- [ ] Monitor migration time (should complete)
-- [ ] Check memory usage during migration
-- [ ] Verify UI remains responsive
+- Open a graph created before the new schema version and verify migration completes without user-facing errors.
+- Confirm the expected new property/class behavior in the UI if the schema change is user-visible.
+- Re-open the graph to confirm bootstrap data and migration side effects are stable.
+- If the change affects exported graph shape, run an export/import round-trip manually in addition to the automated SQLite tests.
+- If the change touches sync-sensitive attributes, verify at least one real sync/download flow in a development environment.
 
 ---
 
-## Test Data Generation
+## Test Data Strategy
 
-### Generating Test Graphs
+Prefer checked-in fixtures and narrowly seeded transactions over large ad hoc generators.
 
-```clojure
-(defn generate-test-graph
-  "Generate test graph with specified characteristics"
-  [conn {:keys [pages blocks properties depth branching-factor]
-         :or {pages 100
-              blocks 1000
-              properties 20
-              depth 3
-              branching-factor 5}}]
+Current examples already in use:
 
-  ;; Generate pages
-  (let [page-uuids (repeatedly pages d/squuid)
-        page-tx (map (fn [uuid]
-                      {:block/uuid uuid
-                       :block/type "page"
-                       :block/original-name (str "Page " uuid)
-                       :block/created-at (rand-int 1000000)
-                       :block/updated-at (rand-int 1000000)})
-                    page-uuids)]
-    (d/transact! conn page-tx)
+- migration fixture transit DBs in `src/test/migration/`
+- hand-built transactions in `src/test/frontend/worker/migrate_test.cljs`
+- round-trip graph builders in `deps/db/test/logseq/db/sqlite/export_test.cljs`
 
-    ;; Generate hierarchical blocks
-    (generate-blocks! conn page-uuids blocks depth branching-factor)
-
-    ;; Add properties to entities
-    (add-random-properties! conn properties)))
-
-(defn generate-blocks!
-  "Generate hierarchical block structure"
-  [conn parent-uuids target-count depth branching-factor]
-  (when (and (pos? depth) (< (count-blocks @conn) target-count))
-    (let [child-uuids (repeatedly (* (count parent-uuids) branching-factor)
-                                  d/squuid)
-          child-tx (map-indexed
-                    (fn [idx uuid]
-                      (let [parent (nth parent-uuids (quot idx branching-factor))]
-                        {:block/uuid uuid
-                         :block/type "block"
-                         :block/content (str "Block " uuid)
-                         :block/parent {:block/uuid parent}
-                         :block/order (str "a" (mod idx branching-factor))
-                         :block/created-at (rand-int 1000000)
-                         :block/updated-at (rand-int 1000000)}))
-                    child-uuids)]
-      (d/transact! conn child-tx)
-      ;; Recurse for next level
-      (generate-blocks! conn child-uuids target-count (dec depth) branching-factor))))
-```
-
-### Generating Edge Case Data
-
-```clojure
-(defn generate-edge-cases
-  "Generate test data with edge cases"
-  [conn]
-  (d/transact! conn
-               [;; Empty content
-                {:block/uuid (d/squuid)
-                 :block/type "block"
-                 :block/content ""}
-
-                ;; Very long content
-                {:block/uuid (d/squuid)
-                 :block/type "block"
-                 :block/content (apply str (repeat 10000 "x"))}
-
-                ;; Special characters
-                {:block/uuid (d/squuid)
-                 :block/type "block"
-                 :block/content "Special: \n\t\"'<>&"}
-
-                ;; Unicode
-                {:block/uuid (d/squuid)
-                 :block/type "block"
-                 :block/content "Unicode: 你好 مرحبا שלום"}
-
-                ;; Nil/missing properties (as much as schema allows)
-                {:block/uuid (d/squuid)
-                 :block/type "page"
-                 :block/original-name "Minimal"}]))
-```
+This is a better fit for Logseq's schema work than the older generic graph generator approach because it keeps each test anchored to one known migration or one known export invariant.
 
 ---
 
-## CI/CD Integration
+## CI And Command Guidance
 
-### Automated Test Pipeline
+Validated current commands:
 
-```yaml
-# .github/workflows/schema-tests.yml
-name: Schema Change Tests
+- `bb dev:lint-and-test` for the main lint and unit-test pass
+- `bb dev:test -v <namespace/test-name>` for a focused unit test
 
-on:
-  pull_request:
-    paths:
-      - 'deps/db/src/logseq/db/**'
-      - 'src/main/frontend/worker/db/migrate.cljs'
+For schema changes, start with the narrowest relevant test namespace or test var, then run the broader main test pass if the focused check succeeds.
 
-jobs:
-  schema-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Clojure
-        uses: DeLaGuardo/setup-clojure@master
-
-      - name: Run unit tests
-        run: bb test:unit
-
-      - name: Run migration tests
-        run: bb test:migration
-
-      - name: Run validation tests
-        run: bb test:validation
-
-      - name: Run import/export tests
-        run: bb test:import-export
-
-      - name: Check schema version consistency
-        run: bb lint:schema-version
-```
-
-### Schema Lint Checks
-
-```clojure
-;; scripts/lint_schema.clj
-(defn lint-schema-changes []
-  (let [changes (get-schema-changes)]
-
-    ;; Check 1: Property added without migration?
-    (when (property-added-without-migration? changes)
-      (println "ERROR: Property added but no migration entry found"))
-
-    ;; Check 2: Schema version bumped?
-    (when (and (property-added? changes)
-               (not (schema-version-bumped? changes)))
-      (println "ERROR: Property added but schema version not bumped"))
-
-    ;; Check 3: Migration version matches?
-    (when-not (migration-version-matches-schema? changes)
-      (println "ERROR: Migration version doesn't match schema version"))
-
-    ;; Check 4: RTC config present?
-    (when (property-missing-rtc-config? changes)
-      (println "WARNING: Property missing RTC configuration"))))
-```
+> **Removed:** No current source evidence was found for a dedicated `schema-tests.yml` workflow or the `bb test:*` commands shown in the previous version of this guide.
 
 ---
 
 ## Quick Reference
 
-### Test Coverage Checklist
+For each schema change PR, verify the applicable items below.
 
-For each schema change PR:
+### Always required
 
-**Unit Tests (Required)**
+- Add or update the built-in property/class definition if the schema surface changed.
+- Add a `schema-version->updates` entry when an existing graph needs migration.
+- Add a focused migration test in `src/test/frontend/worker/migrate_test.cljs` or the nearest owning test namespace.
+- Verify the stored graph schema version after migration.
 
-- [ ] Property definition test
-- [ ] Property usage test (set, get, update, remove)
-- [ ] Validation rules test (valid + invalid)
+### Required when validation behavior changes
 
-**Migration Tests (Required)**
+- Add or update validation tests.
+- Verify transact-time validation or worker validation behavior.
+- Verify schema repair behavior if the change introduces a repair path.
 
-- [ ] Migration from previous version
-- [ ] Migration with test data
-- [ ] Migration performance (<30s for large graph)
-- [ ] Migration idempotency
+### Required when persisted graph shape changes
 
-**Validation Tests (Required)**
+- Add or update SQLite export/import round-trip coverage.
+- Verify `:logseq.kv/schema-version` handling is still correct on import.
+- Verify files, property history, or ordering semantics if your change touches those surfaces.
 
-- [ ] Valid data passes
-- [ ] Invalid data fails with clear errors
-- [ ] Fix function works (if applicable)
+### Required when sync behavior changes
 
-**Import/Export Tests (Required)**
-
-- [ ] Round-trip test (export → import → export)
-- [ ] Cross-version import (from previous 3 versions)
-
-**RTC Tests (If Applicable)**
-
-- [ ] Basic sync (device A → device B)
-- [ ] Concurrent edit conflict resolution
-- [ ] Schema version mismatch handling
-
-**Performance Tests (For Large Changes)**
-
-- [ ] Migration on large graph
-- [ ] Validation overhead
-- [ ] Import/export performance
-
-**Manual Tests (Before Release)**
-
-- [ ] Create new graph
-- [ ] Migrate existing graph
-- [ ] Export and import
-- [ ] RTC sync (if applicable)
+- Verify import ordering, checksum, or diagnostics-related tests.
+- Update DB-sync schema tests if message payload shape changes.
 
 ---
 
@@ -1298,13 +346,3 @@ For each schema change PR:
 - [Schema Migration Best Practices](./schema-migration-best-practices.md)
 - [Validation Guidelines](./validation-best-practices.md)
 - [Import/Export Best Practices](./import-export-best-practices.md)
-- [RTC/Sync Considerations](./rtc-sync-schema-changes.md)
-- [PR Review Checklist](./schema-change-pr-checklist.md)
-
----
-
-## Changelog
-
-| Date       | Changes                                         |
-| ---------- | ----------------------------------------------- |
-| 2025-12-28 | Initial version based on investigation findings |

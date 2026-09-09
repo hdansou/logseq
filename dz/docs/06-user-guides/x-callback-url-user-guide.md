@@ -1,12 +1,14 @@
 # X-Callback-URL User Guide for Logseq
 
-**A practical guide to capturing content in Logseq from anywhere**
+**A practical guide to sending requests into Logseq from desktop URL handlers**
+
+> **Last revised:** 2026-05-29
 
 ---
 
 ## What is X-Callback-URL?
 
-X-callback-url is a way to send content to Logseq from other apps, scripts, or automation tools using special URLs. Think of it as a universal "send to Logseq" button that works across your entire system.
+X-callback-url is a way to send requests into Logseq from other apps, scripts, or automation tools using special URLs. In current desktop builds, it routes into Logseq's quick capture and command invocation handlers.
 
 **What you can do:**
 
@@ -14,7 +16,8 @@ X-callback-url is a way to send content to Logseq from other apps, scripts, or a
 - 🔗 Save interesting links while browsing
 - ⚡ Quick-add notes from anywhere on your computer
 - 🤖 Automate content collection with scripts
-- 📱 Share content from any mobile app to Logseq
+
+> **Removed:** The old mobile x-callback-url walkthroughs. Mobile capture now uses separate `logseq://mobile/...` deep links and the share-intent pipeline.
 
 ---
 
@@ -28,7 +31,7 @@ The simplest way to capture something to Logseq:
 logseq://x-callback-url/quickCapture?content=Remember to buy milk
 ```
 
-Just paste this URL in your browser or terminal and hit Enter. The text "Remember to buy milk" will appear in Logseq!
+Just paste this URL in your browser or terminal and hit Enter. Logseq will open the request through its current quick-capture path.
 
 ### macOS Quick Test
 
@@ -38,7 +41,7 @@ Open Terminal and run:
 open "logseq://x-callback-url/quickCapture?content=Hello%20from%20Terminal"
 ```
 
-You should see "Hello from Terminal" captured in your current Logseq page.
+You should see "Hello from Terminal" captured according to your current quick-capture settings.
 
 ---
 
@@ -54,8 +57,15 @@ logseq://x-callback-url/quickCapture?[parameters]
 
 - `logseq://` - Tells your computer to open Logseq
 - `x-callback-url` - Says "this is an automation request"
-- `quickCapture` - The action (currently the only supported action)
+- `quickCapture` - The quick-capture action
+- `invokeCommand` - The command-invocation action
 - `?parameters` - What to capture and where to put it
+
+## Findings: New Capabilities
+
+- `logseq://x-callback-url/invokeCommand` is now supported alongside `quickCapture`.
+- `invokeCommand` forwards an `action` and optional `payload` into the frontend command pipeline, which currently dispatches plugin commands.
+- The desktop handler still accepts the original quick-capture parameters: `url`, `title`, `content`, `page`, and `append`.
 
 ---
 
@@ -253,40 +263,7 @@ set encodedText to do shell script "python3 -c 'import sys, urllib.parse; print(
 do shell script "open 'logseq://x-callback-url/quickCapture?content=" & encodedText & "&page=Fleeting%20Notes'"
 ```
 
-### iOS
-
-#### Method 1: Shortcuts App
-
-**Create a "Quick Capture" Shortcut:**
-
-1. Open Shortcuts app
-2. Create new shortcut
-3. Add these actions:
-   - "Get Clipboard"
-   - "URL Encode" (Clipboard)
-   - "Open URL": `logseq://x-callback-url/quickCapture?content=[Encoded Text]&page=Inbox`
-
-**Create a "Capture from Safari" Shortcut:**
-
-1. Create new shortcut
-2. Add actions:
-   - "Get Current URL"
-   - "Get Page Contents from URL" → Extract "Page Title"
-   - "Ask for Input" (for your notes)
-   - "URL Encode" each component
-   - "Open URL": `logseq://x-callback-url/quickCapture?url=[URL]&title=[Title]&content=[Input]&page=Reading%20List`
-
-#### Method 2: Share Sheet
-
-Simply use the built-in iOS share extension:
-
-1. In Safari, Photos, or any app, tap the Share button
-2. Select "Logseq"
-3. Content is automatically captured with the configured template
-
-### Android
-
-Use the share menu in any app to send content to Logseq. The system will automatically handle the deep link conversion.
+> **Removed:** The previous iOS and Android x-callback-url examples. Their current implementation lives in the mobile deep-link and share-intent code paths, not in `x-callback-url`.
 
 ---
 
@@ -520,11 +497,9 @@ print(f"Captured {len(feed.entries[:5])} items at {datetime.now()}")
 **Possible causes:**
 
 1. **Logseq not installed or not set as handler**
-
    - Solution: Open Logseq, then try again. The first launch registers the URL scheme.
 
 2. **URL malformed**
-
    - Check for typos in `logseq://x-callback-url/quickCapture`
    - Ensure parameters are properly URL-encoded
 
@@ -533,6 +508,7 @@ print(f"Captured {len(feed.entries[:5])} items at {datetime.now()}")
    ```bash
    /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister -kill -r -domain local -domain system -domain user
    ```
+
    - Restart Logseq
 
 ### Issue: Special Characters Look Weird
@@ -575,7 +551,6 @@ open "logseq://x-callback-url/quickCapture?content=Hello%20World"
    ```
 
 2. **Verify `page` parameter:**
-
    - Use exact page name (case-sensitive)
    - Use `page=TODAY` for journal
    - Page must exist or will be created

@@ -1,10 +1,11 @@
 # Logseq CLI Developer Onboarding
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
+> **Scope note:** This guide now targets the current db-worker-node-based CLI under `src/main/logseq/cli`.
 
-Audience: Junior developers contributing to the Logseq CLI (the `deps/cli` package).
+Audience: Developers contributing to the current Logseq CLI implementation.
 
-Scope: Local setup, how it works, how to run/debug/test, how to add a new command, conventions, and common pitfalls.
+Scope: Local setup, architecture, run/debug/test workflow, command extension points, conventions, and migration pitfalls.
 
 ---
 
@@ -12,118 +13,108 @@ Scope: Local setup, how it works, how to run/debug/test, how to add a new comman
 
 1. Prerequisites
 
-- Node.js >= 22.17.0 and Yarn
-- Babashka (bb) installed
-- The Logseq Desktop “database version” app installed (needed for DB graphs)
+- Node.js >= 22.20.0 (`package.json` engines)
+- pnpm
+- Clojure CLI (for shadow-cljs build targets)
+- Babashka (recommended for local tasks and CLI e2e)
 
-2. Install dependencies
+1. Install dependencies
 
-- Open a terminal in `deps/cli`
-- Run: `yarn install`
+- Open a terminal at repository root
+- Run: `pnpm install`
 
-3. Try the CLI locally
+1. Try the CLI locally
 
-- From `deps/cli`, run: `node cli.mjs -h`
-- Optionally, create a global symlink to run `logseq` directly: `yarn link`
+- Build CLI/runtime artifacts:
+  - `clojure -M:cljs compile logseq-cli`
+  - `pnpm db-worker-node:compile:bundle`
+- Run help:
+  - `node static/logseq-cli.js --help`
 
-4. Sanity check commands
+> **Removed:** The legacy source bootstrap flow `cd deps/cli && yarn install && node cli.mjs -h` is no longer valid in this repo state.
+>
+> **Removed:** `yarn link` workflow for `deps/cli` is no longer applicable.
 
-- List graphs (requires the Desktop “database version” app): `logseq list`
-- Show graph info: `logseq show <graph-name>`
-- Export EDN: `logseq export-edn -g <graph-name> -f out.edn`
-- Import EDN: `logseq import-edn -g <graph-name> -f out.edn`
-- Validate graph: `logseq validate -g <graph-name>`
-- MCP server: `logseq mcp-server -g <graph-name>`
-- Search current graph through HTTP API: start Desktop app with Local HTTP API enabled, then: `logseq search <term> -a <api-server-token>`
+1. Sanity check commands
 
-If you didn’t `yarn link`, substitute `node cli.mjs` for `logseq`.
+- `node static/logseq-cli.js graph list`
+- `node static/logseq-cli.js graph create --graph demo`
+- `node static/logseq-cli.js list page --graph demo --limit 5`
+- `node static/logseq-cli.js show --graph demo --page Home`
+- `node static/logseq-cli.js doctor --graph demo`
+
+> **Removed:** Top-level `list`, `show`, `validate`, `export-edn`, `import-edn`, and `mcp-server` command surface from legacy CLI v1 is no longer the active onboarding target.
 
 ---
 
 ## Repository layout for the CLI
 
-- `deps/cli/cli.mjs` — Node entrypoint that boots an nbb runtime and loads ClojureScript.
-- `deps/cli/src/logseq/cli.cljs` — Main namespace. Defines the command table, help, and dispatch via `babashka.cli`.
-- `deps/cli/src/logseq/cli/commands/` — Individual CLI commands:
-  - `graph.cljs` — list, show commands
-  - `search.cljs` — search command
-  - `query.cljs` — query command
-  - `export.cljs` — export (markdown) command
-  - `export_edn.cljs` — export-edn command
-  - `import_edn.cljs` — import-edn command (v0.4.0+)
-  - `validate.cljs` — validate command (v0.4.0+)
-  - `mcp_server.cljs` — mcp-server command (v0.3.0+)
-  - `append.cljs` — append command
-- `deps/cli/src/logseq/cli/spec.cljs` — Command option specifications for `babashka.cli`.
-- `deps/cli/src/logseq/cli/util.cljs` — Shared helpers (paths, API calls, error handling).
-- `deps/cli/src/logseq/cli/common/` — Shared infrastructure:
-  - `graph.cljs` — DB graphs directory logic
-  - `file.cljs` — File operations
-  - `util.cljc` — Common utilities
-  - `export/` — Export utilities (text, common)
-  - `mcp/` — MCP server and tools (v0.3.0+)
-- `deps/cli/README.md` — User-facing CLI usage docs.
-- `deps/cli/CHANGELOG.md` — Version history and changes.
-- `deps/cli/package.json` — Package metadata, test script, Node engine.
-- `deps/cli/bb.edn` — Babashka tasks for linting and vendorizing.
-- `deps/cli/nbb.edn` — nbb test runner deps (during development).
-
-Related code you may interact with:
-
-- `deps/db` — Database utilities and export/import logic
-- `src/electron/electron/*` — DB and Electron helpers referenced by the CLI
+- `src/main/logseq/cli/main.cljs` — CLI entrypoint (`run!`, `main`), parse/execute/format pipeline.
+- `src/main/logseq/cli/commands.cljs` — Command table assembly, parse + validation, action execution.
+- `src/main/logseq/cli/command/*.cljs` — Command family modules (`graph`, `list`, `upsert`, `remove`, `query`, `search`, `show`, `server`, `sync`, `doctor`, `debug`, `auth`, `completion`, `skill`, `agent`, `example`).
+- `src/main/logseq/cli/config.cljs` — Config/env/flag resolution.
+- `src/main/logseq/cli/root_dir.cljs` — Root-dir normalization and permission checks.
+- `src/main/logseq/cli/server.cljs` — db-worker-node lifecycle + revision checks.
+- `src/test/logseq/cli/` — Unit tests for command parsing/execution and formatting.
+- `cli-e2e/` — Shell-first e2e harness (`bb -f cli-e2e/bb.edn ...`).
+- `deps/db-sync/` — Sync backend adapter used by sync/e2e preflight.
 
 ---
 
 ## How the CLI works
 
-- Node bootstrap: `cli.mjs` uses `@logseq/nbb-logseq` to load the main CLJS namespace (`src/logseq/cli.cljs`). It adds classpaths for `src` and `vendor/src`.
-- Main dispatch: `logseq.cli` builds a `table` of commands and dispatches via `babashka.cli/dispatch`.
-- Lazy loading: Commands are loaded with `lazy-load-fn` to keep startup fast. Your command’s function is resolved on first use.
-- Offline by default: Most commands operate directly on local DB graphs under `~/logseq/graphs`.
-- HTTP API when needed: Some commands (e.g., `search` with `-a/--api-query-token`) hit the Desktop app’s Local HTTP API if enabled.
+- Parsing and dispatch are implemented by `logseq.cli.commands` + `logseq.cli.command.core` using `babashka.cli`.
+- `logseq.cli.main/run!` resolves config, ensures root-dir, builds an action, executes it, formats output, and returns exit code + output.
+- Graph operations are db-worker-node mediated (HTTP invoke), not direct local SQLite manipulations from a standalone `deps/cli` package.
+- Default CLI root is `~/logseq`; graph storage is `<root-dir>/graphs`.
+- Output modes include human, json, and edn (`--output`/`-o`).
+- Debug and perf flags are built in:
+  - `--verbose` emits structured debug logs to stderr.
+  - `--profile` prints stage timing lines to stderr.
 
 Key runtime details:
 
-- Graphs directory: `~/logseq/graphs` (from `logseq.cli.common.graph/get-db-graphs-dir`).
-- Before running most commands, the CLI checks the DB Desktop app is installed (the directory exists).
-- Error reporting: SCI errors use `nbb.error/print-error-report`; other errors are printed to stderr and exit with code 1.
+- Root-dir permission failures surface as `:root-dir-permission`.
+- Command/build/execute/format stages are measured when profiling is enabled.
+- Global options include `--graph`, `--root-dir`, `--timeout-ms`, `--output`, `--verbose`, `--profile`, `--config`, `--version`, and `--help`.
 
 ---
 
 ## Running and debugging
 
-Run from `deps/cli`:
+Run from repository root:
 
-- Help: `node cli.mjs -h` or `logseq -h`
-- List: `logseq list`
-- Show: `logseq show <graph>`
-- Search via API: `logseq search <term> -a <token>` (requires HTTP API enabled in Desktop app)
+- Build CLI and worker artifacts:
+  - `clojure -M:cljs compile logseq-cli`
+  - `pnpm db-worker-node:compile:bundle`
+- Help: `node static/logseq-cli.js --help`
+- Graph list: `node static/logseq-cli.js graph list`
+- Graph info: `node static/logseq-cli.js graph info --graph <graph>`
+- Structured output: `node static/logseq-cli.js graph list --output json`
 
 Debug tips:
 
-- Use `println` or `js/console.log` inside CLJS.
-- Wrap async flows with `promesa.core` and handle errors using `(p/catch cli-util/command-catch-handler)`.
-- If you see SCI errors, they’ll be formatted by `nbb.error/print-error-report` via the lazy loader.
+- Use `--verbose` and `--profile` first.
+- Use command-level tests in `src/test/logseq/cli/command/` to isolate parser and action issues.
+- For server lifecycle issues, inspect `src/main/logseq/cli/server.cljs` and run `node static/logseq-cli.js server list --output json`.
 
 ---
 
 ## Testing and linting
 
-From `deps/cli`:
+From repository root:
 
-- Run tests: `yarn test`
-  - Uses `@logseq/nbb-logseq` and `nextjournal/nbb-test-runner`.
-  - Options: `yarn test -H` (help), `yarn test -i focus` (run focused tests).
-- Lint and hygiene tasks (Babashka):
-  - `bb lint:carve` — dead code and unused vars
-  - `bb lint:ns-docstrings` — ensure namespaces have docstrings
-  - `bb lint:minimize-public-vars` — reduce public API surface
-  - `bb lint:large-vars` — flag overly large forms
+- Unit tests (full): `bb dev:lint-and-test`
+- Unit tests (focused): `bb dev:test -v <namespace/testcase-name>`
+- CLI e2e non-sync: `bb -f cli-e2e/bb.edn test`
+- CLI e2e sync: `bb -f cli-e2e/bb.edn test-sync`
+- CLI e2e cleanup: `bb -f cli-e2e/bb.edn cleanup`
 
-Vendorizing nbb deps (when packaging):
+`cli-e2e` preflight builds these artifacts when `--skip-build` is not passed:
 
-- `bb build:vendor-nbb-deps` — copies cached nbb deps into `vendor/src` and removes `nbb.edn`, making the package self-contained.
+- `clojure -M:cljs compile logseq-cli`
+- `pnpm db-worker-node:compile:bundle`
+- `pnpm --dir deps/db-sync build:node-adapter`
 
 ---
 
@@ -131,103 +122,113 @@ Vendorizing nbb deps (when packaging):
 
 1. Create the command namespace
 
-- File: `deps/cli/src/logseq/cli/commands/<your_cmd>.cljs`
-- Namespace: `(ns logseq.cli.commands.<your-cmd> (:require [promesa.core :as p] [logseq.cli.util :as cli-util] ...))`
-- Export a function (e.g., `run` or a name matching how you’ll reference it in `lazy-load-fn`). Prefer returning a promise with `promesa` for async flows.
+- File: `src/main/logseq/cli/command/<family>.cljs`
+- Follow the family pattern used by existing modules (`entries`, option spec, validation, and action construction).
 
-2. Add CLI options (if needed)
+1. Add CLI options (if needed)
 
-- Edit `deps/cli/src/logseq/cli/spec.cljs` to define a spec map for your command’s options (descriptions, coercions, aliases, etc.).
+- Define command/family spec in the command module and merge with global options from `logseq.cli.command.core/global-spec`.
 
-3. Register it in the command table
+1. Register it in the command table
 
-- Edit `deps/cli/src/logseq/cli.cljs` and add an entry in `table`:
-  - `:cmds ["your-cmd"]`
-  - `:desc` brief description
-  - `:fn (lazy-load-fn 'logseq.cli.commands.<your-cmd>/<your-fn>)`
-  - `:args->opts`, `:coerce`, `:require`, `:no-keyword-opts` as appropriate
-  - `:spec` pointing to the spec you added
+- Edit `src/main/logseq/cli/commands.cljs` by wiring your command family `entries` into `base-table`.
 
-4. Implement the logic
+1. Implement the logic
 
-- Reuse helpers in `cli.util.cljs` (e.g., graph path resolution, DB open args, API fetch helpers, error handling).
-- For local DB reads, open a connection via `(apply sqlite-cli/open-db! (cli-util/->open-db-args graph))` and ensure you close or scope appropriately.
-- Prefer small, pure helpers and minimal stdout prints for stable outputs.
+- Keep parsing/validation in command modules and execution in action handlers.
+- Use consistent result maps for formatter compatibility (`:status`, `:data`, `:error`, optional `:exit-code`).
 
-5. Add tests
+1. Add tests
 
-- Create tests in `deps/cli/test` using `nextjournal/nbb-test-runner`.
-- Keep tests hermetic when possible; for DB reads, use a small sample graph or mock layers where practical.
+- Unit tests in `src/test/logseq/cli/command/<family>_test.cljs` and/or `src/test/logseq/cli/commands_test.cljs`.
+- Add/extend shell e2e cases in `cli-e2e/` when behavior is operator-facing.
 
-6. Try it manually
+1. Try it manually
 
-- `logseq your-cmd ...` (or `node cli.mjs your-cmd ...`)
-- `logseq help your-cmd` should show your options if you wired `:spec`.
+- `node static/logseq-cli.js --help`
+- `node static/logseq-cli.js <command> --help`
+- `node static/logseq-cli.js <command> ... --output json`
 
 ---
 
 ## Conventions and style
 
 - Follow the main project’s dev practices (`docs/dev-practices.md`).
-- Namespace docstrings: every public namespace should have a short docstring.
+- Namespace docstrings: every public namespace should have a short docstring where applicable.
 - Keep public API surface minimal; prefer private fns where possible.
 - Favor small, composable functions; avoid giant forms (see `bb lint:large-vars`).
-- Use `babashka.cli` for option parsing and `cli/format-opts` for help output.
+- Use `babashka.cli` for option parsing and keep command help aligned with generated summaries.
 - Error messages should be actionable and exit with non-zero when appropriate.
 
 ---
 
 ## Working with graphs and the DB
 
-- Graphs live under `~/logseq/graphs`.
-- `list` and `show` rely on `logseq.cli.common.graph` to resolve paths and names.
-- Local DB access uses `logseq.db.common.sqlite-cli` under the hood; you’ll typically create open args via `cli.util/->open-db-args`.
-- The Desktop app must be the “database version” for DB graphs to exist; the CLI shows a helpful error if not installed.
+- Graphs live under `<root-dir>/graphs` (`~/logseq/graphs` by default).
+- Current inspect/edit surface is grouped under `list`, `upsert`, `remove`, `query`, `search`, and `show` families.
+- Graph lifecycle operations are under `graph` and `server` commands.
+- Worker orchestration and revision checks are handled by CLI/server code, not a Desktop Local HTTP API token flow.
 
 ---
 
-## Using the HTTP API (optional)
+## Authentication and sync
 
-- Enable “Local HTTP Server” in the Desktop app settings.
-- Some commands accept an `-a/--api-query-token` option; provide a valid token to run via API.
-- Handle API responses with `cli-util/api-handle-error-response` and error flows via `cli-util/command-catch-handler`.
+- Cloud auth is handled by `login`/`logout` and stored in `~/logseq/auth.json`.
+- Sync workflow uses `sync` subcommands (`status`, `start`, `stop`, `upload`, `download`, `asset download`, `remote-graphs`, `ensure-keys`, `grant-access`, `config set|get|unset`).
+
+> **Removed:** Legacy `search <term> -a <token>` onboarding guidance tied to Desktop Local HTTP API token usage.
 
 ---
 
 ## Common pitfalls
 
-- Wrong Node version: ensure Node >= 22.17.0 (CLI enforces this via `package.json`).
-- Missing Desktop “database version”: local DB commands fail if `~/logseq/graphs` is absent.
-- Not using `lazy-load-fn`: register commands through the lazy loader to prevent slow startup.
-- Unhandled async errors: always add `(p/catch ...)` in command pipelines.
-- CLI vs. API: API-based features require the Desktop app running with HTTP API enabled and a token.- **Command syntax change (v0.4.0)**: Graph name moved from positional arg to `-g` option for most commands.
+- Wrong Node version: ensure Node >= 22.20.0.
+- Running old deps/cli commands from legacy docs (`import-edn`, `export-edn`, `mcp-server`, top-level `validate`) instead of current `graph`/`sync` surfaces.
+- Forgetting build artifacts before local runs (`static/logseq-cli.js`, db-worker bundle, db-sync adapter for sync e2e).
+- Ignoring stderr when using `--verbose`/`--profile` (stdout stays formatter-controlled).
+- Mixing CLI v1 and v2 assumptions when editing docs or tests.
 
 ---
 
 ## PR checklist (before you open a PR)
 
-- Added/updated tests (`yarn test`).
-- Linted with bb tasks where applicable.
-- Updated `spec.cljs` and help text for any new options.
+- Added/updated unit tests in `src/test/logseq/cli/**`.
+- Added/updated `cli-e2e` cases when command behavior changed.
+- Ran `bb dev:lint-and-test` (or explained scope-limited alternative).
 - Verified manual runs for key scenarios.
-- Updated docs (`docs/06-user-guides/cli-user-guide.md`) if user-facing behavior changed.
+- Updated CLI docs (`docs/cli/logseq-cli.md`, `docs/cli/logseq-cli-v2.md`, and comparison docs) for user-facing changes.
+
+---
+
+## Findings: New Capabilities
+
+Compared with this document's previous revision, the current CLI in `src/main/logseq/cli` adds or formalizes these capabilities:
+
+- db-worker-node-first runtime with explicit server lifecycle (`server list|start|stop|restart|cleanup`) and revision checks.
+- Structured output modes (`--output json|edn`) across command families.
+- Expanded command families: `graph`, `list`, `upsert`, `remove`, `query`, `search`, `show`, `sync`, `doctor`, `debug`, `completion`, `skill`, and `agent`.
+- Built-in CLI profiling (`--profile`) and structured debug logging (`--verbose`).
+- Cloud auth lifecycle (`login`, `logout`) with persisted auth file (`~/logseq/auth.json`).
+- Shell-first CLI e2e harness (`cli-e2e`) with suite-level preflight and case-level parallelism.
 
 ---
 
 ## Reference snippets
 
-- Show help for all commands: `logseq -h`
-- Show help for a command: `logseq help <command>`
-- List graphs: `logseq list`
-- Show graph details: `logseq show <graph>`
-- Search current graph via API: `logseq search <term> -a <token>`
-- Query local graph: `logseq query '[:find (pull ?b [*]) :where [?b :kv/value]]' -g <graph>`
-- Export EDN: `logseq export-edn -g <graph> -f out.edn`
-- Import EDN: `logseq import-edn -g <graph> -f in.edn`
-- Validate graph: `logseq validate -g <graph>`
-- MCP server: `logseq mcp-server -g <graph>`
+- Show help for all commands: `node static/logseq-cli.js --help`
+- Show command help: `node static/logseq-cli.js <command> --help`
+- List graphs: `node static/logseq-cli.js graph list`
+- Show graph metadata: `node static/logseq-cli.js graph info --graph <graph>`
+- List pages: `node static/logseq-cli.js list page --graph <graph> --limit 10`
+- Query local graph: `node static/logseq-cli.js query --graph <graph> --query '[:find (pull ?b [*]) :where [?b :block/title]]'`
+- Search blocks: `node static/logseq-cli.js search block --graph <graph> --content note`
+- Export graph: `node static/logseq-cli.js graph export --graph <graph> --type edn --file out.edn`
+- Import graph: `node static/logseq-cli.js graph import --graph <new-graph> --type edn --input out.edn`
+- Validate graph: `node static/logseq-cli.js graph validate --graph <graph>`
+- Server status view: `node static/logseq-cli.js server list --output json`
+- Sync status: `node static/logseq-cli.js sync status --graph <graph>`
 
-If you get stuck, start by reading `deps/cli/src/logseq/cli.cljs` and the relevant command in `deps/cli/src/logseq/cli/commands/`, then check `deps/cli/README.md`.
+If you get stuck, start with `src/main/logseq/cli/main.cljs`, `src/main/logseq/cli/commands.cljs`, and the relevant module in `src/main/logseq/cli/command/`.
 
 ---
 

@@ -3,7 +3,7 @@ title: 'Linking Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-03-10'
+last-verified: '2026-05-30'
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/03-basic-editing.md'
@@ -12,7 +12,7 @@ related-docs:
   - 'how-to/content/graph-view.md'
 ---
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 # Linking Pages
 
@@ -83,9 +83,11 @@ Reference specific blocks:
 
 ```
 - Original: The key to habits is making them obvious
-- Reference: ((above-block))
+- Reference: ((3f2f9a5c-1a94-4ec7-a57f-31f9f13b5f9d))
   - This embeds the original block's content
 ```
+
+Block references must use a block UUID in `((...))`.
 
 **Use cases:**
 
@@ -153,7 +155,7 @@ Linked References:
 | ------------------- | ------------------ | ------------------- | -------------------- |
 | **Page Link**       | `[[Page]]`         | New/existing page   | Concepts, entities   |
 | **Tag**             | `#tag`             | Tag/class (DB) or page (file) | Categories, labels   |
-| **Block Reference** | `((text))`         | Reference to block  | Quote, reuse content |
+| **Block Reference** | `((uuid))`         | Reference to block  | Quote, reuse content |
 | **Block Embed**     | `{{embed ((id))}}` | Embedded block tree | Show full context    |
 | **URL**             | `[Text](url)`      | External link       | Web resources        |
 
@@ -263,6 +265,8 @@ Use `/` for hierarchical grouping:
 - Auto-complete suggests related pages
 - Can query by namespace
 
+> **Removed:** In DB graphs, creating new page names with `/` is no longer supported. Slash-style namespace pages apply to file-based graphs only.
+
 ### Aliases
 
 Link to a page using different text:
@@ -287,6 +291,8 @@ Unlinked References:
 ```
 
 **Convert to links:** Click "Link" button next to unlinked reference
+
+> **Removed:** The old per-item "Link" action in this section is no longer available in current UI.
 
 ## Visualizing Your Graph
 
@@ -318,8 +324,8 @@ See connections for a single page:
 **In right sidebar:**
 
 1. Open any page
-2. Look for "Page Graph" section
-3. See immediate connections
+2. Click **Page graph** in the right sidebar top bar to add it
+3. Use the panel to inspect immediate connections
 
 ## Practical Exercise
 
@@ -380,7 +386,9 @@ If you have duplicate pages:
 
 1. Copy content from duplicate to main page
 2. Delete the duplicate page
-3. Links remain, now pointing to main page
+3. Manually review references and relink where needed
+
+> **Removed:** Automatic "merge pages"/auto-retarget behavior is not available.
 
 ### Finding Broken Links
 
@@ -438,6 +446,11 @@ Build links naturally as you write. Don't force it.
 ✅ View backlinks in right sidebar  
 ✅ Visualize connections in Graph View  
 ✅ Apply practical linking patterns
+
+## Findings: New Capabilities
+
+- **Linked reference filters (DB graphs):** Linked References now supports include/exclude filters for source pages.
+- **Dedicated Page Graph panel:** You can add a per-page graph from the right sidebar top bar using **Page graph**.
 
 ## Next Steps
 

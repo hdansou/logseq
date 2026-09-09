@@ -2,7 +2,7 @@
 title: 'Create a Theme'
 description: 'How to create and publish custom themes for Logseq'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop, web]
 graphType: [file, db]
@@ -15,18 +15,26 @@ relatedDocs:
 
 # Create a Theme
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
-> How to create a complete custom theme for Logseq.
+> How to create and package a custom theme for Logseq.
+
+Logseq themes are CSS overrides. Personal themes live in `logseq/custom.css`; shareable themes ship as Logseq plugins that register theme CSS.
+
+## Findings: New Capabilities
+
+- Theme state is driven by `html[data-theme="light|dark"]` and `html[data-color="..."]`, with backward-compatible classes on `body`.
+- Plugin themes can be registered declaratively with `logseq.themes` or imperatively with `logseq.provideTheme(theme)`.
+- Logseq also exposes `html[data-font]` and `html[data-font-global]` for font-aware styling.
 
 ## Theme Basics
 
-Themes are CSS files that override Logseq's default appearance. They work in both file-based and database graphs.
+Themes work in both file-based and database graphs.
 
 ### Two Options
 
-1. **Personal theme**: `custom.css` in your graph
-2. **Shareable theme**: Packaged as a plugin
+1. **Personal theme**: `logseq/custom.css` in your graph
+2. **Shareable theme**: Packaged as a Logseq plugin that registers one or more theme CSS files
 
 ---
 
@@ -61,7 +69,7 @@ Press `Cmd+R` (macOS) or `Ctrl+R` (Windows/Linux).
 
 ```
 your-theme/
-├── custom.css          # Main CSS file
+├── custom.css          # Personal theme entrypoint
 ├── package.json        # For plugin distribution
 └── README.md           # Documentation
 ```
@@ -70,124 +78,71 @@ your-theme/
 
 ## Color System
 
-### Radix Color Scales
+Logseq's current theme contract is built on three layers:
 
-Logseq uses 12-step color scales:
+- Radix raw tokens: `--rx-*`
+- Logseq aliases: `--lx-*`
+- Semantic variables: `--ls-*`
 
-| Step  | Purpose           |
-| ----- | ----------------- |
-| 01-02 | Backgrounds       |
-| 03-04 | UI elements       |
-| 05-06 | Borders           |
-| 07-08 | Solid backgrounds |
-| 09-10 | Text (secondary)  |
-| 11-12 | Text (primary)    |
-
-### Variable Layers
+Override the semantic variables first. The current source defines the defaults in `packages/ui/src/vars-classic.css` and `packages/ui/src/colors.css`.
 
 ```css
-/* Layer 1: Raw colors (Radix) */
---rx-gray-1: #fcfcfc;
+html[data-theme='dark'] {
+  color-scheme: dark;
 
-/* Layer 2: Logseq extended */
---lx-gray-01: var(--rx-gray-1);
-
-/* Layer 3: Legacy variables (most commonly overridden by themes) */
---ls-primary-background-color: var(--lx-gray-01);
+  --ls-primary-background-color: #111827;
+  --ls-secondary-background-color: #172033;
+  --ls-tertiary-background-color: #202b42;
+  --ls-primary-text-color: #d6deeb;
+  --ls-secondary-text-color: #eef2ff;
+  --ls-link-text-color: #7dd3fc;
+  --ls-link-text-hover-color: #bae6fd;
+  --ls-selection-background-color: rgb(56 189 248 / 0.32);
+}
 ```
 
-> **Note:** The default Logseq color scheme is scoped with `html[data-theme=light][data-color=logseq]`. When overriding variables in a personal theme, using `html[data-theme='light']` (without `data-color`) is usually sufficient and will apply regardless of the selected accent color.
+> **Removed:** The old three-step authoring table that implied fixed meanings for every Radix step. The current source treats these as token aliases, not a theme API you need to model in docs.
+
+> **Removed:** The claim that `html[data-theme="light"]` alone guarantees a theme will ignore accent color. Accent color still affects many tokens through `html[data-color="..."]`.
+
+### Current Hooks
+
+Scope theme CSS by these hooks when needed:
+
+| Hook | Current use |
+| --- | --- |
+| `html[data-theme="light"]` / `html[data-theme="dark"]` | Light and dark mode |
+| `html[data-color="..."]` | Accent color selection |
+| `html.dark` | Tailwind dark-mode hook |
+| `body.light-theme`, `body.white-theme`, `body.dark-theme` | Backward-compatible body classes |
+| `html[data-font="serif"|"mono"]`, `html[data-font-global="true"]` | Font preference hooks |
+| `html.is-mobile`, `html.is-electron`, `html.is-mac`, `html.is-native-iphone` | Platform-specific fixes |
 
 ---
 
-## Complete Theme Template
+## Personal Theme Template
 
 ```css
-/* =============================================================================
-   Theme: [Your Theme Name]
-   Author: [Your Name]
-   ============================================================================= */
+/* logseq/custom.css */
 
-/* Light Mode */
 html[data-theme='light'] {
-  /* Backgrounds */
   --ls-primary-background-color: #ffffff;
-  --ls-secondary-background-color: #f5f5f5;
-  --ls-tertiary-background-color: #eeeeee;
-
-  /* Text */
-  --ls-primary-text-color: #1a1a1a;
-  --ls-secondary-text-color: #666666;
-  --ls-title-text-color: #000000;
-
-  /* Links */
-  --ls-link-text-color: #0077b6;
-  --ls-link-text-hover-color: #023e8a;
-
-  /* Accent */
-  --ls-active-primary-color: #0077b6;
-  --ls-active-secondary-color: #0096c7;
-
-  /* Borders */
-  --ls-border-color: #e0e0e0;
-  --ls-secondary-border-color: #eeeeee;
-
-  /* Blocks */
-  --ls-block-bullet-color: #999999;
-  --ls-block-highlight-color: rgba(0, 119, 182, 0.1);
-
-  /* Selection */
-  --ls-selection-background-color: rgba(0, 119, 182, 0.2);
+  --ls-secondary-background-color: #f8fafc;
+  --ls-primary-text-color: #1e293b;
+  --ls-secondary-text-color: #334155;
+  --ls-link-text-color: #0369a1;
+  --ls-link-text-hover-color: #0c4a6e;
+  --ls-focus-ring-color: rgba(14, 165, 233, 0.35);
 }
 
-/* Dark Mode */
 html[data-theme='dark'] {
-  /* Backgrounds */
-  --ls-primary-background-color: #1a1a2e;
-  --ls-secondary-background-color: #16213e;
-  --ls-tertiary-background-color: #0f3460;
-
-  /* Text */
-  --ls-primary-text-color: #e8e8e8;
-  --ls-secondary-text-color: #b0b0b0;
-  --ls-title-text-color: #ffffff;
-
-  /* Links */
-  --ls-link-text-color: #4cc9f0;
-  --ls-link-text-hover-color: #72efdd;
-
-  /* Accent */
-  --ls-active-primary-color: #4cc9f0;
-  --ls-active-secondary-color: #72efdd;
-
-  /* Borders */
-  --ls-border-color: #2a2a4a;
-  --ls-secondary-border-color: #1a1a2e;
-
-  /* Blocks */
-  --ls-block-bullet-color: #6a6a8a;
-  --ls-block-highlight-color: rgba(76, 201, 240, 0.1);
-
-  /* Selection */
-  --ls-selection-background-color: rgba(76, 201, 240, 0.2);
-}
-
-/* Typography */
-:root {
-  --ls-font-family: 'Inter', -apple-system, sans-serif;
-  --ls-page-text-size: 16px;
-  --ls-page-title-size: 28px;
-}
-
-/* Component Customization */
-.bullet-container .bullet {
-  width: 6px;
-  height: 6px;
-}
-
-.block-properties {
-  border-radius: 8px;
-  padding: 8px 12px;
+  --ls-primary-background-color: #111827;
+  --ls-secondary-background-color: #172033;
+  --ls-primary-text-color: #d6deeb;
+  --ls-secondary-text-color: #eef2ff;
+  --ls-link-text-color: #7dd3fc;
+  --ls-link-text-hover-color: #bae6fd;
+  --ls-selection-background-color: rgb(56 189 248 / 0.32);
 }
 ```
 
@@ -282,70 +237,85 @@ a.tag[data-ref='important'] {
 
 ---
 
-## Testing Your Theme
+## Theme Plugins
 
-### Check Both Modes
+Current source supports two plugin registrations:
 
-1. Toggle between light/dark mode (Settings → General)
-2. Verify colors work in both modes
+1. Declarative `logseq.themes` entries in `package.json`
+2. Programmatic `logseq.provideTheme(theme)`
 
-### Test All Components
-
-- [ ] Page titles
-- [ ] Block content
-- [ ] Links and tags
-- [ ] Code blocks
-- [ ] Properties
-- [ ] Sidebar
-- [ ] Search
-- [ ] Settings panel
-
-### Developer Tools
-
-1. Open DevTools (`Cmd+Option+I`)
-2. Inspect elements
-3. Live-edit CSS
-4. Check computed styles
-
----
-
-## Publishing as Plugin
-
-### package.json
+### `package.json`
 
 ```json
 {
   "name": "logseq-theme-mytheme",
   "version": "1.0.0",
-  "description": "A beautiful theme for Logseq",
+  "description": "A custom Logseq theme",
   "author": "Your Name",
   "logseq": {
     "id": "logseq-theme-mytheme",
     "title": "My Theme",
-    "icon": "./icon.svg"
+    "icon": "./icon.svg",
+    "effect": true,
+    "themes": [
+      {
+        "name": "My Theme Light",
+        "url": "./themes/my-theme-light.css",
+        "mode": "light"
+      },
+      {
+        "name": "My Theme Dark",
+        "url": "./themes/my-theme-dark.css",
+        "mode": "dark"
+      }
+    ]
   },
-  "main": "custom.css"
+  "main": "index.html"
 }
 ```
 
-### Plugin Structure
+### Programmatic Variant
 
+```ts
+import '@logseq/libs'
+
+async function main() {
+  logseq.provideTheme({
+    name: 'My Generated Dark Theme',
+    url: './themes/generated-dark.css',
+    mode: 'dark',
+    description: 'Generated from plugin settings',
+  })
+}
+
+logseq.ready(main).catch(console.error)
 ```
-logseq-theme-mytheme/
-├── custom.css
-├── package.json
-├── icon.svg
-├── README.md
-└── screenshots/
-    ├── light.png
-    └── dark.png
-```
 
-### Submit to Marketplace
+---
 
-1. Create GitHub repo
-2. Add `logseq-plugin` topic
-3. Submit to Logseq plugin registry
+## Testing Your Theme
+
+### Check Both Modes
+
+1. Toggle between light and dark mode in Settings
+2. Switch accent colors and confirm the theme still reads correctly
+3. Check font preferences if your theme changes typography
+
+### Test Core Surfaces
+
+- Page titles
+- Block content
+- Links, tags, and references
+- Code blocks
+- Properties
+- Sidebar and search
+- Settings panel
+
+### Developer Tools
+
+1. Open DevTools (`Cmd+Option+I`)
+2. Inspect the computed values for `html[data-theme]` and `html[data-color]`
+3. Live-edit CSS and verify the resulting variables, not just the selector that matched
 
 ---
 
@@ -358,6 +328,8 @@ logseq-theme-mytheme/
 - ✅ Test with different content types
 - ✅ Use semantic color names
 - ✅ Include screenshots
+- ✅ Verify your theme against accent color changes
+- ✅ Keep layout overrides minimal
 
 ### Don't
 
@@ -365,6 +337,8 @@ logseq-theme-mytheme/
 - ❌ Override functional styles (layout, positioning)
 - ❌ Use `!important` excessively
 - ❌ Forget mobile/responsive testing
+
+> **Removed:** The old "Submit to Marketplace" checklist. Theme distribution and release steps are covered by the plugin release workflow, not this how-to.
 
 ---
 
@@ -386,4 +360,4 @@ Study these for inspiration:
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-05-30_

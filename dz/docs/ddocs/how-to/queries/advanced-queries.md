@@ -2,7 +2,7 @@
 title: 'Advanced Queries'
 description: 'How to write advanced Datalog queries in Logseq'
 status: stable
-lastVerified: '2026-04-21'
+lastVerified: '2026-05-30'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -15,7 +15,7 @@ relatedDocs:
 
 # Advanced Queries
 
-> **Last revised:** 2026-04-21
+> **Last revised:** 2026-05-30
 > How to write powerful Datalog queries to search and analyze your graph.
 
 ## Query Basics
@@ -56,6 +56,11 @@ Advanced queries use Datalog syntax inside query blocks:
 | `:result-transform`       | Modify results                                                     |
 | `:view`                   | Custom display                                                     |
 | `:collapsed?`             | Start collapsed                                                    |
+| `:group-by-page?`         | Group block results by page in list view                           |
+
+By default, list-view queries group block results by page when `:result-transform`
+is absent and the DSL query does not contain `(by-page false)`. You can override
+that with `:group-by-page?`; table views and db graph views do not group by page.
 
 ### Control Child Block Results
 
@@ -236,6 +241,8 @@ Priority values are ref entities: `"Low"`, `"Medium"`, `"High"`, `"Urgent"`.
 | `:current-block` | Current block's `:db/id`           |
 | `:parent-block`  | Parent of current block's `:db/id` |
 | `:right-now-ms`  | Current time in epoch milliseconds |
+| `:start-of-today-ms` | Start of today in epoch milliseconds |
+| `:end-of-today-ms`   | End of today in epoch milliseconds   |
 
 ### Relative Date Inputs
 
@@ -254,6 +261,10 @@ The modern format uses `:<direction><amount><unit>` (e.g., `:-7d`, `:+1m`):
 
 Relative date-time inputs append a time suffix (e.g., `:-7d-ms`, `:-7d-start`, `:-7d-end`).
 
+Time-aware inputs also support `:today-start`, `:today-end`, `:today-HHMM`,
+`:today-HHMMSS`, and `:today-HHMMSSmmm`, plus the same suffixes on relative
+date-time inputs such as `:+1d-1201` or `:-1w-083000`.
+
 > **Note:** The older `:Xd-before` / `:Xd-after` format (e.g., `:7d-before`) is
 > deprecated but still supported internally.
 
@@ -266,9 +277,21 @@ Relative date-time inputs append a time suffix (e.g., `:-7d-ms`, `:-7d-start`, `
  :inputs [:today]}
 ```
 
+## Findings: New Capabilities
+
+- `:group-by-page?` is a supported query-map option for block results, with the
+        DSL-level `(by-page false)` escape hatch for disabling the default grouping.
+- Query date inputs now include today-time variants like `:today-start`,
+        `:today-end`, and fixed-time forms such as `:today-1159` and `:+1d-1201`.
+- `:result-transform` can be supplied as a keyword and resolved through
+        `[:query/result-transforms ...]` in config, not just as an inline function.
+
 ---
 
 ## Result Transform
+
+`:result-transform` may be an inline function or a keyword that resolves
+through `[:query/result-transforms ...]` in config.
 
 ### Sort Results
 

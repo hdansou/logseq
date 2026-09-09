@@ -1,12 +1,30 @@
 # Investigation: `:logseq.property/view-context` rejected on `Published URL` property
 
+**Investigation Date:** February 17, 2026  
+**Last Verified:** May 30, 2026
+
+> **Last revised:** 2026-05-30
+
 ## 1) Executive Summary
 
 - Validation error is raised in closed-schema malli validation for property entities and reported as `{"user-property" ["disallowed key"]}` for `:logseq.property/view-context`.
 - `Published URL` is defined as a built-in property with `:view-context :page`, so that key is expected for internal properties.
 - The failure mode occurs when the property classifier routes an entity into `user-property` schema instead of `internal-property` schema.
 - Root-risk is schema dispatch/classification drift (especially across versions/migrations), not the `Published URL` data itself.
-- A compatibility guard was added so `:logseq.property/built-in? true` forces internal classification.
+- Current protection is namespace/db-attribute based dispatch (`logseq-property?` and db-attribute checks), not a dedicated `:logseq.property/built-in?` guard.
+
+## Current Status (Verified 2026-05-30)
+
+- No dedicated `:logseq.property/built-in?` dispatch guard exists in `property-page`.
+- `Published URL` remains protected by internal classification because `:db/ident` is in the whitelisted `logseq.property.publish` namespace.
+- Migration entry `65.17` remains the introduction point for `:logseq.property.publish/published-url`.
+- Keep this investigation as a schema-dispatch reference.
+
+> **Removed:** Earlier revisions that described a dedicated `:logseq.property/built-in?` dispatch guard in `property-page`.
+
+## Findings: New Capabilities
+
+- Publish now persists a deterministic fallback URL (`/page/{graph-id}/{page-uuid}`) when the publish API response does not include `:short_url`, and still writes it to `:logseq.property.publish/published-url`.
 
 ## 2) Technical Deep Dive
 
@@ -119,14 +137,15 @@ entity persisted + later validation run checks schema
 
 ### For Users
 
-- If this appears on existing graphs, re-run validation after updating to a build containing the dispatch guard.
-- If still present, inspect the affected property entity for schema drift (namespace/classification mismatch).
+- If this appears on existing graphs, re-run validation after upgrading to a recent build.
+- If still present, inspect the affected property entity for namespace/classification drift (for example, incorrect `:db/ident` namespace).
 
 ### For Developers
 
-- ✅ Added compatibility guard in `property-page` dispatch: treat `:logseq.property/built-in? true` as internal.
+- Dispatch currently relies on `:db/ident` namespace and db-attribute classification.
+- `Published URL` is classified as internal because `logseq-property-namespaces` includes `logseq.property.publish`.
 - Keep migration-introduced built-ins in sync with classifier assumptions.
-- Prefer conservative dispatch to internal for built-ins to reduce false invalid states.
+- If future migrations expose mixed legacy shapes, consider an explicit temporary compatibility branch with clear removal criteria.
 
 ### For Testing
 
@@ -144,7 +163,7 @@ entity persisted + later validation run checks schema
 ### Change History
 
 - 2026-02-17: Investigation created for `Published URL` validation mismatch.
-- 2026-02-17: Added dispatch compatibility guard for built-in properties in `malli_schema.cljs`.
+- 2026-05-25: Verified current code paths; corrected earlier note that claimed a `:logseq.property/built-in?` dispatch guard.
 
 ---
 

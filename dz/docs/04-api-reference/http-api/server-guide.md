@@ -1,6 +1,6 @@
 # Logseq HTTP Server API Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## Table of Contents
 
@@ -30,12 +30,12 @@ The HTTP server runs locally on your machine (by default on `http://127.0.0.1:12
 
 ### Key Features
 
-- ✅ Access to the full Logseq Plugin SDK API
+- ✅ Access to Logseq API methods through the desktop API proxy
 - 🔐 Token-based authentication for security
 - 🌐 CORS enabled for web-based integrations
 - 🔄 Bidirectional communication with your Logseq graph
 - 📝 Support for both file-based and database graphs
-- 🚀 Easy to use REST API
+- 🚀 Simple HTTP interface for method invocation
 - 🤖 [MCP (Model Context Protocol) endpoint](/docs/mcp-server-guide.md) for AI assistant integration
 
 > **Note:** The HTTP server also hosts an MCP endpoint at `/mcp` for connecting AI assistants like Claude Desktop and Cline to your knowledge base. When you enable the MCP server (Settings → AI → MCP Server), it automatically starts the HTTP server with both the `/api` and `/mcp` endpoints available. See the [MCP Server Guide](/docs/mcp-server-guide.md) for details.
@@ -106,7 +106,7 @@ After changing settings:
 
 ### Token-Based Security
 
-All API requests require a valid authorization token for security. Tokens are configured within Logseq and must be included in every request.
+All API requests except `GET /` require a valid authorization token for security. Tokens are configured within Logseq and must be included in every authenticated request.
 
 ### Managing Tokens
 
@@ -158,7 +158,7 @@ curl http://127.0.0.1:12315/
 
 **Purpose**: Model Context Protocol (MCP) endpoint for AI assistant integration
 
-This endpoint implements the MCP protocol, enabling AI assistants like Claude Desktop and Cline to interact with your Logseq knowledge base. It provides optimized read and write operations designed for AI use cases.
+This endpoint implements MCP Streamable HTTP for AI assistants like Claude Desktop and Cline.
 
 **When Available**:
 
@@ -168,35 +168,36 @@ This endpoint implements the MCP protocol, enabling AI assistants like Claude De
 
 **MCP Capabilities**:
 
-The MCP endpoint exposes three types of capabilities to AI assistants:
+The desktop `/mcp` endpoint currently registers MCP tools for graph operations:
 
 **1. Tools (6 available)** - Execute operations on your graph:
 
-| Tool             | Description                         | Input                    | Output                     |
-| ---------------- | ----------------------------------- | ------------------------ | -------------------------- |
-| `listPages`      | List all pages in graph             | `expand` (optional bool) | Array of page objects      |
-| `getPage`        | Get page content including blocks   | `pageName`               | Page entity + blocks       |
-| `searchBlocks`   | Search for blocks by term           | `searchTerm`             | Array of matching blocks   |
-| `upsertNodes`    | Batch create/edit pages, blocks, tags, properties | `operations`, `dry-run` (optional) | Summary of changes |
-| `listTags`       | List all tags in graph              | `expand` (optional bool) | Array of tag entities      |
-| `listProperties` | List all properties in graph        | `expand` (optional bool) | Array of property entities |
+| Tool             | Description                                       | Input                              | Output                     |
+| ---------------- | ------------------------------------------------- | ---------------------------------- | -------------------------- |
+| `listPages`      | List all pages in graph                           | `expand` (optional bool)           | Array of page objects      |
+| `getPage`        | Get page content including blocks                 | `pageName`                         | Page entity + blocks       |
+| `searchBlocks`   | Search for blocks by term                         | `searchTerm`                       | Array of matching blocks   |
+| `upsertNodes`    | Batch create/edit pages, blocks, tags, properties | `operations`, `dry-run` (optional) | Summary of changes         |
+| `listTags`       | List all tags in graph                            | `expand` (optional bool)           | Array of tag entities      |
+| `listProperties` | List all properties in graph                      | `expand` (optional bool)           | Array of property entities |
+
+> **Removed:** Earlier docs described desktop `/mcp` resources and prompt templates as server capabilities. Current desktop implementation registers tools only.
 
 **What AI Assistants Can Do**:
 
 With these capabilities, AI assistants can:
 
-- 📖 **Read**: List pages, search content, access blocks/pages via URIs
+- 📖 **Read**: List pages, search content, and retrieve full page trees
 - ✍️ **Write**: Create pages, add blocks, update existing content
 - 🔍 **Analyze**: Generate summaries, find patterns, answer questions about your notes
-- 🏗️ **Organize**: Create structured content using prompts, manage tags and properties
-- 🔗 **Navigate**: Browse your knowledge graph using resource URIs
+- 🏗️ **Organize**: Manage pages, blocks, tags, and properties with `upsertNodes`
 
 **Documentation**:
 
 For complete MCP integration details, see the [**MCP Server Guide**](/docs/mcp-server-guide.md), which includes:
 
 - Quick start guide for enabling MCP
-- Detailed tool, resource, and prompt reference with examples
+- Detailed tool reference with examples
 - Client setup for Claude Desktop, Cline, and custom implementations
 - Protocol details and request/response formats
 - Integration examples in Python, JavaScript, and more
@@ -217,6 +218,25 @@ For complete MCP integration details, see the [**MCP Server Guide**](/docs/mcp-s
   }
 }
 ```
+
+### GET `/mcp`
+
+**Purpose**: Continue MCP session traffic for streamable HTTP transport.
+
+**Notes**:
+
+- Requires `mcp-session-id` header from an initialized session
+- Returns `400` when the session ID is missing or invalid
+
+### DELETE `/mcp`
+
+**Purpose**: Close an active MCP session.
+
+**Notes**:
+
+- Requires `mcp-session-id` header
+- Returns `200` with `{ "ok": true }` when session closes successfully
+- Returns `400` when the session ID is missing or invalid
 
 ---
 
@@ -239,6 +259,12 @@ For complete MCP integration details, see the [**MCP Server Guide**](/docs/mcp-s
   ]
 }
 ```
+
+## Findings: New Capabilities
+
+- Desktop MCP now supports full streamable HTTP session flow on `/mcp` using `POST`, `GET`, and `DELETE` (not only `POST`).
+- `/mcp` enforces session continuity via `mcp-session-id` after initialization.
+- Desktop MCP transport enables DNS rebinding protection with explicit allowed host+port binding.
 
 ## Available Methods
 
@@ -686,17 +712,14 @@ async function safeAPICall(method, args) {
 ### Common Error Scenarios
 
 1. **Token Authentication Failure**
-
    - **Error**: "Access Denied!"
    - **Solution**: Check token is correct and matches one in Logseq
 
 2. **Method Not Found**
-
    - **Error**: "MethodNotExist: method_name"
    - **Solution**: Verify method name spelling and namespace
 
 3. **Server Not Running**
-
    - **Error**: Connection refused
    - **Solution**: Start the HTTP server in Logseq
 
@@ -709,13 +732,11 @@ async function safeAPICall(method, args) {
 ### Security
 
 1. **Network Access**
-
    - Keep server on `127.0.0.1` when possible
    - Only use `0.0.0.0` on trusted networks
    - Consider using a reverse proxy with HTTPS for remote access
 
 2. **Token Management**
-
    - Store tokens in environment variables, not in code
    - Use different tokens for different applications
    - Regularly rotate tokens
@@ -740,7 +761,6 @@ async function safeAPICall(method, args) {
    ```
 
 2. **Cache Results**
-
    - Cache graph structure information
    - Avoid redundant queries for same data
    - Invalidate cache after modifications
@@ -895,7 +915,7 @@ The MCP endpoint enables AI assistants like Claude Desktop and Cline to read fro
 
 When you ask Claude to interact with Logseq, it automatically:
 
-- Calls the appropriate MCP tools (`searchBlocks`, `addToPage`, `getPage`, etc.)
+- Calls the appropriate MCP tools (`searchBlocks`, `upsertNodes`, `getPage`, etc.)
 - Processes the JSON-RPC protocol communication
 - Returns natural language responses based on your knowledge base
 
@@ -1162,5 +1182,5 @@ Happy integrating! 🚀
 ---
 
 _Document Version: 1.1_
-_Last Updated: 2026-03-10_
+_Last Updated: 2026-05-29_
 _Logseq Version: DB Version Compatible_

@@ -1,12 +1,21 @@
 # Logseq DB AST (Abstract Syntax Tree): Comprehensive Investigation
 
-**Version:** 1.0  
-**Last Updated:** November 21, 2025  
+**Investigation Date:** November 21, 2025  
+**Last Verified:** May 29, 2026
+**Last revised:** 2026-05-29
+**Version:** 1.1  
 **Investigation Type:** Architecture Deep Dive
 
 ---
 
 ## Executive Summary
+
+### Verification Status (2026-05-25)
+
+- Core architecture findings remain valid: mldoc-backed AST flow, two-level AST hierarchy, and non-persistent AST behavior.
+- Several historical file line ranges in this document have drifted as source files evolved.
+- Treat symbol names and file paths as source of truth; resolve exact locations from current code before using line-specific references.
+- This document is kept as a deep-dive reference, not a line-stable API contract.
 
 ### Key Findings
 
@@ -16,6 +25,12 @@
 - **Temporary AST storage** - AST is cached with `:block.temp/ast-title` and `:block.temp/ast-body` for UI rendering
 - **No persistent AST** - AST is regenerated on-demand from text content, not stored in database
 - **Multiple transformation pipelines** - Export (HTML, OPML, text), rendering (hiccup), and extraction (blocks/refs)
+
+## Findings: New Capabilities
+
+- **Inline macro recovery is now explicit** - `recover-inline-macros` and `normalize-macro-asts` rebuild fragmented macros, including nested page refs and script markup like `^{...}` / `_{...}`.
+- **Export helpers are broader than the original guide implied** - `parseAndExportMarkdown`, `parseAndExportOPML`, and `export` now sit alongside `astExportMarkdown` and `getReferences` in the mldoc bridge.
+- **Default config handling is more defensive** - `default-config-map` now filters nil options, capitalizes the format name, and converts `export-md-remove-options` into mldoc's `export_md_remove_options` shape.
 
 ### Critical Components
 
@@ -113,7 +128,7 @@ All AST nodes follow this pattern:
 
 ### 2.3 Schema Definitions (Malli)
 
-**File:** `deps/graph-parser/src/logseq/graph_parser/schema/mldoc.cljc:64-156`
+**File:** `deps/graph-parser/src/logseq/graph_parser/schema/mldoc.cljc` (line ranges may drift)
 
 #### Inline AST Schema
 
@@ -579,7 +594,8 @@ Logseq supports exporting AST to:
 - **HTML** - Web pages, static sites
 - **OPML** - Outliner format
 - **Markdown/Text** - Plain text export
-- **JSON** - Raw mldoc AST
+
+> **Removed:** JSON is not a supported export target in current source. The AST remains an internal parse result, not a user-facing export mode.
 
 ### 7.2 HTML Export
 
@@ -769,16 +785,7 @@ Logseq supports exporting AST to:
 
 ### 9.2 Paragraph_line vs Paragraph
 
-**Warning:** `Paragraph_line` is a **mldoc internal AST node**
-
-```clojure
-(case ast-type
-  "Paragraph_line"
-  (assert false "Paragraph_line is mldoc internal ast")
-  ...)
-```
-
-**Never appears in exported AST**, only during parsing.
+> **Removed:** the old `Paragraph_line` warning is stale. Current parser schema and tests no longer expose `Paragraph_line`, so treat `Paragraph` as the block-level unit in this guide.
 
 ### 9.3 Properties Block
 
@@ -1452,7 +1459,7 @@ logseq.Editor.getBlock(uuid).then((block) => {
 
 - **mldoc** - OCaml parser compiled to JavaScript ([github.com/logseq/mldoc](https://github.com/logseq/mldoc))
   - Version: Check `package.json`
-  - API: `parseJson`, `parseInlineJson`, `astExportMarkdown`, `getReferences`
+  - API: `parseJson`, `parseInlineJson`, `astExportMarkdown`, `getReferences`, `parseAndExportMarkdown`, `parseAndExportOPML`, `export`
 
 ---
 
@@ -1487,8 +1494,8 @@ logseq.Editor.getBlock(uuid).then((block) => {
 
 - [mldoc GitHub Repository](https://github.com/logseq/mldoc)
 - [Logseq Database Schema](../03-features/database-graphs/schema-guide.md)
-- [Block Extraction Developer Guide](../05-developer-guides/block-extraction-guide.md)
-- [Export System Overview](../03-features/export-system/overview.md)
+- [Graph Parser README](../../../deps/graph-parser/README.md)
+- [Import/Export Best Practices](../08-processes/import-export-best-practices.md)
 - [Query System Developer Guide](../03-features/query-system/developer-guide.md)
 
 ---

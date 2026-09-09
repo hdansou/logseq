@@ -1,7 +1,10 @@
 # Logseq Theme CSS Variable and Class Reference
 
-**Investigation Date:** December 15, 2025  
-**Version:** 1.0  
+**Investigation Date:** May 30, 2026  
+**Version:** 1.1
+
+> **Last revised:** 2026-05-30
+
 **Purpose:** Comprehensive reference of all CSS custom properties, classes, and structures that make up a Logseq theme
 
 ---
@@ -17,11 +20,17 @@ Logseq's theming system uses **CSS custom properties (variables)** with a well-d
 
 ### Key Findings
 
-1. **~150+ CSS Custom Properties** define the complete theme
+1. **Hundreds of CSS custom properties** define the theme system (`--ls-*`, `--lx-*`, `--rx-*`, plus `-alpha`/`-hsl` variants)
 2. **Two parallel color systems:** Legacy (`--ls-*`) and Modern (`--rx-*`/`--lx-*`)
 3. **Theme switching** via HTML `data-theme` and `data-color` attributes
-4. **Three main CSS files** define the base theme system
+4. **Core theme sources** are split across `packages/ui/src/vars-classic.css`, `packages/ui/src/colors.css`, `packages/ui/src/radix.css`, `packages/ui/src/index.css`, `src/main/frontend/common.css`, and `src/main/frontend/components/theme.css`
 5. **Semantic naming** groups variables by purpose (background, text, border, etc.)
+
+## Findings: New Capabilities
+
+- **Expanded accent palettes:** `data-color` now supports multiple named palettes (e.g. `logseq`, `tomato`, `red`, `blue`, `crimson`, `pink`, `plum`, `purple`, `violet`, `indigo`, `cyan`, `teal`, `green`, `grass`, `orange`, `brown`) via `packages/ui/src/colors.css`.
+- **Alpha-channel theme tokens:** accent and gray families include `--lx-*-alpha` variables (for example `--lx-accent-11-alpha`, `--lx-gray-12-alpha`) in addition to base `--lx-*` tokens.
+- **App-level semantic token bridge:** modern HSL tokens such as `--background`, `--foreground`, `--border`, and `--primary` are actively bridged with legacy `--ls-*` and `--lx-*` fallbacks in current CSS.
 
 ---
 
@@ -321,14 +330,13 @@ border-color: hsl(var(--border));
 
 **Purpose:** Error, warning, success states
 
+> **Removed:** The previous claim that Logseq defines default `--ls-error-*`, `--ls-warning-*`, and `--ls-success-*` theme variables in core CSS is stale for current `src/`, `deps/`, and `packages/`.
+
 ```css
-/* Dark mode defaults (light mode similar but lighter) */
---ls-error-text-color: var(--color-red-400);
---ls-error-background-color: var(--color-red-900);
---ls-warning-text-color: var(--color-yellow-400);
---ls-warning-background-color: var(--color-yellow-900);
---ls-success-text-color: var(--color-green-100);
---ls-success-background-color: var(--color-green-900);
+/* Current status-related variables in source */
+--ls-color-file-sync-error: var(--color-red-600);
+--ls-color-file-sync-pending: var(--color-yellow-600);
+--ls-color-file-sync-idle: var(--color-green-600);
 ```
 
 ---
@@ -346,7 +354,7 @@ Logseq uses HTML data attributes to control theming:
 
   <!-- Color accent -->
   <html data-color="logseq">
-    <!-- or "none" for modern Radix system -->
+    <!-- or another supported accent token such as "blue", "teal", or "orange" -->
   </html>
 </html>
 ```
@@ -395,13 +403,15 @@ html[data-theme='dark'][data-color='logseq'] {
 }
 ```
 
-**5. Modern Color System (No Color):**
+**5. Modern Color System (`data-color='none'`):**
+
+> **Removed:** `html[data-color='none']` is no longer present in current `src/`, `deps/`, and `packages/` theme sources.
 
 ```css
-html[data-color='none'] {
-  /* Use pure Radix colors without Logseq overrides */
-  --ls-block-bullet-color: var(--rx-gray-08);
-  --ls-block-bullet-active-color: var(--rx-gray-12);
+html[data-color='blue'] {
+  /* Example of current accent-token driven theming */
+  --lx-accent-11: var(--rx-blue-11);
+  --ls-link-text-color: var(--rx-blue-11);
 }
 ```
 
@@ -454,11 +464,11 @@ lime, yellow, amber, orange, brown, bronze, gold
 **Example Usage:**
 
 ```css
-html[data-color='none'] {
-  /* Use Radix colors directly */
-  background-color: var(--rx-gray-01);
-  color: var(--rx-gray-12);
-  border-color: var(--rx-gray-06);
+html[data-color='blue'] {
+  /* Current model: pick a named accent palette */
+  background-color: var(--lx-gray-01, var(--rx-slate-01));
+  color: var(--lx-gray-12, var(--rx-slate-12));
+  border-color: var(--ls-border-color, var(--rx-slate-05));
 }
 ```
 
@@ -472,9 +482,11 @@ These extend Radix with Logseq-specific needs:
 --lx-gray-01  /* Extended gray scale */
 --lx-gray-12
 --lx-accent-11  /* Accent colors */
---lx-popover-bg  /* Component-specific */
+--lx-accent-11-alpha  /* Accent with alpha channel */
 --lx-pdf-container-dark-bg  /* Feature-specific */
 ```
+
+> **Removed:** `--lx-popover-bg` is not defined in current `src/`, `deps/`, and `packages/`.
 
 ---
 
@@ -643,7 +655,7 @@ html[data-theme='dark'] {
 **Modern Approach:**
 
 ```css
-html[data-theme='dark'][data-color='none'] {
+html[data-theme='dark'][data-color='logseq'] {
   /* Define Radix scales */
   --rx-gray-01: #002b36;
   --rx-gray-12: #a4b5b6;
@@ -724,7 +736,7 @@ document.documentElement.setAttribute('data-theme', 'light')
 
 // Test color mode
 document.documentElement.setAttribute('data-color', 'logseq')
-document.documentElement.setAttribute('data-color', 'none')
+document.documentElement.setAttribute('data-color', 'blue')
 
 // Get computed values
 getComputedStyle(document.documentElement).getPropertyValue(
@@ -794,6 +806,8 @@ background-color: var(--lx-gray-01, var(--ls-primary-background-color, #fff));
 
 ### All `--ls-` Variables (Alphabetical)
 
+> **Removed:** `--ls-error-*`, `--ls-warning-*`, and `--ls-success-*` are not currently defined in core theme CSS under `src/`, `deps/`, and `packages/` (they may still appear as fallback references in some UI code).
+
 ```css
 --ls-a-chosen-bg
 --ls-active-primary-color
@@ -816,8 +830,6 @@ background-color: var(--lx-gray-01, var(--ls-primary-background-color, #fff));
 --ls-color-file-sync-pending
 --ls-color-icon-preset
 --ls-draggable-handle-height
---ls-error-background-color
---ls-error-text-color
 --ls-focus-ring-color
 --ls-font-family
 --ls-guideline-color
@@ -876,8 +888,6 @@ background-color: var(--lx-gray-01, var(--ls-primary-background-color, #fff));
 --ls-selection-background-color
 --ls-selection-text-color
 --ls-slide-background-color
---ls-success-background-color
---ls-success-text-color
 --ls-table-tr-even-background-color
 --ls-tag-text-color
 --ls-tag-text-hover-color
@@ -886,8 +896,6 @@ background-color: var(--lx-gray-01, var(--ls-primary-background-color, #fff));
 --ls-tertiary-background-color
 --ls-tertiary-border-color
 --ls-title-text-color
---ls-warning-background-color
---ls-warning-text-color
 --ls-z-index-level-0
 --ls-z-index-level-1
 --ls-z-index-level-2
@@ -902,21 +910,22 @@ background-color: var(--lx-gray-01, var(--ls-primary-background-color, #fff));
 
 ### Theme-Related CSS Files
 
-| File                                                                                                                              | Purpose                  | Variables Defined           |
-| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | --------------------------- |
-| [packages/ui/src/vars-classic.css](file:///Users/dzu/Projects/src/github.com/logseq/packages/ui/src/vars-classic.css)             | Classic Logseq theme     | All `--ls-*` for light/dark |
-| [src/main/frontend/common.css](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/common.css)                     | Base app styles          | Legacy theme definitions    |
-| [resources/css/shui.css](file:///Users/dzu/Projects/src/github.com/logseq/resources/css/shui.css)                                 | Modern Radix integration | Radix color mappings        |
-| [src/main/frontend/components/theme.css](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/theme.css) | Theme utilities          | Z-index, scrollbar          |
-| [packages/ui/src/radix.css](file:///Users/dzu/Projects/src/github.com/logseq/packages/ui/src/radix.css)                           | Radix UI components      | Radix color scales          |
+| File                                                                                      | Purpose               | Variables Defined                                             |
+| ----------------------------------------------------------------------------------------- | --------------------- | ------------------------------------------------------------- |
+| [packages/ui/src/vars-classic.css](../../../packages/ui/src/vars-classic.css)             | Classic Logseq theme  | Core `--ls-*` defaults for light/dark                         |
+| [packages/ui/src/colors.css](../../../packages/ui/src/colors.css)                         | Accent token palettes | `data-color=*` mappings, `--lx-*`, `--ls-*` overrides         |
+| [packages/ui/src/radix.css](../../../packages/ui/src/radix.css)                           | Radix token base      | `--rx-*` scales and variants                                  |
+| [packages/ui/src/index.css](../../../packages/ui/src/index.css)                           | Semantic HSL tokens   | `--background`, `--foreground`, `--border`, `--primary`, etc. |
+| [src/main/frontend/common.css](../../../src/main/frontend/common.css)                     | App-wide CSS usage    | Fallback chains across `--lx-*`/`--ls-*`/HSL tokens           |
+| [src/main/frontend/components/theme.css](../../../src/main/frontend/components/theme.css) | Theme utilities       | Scrollbar and z-index contract                                |
 
 ---
 
 ## Appendix C: Related Documentation
 
-- **Plugin UI Guide:** [PLUGIN-UI-INTEGRATION-GUIDE.md](file:///Users/dzu/Projects/src/github.com/logseq/docs/07-investigations/PLUGIN-UI-INTEGRATION-GUIDE.md)
-- **Tailwind Config:** [tailwind.config.js](file:///Users/dzu/Projects/src/github.com/logseq/tailwind.config.js)
-- **Theme ClojureScript:** [src/main/frontend/components/theme.cljs](file:///Users/dzu/Projects/src/github.com/logseq/src/main/frontend/components/theme.cljs)
+- **Plugin UI Guide:** [PLUGIN-UI-INTEGRATION-GUIDE.md](PLUGIN-UI-INTEGRATION-GUIDE.md)
+- **Tailwind Config:** [tailwind.config.js](../../../tailwind.config.js)
+- **Theme ClojureScript:** [src/main/frontend/components/theme.cljs](../../../src/main/frontend/components/theme.cljs)
 
 ---
 
@@ -967,9 +976,10 @@ html[data-theme='dark'] {
 
 ## Version History
 
-| Version | Date       | Changes                         |
-| ------- | ---------- | ------------------------------- |
-| 1.0     | 2025-12-15 | Initial comprehensive reference |
+| Version | Date       | Changes                                                                                                 |
+| ------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| 1.1     | 2026-05-30 | Validated against current `src/`, `deps/`, and `packages/`; updated stale claims and removed-mode notes |
+| 1.0     | 2025-12-15 | Initial comprehensive reference                                                                         |
 
 ---
 

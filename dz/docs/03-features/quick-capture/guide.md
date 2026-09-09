@@ -1,12 +1,13 @@
 # Logseq Quick Capture: Complete Guide
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-29
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [How Quick Capture Works](#how-quick-capture-works)
 - [Configuration Options](#configuration-options)
+- [Findings: New Capabilities](#findings-new-capabilities)
 - [Template System](#template-system)
 - [Page Selection Logic](#page-selection-logic)
 - [Mobile Integration](#mobile-integration)
@@ -62,14 +63,27 @@ Configure behavior in your `config.edn`:
 :quick-capture-options
 {:insert-today? false           ;; Insert into today's journal (default: false)
  :redirect-page? false          ;; Navigate to capture page after saving (default: false)
- :default-page "quick capture"} ;; Default target page (default: "quick capture")
+ :default-page "quick capture"  ;; Default target page (default: "quick capture")
+ :prettify-url? true}           ;; Auto-format video/twitter URLs (default: true)
 ```
 
 **Configuration Details:**
 
-- **`insert-today?`**: When `true`, captures go to today's journal page regardless of other settings
+- **`insert-today?`**: When `true`, captures go to today's journal page when no explicit `page` is provided
 - **`redirect-page?`**: When `true`, navigates you to the target page after capturing
 - **`default-page`**: Fallback page when no specific target is provided
+- **`prettify-url?`**: Controls auto-formatting for video and Twitter/X URLs
+
+## Findings: New Capabilities
+
+- Quick capture supports a URL prettification toggle via `:prettify-url?`.
+- Current runtime behavior reads this value from `:quick-capture-option` (singular), while schema/docs define `:quick-capture-options`.
+- For current builds, set both keys if needed:
+
+```clojure
+:quick-capture-options {:prettify-url? true}
+:quick-capture-option {:prettify-url? true}
+```
 
 ### Example Configurations
 
@@ -108,9 +122,10 @@ Customize the capture format using templates:
 
 ```clojure
 :quick-capture-templates
-{:text "**{time}** [[quick capture]]: {text} from {url}"
- :media "**{time}** [[quick capture]]: {url}"}
+{:text "**{time}** [[quick capture]]: {text} from {url}"}
 ```
+
+> **Removed:** Runtime quick capture paths currently use `:quick-capture-templates :text` for both desktop and mobile capture insertion; `:media` is schema-defined but not consumed by active capture code paths.
 
 ### Template Variables
 
@@ -131,8 +146,7 @@ Customize the capture format using templates:
 
 ```clojure
 :quick-capture-templates
-{:text "- **{time}** [[research]] {text}\n  - Source: {url}\n  - Captured: [[{date}]]\n  - #to-review"
- :media "- **{time}** [[research]] Media capture\n  - {url}\n  - Captured: [[{date}]]\n  - #to-review"}
+{:text "- **{time}** [[research]] {text}\n  - Source: {url}\n  - Captured: [[{date}]]\n  - #to-review"}
 ```
 
 #### GTD (Getting Things Done) Template
@@ -173,7 +187,7 @@ Quick capture uses intelligent page selection with this priority order:
 On mobile devices, quick capture integrates with the system share functionality:
 
 - **Text Sharing**: Captures selected text from other apps
-- **URL Sharing**: Captures links with automatic title extraction
+- **URL Sharing**: Captures links (title is used when provided by the share payload)
 - **Media Sharing**: Handles images, videos, and documents
 - **Complex Payloads**: Supports mixed content (text + media)
 
@@ -190,7 +204,7 @@ On mobile devices, quick capture integrates with the system share functionality:
 
 ```clojure
 :quick-capture-templates
-{:media "## 📷 Photo Capture\n{url}\n\n**Context:** {text}\n**Location:** \n**Date:** [[{date}]] at {time}\n**Tags:** #photo #visual-note\n\n**Description:**\n- "}
+{:text "## 📷 Photo Capture\n{url}\n\n**Context:** {text}\n**Location:** \n**Date:** [[{date}]] at {time}\n**Tags:** #photo #visual-note\n\n**Description:**\n- "}
 ```
 
 #### Voice Memo Template
@@ -325,6 +339,8 @@ _Captured 14:30 on [[Dec 15th, 2024]]_
 
 Logseq automatically detects certain content types and formats them appropriately before applying your template. Video URLs are wrapped in `{{video URL}}` format, and Twitter/X links are converted to `{{twitter URL}}` format. This detection happens automatically -- no conditional template syntax is needed.
 
+You can disable this behavior with `:prettify-url? false`.
+
 Note that quick capture templates do **not** support conditional logic (if/else). The automatic content type detection is built into the capture function itself.
 
 ## Troubleshooting
@@ -439,7 +455,8 @@ The configuration follows this schema:
   [:map
    [:insert-today? :boolean]
    [:redirect-page? :boolean]
-   [:default-page :string]])
+  [:default-page :string]
+  [:prettify-url? :boolean]])
 
 :quick-capture-templates (optional-keys
   [:map
@@ -463,11 +480,11 @@ The configuration follows this schema:
 :quick-capture-options
 {:insert-today? true
  :redirect-page? false
- :default-page "Quick Capture"}
+ :default-page "Quick Capture"
+ :prettify-url? true}
 
 :quick-capture-templates
-{:text "- **{time}** {text} {url} #captured"
- :media "- **{time}** {url} #captured"}
+{:text "- **{time}** {text} {url} #captured"}
 ```
 
 ### Evolution Path

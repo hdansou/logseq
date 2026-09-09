@@ -1,496 +1,126 @@
 # Changelog Generation System - Implementation Summary
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-05-30
 
 ## Overview
 
-A comprehensive AI-powered changelog generation system for Logseq that transforms git commit logs into professional, user-facing changelogs and release notes.
+This changelog system combines repository scripts, Copilot skill instructions, and editorial standards to produce release-ready changelog artifacts.
 
-## What Was Created
+It now supports both first-pass generation and rolling extension of an existing changelog window.
 
-### 1. Copilot Command: `@workspace /new-changelog`
+## Current Components
 
-**Location:** `.github/copilot-instructions.md`
+### 1. Copilot Skill Command: @workspace /new-changelog
 
-**Usage:**
+Location:
+- .github/copilot-instructions.md
+- .github/skills/new-changelog.md
 
-```text
-@workspace /new-changelog <start-date> <end-date> [--format=<changelog|release>]
-```
+Primary behavior:
+- Generates changelog-style or release-note-style output from commit history
+- Supports date-window usage and format selection
+- Uses the changelog prompt contract as guidance
 
-**Features:**
+### 2. Raw Commit Log Script: generate-changelog-log.sh
 
-- Automatic git log fetching across all branches
-- AI-powered commit categorization
-- User-facing language generation
-- Two output formats: detailed changelog and condensed release notes
+Location:
+- dz/scripts/generate-changelog-log.sh
 
-**Examples:**
+Current capabilities:
+- Date format validation
+- Optional output path
+- Optional branch filter
+- Commit counting and branch grouping
+- Produces a markdown commit log window for AI/manual processing
 
-```text
-@workspace /new-changelog 2025-01-05 2025-01-15
-@workspace /new-changelog 2025-01-01 2025-01-31 --format=release
-```
+### 3. Changelog Prompt Contract
 
-### 2. Shell Script: `generate-changelog-log.sh`
+Location:
+- .github/prompts/changelog-generation.prompt.md
 
-**Location:** `dz/scripts/generate-changelog-log.sh`
+Current role:
+- Defines changelog output structure and editorial expectations
+- Provides examples and categorization guidance
+- Documents the expected analysis workflow for generated commit logs
 
-**Purpose:** Generate raw git commit logs for changelog processing
+### 4. Process Documentation (Current Home)
 
-**Features:**
+Location:
+- dz/docs/08-processes/changelog/readme.md
+- dz/docs/08-processes/changelog/workflow.md
+- dz/docs/08-processes/changelog/quick-reference.md
+- dz/docs/08-processes/changelog/system-summary.md
 
-- Date range validation
-- Branch filtering
-- Custom output paths
-- Commit counting
-- Helpful error messages
+## Findings: New Capabilities
 
-**Usage:**
+### Rolling window extension tooling
 
-```bash
-./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
-./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -o release.md
-./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/master"
-```
+The workflow now includes changelog window extension support through:
+- dz/scripts/changelog-extend.sh
+- dz/scripts/authors.txt
+- dz/scripts/changelog-exclude.txt
+- dz/changelog/STYLE.md
 
-### 3. Changelog Generation Guidelines
+This extension flow adds capabilities that were not reflected in the prior summary:
+- Extend an existing changelog date window to a new end date
+- Optional no-merge and dry-run operation modes
+- Character-budget checking during the extension workflow
+- Auto-appended pre-categorized TRIAGE section for human review
+- Contributor normalization and refresh using an author mapping file
+- Noise filtering via maintained exclusion patterns
 
-**Location:** `.github/prompts/changelog-generation.prompt.md`
+### Editorial taxonomy shift
 
-**Contents:**
+The current style guide centers on:
+- Spotlight
+- Currently Available
+- Upcoming
+- Contributors
 
-- Complete formatting specifications
-- Category definitions (New Feature, Enhancement, Bug Fix, etc.)
-- Functional area groupings
-- Example changelogs
-- Quality guidelines
-- Spotlight section criteria
+This is now the active editorial contract for categorized release artifacts.
 
-### 4. Workflow Documentation
+### Source-backed functional area expansion
 
-**Location:** `docs/CHANGELOG_WORKFLOW.md`
+Compared with the older taxonomy snapshot, current source roots (src/, deps/, packages/) clearly surface active areas including:
+- Publishing flows
+- Properties-heavy data/model work
+- PDF/media-related flows
+- RTC/sync infrastructure
+- Desktop window and shell integration paths
 
-**Contents:**
+## Removed or Stale Claims (Corrected)
 
-- Complete end-to-end workflow
-- Changelog vs release notes comparison
-- Best practices
-- Troubleshooting guide
-- Example scenarios
+> **Removed:** docs/CHANGELOG_WORKFLOW.md as the canonical workflow doc location. Current workflow documentation lives in dz/docs/08-processes/changelog/.
 
-### 5. Quick Reference Guide
+> **Removed:** docs/CHANGELOG_QUICK_REFERENCE.md as the canonical quick reference location. Current quick reference lives in dz/docs/08-processes/changelog/quick-reference.md.
 
-**Location:** `docs/CHANGELOG_QUICK_REFERENCE.md`
+> **Removed:** prompts/changelog-generation.md as the canonical prompt path. Current prompt path is .github/prompts/changelog-generation.prompt.md.
 
-**Contents:**
+> **Removed:** The statement that a deprecated New-LogseqChangeLog shell function currently points users to the new system. The function appears as an example in the prompt contract, but no active wrapper implementation is verified in source roots.
 
-- Command cheat sheet
-- Category reference
-- Common task examples
-- Workflow checklist
-- Troubleshooting tips
+> **Removed:** PDF annotations as a standalone changelog functional-area bucket in this summary. Current categorization in process docs favors broader PDF/media and property-oriented flows.
 
-## How It Works
+## Current End-to-End Workflow
 
-### Workflow
-
-```mermaid
-graph TD
-    A[Set Date Range] --> B[Fetch Git Commits]
-    B --> C[Generate Raw Log]
-    C --> D{Processing Method}
-    D -->|Copilot| E[AI Analysis]
-    D -->|Manual| F[Follow Guidelines]
-    E --> G[Generate Changelog]
-    F --> G
-    G --> H{Format Type}
-    H -->|Changelog| I[Detailed Output]
-    H -->|Release| J[Condensed Output]
-    I --> K[Review & Publish]
-    J --> K
-```
-
-### Process Steps
-
-1. **Generate Raw Log**
-
-   - Fetch commits from all remote branches
-   - Filter by date range
-   - Format with commit hash, author, date, message
-
-2. **AI Analysis** (via Copilot)
-
-   - Identify major themes and patterns
-   - Categorize commits by type
-   - Group by functional area
-   - Generate user-facing descriptions
-
-3. **Create Spotlight**
-
-   - Select 2-3 major initiatives
-   - Write compelling summaries
-   - Focus on user impact
-
-4. **Organize Changes**
-
-   - Primary categories: New Feature, Enhancement, Bug Fix, etc.
-   - Secondary grouping: Functional areas
-   - Combine related commits
-
-5. **Extract Contributors**
-
-   - Parse commit authors
-   - Alphabetically sort
-   - Format as list
-
-6. **Generate Output**
-   - Format as markdown
-   - Include GitHub commit links
-   - Add metadata (dates, totals)
-
-## Output Formats
-
-### Changelog (Default)
-
-**Target Audience:** Developers, power users, technical documentation
-
-**Structure:**
-
-```markdown
-# Changelog (YYYY-MM-DD to YYYY-MM-DD)
-
-## Spotlight
-
-[2-3 major features with detailed descriptions]
-
-## New Feature
-
-### [Functional Area]
-
-- [Change description] ([commit-hash])
-
-## Enhancement
-
-### [Functional Area]
-
-- [Change description] ([commit-hash])
-
-## Bug Fix
-
-### [Functional Area]
-
-- [Change description] ([commit-hash])
-
-## Performance
-
-- [Change description] ([commit-hash])
-
-## Refactoring
-
-- [Change description] ([commit-hash])
-
-## Chore
-
-- [Change description] ([commit-hash])
-
-## Contributors
-
-@user1, @user2, @user3
-```
-
-### Release Notes
-
-**Target Audience:** End users, stakeholders, marketing
-
-**Structure:**
-
-```markdown
-# Release Notes (YYYY-MM-DD to YYYY-MM-DD)
-
-## Spotlight
-
-[2-3 major features with compelling descriptions]
-
-## What's New
-
-- [High-level user-facing feature]
-- [High-level user-facing feature]
-
-## Improvements
-
-- [User-visible enhancement]
-- [User-visible enhancement]
-
-## Bug Fixes
-
-- [Notable user-facing fix]
-- [Notable user-facing fix]
-
-## Contributors
-
-@user1, @user2, @user3
-```
-
-## Categories
-
-### Primary Categories
-
-1. **New Feature** - New capabilities added to the product
-2. **Enhancement** - Improvements to existing features
-3. **Bug Fix** - Corrections to existing functionality
-4. **Performance** - Speed and efficiency improvements
-5. **Refactoring** - Code structure improvements (usually internal)
-6. **Chore** - Maintenance tasks (dependencies, CI/CD, etc.)
-
-### Functional Areas
-
-- Block editing and management
-- Graph visualization
-- Search and queries
-- Plugin system
-- Database operations
-- UI/UX improvements
-- File handling
-- Sync and storage
-- Mobile support
-- Developer tools
-- Real-time collaboration (RTC)
-- Whiteboards
-- PDF annotations
-- Settings and configuration
-
-## Key Features
-
-### AI-Powered Analysis
-
-- Automatic categorization of commits
-- Pattern recognition for related changes
-- User-facing language generation
-- Intelligent commit grouping
-
-### Flexible Output
-
-- Two distinct formats for different audiences
-- Customizable date ranges
-- Branch filtering
-- Custom output paths
-
-### Quality Standards
-
-- Consistent formatting
-- GitHub commit links
-- Alphabetically sorted contributors
-- Clear, concise language
-- User benefit focus
-
-### Developer-Friendly
-
-- Simple command-line interface
-- Helpful error messages
-- Validation of inputs
-- Progress indicators
-- Comprehensive documentation
-
-## Usage Examples
-
-### Monthly Release
-
-```bash
-# Generate raw log
-cd ~/Projects/src/github.com/logseq
-./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31
-
-# Create release notes (in VS Code)
-@workspace /new-changelog 2025-01-01 2025-01-31 --format=release
-
-# Create detailed changelog
-@workspace /new-changelog 2025-01-01 2025-01-31
-```
-
-### Hotfix Release
-
-```bash
-# Generate log for hotfix branch
-./dz/scripts/generate-changelog-log.sh 2025-01-15 2025-01-16 -b "origin/hotfix"
-
-# Create changelog
-@workspace /new-changelog 2025-01-15 2025-01-16
-```
-
-### Feature Preview
-
-```bash
-# Generate log for feature branch
-./dz/scripts/generate-changelog-log.sh 2025-01-01 2025-01-31 -b "origin/feature/semantic-search"
-
-# Create changelog
-@workspace /new-changelog 2025-01-01 2025-01-31
-```
-
-## File Structure
-
-```text
-logseq/
-├── .github/
-│   └── copilot-instructions.md      # Defines @workspace /new-changelog command
-└── dz/
-    ├── docs/08-processes/changelog/
-    │   ├── readme.md                    # Overview and quick start
-    │   ├── workflow.md                  # Complete workflow documentation
-    │   ├── quick-reference.md           # Quick command reference
-    │   └── system-summary.md            # Technical implementation details
-    └── scripts/
-        └── generate-changelog-log.sh    # Raw log generation script
-```
-
-## Integration Points
-
-### GitHub Copilot
-
-The system integrates with GitHub Copilot through the `@workspace /new-changelog` command, providing:
-
-- Automatic context gathering from git history
-- AI-powered analysis and categorization
-- Natural language generation
-- Consistent formatting
-
-### Shell Environment
-
-The script can be called from:
-
-- Command line: `./dz/scripts/generate-changelog-log.sh`
-- Shell functions: Deprecated `New-LogseqChangeLog` now points to new system
-- CI/CD pipelines: Can be automated for releases
-
-### Git Workflow
-
-Works with standard git operations:
-
-- `git fetch --all` - Update remote tracking
-- `git log` - Extract commit history
-- `git branch -r` - List remote branches
-
-## Best Practices
-
-### Writing Commits
-
-```bash
-# Good - Clear, categorized, descriptive
-feat(blocks): Add custom properties panel support
-fix(mobile): Resolve touch target sizing on iOS
-perf(db): Optimize query execution for large graphs
-
-# Bad - Vague, no context
-updated stuff
-fixes
-WIP
-```
-
-### Selecting Spotlight Items
-
-Choose features that:
-
-- ✓ Significantly impact user experience
-- ✓ Represent major development effort
-- ✓ Introduce new capabilities
-- ✓ Solve long-standing issues
-- ✗ Are minor bug fixes
-- ✗ Are internal refactorings
-- ✗ Are dependency updates
-
-### Review Checklist
-
-Before publishing:
-
-- [ ] All commit hashes link correctly to GitHub
-- [ ] Categories are accurate
-- [ ] User-facing language is clear
-- [ ] No duplicate entries
-- [ ] Contributors list is complete
-- [ ] Spotlight highlights the most important changes
-- [ ] Technical jargon is minimized
-- [ ] Benefits are clear to users
-
-## Future Enhancements
-
-Potential improvements:
-
-1. **Automated PR Linking** - Extract and link to GitHub PRs
-2. **Issue Tracking** - Link to resolved issues
-3. **Metrics** - Add statistics (lines changed, files modified)
-4. **Themes** - Detect recurring themes across commits
-5. **Breaking Changes** - Highlight breaking changes section
-6. **Migration Guides** - Auto-generate for major changes
-7. **Multi-Language** - Generate changelogs in multiple languages
-8. **Integration** - Direct publishing to GitHub Releases, blog, etc.
-
-## Maintenance
-
-### Updating Guidelines
-
-When updating changelog standards:
-
-1. Edit `.github/prompts/changelog-generation.prompt.md`
-2. Update examples in documentation
-3. Regenerate past changelogs to verify
-4. Update quick reference if needed
-
-### Adding Categories
-
-To add new categories:
-
-1. Update `.github/prompts/changelog-generation.prompt.md`
-2. Add to `CHANGELOG_QUICK_REFERENCE.md`
-3. Update Copilot instructions if needed
-4. Document with examples
-
-### Script Improvements
-
-When modifying the shell script:
-
-1. Update help text (`--help` flag)
-2. Test with various date ranges
-3. Verify error handling
-4. Update documentation
-5. Test on different shells (bash, zsh)
-
-## Migration from Old Function
-
-The old `New-LogseqChangeLog` bash function has been deprecated in favor of this new system. The function now displays a deprecation notice and guides users to the new workflow.
-
-**Old workflow:**
-
-```bash
-New-LogseqChangeLog 2025-01-05 2025-01-15
-# (Manual LLM processing required)
-```
-
-**New workflow:**
-
-```bash
-./dz/scripts/generate-changelog-log.sh 2025-01-05 2025-01-15
-@workspace /new-changelog 2025-01-05 2025-01-15
-```
-
-**Improvements:**
-
-- Better error handling
-- More flexible options
-- Integrated AI processing
-- Two output formats
-- Comprehensive documentation
-- Validation and progress indicators
-
-## Support and Documentation
-
-- **Full Workflow:** `docs/CHANGELOG_WORKFLOW.md`
-- **Quick Reference:** `docs/CHANGELOG_QUICK_REFERENCE.md`
-- **Generation Guidelines:** `.github/prompts/changelog-generation.prompt.md`
-- **Copilot Commands:** `.github/copilot-instructions.md`
+1. Generate the raw date-window commit log with dz/scripts/generate-changelog-log.sh.
+2. Generate or refine release text via @workspace /new-changelog using the prompt contract.
+3. If extending an existing release window, run dz/scripts/changelog-extend.sh and triage appended commits.
+4. Finalize output against dz/changelog/STYLE.md and current process docs.
+
+## Maintenance Notes
+
+When updating this system, keep these files aligned together:
+- .github/copilot-instructions.md
+- .github/skills/new-changelog.md
+- .github/prompts/changelog-generation.prompt.md
+- dz/scripts/generate-changelog-log.sh
+- dz/scripts/changelog-extend.sh
+- dz/changelog/STYLE.md
+- dz/docs/08-processes/changelog/*.md
+
+Inconsistency risk to watch:
+- Script help text and next-step messages in dz/scripts/generate-changelog-log.sh still reference prompts/changelog-generation.md in places, while canonical docs now point to .github/prompts/changelog-generation.prompt.md.
 
 ## Summary
 
-This system provides a complete, AI-powered solution for generating professional changelogs from git history. It combines automated git log extraction with intelligent AI analysis to produce user-facing documentation that clearly communicates the value and impact of each release.
-
-The dual-format approach (changelog vs. release notes) ensures appropriate communication for different audiences, while the comprehensive documentation makes it easy for anyone on the team to generate high-quality changelogs consistently.
+The changelog system has moved from a single-pass generation model to a more complete release-operations pipeline: initial log generation, AI-assisted drafting, extension/triage tooling, and style-enforced publishing outputs. This summary now reflects the current process-document locations and active capability set as of 2026-05-30.
