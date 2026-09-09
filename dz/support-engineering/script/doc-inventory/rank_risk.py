@@ -39,10 +39,12 @@ rows = []
 for dp, _, ns in os.walk(a.root):
     for n in sorted(ns):
         if not n.endswith(".md") or n == "README.md": continue
+        if os.sep + "_templates" + os.sep in os.path.join(dp, n) or dp.endswith("_templates"): continue
         p = os.path.join(dp, n); rel = os.path.relpath(p, a.root)
         st = fm(p, "reviewStatus") or fm(p, "review-status")
         if a.status == "unreviewed":
-            if st in ("authored-from-source", "merged-not-fully-audited", "generated-gated"): continue
+            if st in ("authored-from-source", "merged-not-fully-audited",
+                      "generated-gated", "audited"): continue
         elif a.status and st != a.status:
             continue
         s, c, lines = score(p)
