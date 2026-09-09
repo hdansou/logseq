@@ -66,31 +66,31 @@ No content decisions; `git mv` plus a source-link depth fix (`../../../` → `..
 
 | ✔ | Δ lines | A lines | A date | B lines | B date | File |
 |---|---|---|---|---|---|---|
-| [ ] | 39 | 301 | 2026-01-29 | 313 | 2026-05-30 | `how-to/integrations/custom-css.md` |
-| [ ] | 40 | 170 | — | 183 | — | `tutorials/getting-started/01-installation.md` |
+| [x] | 39 | 301 | 2026-01-29 | 313 | 2026-05-30 | `how-to/integrations/custom-css.md` |
+| [x] | 40 | 170 | — | 183 | — | `tutorials/getting-started/01-installation.md` |
 | [ ] | 54 | 330 | 2026-01-29 | 325 | 2026-03-10 | `reference/syntax/dynamic-variables.md` |
 | [ ] | 56 | 384 | 2026-01-29 | 395 | 2026-03-10 | `reference/configuration/css-variables.md` |
 | [ ] | 59 | 372 | 2026-01-29 | 370 | 2026-03-10 | `reference/api/http-api.md` |
 | [ ] | 74 | 354 | 2026-01-29 | 383 | 2026-03-10 | `reference/configuration/config-edn-db.md` |
-| [ ] | 79 | 189 | 2026-01-29 | 209 | 2026-05-30 | `explanation/architecture/system-overview.md` |
+| [x] | 79 | 189 | 2026-01-29 | 209 | 2026-05-30 | `explanation/architecture/system-overview.md` |
 | [ ] | 80 | 393 | 2026-01-29 | 414 | 2026-03-10 | `tutorials/task-management/project-planning.md` |
-| [ ] | 84 | 464 | — | 478 | — | `tutorials/getting-started/04-linking-pages.md` |
-| [ ] | 92 | 313 | 2026-01-29 | 371 | 2026-05-30 | `how-to/content/view-types.md` |
+| [x] | 84 | 464 | — | 478 | — | `tutorials/getting-started/04-linking-pages.md` |
+| [x] | 92 | 313 | 2026-01-29 | 371 | 2026-05-30 | `how-to/content/view-types.md` |
 | [ ] | 99 | 549 | 2026-01-29 | 541 | 2026-03-10 | `reference/configuration/config-edn.md` |
-| [ ] | 100 | 401 | — | 416 | — | `tutorials/getting-started/03-basic-editing.md` |
-| [ ] | 107 | 258 | 2026-01-29 | 291 | 2026-05-30 | `explanation/comparisons/rtc-vs-file-sync.md` |
+| [x] | 100 | 401 | — | 416 | — | `tutorials/getting-started/03-basic-editing.md` |
+| [x] | 107 | 258 | 2026-01-29 | 291 | 2026-05-30 | `explanation/comparisons/rtc-vs-file-sync.md` |
 | [ ] | 108 | 245 | 2026-01-29 | 255 | 2026-05-30 | `how-to/content/quick-capture.md` |
-| [ ] | 116 | 291 | 2026-01-29 | 316 | 2026-05-30 | `explanation/concepts/file-vs-db.md` |
-| [ ] | 125 | 227 | — | 229 | — | `tutorials/getting-started/02-first-graph.md` |
+| [x] | 116 | 291 | 2026-01-29 | 316 | 2026-05-30 | `explanation/concepts/file-vs-db.md` |
+| [x] | 125 | 227 | — | 229 | — | `tutorials/getting-started/02-first-graph.md` |
 | [ ] | 130 | 310 | 2026-09-09 | 312 | 2026-05-30 | `how-to/integrations/x-callback-url.md` |
-| [ ] | 133 | 350 | 2026-01-29 | 377 | 2026-05-30 | `how-to/integrations/custom-js.md` |
+| [x] | 133 | 350 | 2026-01-29 | 377 | 2026-05-30 | `how-to/integrations/custom-js.md` |
 | [ ] | 156 | 395 | 2026-01-29 | 410 | 2026-03-10 | `reference/database/schema-overview.md` |
-| [ ] | 179 | 368 | 2026-01-29 | 414 | 2026-05-30 | `explanation/architecture/data-architecture.md` |
+| [x] | 179 | 368 | 2026-01-29 | 414 | 2026-05-30 | `explanation/architecture/data-architecture.md` |
 | [ ] | 179 | 478 | — | 481 | — | `reference/syntax/code-blocks.md` |
-| [ ] | 196 | 642 | — | 658 | — | `how-to/multimedia/video-embed.md` |
+| [x] | 196 | 642 | — | 658 | — | `how-to/multimedia/video-embed.md` |
 | [ ] | 210 | 722 | — | 714 | — | `reference/features/pdf-annotations.md` |
-| [ ] | 281 | 453 | — | 404 | — | `how-to/content/favorites-recent.md` |
-| [ ] | 283 | 376 | 2026-01-29 | 451 | 2026-05-30 | `how-to/queries/advanced-queries.md` |
+| [x] | 281 | 453 | — | 404 | — | `how-to/content/favorites-recent.md` |
+| [x] | 283 | 376 | 2026-01-29 | 451 | 2026-05-30 | `how-to/queries/advanced-queries.md` |
 | [ ] | 291 | 305 | 2026-01-29 | 231 | 2026-05-30 | `how-to/backup/backup-restore.md` |
 | [ ] | 299 | 760 | 2026-09-09 | 889 | — | `how-to/multimedia/asset-management.md` |
 | [ ] | 313 | 305 | 2026-01-29 | 245 | 2026-03-10 | `tutorials/task-management/todo-basics.md` |
@@ -101,7 +101,7 @@ No content decisions; `git mv` plus a source-link depth fix (`../../../` → `..
 | [ ] | 376 | 523 | — | 510 | — | `how-to/tasks/repeating-tasks.md` |
 | [ ] | 380 | 370 | 2026-01-29 | 364 | 2026-05-30 | `how-to/integrations/create-theme.md` |
 | [ ] | 384 | 319 | 2026-01-29 | 240 | 2026-05-30 | `how-to/content/create-flashcard-deck.md` |
-| [ ] | 400 | 749 | — | 793 | — | `explanation/security/e2ee-encryption.md` |
+| [x] | 400 | 749 | — | 793 | — | `explanation/security/e2ee-encryption.md` |
 | [ ] | 408 | 434 | 2026-01-29 | 289 | 2026-03-10 | `reference/features/flashcards.md` |
 | [ ] | 425 | 533 | — | 596 | — | `how-to/integrations/zotero.md` |
 | [ ] | 462 | 314 | 2026-01-29 | 198 | 2026-05-30 | `how-to/integrations/cli-basic.md` |
@@ -115,6 +115,22 @@ No content decisions; `git mv` plus a source-link depth fix (`../../../` → `..
 | [ ] | 2147 | 1138 | 2026-01-29 | 1229 | 2026-03-10 | `reference/api/plugin-api.md` |
 
 Total changed lines: 14671
+
+
+### Dropped A-only sections (recoverable from git)
+
+Taking the audited `dz/docs/ddocs/` version dropped five small sections that
+existed only in the unaudited root copy. They were **not** ported: adding
+unverified prose to the audited tree would launder it as checked. Each is a
+review candidate — verify against source, then add if still true.
+
+| File | Section | Lines | Recover from |
+|---|---|---|---|
+| `tutorials/getting-started/02-first-graph.md` | Database Mode / File-Based Mode / Graph Types Comparison | 27 | `219d51c00f:ddocs/...` |
+| `how-to/integrations/custom-js.md` | Using Logseq API | 24 | `219d51c00f:ddocs/...` |
+| `how-to/content/favorites-recent.md` | Smart Recent Pages Query | 17 | `219d51c00f:ddocs/...` |
+| `how-to/queries/advanced-queries.md` | Property Contains Value | 11 | `219d51c00f:ddocs/...` |
+| `explanation/security/e2ee-encryption.md` | Password Storage: Never Stored | 13 | `219d51c00f:ddocs/...` |
 
 ## Stage 3 — B-only files (10): no action, they stay
 
