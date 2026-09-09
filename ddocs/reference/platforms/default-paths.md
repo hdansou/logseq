@@ -3,7 +3,7 @@ title: 'Default Paths by Platform'
 description: 'Every default file, directory, storage bucket, and keychain entry Logseq uses, grouped by platform, with the environment variables and config keys that override them'
 type: reference
 status: active-development
-lastVerified: '2026-09-08'
+lastVerified: '2026-09-09'
 logseqVersion: '2.0.x'
 platforms: [desktop, mobile, web]
 graphType: [file, db]
@@ -17,7 +17,7 @@ relatedDocs:
 
 # Default Paths by Platform
 
-> Where Logseq puts things when you have not told it otherwise. Verified against `origin/master` @ `d2ab772` (2026-09-02); each entry cites the file that defines it. A drift check for the literal constants lives at `dz/support-engineering/script/sync-limits/` (`default-paths.edn`).
+> Where Logseq puts things when you have not told it otherwise. Verified against `origin/master` @ `be800f1711` (2026-09-08); all 74 declared constants re-checked by the drift gate on 2026-09-09; each entry cites the file that defines it. A drift check for the literal constants lives at `dz/support-engineering/script/sync-limits/` (`default-paths.edn`).
 
 Two conventions run through everything below:
 

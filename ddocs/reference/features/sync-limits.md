@@ -3,7 +3,7 @@ title: 'Sync Limits, Throttles, and Batch Sizes'
 description: 'Every limit, quota, rate limit, timeout, and batch size in Logseq DB sync (RTC), with what is enforced where — and what is only claimed'
 type: reference
 status: active-development
-lastVerified: '2026-09-08'
+lastVerified: '2026-09-09'
 logseqVersion: '2.0.x'
 platforms: [desktop, mobile]
 graphType: [db]
@@ -19,7 +19,7 @@ relatedDocs:
 
 # Sync Limits, Throttles, and Batch Sizes
 
-> Every numeric limit in the DB sync stack — client (`src/main/frontend/worker/sync`) and server (`deps/db-sync`) — with the file and line it comes from. Verified against `origin/master` @ `d2ab772` (2026-09-02). A drift check for these numbers lives at `dz/support-engineering/script/sync-limits/`.
+> Every numeric limit in the DB sync stack — client (`src/main/frontend/worker/sync`) and server (`deps/db-sync`) — with the file and line it comes from. Verified against `origin/master` @ `be800f1711` (2026-09-08); all 42 declared values re-checked by the drift gate on 2026-09-09. A drift check for these numbers lives at `dz/support-engineering/script/sync-limits/`.
 
 The single most important fact on this page: **there is no server-side graph-count or storage quota.** The "1 graph / 50 MB free, 10 graphs pro" figures exist only as UI strings and hard-coded defaults; nothing in `deps/db-sync` enforces them. See [Account-level limits](#account-level-limits--claimed-not-enforced).
 

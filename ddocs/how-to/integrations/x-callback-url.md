@@ -2,9 +2,10 @@
 title: 'X-Callback-URL'
 description: 'How to capture content to Logseq from other apps using URL schemes'
 status: stable
-lastVerified: '2026-01-29'
+lastVerified: '2026-09-09'
 logseqVersion: '0.11.x'
-platforms: [desktop, mobile]
+verifiedScope: 'Mobile Integration section only; desktop recipes not re-tested since 0.11.x'
+platforms: [desktop]
 graphType: [file, db]
 relatedDocs:
   howTo:

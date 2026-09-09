@@ -3,6 +3,8 @@ title: 'Asset Management in Logseq'
 status: '🟢 Stable'
 version: 'Since v0.5.0'
 quadrant: 'How-To Guide'
+lastVerified: '2026-09-09'
+verifiedScope: 'Remote Graphs (RTC Sync) section only'
 platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
 related-docs:
   - '../../reference/features/asset-sync.md'
