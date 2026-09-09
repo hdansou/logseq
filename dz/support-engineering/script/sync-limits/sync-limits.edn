@@ -1,0 +1,123 @@
+;; Declaration of every number in ddocs/reference/features/sync-limits.md.
+;;
+;; check_sync_limits.clj re-reads each :file and fails if the value in source
+;; no longer equals :expected. Two entry kinds:
+;;
+;;   {:symbol sym  :file path :expected v}        ; a (def sym v) — v may be arithmetic, it is evaluated
+;;   {:regex  "…"  :file path :expected "…"}      ; first capture group of the regex, compared as a string
+;;
+;; :doc is what the reference page says about it; keep the two in step.
+
+[;; ---- hard server limits ------------------------------------------------
+ {:symbol max-asset-size
+  :file "deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs"
+  :expected 104857600
+  :doc "asset size, plain graph (100 MiB)"}
+ {:symbol max-encrypted-asset-size
+  :file "deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs"
+  :expected 209715200
+  :doc "asset size, E2EE graph (200 MiB)"}
+ {:symbol default-limit
+  :file "deps/db-sync/src/logseq/db_sync/worker/handler/semantic.cljs"
+  :expected 50
+  :doc "semantic API default page size"}
+ {:symbol max-limit
+  :file "deps/db-sync/src/logseq/db_sync/worker/handler/semantic.cljs"
+  :expected 200
+  :doc "semantic API max page size"}
+ {:regex "\\[limits\\]\\s*\\n\\s*cpu_ms\\s*=\\s*(\\d+)"
+  :file "deps/db-sync/worker/wrangler.toml"
+  :expected "300000"
+  :doc "worker CPU ms per invocation (prod)"}
+
+ ;; ---- client caps -------------------------------------------------------
+ {:symbol max-asset-size
+  :file "src/main/frontend/worker/sync/assets.cljs"
+  :expected 104857600
+  :doc "client-side asset ceiling (does not know about the E2EE allowance)"}
+ {:symbol large-title-byte-limit
+  :file "src/main/frontend/worker/sync/large_title.cljs"
+  :expected 4096
+  :doc "block title bytes before offload to object storage"}
+ {:symbol snapshot-upload-max-bytes
+  :file "src/main/frontend/worker/sync/upload.cljs"
+  :expected 1000000
+  :doc "bytes per snapshot upload frame"}
+ {:symbol snapshot-frame-header-bytes
+  :file "src/main/frontend/worker/sync/upload.cljs"
+  :expected 4
+  :doc "frame header"}
+ {:symbol ignored-oversized-upload-attrs
+  :file "src/main/frontend/worker/sync/upload.cljs"
+  :expected #{:logseq.property.tldraw/page}
+  :doc "attrs whose oversized values are DROPPED from upload"}
+ {:symbol max-upload-request-datoms
+  :file "src/main/frontend/worker/sync/apply_txs.cljs"
+  :expected 5000
+  :doc "datoms per tx upload request"}
+
+ ;; ---- account-level claims (strings + UI defaults; not enforced) --------
+ {:regex ":account/free-plan-sync-limit \"([^\"]+)\""
+  :file "src/resources/dicts/en.edn"
+  :expected "1 synced graph (up to 50MB, notes only)"
+  :doc "free plan marketing string"}
+ {:regex ":account/pro-plan-sync-limit \"([^\"]+)\""
+  :file "src/resources/dicts/en.edn"
+  :expected "10 synced graphs (up to 5GB each)"
+  :doc "pro plan marketing string"}
+ {:regex ":account/sync-assets-limit \"([^\"]+)\""
+  :file "src/resources/dicts/en.edn"
+  :expected "Sync assets up to 100MB per file"
+  :doc "asset marketing string"}
+ {:regex "count-limit \\(if pro-account\\? (\\d+ \\d+)\\)"
+  :file "src/main/frontend/components/settings.cljs"
+  :expected "10 1"
+  :doc "UI graph-count defaults: pro free"}
+ {:regex "default-storage-limit \\(if pro-account\\? ([0-9.]+ [0-9.]+)\\)"
+  :file "src/main/frontend/components/settings.cljs"
+  :expected "10 0.05"
+  :doc "UI storage defaults in GB: pro free (note: string says 5GB)"}
+ {:regex "\\(let \\[graph-usage (\\[\\])"
+  :file "src/main/frontend/components/settings.cljs"
+  :expected "[]"
+  :doc "usage panel data is hard-coded empty"}
+
+ ;; ---- throttles ---------------------------------------------------------
+ {:regex "name = \"SEMANTIC_READ_RATE_LIMITER\"\\s*\\n\\s*namespace_id = \"1001\"\\s*\\n\\s*\\[ratelimits.simple\\]\\s*\\n\\s*limit = (\\d+)"
+  :file "deps/db-sync/worker/wrangler.toml"
+  :expected "120"
+  :doc "semantic read requests per period (prod)"}
+ {:regex "name = \"SEMANTIC_WRITE_RATE_LIMITER\"\\s*\\n\\s*namespace_id = \"1002\"\\s*\\n\\s*\\[ratelimits.simple\\]\\s*\\n\\s*limit = (\\d+)"
+  :file "deps/db-sync/worker/wrangler.toml"
+  :expected "20"
+  :doc "semantic write requests per period (prod)"}
+ {:regex "\"retry-after\" \"(\\d+)\""
+  :file "deps/db-sync/src/logseq/db_sync/worker/dispatch.cljs"
+  :expected "60"
+  :doc "429 retry-after seconds"}
+ {:symbol reconnect-base-delay-ms :file "src/main/frontend/worker/sync.cljs" :expected 1000 :doc "ws reconnect base"}
+ {:symbol reconnect-max-delay-ms :file "src/main/frontend/worker/sync.cljs" :expected 30000 :doc "ws reconnect max"}
+ {:symbol reconnect-jitter-ms :file "src/main/frontend/worker/sync.cljs" :expected 250 :doc "ws reconnect jitter"}
+ {:symbol ws-stale-kill-interval-ms :file "src/main/frontend/worker/sync.cljs" :expected 60000 :doc "stale ws check interval"}
+ {:symbol ws-stale-timeout-ms :file "src/main/frontend/worker/sync.cljs" :expected 600000 :doc "stale ws timeout"}
+ {:symbol upload-response-timeout-ms :file "src/main/frontend/worker/sync/apply_txs.cljs" :expected 120000 :doc "upload response timeout"}
+ {:symbol max-remote-apply-snapshot-retries :file "src/main/frontend/worker/sync/apply_txs.cljs" :expected 3 :doc "snapshot apply retries"}
+ {:symbol remote-apply-snapshot-retry-delay-ms :file "src/main/frontend/worker/sync/apply_txs.cljs" :expected 50 :doc "snapshot apply retry delay"}
+
+ ;; ---- batch sizes -------------------------------------------------------
+ {:symbol upload-prepare-datoms-batch-size :file "src/main/frontend/worker/sync/upload.cljs" :expected 100000 :doc "datom preparation batch"}
+ {:symbol upload-kvs-batch-size :file "src/main/frontend/worker/sync/upload.cljs" :expected 500 :doc "kv rows per snapshot batch"}
+ {:symbol large-tx-min-items :file "deps/db-sync/src/logseq/db_sync/worker/handler/sync.cljs" :expected 500 :doc "server large-tx threshold"}
+ {:symbol large-tx-max-chunk-items :file "deps/db-sync/src/logseq/db_sync/worker/handler/sync.cljs" :expected 500 :doc "server large-tx chunk"}
+ {:symbol snapshot-download-batch-size :file "deps/db-sync/src/logseq/db_sync/worker/handler/sync.cljs" :expected 10000 :doc "snapshot rows per pull batch"}
+ {:symbol snapshot-import-datoms-batch-size :file "src/main/frontend/worker/sync/download.cljs" :expected 10000 :doc "datoms per import batch"}
+ {:symbol remote-asset-download-parallelism :file "src/main/frontend/worker/sync/assets.cljs" :expected 10 :doc "concurrent asset downloads"}
+ {:symbol max-sql-params :file "deps/db-sync/src/logseq/db_sync/batch.cljs" :expected 99 :doc "sql bind params per statement"}
+ {:symbol row-param-count :file "deps/db-sync/src/logseq/db_sync/batch.cljs" :expected 3 :doc "params per kv row"}
+
+ ;; ---- server caches -----------------------------------------------------
+ {:symbol graph-access-cache-ttl-ms :file "deps/db-sync/src/logseq/db_sync/worker/handler/index.cljs" :expected 5000 :doc "graph access cache ttl"}
+ {:symbol user-upsert-cache-ttl-ms :file "deps/db-sync/src/logseq/db_sync/index.cljs" :expected 3600000 :doc "user upsert cache ttl"}
+ {:symbol user-upsert-cache-max :file "deps/db-sync/src/logseq/db_sync/index.cljs" :expected 1024 :doc "user upsert cache entries"}
+ {:symbol activity-touch-cache-max :file "deps/db-sync/src/logseq/db_sync/index.cljs" :expected 8192 :doc "activity cache entries"}
+ {:symbol ttl-seconds :file "deps/db-sync/src/logseq/db_sync/worker/asset_link.cljs" :expected 300 :doc "signed asset link ttl"}]

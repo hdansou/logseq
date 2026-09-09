@@ -1,0 +1,93 @@
+;; Declaration of the literal constants behind ddocs/reference/platforms/default-paths.md.
+;; Checked by check_sync_limits.clj --declaration default-paths.edn --root <checkout>.
+;; Composed paths (join of homedir + literal) are declared via :regex on the literal parts.
+
+[;; ---- shared names ------------------------------------------------------
+ {:symbol default-graphs-dir :file "deps/common/src/logseq/common/config.cljs" :expected "~/logseq/graphs" :doc "graphs root"}
+ {:symbol local-assets-dir :file "deps/common/src/logseq/common/config.cljs" :expected "assets" :doc "assets dir name"}
+ {:symbol unlinked-graphs-dir :file "deps/common/src/logseq/common/config.cljs" :expected "Unlinked graphs" :doc "unlinked graphs dir"}
+ {:symbol app-name :file "deps/common/src/logseq/common/config.cljs" :expected "logseq" :doc "app name (paths)"}
+ {:symbol db-version-prefix :file "deps/common/src/logseq/common/config.cljs" :expected "logseq_db_" :doc "repo prefix stripped from dir names"}
+ {:symbol config-file :file "src/main/frontend/config.cljs" :expected "config.edn" :doc "file-graph config"}
+ {:symbol custom-css-file :file "src/main/frontend/config.cljs" :expected "custom.css" :doc ""}
+ {:symbol custom-js-file :file "src/main/frontend/config.cljs" :expected "custom.js" :doc ""}
+ {:symbol export-css-file :file "src/main/frontend/config.cljs" :expected "export.css" :doc ""}
+ {:regex "\\[graph-dir-name \\(path/path-join graph-dir \"([^\"]+)\"\\)\\]" :file "deps/db/src/logseq/db/common/sqlite.cljs" :expected "db.sqlite" :doc "graph db file"}
+ {:regex "graph-dir-name \"(backups)\"" :file "deps/db/src/logseq/db/common/sqlite.cljs" :expected "backups" :doc "sqlite backups dir"}
+ {:symbol repo-path :file "src/main/frontend/worker/db_core.cljs" :expected "/db.sqlite" :doc "db path inside pool"}
+ {:regex "resolve-db-path repo pool \"(search/vector)\"" :file "src/main/frontend/worker/db_core.cljs" :expected "search/vector" :doc "vector index dir"}
+ {:regex "\\(str \"(client-ops-)\" repo-path\\)" :file "src/main/frontend/worker/db_core.cljs" :expected "client-ops-" :doc "client-ops dir (trailing hyphen)"}
+ {:symbol backup-root-dir-name :file "src/main/logseq/db_worker/graph_backup.cljs" :expected "backup" :doc "named backups root"}
+ {:symbol backup-db-file-name :file "src/main/logseq/db_worker/graph_backup.cljs" :expected "db.sqlite" :doc ""}
+ {:symbol backup-metadata-file-name :file "src/main/logseq/db_worker/graph_backup.cljs" :expected "metadata.edn" :doc ""}
+ {:regex "\\(node-path/join \\(ensure-graph-dir! db-name\\) \"(export)\"\\)" :file "src/electron/electron/db.cljs" :expected "export" :doc "db export dir"}
+
+ ;; ---- desktop / electron ------------------------------------------------
+ {:regex "dot-root \\(\\.join node-path \\(\\.getPath app \"home\"\\) \"(\\.logseq)\"\\)" :file "src/electron/electron/configs.cljs" :expected ".logseq" :doc "global dot-dir"}
+ {:regex "cfg-root \\(\\.getPath app \"(userData)\"\\)" :file "src/electron/electron/configs.cljs" :expected "userData" :doc "configs.edn lives in userData"}
+ {:regex "cfg-path \\(\\.join node-path cfg-root \"(configs\\.edn)\"\\)" :file "src/electron/electron/configs.cljs" :expected "configs.edn" :doc "app config file"}
+ {:regex "\\(\\.join node-path dot-root \"(graphs\\.edn)\"\\)" :file "src/electron/electron/configs.cljs" :expected "graphs.edn" :doc "graph registry"}
+ {:regex "PLUGINS_ROOT \\(\\.join node-path \\(\\.homedir os\\) \"(\\.logseq/plugins)\"\\)" :file "src/electron/electron/core.cljs" :expected ".logseq/plugins" :doc "plugins dir"}
+ {:regex "\\(utils/get-ls-dotdir-root\\) \"(settings)\" \\(str id \"\\.json\"\\)" :file "src/electron/electron/plugin.cljs" :expected "settings" :doc "plugin settings dir"}
+ {:regex "path/path-join home-dir \"logseq\" \"(auth\\.json)\"" :file "src/main/frontend/handler/user.cljs" :expected "auth.json" :doc "desktop auth file"}
+ {:regex "user-bin \\(path-join home-dir \"(\\.local)\" \"bin\"\\)" :file "src/electron/electron/cli_install.cljs" :expected ".local" :doc "unix cli launcher dir"}
+ {:regex "\\(node-path/join local-appdata \"(Microsoft)\" \"WindowsApps\"\\)" :file "src/electron/electron/core.cljs" :expected "Microsoft" :doc "windows cli launcher dir"}
+ {:regex "\\(if windows\\? \"(logseq\\.cmd)\" \"logseq\"\\)" :file "src/electron/electron/cli_install.cljs" :expected "logseq.cmd" :doc "windows launcher name"}
+ {:regex ":appimage-path \\(\\.-(APPIMAGE) js/process\\.env\\)" :file "src/electron/electron/core.cljs" :expected "APPIMAGE" :doc "linux appimage env"}
+ {:symbol runtime-dir-name :file "src/electron/electron/embedding_server.cljs" :expected "embedding-server" :doc "sidecar runtime dir under userData"}
+ {:symbol venv-name :file "src/electron/electron/embedding_server.cljs" :expected ".venv" :doc ""}
+ {:symbol deps-stamp-name :file "src/electron/electron/embedding_server.cljs" :expected "deps-v2.ok" :doc ""}
+ {:symbol log-file-name :file "src/electron/electron/embedding_server.cljs" :expected "embedding-server.log" :doc ""}
+ {:symbol keychain-service :file "src/main/frontend/worker/platform/node.cljs" :expected "Logseq E2EE" :doc "keytar service"}
+ {:regex "\"electron-log\": \"([0-9.]+)\"" :file "resources/package.json" :expected "5.4.3" :doc "electron-log version (log path defaults)"}
+ {:regex "\"productName\": \"([A-Za-z]+)\"" :file "resources/package.json" :expected "Logseq" :doc "userData dir name"}
+
+ ;; ---- node worker / cli ---------------------------------------------------
+ {:regex "\\(node-path/join \\(\\.homedir os\\) \"(logseq)\"\\)" :file "src/main/frontend/worker/db_worker_node_lock.cljs" :expected "logseq" :doc "worker root dir"}
+ {:regex "\\(resolve-root-dir root-dir\\) \"(graphs)\"" :file "src/main/frontend/worker/db_worker_node_lock.cljs" :expected "graphs" :doc "worker graphs dir"}
+ {:regex "\"(db-worker\\.lock)\"" :file "src/main/frontend/worker/db_worker_node_lock.cljs" :expected "db-worker.lock" :doc "lock file"}
+ {:regex "path/path-join root-dir-path \"(server-list)\"" :file "src/main/logseq/db_worker/server_list.cljs" :expected "server-list" :doc "worker registry"}
+ {:regex "\\(node-path/join data-dir \"(kv-store\\.json)\"\\)" :file "src/main/frontend/worker/platform/node.cljs" :expected "kv-store.json" :doc "worker kv store"}
+ {:regex "logs: <root-dir>/graphs/<graph-dir>/(db-worker-node-YYYYMMDD\\.log) \\(retains 7\\)" :file "src/main/frontend/worker/db_worker_node.cljs" :expected "db-worker-node-YYYYMMDD.log" :doc "worker log"}
+ {:regex "Filename\\.concat \\(Sys\\.getenv_opt \"HOME\" \\|> Option\\.value ~default:\"\\.\"\\) \"(logseq)\"" :file "cli/lib/cli_config.ml" :expected "logseq" :doc "cli root"}
+ {:regex "Filename\\.concat root_dir \"(cli\\.edn)\"" :file "cli/lib/cli_config.ml" :expected "cli.edn" :doc "cli config"}
+ {:regex "\"(auth\\.json)\"" :file "cli/lib/auth_state.ml" :expected "auth.json" :doc "cli auth file"}
+
+ ;; ---- browser / mobile ----------------------------------------------------
+ {:regex "db-dir-prefix \"(\\.logseq-pool-)\"" :file "src/main/frontend/worker/platform/browser.cljs" :expected ".logseq-pool-" :doc "OPFS dir prefix"}
+ {:regex "\\(str \"(logseq-pool-)\"" :file "src/main/frontend/worker_common/util.cljc" :expected "logseq-pool-" :doc "VFS pool prefix"}
+ {:symbol key-prefix :file "src/main/frontend/mobile/secure_storage.cljs" :expected "logseq.e2ee." :doc "mobile secure storage prefix"}
+ {:regex "appId: '([a-z.]+)'" :file "capacitor.config.ts" :expected "com.logseq.app" :doc "mobile app id"}
+ {:regex "<string>(iCloud\\.com\\.logseq\\.logseq)</string>" :file "ios/App/App/App.entitlements" :expected "iCloud.com.logseq.logseq" :doc "icloud container"}
+ {:regex "forSecurityApplicationGroupIdentifier: \"(group\\.com\\.logseq\\.logseq)\"" :file "ios/App/ShareViewController/ShareViewController.swift" :expected "group.com.logseq.logseq" :doc "ios app group"}
+ {:regex "getExternalStorageDirectory\\(\\) \\+ \"(/Documents/)\"" :file "android/app/src/main/java/com/logseq/app/FileUtil.java" :expected "/Documents/" :doc "android home mapping"}
+
+ ;; ---- self-hosted sync server -------------------------------------------
+ {:regex "\"DB_SYNC_DATA_DIR\"\\) \"(data/db-sync)\"" :file "deps/db-sync/src/logseq/db_sync/node/config.cljs" :expected "data/db-sync" :doc "server data dir"}
+ {:regex "\\(node-path/join data-dir \"(index\\.sqlite)\"\\)" :file "deps/db-sync/src/logseq/db_sync/node/storage.cljs" :expected "index.sqlite" :doc "server graph index"}
+ {:regex "\\(node-path/join \\(:data-dir cfg\\) \"(assets)\"\\)" :file "deps/db-sync/src/logseq/db_sync/node/server.cljs" :expected "assets" :doc "server assets dir"}
+
+ ;; ---- config.edn / plugins / backups / mirror ---------------------------
+ {:regex "\\(path/path-join @root-dir \"config\" \"(config\\.edn)\"\\)" :file "src/main/frontend/handler/global_config.cljs" :expected "config.edn" :doc "global config file under ~/.logseq/config"}
+ {:regex "<get-file-content repo-url \"(logseq/config\\.edn)\"" :file "src/main/frontend/handler/repo_config.cljs" :expected "logseq/config.edn" :doc "DB graph config is a virtual file in the db"}
+ {:regex "\\(util/node-path\\.join \"(storages)\" \\(util/node-path\\.basename plugin-id\\)\\)" :file "src/main/logseq/api/plugin.cljs" :expected "storages" :doc "plugin FileStorage sub-root"}
+ {:regex "\\(write_dotdir_file file content \"(tmp)\"\\)" :file "src/main/logseq/api/plugin.cljs" :expected "tmp" :doc "plugin dotdir scratch sub-root"}
+ {:regex "string/includes\\? file \"(assets/storages)\"" :file "src/electron/electron/plugin.cljs" :expected "assets/storages" :doc "allowed plugin asset write prefix"}
+ {:symbol backup-dir :file "src/electron/electron/backup_file.cljs" :expected "backups" :doc "file-graph backups dir"}
+ {:symbol automatic-backup-keep-versions :file "src/electron/electron/db.cljs" :expected 12 :doc "DB graph auto-backup versions kept"}
+ {:regex "\\(def \\^:private backup-interval-ms\\s*\\n\\s*\\(\\* (60 60 1000)\\)\\)" :file "src/electron/electron/db.cljs" :expected "60 60 1000" :doc "auto-backup throttle = 1h"}
+ {:regex "\"/(mirror/markdown)\"" :file "src/main/frontend/worker/markdown_mirror.cljs" :expected "mirror/markdown" :doc "markdown mirror dir under graph dir"}
+ {:regex "\\(str \"(journals/)\" stem \"\\.md\"\\)" :file "src/main/frontend/worker/markdown_mirror.cljs" :expected "journals/" :doc "mirror journals subdir"}
+ {:regex "\\(str \"(pages/)\" stem' \"\\.md\"\\)" :file "src/main/frontend/worker/markdown_mirror.cljs" :expected "pages/" :doc "mirror pages subdir"}
+ {:regex "\\(path/path-join \\(str \"(memory:///)\" graph-name\\)" :file "src/main/frontend/worker/platform/browser.cljs" :expected "memory:///" :doc "browser/mobile assets live in lightning-fs"}
+ {:regex "bucket_name = \"(logseq-sync-assets-prod)\"" :file "deps/db-sync/worker/wrangler.toml" :expected "logseq-sync-assets-prod" :doc "hosted assets bucket"}
+
+ ;; ---- custom.css / custom.js ------------------------------------------
+ {:regex "<get-file-content repo \"(logseq/custom\\.css)\"" :file "src/main/frontend/handler/ui.cljs" :expected "logseq/custom.css" :doc "DB graph custom.css is a virtual file"}
+ {:regex "\\(= path \"(logseq/custom\\.css)\"\\)" :file "src/main/frontend/handler/db_based/editor.cljs" :expected "logseq/custom.css" :doc "db editor recognises the virtual path"}
+ {:regex "\\(path/path-join repo-dir app-name (custom-js-file)\\)" :file "src/main/frontend/config.cljs" :expected "custom-js-file" :doc "file-graph custom.js = <repo>/logseq/custom.js"}
+
+ ;; ---- preferences / plugins.edn -----------------------------------------
+ {:regex "\\(path/path-join \\(global-config-handler/global-config-dir\\) \"(plugins\\.edn)\"\\)" :file "src/main/frontend/handler/plugin_config.cljs" :expected "plugins.edn" :doc "installed-plugins manifest under ~/.logseq/config"}
+ {:regex "\\(util/node-path\\.join path \"(preferences\\.json)\"\\)" :file "src/main/logseq/api/plugin.cljs" :expected "preferences.json" :doc "plugin-sdk preferences under ~/.logseq"}
+ {:regex "\\(js/localStorage\\.setItem \"(refresh-token)\" refresh-token\\)" :file "src/main/frontend/handler/user.cljs" :expected "refresh-token" :doc "auth tokens in localStorage"}]
