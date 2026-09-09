@@ -31,13 +31,15 @@ rows.sort(key=lambda r: (r[1] or "0000-00-00", r[0]))
 authored = [r for r in rows if r[4] == "authored-from-source"]
 merged   = [r for r in rows if r[4] == "merged-not-fully-audited"]
 gen      = [r for r in rows if r[4] == "generated-gated"]
-old      = [r for r in rows if r not in authored and r not in merged and r not in gen]
+audited  = [r for r in rows if r[4] == "audited"]
+old      = [r for r in rows if r not in authored and r not in merged and r not in gen and r not in audited]
 L = ["# Documentation status", "",
      f"Generated {datetime.date.today()} by",
      "`dz/support-engineering/script/doc-inventory/gen_task_list.py`. Do not edit by hand —",
      "every field comes from each document's frontmatter.", "",
      f"| | Count |", "|---|---|",
      f"| Documents | {len(rows)} |",
+     f"| Audited line by line this pass | {len(audited)} |",
      f"| Authored from source — trusted | {len(authored)} |",
      f"| Merged this pass — base inherited, needs a line-by-line audit | {len(merged)} |",
      f"| Generated, gated in CI | {len(gen)} |",
@@ -51,6 +53,10 @@ L += ["## Not reviewed", "",
       "| Document | Last verified | Against |", "|---|---|---|"]
 for rel, d, rev, _, _ in old:
     L.append(f"| `{rel}` | {d or '—'} | {rev or '—'} |")
+L += ["", "## Audited line by line", "",
+      "| Document | Date | Against |", "|---|---|---|"]
+for rel, d, rev, _, _ in audited:
+    L.append(f"| `{rel}` | {d} | `{rev or '—'}` |")
 L += ["", "## Merged this pass — needs a line-by-line audit", "",
       "| Document | Date | Against | Scope |", "|---|---|---|---|"]
 for rel, d, rev, scope, _ in merged:
@@ -60,4 +66,4 @@ L += ["", "## Authored from source", "",
 for rel, d, rev, _, _ in authored:
     L.append(f"| `{rel}` | {d} | `{rev or '—'}` |")
 open(out, "w").write("\n".join(L) + "\n")
-print(f"{len(rows)} docs: {len(authored)} authored, {len(merged)} merged-needs-audit, {len(old)} not reviewed -> {out}")
+print(f"{len(rows)} docs: {len(audited)} audited, {len(authored)} authored, {len(merged)} merged-needs-audit, {len(gen)} generated, {len(old)} not reviewed -> {out}")

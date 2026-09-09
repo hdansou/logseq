@@ -7,10 +7,11 @@ every field comes from each document's frontmatter.
 | | Count |
 |---|---|
 | Documents | 106 |
+| Audited line by line this pass | 10 |
 | Authored from source — trusted | 10 |
 | Merged this pass — base inherited, needs a line-by-line audit | 28 |
 | Generated, gated in CI | 1 |
-| Not reviewed | 67 |
+| Not reviewed | 57 |
 
 `merged-not-fully-audited` means the two copies were reconciled against source and
 every ported claim was verified, but content inherited from the surviving base was
@@ -80,16 +81,21 @@ Older date, or none. Highest priority.
 | `tutorials/getting-started/02-first-graph.md` | 2026-05-30 | — |
 | `tutorials/getting-started/03-basic-editing.md` | 2026-05-30 | — |
 | `tutorials/getting-started/04-linking-pages.md` | 2026-05-30 | — |
-| `explanation/architecture/block-editor.md` | 2026-09-09 | be800f1711 |
-| `explanation/architecture/data-architecture.md` | 2026-09-09 | be800f1711 |
-| `explanation/architecture/database-integrity.md` | 2026-09-09 | be800f1711 |
-| `explanation/architecture/schema-system.md` | 2026-09-09 | be800f1711 |
-| `explanation/concepts/bidirectional-properties.md` | 2026-09-09 | be800f1711 |
-| `explanation/concepts/tag-properties-vs-page-properties.md` | 2026-09-09 | be800f1711 |
-| `how-to/queries/advanced-queries.md` | 2026-09-09 | be800f1711 |
-| `reference/data/properties-reference.md` | 2026-09-09 | be800f1711 |
-| `reference/features/calculator.md` | 2026-09-09 | be800f1711 |
-| `tutorials/queries/charts-with-hiccup.md` | 2026-09-09 | be800f1711 |
+
+## Audited line by line
+
+| Document | Date | Against |
+|---|---|---|
+| `explanation/architecture/block-editor.md` | 2026-09-09 | `be800f1711` |
+| `explanation/architecture/data-architecture.md` | 2026-09-09 | `be800f1711` |
+| `explanation/architecture/database-integrity.md` | 2026-09-09 | `be800f1711` |
+| `explanation/architecture/schema-system.md` | 2026-09-09 | `be800f1711` |
+| `explanation/concepts/bidirectional-properties.md` | 2026-09-09 | `be800f1711` |
+| `explanation/concepts/tag-properties-vs-page-properties.md` | 2026-09-09 | `be800f1711` |
+| `how-to/queries/advanced-queries.md` | 2026-09-09 | `be800f1711` |
+| `reference/data/properties-reference.md` | 2026-09-09 | `be800f1711` |
+| `reference/features/calculator.md` | 2026-09-09 | `be800f1711` |
+| `tutorials/queries/charts-with-hiccup.md` | 2026-09-09 | `be800f1711` |
 
 ## Merged this pass — needs a line-by-line audit
 
