@@ -24,10 +24,7 @@ Older date, or none. Highest priority.
 | Document | Last verified | Against |
 |---|---|---|
 | `_templates/frontmatter.md` | ' # YYYY-MM-DD | — |
-| `explanation/architecture/block-editor.md` | — | — |
-| `explanation/architecture/database-integrity.md` | — | — |
 | `explanation/architecture/plugin-security.md` | — | — |
-| `explanation/architecture/schema-system.md` | — | — |
 | `explanation/concepts/block-editing-philosophy.md` | — | — |
 | `explanation/concepts/file-organization.md` | — | — |
 | `explanation/concepts/file-vs-database.md` | — | — |
@@ -68,14 +65,9 @@ Older date, or none. Highest priority.
 | `_templates/how-to-template.md` | 2026-01-29 | — |
 | `_templates/reference-template.md` | 2026-01-29 | — |
 | `_templates/tutorial-template.md` | 2026-01-29 | — |
-| `reference/features/calculator.md` | 2026-04-14 | — |
 | `explanation/concepts/block-tags-vs-page-tags.md` | 2026-04-22 | — |
-| `explanation/concepts/tag-properties-vs-page-properties.md` | 2026-04-22 | — |
-| `explanation/concepts/bidirectional-properties.md` | 2026-04-28 | — |
 | `how-to/content/hide-tags-from-node.md` | 2026-04-28 | — |
 | `how-to/tasks/disable-task-time-tracking.md` | 2026-04-28 | — |
-| `reference/data/properties-reference.md` | 2026-04-28 | — |
-| `explanation/architecture/data-architecture.md` | 2026-05-30 | — |
 | `explanation/architecture/system-overview.md` | 2026-05-30 | — |
 | `explanation/comparisons/rtc-vs-file-sync.md` | 2026-05-30 | — |
 | `explanation/concepts/file-vs-db.md` | 2026-05-30 | — |
@@ -84,12 +76,20 @@ Older date, or none. Highest priority.
 | `how-to/content/view-types.md` | 2026-05-30 | — |
 | `how-to/integrations/custom-css.md` | 2026-05-30 | — |
 | `how-to/integrations/custom-js.md` | 2026-05-30 | — |
-| `how-to/queries/advanced-queries.md` | 2026-05-30 | — |
 | `tutorials/getting-started/01-installation.md` | 2026-05-30 | — |
 | `tutorials/getting-started/02-first-graph.md` | 2026-05-30 | — |
 | `tutorials/getting-started/03-basic-editing.md` | 2026-05-30 | — |
 | `tutorials/getting-started/04-linking-pages.md` | 2026-05-30 | — |
-| `tutorials/queries/charts-with-hiccup.md` | 2026-05-30 | — |
+| `explanation/architecture/block-editor.md` | 2026-09-09 | be800f1711 |
+| `explanation/architecture/data-architecture.md` | 2026-09-09 | be800f1711 |
+| `explanation/architecture/database-integrity.md` | 2026-09-09 | be800f1711 |
+| `explanation/architecture/schema-system.md` | 2026-09-09 | be800f1711 |
+| `explanation/concepts/bidirectional-properties.md` | 2026-09-09 | be800f1711 |
+| `explanation/concepts/tag-properties-vs-page-properties.md` | 2026-09-09 | be800f1711 |
+| `how-to/queries/advanced-queries.md` | 2026-09-09 | be800f1711 |
+| `reference/data/properties-reference.md` | 2026-09-09 | be800f1711 |
+| `reference/features/calculator.md` | 2026-09-09 | be800f1711 |
+| `tutorials/queries/charts-with-hiccup.md` | 2026-09-09 | be800f1711 |
 
 ## Merged this pass — needs a line-by-line audit
 

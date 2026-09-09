@@ -2,7 +2,9 @@
 title: 'Data Architecture'
 description: 'Understanding how Logseq stores and manages knowledge graph data'
 status: stable
-lastVerified: '2026-05-30'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 logseqVersion: '0.11.x'
 category: architecture
 relatedDocs:
@@ -15,7 +17,10 @@ relatedDocs:
 
 # Data Architecture
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09 (audited against `be800f1711`)
+
+> **Graph model:** unless a section says otherwise, this page describes **DB graphs**
+> (SQLite-backed). Sections that describe the legacy **file graph** model are marked.
 
 > Understanding how Logseq structures, stores, and queries your knowledge.
 
@@ -37,7 +42,10 @@ In Logseq, all data is represented as entities:
 | **Block**    | Unit of content      | content, parent, children |
 | **Property** | Metadata field       | type, cardinality, schema |
 | **Class**    | Category/tag         | extends, properties       |
-| **Asset**    | Attached file        | asset/type, asset/size, asset/checksum |
+| **Asset**    | Attached file        | `:logseq.property.asset/type`, `/size`, `/checksum` |
+
+Source: `deps/db/src/logseq/db/frontend/class.cljs:68-74` (`:logseq.class/Asset` declares these three as
+both `:properties` and `:required-properties`).
 
 ### Entity-Attribute-Value (EAV)
 
@@ -148,6 +156,13 @@ Properties are first-class entities in database graphs:
 | `:node`     | Page/block ref   | [[Page Name]]  |
 | `:asset`    | Asset node ref   | Uploaded file block |
 
+These are exactly `logseq.db.frontend.property.type/user-built-in-property-types`
+(`deps/db/src/logseq/db/frontend/property/type.cljs:19-21`), listed there in UI order.
+A separate `internal-built-in-property-types` set —
+`#{:keyword :map :coll :any :entity :class :page :property :string :json :raw-number}` —
+is reserved for built-in properties (`type.cljs:15-17`); of those, only `:map`, `:json` and
+`:string` may be stored by users, and only via EDN or the API (`type.cljs:23-26`).
+
 ### Closed Values
 
 Properties can have predefined options:
@@ -163,7 +178,12 @@ Properties can have predefined options:
  {:db/ident :logseq.property/status.canceled :block/title "Canceled"}]
 ```
 
-Closed value entities reference back to their property via `:block/closed-value-property`.
+Closed value entities reference back to their property via `:block/closed-value-property`
+(`deps/db/src/logseq/db/frontend/schema.cljs:99-101`, a cardinality-many ref). The six status
+idents and titles above are exactly those declared at
+`deps/db/src/logseq/db/frontend/property.cljs:313-318`; the property's own type is `:default`
+with `:logseq.property/default-value :logseq.property/status.todo`
+(`property.cljs:300-322`).
 
 ---
 
@@ -176,22 +196,30 @@ Classes categorize entities and define schemas:
 ```clojure
 {:db/ident :logseq.class/Task
  :block/title "Task"
- :block/tags [:logseq.class/Tag]
- ;; schema properties defined during graph creation:
- ;; :logseq.property/status, :logseq.property/priority,
- ;; :logseq.property/deadline, :logseq.property/scheduled
- }
+ :block/tags #{:logseq.class/Tag}
+ ;; declared schema properties become :logseq.property.class/properties at graph creation
+ :logseq.property.class/properties [:logseq.property/status :logseq.property/priority
+                                    :logseq.property/deadline :logseq.property/scheduled]
+ :logseq.property.class/extends :logseq.class/Root}
 ```
 
-Note: User-created classes automatically extend `:logseq.class/Root` via `:logseq.property.class/extends`. Built-in classes like Task do not set an explicit extends.
+Source: `deps/db/src/logseq/db/frontend/class.cljs:40-42` (Task's declared schema properties) and
+`deps/db/src/logseq/db/sqlite/create_graph.cljs:145-167` (`build-initial-classes*`, which turns
+`:schema {:properties [...]}` into `:logseq.property.class/properties`).
+
+Note: **every** class — user-created and built-in alike — is created through
+`sqlite-util/build-new-class`, which tags it `:logseq.class/Tag` and, unless it is
+`:logseq.class/Root` itself or already declares an explicit extends, sets
+`:logseq.property.class/extends :logseq.class/Root`
+(`deps/db/src/logseq/db/sqlite/util.cljs:91-100`).
 
 ### Inheritance
 
 Classes can extend other classes:
 
 ```
-Built-in classes (all are tagged :logseq.class/Tag):
-  Root            (top-level, user classes extend this by default)
+Built-in classes (all are tagged :logseq.class/Tag; source: class.cljs:17-101):
+  Root            (top-level; every other class extends this unless it declares its own extends)
   Tag
   Property
   Page
@@ -215,14 +243,21 @@ Built-in classes (all are tagged :logseq.class/Tag):
 
 ### Types of References
 
-| Reference Type  | Syntax                | Creates Backlink |
-| --------------- | --------------------- | ---------------- |
-| Page link       | `[[Page Name]]`       | ✅ Yes           |
-| Block reference | `((block-uuid))`      | ✅ Yes           |
-| Block embed     | `{{embed ((uuid))}}`  | ✅ Yes           |
-| Property ref    | `property:: [[Page]]` | ✅ Yes           |
-| Tag             | `#[[Tag]]`            | ✅ Yes           |
+| Reference Type  | Syntax                | Stored as                                  |
+| --------------- | --------------------- | ------------------------------------------ |
+| Page link       | `[[Page Name]]`       | `:block/refs` (cardinality-many ref)       |
+| Block reference | `((block-uuid))`      | `:block/refs`                              |
+| Tag             | `#Tag` / `#[[Tag]]`   | `:block/tags` (and `:block/refs`)          |
+| Property value  | property of type `:node` / `:date` / `:asset` | a ref stored under the property's own `:db/ident` |
 
+All ref attributes are declared in `deps/db/src/logseq/db/frontend/schema.cljs:69-83`
+(`:block/refs`, `:block/tags`, `:block/link`, `:block/alias`).
+
+> **Removed:** the previous table listed `{{embed ((uuid))}}` and `property:: [[Page]]` as
+> reference *types*. `property:: value` is **file-graph markdown syntax**; DB graphs store property
+> values as datoms keyed by the property's `:db/ident`, and there is no `:block/properties` attribute
+> in the DB-graph datascript schema (`schema.cljs:57-106`). `{{embed ...}}` is a macro rendered at
+> display time, not a distinct reference kind in the schema.
 ### Backlinks
 
 Every reference creates a backlink:
@@ -238,7 +273,7 @@ Page B's backlinks:
 
 ## Storage Layers
 
-### File-Based Storage
+### File-Based Storage (file graphs only — legacy model)
 
 ```
 graph/
@@ -257,28 +292,46 @@ Files are parsed on load, building the in-memory database.
 
 ```
 <db-graph-storage>/
-├── db.sqlite        # Main database
-├── db.sqlite-wal    # Write-ahead log
-├── search.sqlite    # Search index database
+├── db.sqlite        # Main database (datascript.storage kvs table)
+├── search-db.sqlite # Search index database
 └── assets/
 ```
 
-SQLite provides ACID transactions and persistence.
+Source: `deps/db/src/logseq/db/common/sqlite.cljs:30-33` (`db.sqlite` path) and
+`src/main/frontend/worker/db_core.cljs:547-551` (the worker opens `/db.sqlite` and
+`/search-db.sqlite`).
 
-For database graphs, runtime state is still held in a DataScript connection in the db worker, with SQLite as the durable backing store.
+The main DB is not a relational block table: `db.sqlite` holds a single
+`kvs (addr INTEGER primary key, content TEXT, addresses JSON)` table used as a
+`datascript.storage` backend (`deps/db/src/logseq/db/common/sqlite.cljs:11-13`).
 
-### Storage Flow
+For database graphs, runtime state is held in a DataScript connection in the db worker, with
+SQLite as the durable backing store.
+
+> **Removed:** `search.sqlite` — the search index file is `search-db.sqlite`
+> (`src/main/frontend/worker/db_core.cljs:551`). `db.sqlite-wal` was also removed: no WAL sidecar
+> file is named anywhere in the source; the worker's storage layer is the datascript `kvs` table.
+
+### Storage Flow (DB graphs)
 
 ```
-User Edit
+User Edit (UI thread)
     │
     ▼
-DataScript Transaction
-    │
-    ├──► File-Based: Write to .md file
-    │
-    └──► Database: Write to SQLite
+ui-outliner-tx/transact!  collects [:op args] pairs
+    │   src/main/frontend/modules/outliner/ui.cljc:9-27
+    ▼
+:thread-api/apply-outliner-ops  (crosses into the db worker)
+    │   src/main/frontend/worker/handler/transaction.cljs:94
+    ▼
+logseq.outliner.op/apply-ops!   (malli-validates the ops, then dispatches)
+    │   deps/outliner/src/logseq/outliner/op.cljs:427-450
+    ▼
+logseq.db/transact!  →  pipeline  →  malli validate  →  commit + store
+        deps/db/src/logseq/db.cljs:153-180
 ```
+
+The outliner core runs **in the db worker**, not on the UI thread; the UI only enqueues ops.
 
 ---
 
@@ -286,7 +339,8 @@ DataScript Transaction
 
 ### Indexed Attributes
 
-Schema-defined indexes and identities (from `logseq.db.frontend.schema/schema`):
+Schema-defined indexes and identities (from `logseq.db.frontend.schema/schema`,
+`deps/db/src/logseq/db/frontend/schema.cljs:56-106` — every row below re-verified):
 
 | Attribute          | Index Type | Purpose               |
 | ------------------ | ---------- | --------------------- |
@@ -337,11 +391,28 @@ Schema-defined indexes and identities (from `logseq.db.frontend.schema/schema`):
 {:outliner-op :save-block}  ; or :insert-blocks, :delete-blocks, :move-blocks, etc.
 ```
 
+`:outliner-op` is attached by `logseq.outliner.core/op-transact!`
+(`deps/outliner/src/logseq/outliner/core.cljs:1282-1298`). The set of legal ops is the 30-entry
+malli `op-schema` in `deps/outliner/src/logseq/outliner/op.cljs:20-155`; `apply-ops!` asserts
+against it before anything is transacted (`op.cljs:427-429`).
+
+Several tx-meta flags change how a transaction is handled — notably `:skip-validate-db?`,
+`:initial-db?`, `:rtc-download-graph?`, `:reset-conn!` (skip the whole pipeline) and `:fix-db?`
+(run the pipeline but skip malli validation of its result)
+(`deps/db/src/logseq/db.cljs:113-130`).
+
 ---
 
 ## Undo/Redo
 
-Undo/redo history is recorded as structured history ops that include db transaction metadata (`:outliner-op` and optional db-sync tx identifiers), then replayed through worker history handlers.
+Undo/redo history is recorded as structured history ops that include db transaction metadata
+(`:outliner-op` and optional db-sync tx identifiers), then replayed through worker history handlers.
+The op items are themselves malli-validated: `::db-transact` carries `{:tx-meta {:outliner-op ...}
+:added-ids #{} :retracted-ids #{}}` plus optional `:db-sync/tx-id`,
+`:db-sync/forward-outliner-ops` and `:db-sync/inverse-outliner-ops`; the other two item kinds are
+`::record-editor-info` and `::ui-state`
+(`src/main/frontend/worker/undo_redo.cljs:11-63`). Undo/redo is worker-owned
+(`docs/adr/0012-worker-owned-undo-redo.md`).
 
 ```
 Undo Stack          Current State        Redo Stack
@@ -356,7 +427,14 @@ This is implemented as operation-history replay rather than a simple blanket "in
 
 ### Malli Schema
 
-Database graphs validate entities using Malli schemas defined in `logseq.db.frontend.malli-schema`. Validation covers entity structure, property values, and `:db/ident` namespace correctness.
+Database graphs validate entities using Malli schemas defined in `logseq.db.frontend.malli-schema`
+(`deps/db/src/logseq/db/frontend/malli_schema.cljs`). The top-level schema `DB` is
+`[:sequential Data]`, and `Data` is a `:multi` dispatching on `entity-dispatch-key`, which today
+routes to 13 branches: `:property`, `:class`, `:hidden`, `:normal-page`, `:reaction-entity`,
+`:property-history-block`, `:closed-value-block`, `:property-value-block`, `:block`,
+`:asset-block`, `:file-block`, `:db-ident-key-value`, `:property-value-placeholder`
+(`malli_schema.cljs:557-613`). Validation covers entity structure, property values, and
+`:db/ident` namespace correctness.
 
 ```clojure
 ;; Example: block order must be a valid fractional index string
@@ -366,9 +444,24 @@ Database graphs validate entities using Malli schemas defined in `logseq.db.fron
 
 ### Validation Points
 
-1. **Per transaction (default path)**: DB writes validate tx reports unless explicitly skipped via tx-meta flags (for migrations/initialization/replay paths).
-2. **Manual full-graph validation**: Available through worker API (`:thread-api/validate-db`) and developer tooling.
-3. **Import checks**: Import flows run explicit validation checks and report/fix issues where applicable.
+1. **Per transaction (default path)**: `logseq.db/transact-sync` runs `d/with` speculatively,
+   pipes the report through the transact pipeline, then calls
+   `logseq.db.frontend.validate/validate-tx-report` on the *changed* entity ids. If validation
+   fails the write is thrown away (`throw-invalid-tx!`) and never reaches the conn — so the commit
+   is atomic with respect to validation. Skipped for the tx-meta flags listed above.
+   (`deps/db/src/logseq/db.cljs:113-186`; `deps/db/src/logseq/db/frontend/validate.cljs:24-70`.)
+2. **Manual full-graph validation**: `:thread-api/validate-db` →
+   `frontend.worker.db.validate/validate-db`, which by default also *repairs*: it fixes the
+   `:logseq.property.class/extends` cardinality, wrong-typed icons, non-closed values and
+   num-prefixed `:db/ident`s, then loops validate-and-fix over invalid blocks
+   (`src/main/frontend/worker/db/validate.cljs:294-327`). Reachable from the developer command
+   `:dev/validate-db` (`src/main/frontend/handler/common/developer.cljs:84-85`).
+3. **Pre-export validation**: `export-repo-as-db-edn!` invokes `:thread-api/validate-db` and
+   throws `"Graph validation failed"` before writing the EDN
+   (`src/main/frontend/handler/db_based/export.cljs:80-88`).
+4. **Import checks**: `sqlite-export/validate-import-txs` gates `:batch-import-edn`
+   (`deps/outliner/src/logseq/outliner/op.cljs:214-231`), and the CLI/importer path uses
+   `validate-local-db!` (`deps/db/src/logseq/db/frontend/validate.cljs:126`).
 
 > **Removed:** "Automatic full-graph validation on graph open/import/sync" is not a single always-on lifecycle hook; validation is split across tx-time checks, explicit validation APIs, and import-specific checks.
 
@@ -378,13 +471,18 @@ Database graphs validate entities using Malli schemas defined in `logseq.db.fron
 
 ### Memory Usage
 
-- All data loaded in memory (DataScript)
-- Large graphs: 100k+ blocks = 100s MB RAM
+- All data loaded in memory (DataScript), in the db worker
 - Assets not loaded in memory
+
+> **Unverified:** the figure "100k+ blocks = 100s MB RAM" has no basis in source and no
+> benchmark is referenced anywhere in the repo. Treat it as folklore, not a specification.
 
 ### Optimization Strategies
 
-1. **Batch transactions**: Group related changes (`batch-transact!`, temp-conn batch paths)
+1. **Batch transactions**: Group related changes — `logseq.db/batch-transact-with-temp-conn!`
+   (`deps/db/src/logseq/db.cljs:262`) and `logseq.db/batch-transact!` (`db.cljs:318`). The
+   temp-conn path defers validation for the inner ops (`:skip-validate-db? true`) and validates
+   once at the end.
 2. **Indexed queries**: Prefer schema-indexed attributes for hot paths
 3. **Worker offloading**: Keep heavy DB operations and sync logic in db worker
 4. **Search/vector indexes**: Dedicated search DB and vector index pipeline for retrieval workflows
@@ -395,10 +493,33 @@ Database graphs validate entities using Malli schemas defined in `logseq.db.fron
 
 ## Findings: New Capabilities
 
-- Added built-in property type `:asset` for asset-node references in DB graphs.
-- Built-in class set now includes `:logseq.class/Comments` and `:logseq.class/Comment`.
-- DB runtime includes dedicated search-index progress/build flow and vector index integration in the db worker.
-- Validation/fix tooling in worker DB paths includes targeted repair routines (for example schema/cardinality and invalid-entity cleanup) exposed via validation APIs.
+- Added built-in property type `:asset` for asset-node references in DB graphs
+  (`deps/db/src/logseq/db/frontend/property/type.cljs:19-21`).
+- Built-in class set now includes `:logseq.class/Comments` and `:logseq.class/Comment`
+  (`deps/db/src/logseq/db/frontend/class.cljs:44-52`), plus `:logseq.class/Card`,
+  `:logseq.class/Cards`, `:logseq.class/Template` and the block-kind classes
+  `Code-block`, `Quote-block`, `Math-block`, `Pdf-annotation`.
+- **Vector / semantic search index.** The db worker opens a per-graph vector index at
+  `search/vector` alongside the FTS index, with a 384-dimension embedding
+  (`src/main/frontend/worker/search.cljs:151`), a 1024-row upsert batch, and result gating at
+  `max-vector-search-results 10` / `min-vector-search-score 0.5` (`search.cljs:17-19`).
+  Lifecycle lives in `src/main/frontend/worker/db_core.cljs:490-583, 731-739`.
+- **Reactions are first-class entities.** `:logseq.property.reaction/target` /
+  `/emoji-id` back a `:toggle-reaction` outliner op
+  (`deps/outliner/src/logseq/outliner/op.cljs:154-158, 176-212`) and a dedicated
+  `:reaction-entity` malli branch (`malli_schema.cljs:438`).
+- **Recycle bin.** `:restore-recycled` and `:recycle-delete-permanently` outliner ops back a
+  soft-delete flow via `logseq.outliner.recycle` (`op.cljs:143-151`), with
+  `:logseq.property/deleted-at` on the entity (`malli_schema.cljs:284`).
+- **Property history.** `:logseq.property/enable-history?` on a property records value changes
+  into `:property-history-block` entities (`malli_schema.cljs:450-469`;
+  `property.cljs:319-322`).
+- **Markdown mirror.** DB graphs can mirror to markdown on disk, toggled per graph
+  (`src/main/frontend/persist_db.cljs:216-246`).
+- Validation/fix tooling in worker DB paths includes targeted repair routines — extends
+  cardinality, wrong-typed icons, non-closed values, num-prefixed `:db/ident`s, and a
+  validate-and-fix loop over invalid blocks
+  (`src/main/frontend/worker/db/validate.cljs:222-327`).
 
 ---
 
@@ -410,4 +531,4 @@ Database graphs validate entities using Malli schemas defined in `logseq.db.fron
 
 ---
 
-_Last updated: 2026-05-30_
+_Last updated: 2026-09-09_

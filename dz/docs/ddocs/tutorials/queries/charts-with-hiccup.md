@@ -4,7 +4,9 @@ description: 'Learn to render ASCII bar charts and full SVG line charts directly
 status: draft
 difficulty: intermediate
 timeToComplete: '45 minutes'
-lastVerified: '2026-05-30'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 logseqVersion: '0.11.x (DB graphs only)'
 platforms: [desktop, web]
 prerequisites:
@@ -18,7 +20,7 @@ relatedDocs:
 
 # Build ASCII and SVG Charts in Logseq Queries with Hiccup
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09 (verified against `be800f1711`)
 > **What you'll learn**: How to use the `:view` function in advanced queries to render aggregation results as ASCII bar charts and SVG line charts, and how to register reusable chart templates in `config.edn`.
 
 ## Introduction
@@ -45,9 +47,14 @@ When you write an advanced query, the result is passed to a renderer. By default
  :view (fn [r] [:pre.code (pr-str r)])}
 ```
 
-`:view` receives the raw query result (`r`) and must return a [Hiccup](https://github.com/weavejester/hiccup) vector — a Clojure data structure that maps to HTML/SVG. Logseq evaluates the function in an [SCI](https://github.com/babashka/sci) sandbox.
+`:view` receives the normalized query result (`r`) and must return a [Hiccup](https://github.com/weavejester/hiccup) vector — a Clojure data structure that maps to HTML/SVG. Logseq evaluates the function in an [SCI](https://github.com/babashka/sci) sandbox (`src/main/frontend/components/query.cljs:148-149`, `src/main/frontend/extensions/sci.cljs:50-58`).
 
-> 💡 **Why `:view` is required for aggregations**: a query like `[:find ?status (count ?b)]` returns tuples, not block entities. The default renderer can't display them — it ignores them. Without `:view`, your query produces no visible output.
+> 💡 **Why `:view` is required for aggregations**: a query like `[:find ?status (count ?b)]` returns scalar tuples, not block entities. Without a `:view`, the renderer falls back to a plain `<ul>` of stringified rows (`src/main/frontend/components/query.cljs:75-85`) — readable, but not a chart.
+
+> ⚠️ **What `r` actually contains.** Queries run in the DB worker and every row is passed through `normalize-query-row` before it reaches your `:view` (`src/main/frontend/worker/handler/render_resource/query.cljs:40-46,195-202`). Two consequences:
+>
+> - **Block cells become UUIDs, not entity maps.** A `(pull ?b [*])` row arrives in `:view` as a bare `:block/uuid`, so `(:block/title r)` is `nil` there. If you need block fields inside `:view`, `:find` them as explicit scalar columns instead of pulling.
+> - **Multi-column rows stay as tuples.** A 2-column `:find` yields a vector of 2-element vectors. See the test `query-resource-preserves-scalar-tuples-test` (`src/test/frontend/worker/handler/render_resource_test.cljs:2021-2038`), which asserts `{:rows [["Jan 1st, 2020" 20200101]]}`. A single-column `:find` is unwrapped to the bare value.
 
 ## Step 1: Render the Raw Result
 
@@ -70,10 +77,12 @@ Create a new block, add the `query::` property, and paste this:
 **Expected result**: a code block showing the raw result, e.g.
 
 ```text
-("Todo" 5 "Doing" 2 "Done" 11)
+[["Todo" 5] ["Doing" 2] ["Done" 11]]
 ```
 
-> ⚠️ **Important**: Logseq DB **flattens** aggregation results into a single sequence of alternating values, **not** a sequence of tuples. Your `:view` must use `(partition N r)` to re-pair them, where N is the number of `:find` variables.
+> **Removed:** Earlier revisions of this page claimed that Logseq DB *flattens* aggregation results into a single alternating sequence (`("Todo" 5 "Doing" 2 …)`) and that every `:view` therefore needs `(partition N r)`. That is no longer true. Since the worker render-resource pipeline landed (`src/main/frontend/worker/handler/render_resource/query.cljs`, added 2026-08-04), each row keeps its tuple shape — `normalize-query-row` returns the tuple verbatim whenever it has more than one column (lines 40-46). Adding `(partition 2 r)` on top of that regroups *rows*, not columns, and silently produces a broken chart. Destructure the tuples directly.
+
+Always confirm the shape with `(pr-str r)` before writing chart code — it takes ten seconds and it is the one step that catches an unwrapped-vs-tuple mistake.
 
 ## Step 2: Build an ASCII Bar Chart
 
@@ -90,7 +99,7 @@ Now render that count data as a horizontal text bar chart:
                [?s :db/ident :logseq.property/status.done])
            [?s :block/title ?status]]
    :view (fn [r]
-           (let [rows    (partition 2 r)
+           (let [rows    (vec r)
                  max-cnt (apply max (mapv (fn [[_ c]] c) rows))
                  bar-max 30
                  label-w (apply max (mapv (fn [[s _]] (count s)) rows))
@@ -115,7 +124,7 @@ Done  │ ███████████████████████�
 
 | Step              | What it does                                                                             |
 | ----------------- | ---------------------------------------------------------------------------------------- |
-| `(partition 2 r)` | Re-pairs the flat result `("Todo" 5 "Doing" 2 …)` into `(["Todo" 5] ["Doing" 2] …)`.     |
+| `(vec r)`         | `r` is already a sequence of `["Todo" 5]` tuples; `vec` only makes indexing cheap. Do **not** `partition` it. |
 | `max-cnt`         | Finds the largest count so we can scale bars proportionally.                             |
 | `bar`             | Builds a string of `█` characters proportional to the count, capped at `bar-max` (30).   |
 | `pad`             | Right-pads each label so the bar columns line up.                                        |
@@ -133,7 +142,7 @@ For this step you need a tagged page with some numeric properties. If you don't 
   {:query [:find ?title ?day ?running ?walking
            :where
            [?p :block/tags ?t]
-           [?t :db/ident :user.class/habit-tracker]
+           [?t :block/title "habit-tracker"]
            [?p :block/journal-day ?day]
            [?p :block/title ?title]
            [?p :user.property/running ?ru]
@@ -141,8 +150,7 @@ For this step you need a tagged page with some numeric properties. If you don't 
            [?p :user.property/walking ?wa]
            [?wa :logseq.property/value ?walking]]
    :view (fn [r]
-           (let [rows   (sort-by (fn [x] (nth x 1)) <
-                                 (partition 4 r))
+           (let [rows   (sort-by (fn [x] (nth x 1)) < (vec r))
                  n      (count rows)
                  days   (mapv (fn [x]
                                 (let [d (str (nth x 1))]
@@ -202,8 +210,16 @@ For this step you need a tagged page with some numeric properties. If you don't 
   ```
 ````
 
-> 💡 **Property idents**: replace `:user.property/running` and `:user.property/walking` with the actual idents from your graph. User properties often include generated suffixes (e.g. `:user.property/running-jHqSz90j`), but ident formats can vary across imported graphs and environments. Find actual idents with `[:find ?ident :where [?p :db/ident ?ident] [(clojure.string/starts-with? (str ?ident) ":user.property/")]]`.
-> ⚠️ **Number properties are entity refs**: a direct `[?p :user.property/running ?x]` binds `?x` to a value-entity's `:db/id`, **not** the number. You must add a deref step `[?x :logseq.property/value ?n]` to get the actual number. Tip: if results show suspiciously consecutive small integers, that's the giveaway you're looking at eids.
+> ⚠️ **Never hardcode a user ident.** Every user-created property *and class* ident gets an 8-character random suffix when it is created — `"-"` plus one letter plus a 7-character nano-id (`deps/db/src/logseq/db/frontend/db_ident.cljc:82-90`, reached via `create-user-property-ident-from-name` at `deps/db/src/logseq/db/frontend/property.cljs:854-859` and `create-user-class-ident-from-name` at `deps/db/src/logseq/db/frontend/class.cljs:178-186`). So your habit-tracker tag is `:user.class/habit-tracker-a3Kf9Qz1`, **not** `:user.class/habit-tracker`. Matching a class by `[?t :block/title "habit-tracker"]` — as above — is portable; matching by `:db/ident` is not. Replace `:user.property/running` / `:user.property/walking` with your graph's real idents, which you can list with:
+>
+> ```clojure
+> [:find ?ident :where [?p :db/ident ?ident]
+>  [(str ?ident) ?s] [(clojure.string/starts-with? ?s ":user.property/")]]
+> ```
+>
+> (The suffix is skipped only for `plugin.class.*` namespaces, and for test runs with `$LOGSEQ_STABLE_IDENTS` set.)
+
+> ⚠️ **Number properties are entity refs**: `:number` is in `original-value-ref-property-types` (`deps/db/src/logseq/db/frontend/property/type.cljs:52-56`), so a direct `[?p :user.property/running ?x]` binds `?x` to a value-entity's `:db/id`, **not** the number. You must add a deref step `[?x :logseq.property/value ?n]` to get the actual number. Tip: if results show suspiciously consecutive small integers, that's the giveaway you're looking at eids.
 
 **Expected result**: a clean two-line chart with axes, gridlines, dot markers, value labels, and a legend identifying running and walking.
 
@@ -234,7 +250,7 @@ Open your graph's `config.edn` (Settings → Edit config.edn) and add:
 
  :ascii-bars
  (fn [r]
-   (let [rows    (partition 2 r)
+   (let [rows    (vec r)
          max-cnt (apply max (mapv (fn [[_ c]] c) rows))
          bar-max 30
          label-w (apply max (mapv (fn [[s _]] (count s)) rows))
@@ -268,25 +284,32 @@ In any advanced query, use the keyword instead of an inline function:
 
 **Expected result**: the same ASCII bar chart as Step 2, but the `:view` is just `:ascii-bars` — clean and reusable.
 
-> 💡 **How it works**: when Logseq sees `:view` is a keyword, it looks up `[:query/views <keyword>]` in `config.edn`, stringifies the function with `pr-str`, then evaluates it with SCI. The function still runs in the same sandbox as inline `:view`s — no closure capture, no external `require`.
+> 💡 **How it works**: when Logseq sees `:view` is a keyword, it looks up `[:query/views <keyword>]` in `config.edn`, stringifies the function with `pr-str`, then evaluates it with SCI (`src/main/frontend/components/query.cljs:148-149`). The function still runs in the same sandbox as inline `:view`s — no closure capture, no external `require`. `config.edn` validates `:query/views` as `[:map-of :keyword [:sequential any?]]` (`src/main/frontend/schema/handler/common_config.cljc:34-36`), so each value must be a *list* form such as `(fn [r] …)`.
+>
+> ⚠️ Unlike `:result-transform`, a missing `:query/views` entry is **not** reported. `:view` simply resolves to `nil` and the query falls back to the default renderer, so a typo in the keyword looks like "my chart disappeared". `:result-transform` by contrast throws `"Missing query result transform"` (`src/main/frontend/components/query.cljs:134-140`).
+>
+> 💡 `pprint` is one of the few helpers injected into the SCI `user` namespace, alongside `sum`, `average`, `parseFloat`, `isNaN`, `log` and `call-api` (`src/main/frontend/extensions/sci.cljs:29-37`) — which is why the `:pprint` view above works.
 
 ### Tip: parameterize via the result shape
 
-Since registered views can't take config arguments (only the query result `r`), design them around a **result-shape contract**. For example, a generic ASCII bar chart assumes the result is `(label1 value1 label2 value2 …)` from `[:find ?label (count ?b)]`. Any query producing that shape can use `:view :ascii-bars`.
+Since registered views can't take config arguments (only the query result `r`), design them around a **result-shape contract**. For example, a generic ASCII bar chart assumes the result is a sequence of `[label value]` tuples from `[:find ?label (count ?b)]`. Any query producing that shape can use `:view :ascii-bars`.
 
-For richer parameterization, design your view to accept a "sentinel" first row. For example, a polymorphic chart could expect `(:type "line" :title "..." val1 val2 …)` and switch on the first element.
+For richer parameterization, design your view to accept a "sentinel" first row — for example a polymorphic chart that expects `["line" "My title"]` as row 0 and switches on it.
 
 ## Findings: New Capabilities
 
-- `config.edn` supports both `:query/views` and `:query/result-transforms` as keyword-addressable functions, so you can keep chart rendering and post-processing reusable and centralized.
-- User property idents are generated with uniqueness suffixes by default in DB graphs; query snippets should always discover idents from the graph instead of hardcoding guessed names.
+- **Queries now execute in the DB worker behind a render-resource contract.** `src/main/frontend/worker/handler/render_resource/query.cljs` (added 2026-08-04) validates the query spec, runs it, applies `:result-transform`, and normalizes every row before it crosses back to the UI. This is what changed the shape `:view` receives.
+- **`:result-transform` and `:view` no longer see the same data.** `:result-transform` runs in the worker on the *pre-normalization* rows — pulled maps or entities (`render_resource/query.cljs:181-202`). `:view` runs in the UI on the *post-normalization* rows, where block cells have already collapsed to UUIDs. Do entity-level filtering and sorting in `:result-transform`; do presentation in `:view`.
+- **A `:result-transform` must return a sequential or set**, or the worker fails the resource with `"Query result transform must return rows"` (`render_resource/query.cljs:188-191`).
+- `config.edn` supports both `:query/views` and `:query/result-transforms` as keyword-addressable functions (`src/main/frontend/schema/handler/common_config.cljc:34-38`), so you can keep chart rendering and post-processing reusable and centralized.
+- User property **and class** idents are generated with random uniqueness suffixes in DB graphs (`deps/db/src/logseq/db/frontend/db_ident.cljc:82-90`); query snippets should always discover idents from the graph, or match on `:block/title`, instead of hardcoding guessed names.
 
 ## Verify Your Work
 
 You should now be able to:
 
-1. Run an aggregation query and see the raw flat-seq result via `:view (fn [r] [:pre.code (pr-str r)])`.
-2. Render an ASCII bar chart using `(partition 2 r)` and `[:pre.code …]`.
+1. Run an aggregation query and see the raw tuple result via `:view (fn [r] [:pre.code (pr-str r)])`.
+2. Render an ASCII bar chart by destructuring each `[label count]` tuple into `[:pre.code …]`.
 3. Render a full SVG line chart with axes, polylines, dots, value labels, and a legend.
 4. Register `:ascii-bars` in your `config.edn` under `:query/views` and reference it as `:view :ascii-bars` in any query block.
 
@@ -295,7 +318,7 @@ You should now be able to:
 In this tutorial, you:
 
 - ✅ Used `:view` to override Logseq's default block renderer.
-- ✅ Learned that aggregation results are flattened — `(partition N r)` re-pairs them.
+- ✅ Learned that multi-column results arrive as tuples, that single-column results are unwrapped, and that block cells arrive as UUIDs.
 - ✅ Built a hand-rendered ASCII bar chart with `:pre.code` and `█` characters.
 - ✅ Built a full SVG line chart with axes, polylines, dots, gridlines, and a legend.
 - ✅ Registered reusable views in `config.edn` under `:query/views` and called them by keyword.
@@ -308,35 +331,37 @@ In this tutorial, you:
 
 ## Troubleshooting
 
-### Query runs but produces no output
+### Query runs but shows a plain bullet list instead of a chart
 
-**Problem**: `:view` is missing on an aggregation query, so Logseq's default block renderer drops the non-block tuples.
+**Problem**: `:view` is missing (or its keyword did not resolve), so the renderer falls back to stringifying each row into a `<ul>` (`src/main/frontend/components/query.cljs:75-85`).
 
-**Solution**: aggregation queries (anything using `count`, `sum`, scalar values, or non-entity tuples in `:find`) **always** require a `:view`. Add at minimum `(fn [r] [:pre.code (pr-str r)])` to see the raw result.
+**Solution**: add a `:view`. Start with `(fn [r] [:pre.code (pr-str r)])` to see the exact shape, then build up. If you used `:view :some-keyword`, check the key really exists under `:query/views` in `config.edn` — a missing key resolves to `nil` silently.
+
+### Chart shows one giant bar, or `nth` / destructuring errors
+
+**Problem**: the view is calling `(partition N r)` on a result that is already a sequence of tuples. `(partition 2 [["Todo" 5] ["Doing" 2] ["Done" 11]])` yields `((["Todo" 5] ["Doing" 2]) (["Done" 11]))`, so `[status cnt]` destructures a *pair of rows* rather than a label and a count.
+
+**Solution**: remove the `partition`. Destructure each row directly. See the "What `r` actually contains" note above.
 
 ### Block renders blank with no console error
 
-> **Removed:** The previous claim that SCI silently drops idioms like `map-indexed`, `#()` reader macros, and keyword-as-function calls is stale for current builds.
+> **Removed:** The previous claim that SCI silently drops idioms like `map-indexed`, `#()` reader macros, and keyword-as-function calls is stale. `frontend.extensions.sci/eval-string` is a plain `sci/eval-string` with a small `user` namespace merged in (`src/main/frontend/extensions/sci.cljs:39-58`); standard SCI supports all three.
 
-**Current guidance**: if a custom view renders blank, first validate output shape with `(fn [r] [:pre.code (pr-str r)])`, then add chart logic incrementally and check browser console errors for malformed Hiccup or runtime exceptions.
+**Current guidance**: `eval-string` catches every exception, logs `:sci-eval-failed`, and returns `nil` (`src/main/frontend/extensions/sci.cljs:55-58`) — so a view that throws at *definition* time disappears without a visible error. Filter the browser console for `sci-eval-failed`. A view that throws at *call* time is caught separately and rendered as a `:query/custom-view-error` message (`src/main/frontend/components/query.cljs:44-49`).
 
-### `nth not supported on this type Number()` error
-
-**Problem**: the first column of your `:find` is a number (e.g. `:block/journal-day` returns an integer like `20260418`), and Logseq's pre-render check `grouped-by-page-result?` calls `first` on it before your `:view` runs.
-
-**Solution**: ensure the **first** `:find` variable binds to a string or entity. Add `[?p :block/title ?title]` and put `?title` first — even if you don't use it in `:view`, it unblocks rendering.
+> **Removed:** The troubleshooting entry for `nth not supported on this type Number()` — attributed to a pre-render `grouped-by-page-result?` check calling `first` on a numeric first column — no longer applies. No such function exists anywhere in `be800f1711`, and the current pipeline routes rows through `query-tuples` / `normalize-query-row` (`render_resource/query.cljs:151-159,40-46`), which handle numeric columns fine. You no longer need a dummy leading `?title` column.
 
 ### `:title` key is ignored
 
-**Problem**: for regular advanced query blocks, the top-level `:title "..."` key is not reliably shown in the result renderer.
+**Problem**: for regular advanced query blocks, the top-level `:title "..."` key is never rendered. The title header is drawn only on *built-in* queries (`src/main/frontend/components/query.cljs:166-177`); ordinary query blocks take the `[:div.bd …]` branch, which has no title. File-graph queries that carried a `:title` had it hoisted into the block's own `:block/title` on import, and the key stripped from the map (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1159-1167,1406-1410`).
 
-**Solution**: put your heading inside `:view` as `[:h3 "..."]` or `[:text {:x ... :y ...} "..."]` for SVG, or as a markdown header in the block above the `query::` property.
+**Solution**: put your heading inside `:view` as `[:h3 "..."]` or `[:text {:x ... :y ...} "..."]` for SVG, or as ordinary text in the query block itself.
 
 ### `Query Error` on an apparently valid query
 
-**Problem**: `:limit N` was placed inside the `:find` vector. Logseq DB rejects it.
+**Problem**: `:limit N` was placed inside the `:find` vector. The query vector is handed straight to `d/q` (`src/main/frontend/worker/handler/query.cljs:261`), and Datascript's find-spec parser rejects it.
 
-**Solution**: drop `:limit` and bound results either via `:where` filters or by post-processing in `:view` with `(take N rows)` after partition.
+**Solution**: drop `:limit` and bound results either via `:where` filters, via `:result-transform` with `(take N rows)`, or by taking a slice inside `:view`.
 
 ### Number property values look like consecutive small integers (1095, 1093, …)
 
@@ -353,4 +378,4 @@ Use `?actual-number` in `:find`.
 
 ---
 
-_Last updated: 2026-05-30 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 (audited against `be800f1711`) | [Report an issue](https://github.com/logseq/logseq/issues)_

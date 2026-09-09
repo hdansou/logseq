@@ -3,7 +3,9 @@ title: 'Calculator Reference'
 description: "Reference for Logseq's built-in calculator code block mode"
 type: reference
 status: stable
-lastVerified: '2026-04-14'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web]
 graphType: [file, db]
@@ -14,7 +16,7 @@ relatedDocs:
     - '[Calculator Investigation](../../../07-investigations/calculator-feature-investigation.md)'
 ---
 
-> **Last revised:** 2026-04-14
+> **Last revised:** 2026-09-09 (verified against `be800f1711`)
 > The built-in calculator is a live `calc` code block mode inside Logseq. You enter expressions line by line and Logseq renders the result for each line beside the editor.
 
 ## Overview
@@ -172,6 +174,14 @@ Formatting directives start with `:` and affect how later decimal results are di
 | `frac` | `fraction`, `fractions` | optional max denominator | mixed-number fractions |
 | `imp` | `improper` | optional max denominator | improper fractions |
 
+Mode names and their aliases are matched case-insensitively — the grammar marks
+every one `(?i)` (`src/resources/grammar/calc.bnf#L41-L46`) — so `:format FIX 2`
+and `:FMT Fixed 2` are both accepted.
+
+Defaults when a parameter is omitted: `frac` and `imp` use a maximum denominator
+of 4095, and `norm` uses a precision of 21 significant digits
+(`src/main/frontend/extensions/calc.cljc#L169-L195`).
+
 Examples:
 
 ```calc
@@ -213,12 +223,24 @@ The calculator accepts numbers in binary, octal, and hexadecimal form.
 | Octal | `0o` | `0o20` |
 | Hexadecimal | `0x` | `0xFF` |
 
-You can also change the output base with directives:
+Digit-group separators are allowed in every base and are stripped before
+evaluation, so `1,000,000` and `0xFF,FF` are valid input
+(`src/resources/grammar/calc.bnf#L31-L34`, `calc.cljc#L43`).
 
-- `:bin`
-- `:oct`
-- `:hex`
-- `:dec`
+You can also change the output base with directives. Each has a long alias and
+all are case-insensitive (`calc.bnf#L47-L51`):
+
+| Directive | Aliases |
+| --------- | ------- |
+| `:bin` | `:binary` |
+| `:oct` | `:octal` |
+| `:hex` | `:hexadecimal` |
+| `:dec` | `:decimal` |
+
+`:dec` works by naming a base that the formatter does not special-case, so
+output falls back to the current `:format` mode
+(`calc.cljc#L180-L206`). Note that a base directive **overrides** the format
+mode while it is active — `:hex` wins over a previously set `:format fix 2`.
 
 Example:
 
@@ -249,11 +271,17 @@ If a line cannot be parsed or evaluated, Logseq renders `?` for that output line
 This usually means one of these happened:
 
 - malformed syntax
-- invalid variable reference
+- invalid variable reference (`"Can't find variable %s"`, `calc.cljc#L111-L117`)
 - unsupported input
-- illegal reassignment of a constant such as `PI`
+- illegal reassignment of a constant such as `PI` (`"Can't redefine constant %s"`, `calc.cljc#L82-L87`)
 
-The rest of the block still renders line by line.
+The rest of the block still renders line by line: each line is parsed and
+evaluated independently, and only failures are replaced with `?`
+(`calc.cljc#L209-L215`, `calc.cljc#L230-L235`).
+
+`?` is not the only failure surface. Some operations return `NaN` rather than
+failing — notably factorial, which is only computed for positive integers below
+254 and otherwise yields `NaN` (`calc.cljc#L59-L61`).
 
 ## Examples
 
@@ -295,18 +323,50 @@ exp(1)
 ## Scope and Limitations
 
 - Results are **derived**, not stored separately.
-- Variables exist only within the current calculator block evaluation.
+- Variables exist only within the current calculator block evaluation — a fresh
+  `env` atom is created per evaluation of the whole block (`calc.cljc#L209-L215`),
+  so nothing carries over between calculator blocks.
 - Trigonometric functions use **radians**.
-- Mobile support was not explicitly verified in the current code investigation.
+- Arithmetic runs on `bignumber.js`, so `+ - * / ^ mod` and factorial keep
+  arbitrary precision. The transcendental functions (`log`, `ln`, `exp`, `sin`,
+  `cos`, `tan`, `asin`, `acos`, `atan`) and non-integer exponentiation delegate
+  to JavaScript `Math` and are therefore only double-precision
+  (`calc.cljc#L55-L81`).
 - Error output is intentionally compact: failed lines show `?` rather than detailed error text.
+
+> **Unverified:** mobile behaviour. The calculator is a CodeMirror code-block
+> mode, and nothing in the source gates it by platform, but this has not been
+> exercised on a mobile build. Frontmatter lists `platforms: [desktop, web]`
+> accordingly.
+
+## Findings: New Capabilities
+
+- **Format and base directives are case-insensitive and have long aliases** —
+  `:format FIXED 2`, `:hexadecimal`, `:binary` all parse
+  (`src/resources/grammar/calc.bnf#L41-L51`). Previously documented only in short,
+  lowercase form.
+- **Digit-group separators are accepted in numeric literals in every base**
+  (`calc.bnf#L31-L34`; commas are stripped at `calc.cljc#L43`).
+- **A `:format norm` directive clears any `:places` set by `fix`/`sci`**, and
+  `:format frac` clears the `improper` flag left by `:format imp`
+  (`calc.cljc#L97-L107`) — so the modes are cleanly switchable rather than
+  accumulating.
+- **`:format` directives return the current `last` value**, which is why a
+  directive line renders the previous result rather than a blank
+  (`calc.cljc#L91-L110`).
 
 ## Implementation Notes
 
 The current implementation is backed by:
 
-- slash command registration in [src/main/frontend/commands.cljs](../../../../../src/main/frontend/commands.cljs#L106-L116)
-- live code-block evaluation in [src/main/frontend/extensions/code.cljs](../../../../../src/main/frontend/extensions/code.cljs#L461-L464)
-- parser and evaluator logic in [src/main/frontend/extensions/calc.cljc](../../../../../src/main/frontend/extensions/calc.cljc#L19-L232)
-- grammar definition in [src/resources/grammar/calc.bnf](../../../../../src/resources/grammar/calc.bnf#L1-L39)
+- slash command steps in [src/main/frontend/commands.cljs](../../../../../src/main/frontend/commands.cljs#L119-L123), registered in the slash-command table at [line 331-334](../../../../../src/main/frontend/commands.cljs#L331-L334)
+- live code-block evaluation in [src/main/frontend/extensions/code.cljs](../../../../../src/main/frontend/extensions/code.cljs#L471-L474), with initial and re-render evaluation at [L590-L615](../../../../../src/main/frontend/extensions/code.cljs#L590-L615) and result rendering at [L638-L639](../../../../../src/main/frontend/extensions/code.cljs#L638-L639)
+- parser and evaluator logic in [src/main/frontend/extensions/calc.cljc](../../../../../src/main/frontend/extensions/calc.cljc#L18-L215), with the results component at [L220-L235](../../../../../src/main/frontend/extensions/calc.cljc#L220-L235)
+- grammar definition in [src/resources/grammar/calc.bnf](../../../../../src/resources/grammar/calc.bnf#L1-L52)
+- slash-command label and description in [src/resources/dicts/en.edn](../../../../../src/resources/dicts/en.edn#L519-L520)
+
+> **Note:** all four line ranges above drifted since the 2026-04-14 revision and
+> have been re-pinned against `be800f1711`. The grammar in particular grew from
+> 39 to 52 lines.
 
 For a deeper code-level walkthrough, see the [Calculator Investigation](../../../07-investigations/calculator-feature-investigation.md).
