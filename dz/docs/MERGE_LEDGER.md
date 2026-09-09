@@ -164,5 +164,8 @@ review candidate — verify against source, then add if still true.
 - [ ] Retire root `ddocs/`
 - [ ] Rewrite inbound `../../../ddocs/` references under `dz/docs/`
 - [ ] Link check: zero broken links across the merged tree
+- [ ] Resolve duplicate pages: `reference/configuration/keyboard-shortcuts.md` and
+      `reference/interface/keyboard-shortcuts.md` share the title
+      'Keyboard Shortcuts Reference' — decide which survives
 - [ ] Triage the **258 pre-existing broken links** found by `check_links.py` (none caused by the merge)
 - [ ] Regenerate `TASK_LIST.md` from the merged inventory
