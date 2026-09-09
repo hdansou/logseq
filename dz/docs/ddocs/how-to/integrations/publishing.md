@@ -2,7 +2,8 @@
 title: 'Publish a Page'
 description: 'How to publish a page to the web and customize the published design with CSS and JavaScript'
 status: stable
-lastVerified: '2026-04-24'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web]
 graphType: [db]

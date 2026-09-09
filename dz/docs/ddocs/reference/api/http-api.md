@@ -2,7 +2,8 @@
 title: 'HTTP API Reference'
 description: "Reference for Logseq's HTTP Server API for external application integration"
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
@@ -17,7 +18,7 @@ relatedDocs:
 
 # HTTP API Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Complete reference for Logseq's HTTP Server API, enabling external applications to interact with your knowledge graph programmatically.
 
@@ -149,7 +150,23 @@ curl -X POST http://127.0.0.1:12315/api \
 
 ## Available API Methods
 
-The HTTP API exposes all Logseq Plugin SDK methods. Organized by namespace:
+The HTTP API does not expose the whole Plugin SDK. A request's `method` is
+resolved by lower-casing the namespace and snake-casing the method name
+(`electron/server.cljs:69-77`), then looked up on the host:
+
+- `logseq.App.*`, `logseq.Editor.*`, `logseq.DB.*` and `logseq.CLI.*` resolve
+  against the flat exports of `src/main/logseq/api.cljs`.
+- Any other namespace (`logseq.UI.*`, `logseq.Assets.*`, `logseq.Utils.*`)
+  resolves against `window.logseq.sdk.<namespace>`
+  (`src/main/electron/listener.cljs:104-128`).
+
+Methods that only exist in the JS SDK (`libs/src/LSPlugin.user.ts`) or that take
+a JavaScript callback -- `App.getInfo`, `App.registerCommand`,
+`App.registerCommandPalette`, `DB.onChanged`, `Editor.scrollToBlockInPage`,
+`logseq.Git.*` -- have no host export and return
+`MethodNotExist` over HTTP.
+
+Verified methods by namespace:
 
 ### logseq.App
 
@@ -157,13 +174,15 @@ The HTTP API exposes all Logseq Plugin SDK methods. Organized by namespace:
 | ------------------------ | ---------------------- | -------------------------------- |
 | `getCurrentGraph`        | Get current graph info | -                                |
 | `getUserConfigs`         | Get user configuration | -                                |
-| `getInfo`                | Get app info           | `key?`                           |
-| `pushState`              | Navigate to route      | `type`, `opts`                   |
-| `replaceState`           | Replace current route  | `type`, `opts`                   |
-| `setLeftSidebarVisible`  | Toggle left sidebar    | `visible`                        |
-| `setRightSidebarVisible` | Toggle right sidebar   | `visible`                        |
-| `registerCommand`        | Register command       | `type`, `opts`, `action`         |
-| `registerCommandPalette` | Add to command palette | `opts`, `action`                 |
+| `getAppInfo`             | Get app info           | -                                |
+| `getCurrentRoute`        | Get current route      | -                                |
+| `getCurrentGraphConfigs` | Get graph config       | `path?`                          |
+| `pushState`              | Navigate to route      | `route`, `params?`, `query?`     |
+| `replaceState`           | Replace current route  | `route`, `params?`, `query?`     |
+| `setLeftSidebarVisible`  | Toggle left sidebar    | `visible` (bool or `"toggle"`)   |
+| `setRightSidebarVisible` | Toggle right sidebar   | `visible` (bool or `"toggle"`)   |
+| `setThemeMode`           | Set light/dark mode    | `mode`                           |
+| `openExternalLink`       | Open URL externally    | `url`                            |
 
 ### logseq.Editor
 
@@ -186,7 +205,7 @@ The HTTP API exposes all Logseq Plugin SDK methods. Organized by namespace:
 | `upsertBlockProperty` | Set block property       | `block`, `key`, `value`            |
 | `removeBlockProperty` | Remove block property    | `block`, `key`                     |
 | `getBlockProperties`  | Get all block properties | `block`                            |
-| `scrollToBlockInPage` | Scroll to block          | `pageName`, `blockId`, `opts?`     |
+| `openInRightSidebar`  | Open block in sidebar    | `idOrKey`                          |
 | `editBlock`           | Enter edit mode          | `srcBlock`, `opts?`                |
 | `exitEditingMode`     | Exit edit mode           | `selectBlock?`                     |
 
@@ -353,8 +372,11 @@ curl -X POST http://127.0.0.1:12315/api \
 
 ### Method Not Found
 
-- Check method name spelling
-- Verify namespace is correct (e.g., `logseq.Editor.` not `logseq.editor.`)
+- Check method name spelling. The namespace segment is case-insensitive (it is
+  lower-cased in `electron/server.cljs:73`), but the method name is converted
+  with `csk/->snake_case`, so `getAllPages` and `get_all_pages` both work while
+  `getallpages` does not.
+- Verify the method actually has a host export (see "Available API Methods").
 
 ---
 
@@ -366,4 +388,4 @@ curl -X POST http://127.0.0.1:12315/api \
 
 ---
 
-_Last updated: 2026-01-29 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

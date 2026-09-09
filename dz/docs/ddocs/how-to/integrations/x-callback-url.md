@@ -2,15 +2,17 @@
 title: 'X-Callback-URL'
 description: 'How to capture content to Logseq from other apps using URL schemes'
 status: stable
-lastVerified: '2026-05-30'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop]
 graphType: [file, db]
 relatedDocs:
   howTo:
-    - '[Quick Capture](quick-capture.md)'
+    - '[Quick Capture](../content/quick-capture.md)'
   reference:
     - '[HTTP API](../../reference/api/http-api.md)'
+    - '[URI Schemes](../../reference/platforms/uri-schemes.md)'
 ---
 
 # X-Callback-URL
@@ -23,7 +25,7 @@ relatedDocs:
 
 X-callback-url is a way to send content to Logseq using special URLs. Works from browsers, scripts, and any app that can open URLs.
 
-> **Note:** X-callback-url is supported on **desktop (Electron) only**. The mobile app handles deeplinks differently and does not process `x-callback-url` actions. For mobile capture, use the share sheet or intent-based workflows instead.
+> **Note:** X-callback-url is supported on **desktop (Electron) only**. The mobile app handles deeplinks differently and does not process `x-callback-url` actions. For mobile capture, use the share sheet or intent-based workflows instead. The full desktop and mobile route tables are in [URI Schemes](../../reference/platforms/uri-schemes.md#deep-link-routes).
 
 ---
 
@@ -303,7 +305,7 @@ Use the exact target page name. `page=TODAY` still resolves to the current journ
 
 ## See Also
 
-- **Quick Capture**: [quick-capture.md](quick-capture.md)
+- **Quick Capture**: [quick-capture.md](../content/quick-capture.md)
 - **HTTP API**: [http-api.md](../../reference/api/http-api.md)
 
 ---

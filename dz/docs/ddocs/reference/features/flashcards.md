@@ -3,7 +3,8 @@ title: 'Flashcard System'
 description: "Complete reference for Logseq's flashcard and spaced repetition system"
 type: reference
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -16,7 +17,7 @@ relatedDocs:
 
 # Flashcard System
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Complete reference for Logseq's flashcard and spaced repetition functionality.
 
@@ -43,6 +44,14 @@ What is the capital of France? #Card
 Paris
 ```
 
+### Context Menu ("Make a Card")
+
+When flashcards are enabled, the block right-click menu and the multi-block selection menu both offer **Make a Card**, which tags the selected top-level block(s) with `:logseq.class/Card`.
+
+- Single block: `src/main/frontend/components/content.cljs:341-346`
+- Selection: `src/main/frontend/components/content.cljs:134-138`
+- Handler: `batch-make-cards!`, `src/main/frontend/extensions/fsrs.cljs:412-424`
+
 ### Cloze Deletions
 
 Hide parts of text:
@@ -59,7 +68,9 @@ Add context hints using `\\` as a separator:
 The capital of {{cloze France\\country}} is {{cloze Paris\\city}}. #Card
 ```
 
-Multiple `{{cloze ...}}` blocks within a single card are supported. Each cloze is revealed individually during review.
+Multiple `{{cloze ...}}` macros within a single card are supported. During review the **Show clozes** step reveals all of them at once; an individual cloze can also be toggled by clicking (or focusing and pressing Enter/Space) on it (`cloze-macro-show`, `src/main/frontend/extensions/fsrs.cljs:440-471`).
+
+If a cloze body contains more than one `\\` separator, only the text after the **last** separator is used as the cue (`cloze-parse`, `src/main/frontend/extensions/fsrs.cljs:430-438`).
 
 ---
 
@@ -120,11 +131,13 @@ Settings -> Features -> Enable Flashcards
 {;; Enable/disable flashcards
  :feature/enable-flashcards? true
 
- ;; Legacy SRS options (file-based graphs only, no longer active)
+ ;; Legacy SRS options -- explicitly listed as "unused in DB graphs"
  ;; :srs/learning-fraction 0.5
  ;; :srs/initial-interval 4
  }
 ```
+
+`:srs/learning-fraction` and `:srs/initial-interval` are enumerated in the DB-graph deprecation list (`deps/common/src/logseq/common/config.cljs:123-124`) and have no effect in DB graphs.
 
 ---
 
@@ -145,7 +158,7 @@ Settings -> Features -> Enable Flashcards
 | `3` | Good   |
 | `4` | Easy   |
 
-The flashcard dialog can be opened with the shortcut `t c`.
+The flashcard dialog can be opened with `g f` or `t c` (`:go/flashcards`, `src/main/frontend/modules/shortcut/config.cljs:414-415`). The rating and show/hide-answer bindings above are the `:cards/*` shortcut namespace (`src/main/frontend/modules/shortcut/config.cljs:82-95`).
 
 ---
 
@@ -170,7 +183,7 @@ Extends `:logseq.class/Query`. Used for defining filtered card collections with 
 
 ### Creating Card Collections
 
-In the flashcard dialog, click the "+" button to create a new Cards block on the current journal page. Each Cards block has an associated query that filters which cards to review.
+In the flashcard dialog, click the "+" button to create a new Cards block on today's journal page and navigate to it (`<create-cards-block!`, `src/main/frontend/extensions/fsrs.cljs:108-115`). Each Cards block has an associated query (`:logseq.property/query`) that filters which cards to review.
 
 ### Selecting Card Sets
 
@@ -193,7 +206,7 @@ Use the dropdown in the flashcard dialog to switch between "All cards" and any d
 
 - **Due today**: Cards needing review (shown in sidebar badge)
 
-Note: Detailed statistics (retention rate, review history breakdowns) exist in the codebase as commented-out/experimental code and are not yet exposed in the UI.
+Note: Detailed statistics (true retention, passed/lapsed repeats, per-state counts, today / 7-day / 30-day windows) exist only inside a `(comment ...)` form (`src/main/frontend/extensions/fsrs.cljs:484-556`) and are not exposed in the UI.
 
 ---
 
@@ -270,10 +283,11 @@ Note: `/Cloze` is the only flashcard-related slash command currently registered.
 | Component        | Path                                             |
 | ---------------- | ------------------------------------------------ |
 | FSRS Logic & UI  | `src/main/frontend/extensions/fsrs.cljs`         |
+| Card context menu | `src/main/frontend/components/content.cljs:134`, `:341` |
 | Shortcut Handler | `src/main/frontend/extensions/srs/handler.cljs`  |
 | Shortcut Config  | `src/main/frontend/modules/shortcut/config.cljs` |
-| Card Classes     | `deps/db/src/logseq/db/frontend/class.cljs`      |
-| FSRS Properties  | `deps/db/src/logseq/db/frontend/property.cljs`   |
+| Card Classes     | `deps/db/src/logseq/db/frontend/class.cljs:59-67` |
+| FSRS Properties  | `deps/db/src/logseq/db/frontend/property.cljs:610-619` |
 | FSRS Library     | `open-spaced-repetition/cljc-fsrs` (dependency)  |
 
 ---
@@ -285,4 +299,4 @@ Note: `/Cloze` is the only flashcard-related slash command currently registered.
 
 ---
 
-_Last updated: 2026-03-10_
+_Last updated: 2026-09-09_
