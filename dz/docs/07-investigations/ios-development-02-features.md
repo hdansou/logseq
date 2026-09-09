@@ -121,7 +121,7 @@ When implementing new features, add/verify iOS-specific paths explicitly instead
 
 ## 8) References
 
-- Platform differences: [ddocs/reference/platforms/mobile-differences.md](../../../ddocs/reference/platforms/mobile-differences.md)
+- Platform differences: [ddocs/reference/platforms/mobile-differences.md](../ddocs/reference/platforms/mobile-differences.md)
 - Mobile helpers: [src/main/frontend/mobile/util.cljs](../../../src/main/frontend/mobile/util.cljs)
 - Mobile onboarding: [docs/develop-logseq-on-mobile.md](../../../docs/develop-logseq-on-mobile.md)
 - Investigation index: [ios-development-00-index.md](./ios-development-00-index.md)

@@ -16,7 +16,7 @@ Three kinds of limit exist, and they are very unevenly enforced:
 2. **Client-side caps** — 4 KiB block titles offloaded to assets, 1 MB snapshot frames, 5,000-datom upload requests, and one silent data drop: **whiteboard pages over ~1 MB are removed from the upload.**
 3. **Account-level limits (graph count, storage, free-tier "notes only") exist only as UI strings and hard-coded defaults. Nothing enforces them.** The sync server has no plan concept, no graph-count check, and no storage accounting.
 
-The full table is in [`ddocs/reference/features/sync-limits.md`](../../../ddocs/reference/features/sync-limits.md).
+The full table is in [`ddocs/reference/features/sync-limits.md`](../ddocs/reference/features/sync-limits.md).
 
 ## Findings
 
@@ -76,6 +76,6 @@ Server: `max-encrypted-asset-size` 200 MiB chosen at `assets.cljs:229` when `gra
 
 ## Related
 
-- [Sync Limits, Throttles, and Batch Sizes](../../../ddocs/reference/features/sync-limits.md)
+- [Sync Limits, Throttles, and Batch Sizes](../ddocs/reference/features/sync-limits.md)
 - Drift check: `dz/support-engineering/script/sync-limits/`
 - [024 — db-worker HTTP API as a UI Backend](024-db-worker-http-api-as-ui-backend.md)

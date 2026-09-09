@@ -5,8 +5,8 @@ status: archived
 lastVerified: '2026-05-29'
 relatedDocs:
   howTo:
-    - '[View Functions](../../ddocs/how-to/content/view-types.md)'
-    - '[Advanced Queries](../../ddocs/how-to/queries/advanced-queries.md)'
+    - '[View Functions](../ddocs/how-to/content/view-types.md)'
+    - '[Advanced Queries](../ddocs/how-to/queries/advanced-queries.md)'
 ---
 
 ## Archived: `:view Feature Investigation`
@@ -17,8 +17,8 @@ This page has been archived.
 
 The maintained docs for this topic are:
 
-- [View Functions](../../ddocs/how-to/content/view-types.md)
-- [Advanced Queries](../../ddocs/how-to/queries/advanced-queries.md)
+- [View Functions](../ddocs/how-to/content/view-types.md)
+- [Advanced Queries](../ddocs/how-to/queries/advanced-queries.md)
 
 Why this page was archived:
 

@@ -544,7 +544,7 @@ Understanding Root Tag is essential for:
 
 - [Database Schema Guide](../../../docs/03-features/database-graphs/schema-guide.md)
 - [Tagging and Classification System](../../../docs/03-features/tagging-classification/system-guide.md)
-- [Advanced Queries](../../../ddocs/how-to/queries/advanced-queries.md)
+- [Advanced Queries](../ddocs/how-to/queries/advanced-queries.md)
 
 ## Questions or Issues?
 

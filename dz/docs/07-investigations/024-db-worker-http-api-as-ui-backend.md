@@ -95,9 +95,9 @@ Upstream, two small changes would make this materially safer for third parties, 
 
 ## Related
 
-- [db-worker HTTP API](../../../ddocs/reference/api/db-worker-http-api.md)
-- [Generated thread-api reference](../../../ddocs/reference/api/thread-api.generated.md)
-- [Build a UI on the db-worker API](../../../ddocs/tutorials/integrations/build-a-db-worker-ui.md)
+- [db-worker HTTP API](../ddocs/reference/api/db-worker-http-api.md)
+- [Generated thread-api reference](../ddocs/reference/api/thread-api.generated.md)
+- [Build a UI on the db-worker API](../ddocs/tutorials/integrations/build-a-db-worker-ui.md)
 - Client adapter: `dz/support-engineering/script/db-worker-client/`
 - Generator: `dz/support-engineering/script/thread-api-docs/`
 - [023 — Graph Vector Embeddings for Agentic Work](023-graph-vector-embeddings-for-agents.md)

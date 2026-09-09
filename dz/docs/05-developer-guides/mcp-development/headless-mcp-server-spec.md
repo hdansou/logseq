@@ -3,7 +3,7 @@
 > **Status:** Draft for review (rev 3 — 7-server survey, context budget, write verification)
 > **Date:** 2026-09-08
 > **Verified against:** `origin/master` @ `d2ab772` (2026-09-02)
-> **Related:** [024 — db-worker HTTP API as a UI Backend](../../07-investigations/024-db-worker-http-api-as-ui-backend.md) · [db-worker HTTP API](../../../../ddocs/reference/api/db-worker-http-api.md) · [Generated thread-api reference](../../../../ddocs/reference/api/thread-api.generated.md)
+> **Related:** [024 — db-worker HTTP API as a UI Backend](../../07-investigations/024-db-worker-http-api-as-ui-backend.md) · [db-worker HTTP API](../../ddocs/reference/api/db-worker-http-api.md) · [Generated thread-api reference](../../ddocs/reference/api/thread-api.generated.md)
 
 ## 1. Summary
 

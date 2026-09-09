@@ -20,7 +20,7 @@ You have four options, and only one of them yields actual vectors:
 | 3 | MCP `searchBlocks` | Ranked results | Keyword-only |
 | 4 | `POST /v1/invoke` with `:query-embedding` | Ranked results, your vector | Keyword-only |
 
-For agentic work over a whole graph, option 1 for indexing plus option 2 for live lookups is the practical combination. See [How to Build an External Vector Index](../../../ddocs/how-to/integrations/external-vector-index.md).
+For agentic work over a whole graph, option 1 for indexing plus option 2 for live lookups is the practical combination. See [How to Build an External Vector Index](../ddocs/how-to/integrations/external-vector-index.md).
 
 ## Findings
 
@@ -94,8 +94,8 @@ Enabled via Settings → Features → HTTP server (`:server/autostart`, `:server
 
 ## Related
 
-- [How to Build an External Vector Index](../../../ddocs/how-to/integrations/external-vector-index.md)
-- [Semantic Search API](../../../ddocs/reference/api/semantic-search-api.md)
-- [db-worker HTTP API](../../../ddocs/reference/api/db-worker-http-api.md)
-- [How Semantic Search Works](../../../ddocs/explanation/features/how-embeddings-work.md)
+- [How to Build an External Vector Index](../ddocs/how-to/integrations/external-vector-index.md)
+- [Semantic Search API](../ddocs/reference/api/semantic-search-api.md)
+- [db-worker HTTP API](../ddocs/reference/api/db-worker-http-api.md)
+- [How Semantic Search Works](../ddocs/explanation/features/how-embeddings-work.md)
 - [022 — Logseq CLI Semantic Search](022-logseq-cli-semantic-search.md)

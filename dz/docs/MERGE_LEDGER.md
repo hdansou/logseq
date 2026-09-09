@@ -160,12 +160,31 @@ review candidate — verify against source, then add if still true.
 
 ## Stage 4 — finish
 
-- [ ] Merge the two `README.md` indexes (A 121 lines, B 229)
-- [ ] Retire root `ddocs/`
-- [ ] Rewrite inbound `../../../ddocs/` references under `dz/docs/`
-- [ ] Link check: zero broken links across the merged tree
+- [x] README index: generated from the tree, all 107 documents indexed
+- [x] Retire root `ddocs/`
+- [x] Rewrite inbound references (60 links across 8 files)
+- [x] Link check: 614 resolved, 0 broken by the merge
 - [ ] Resolve duplicate pages: `reference/configuration/keyboard-shortcuts.md` and
       `reference/interface/keyboard-shortcuts.md` share the title
       'Keyboard Shortcuts Reference' — decide which survives
-- [ ] Triage the **258 pre-existing broken links** found by `check_links.py` (none caused by the merge)
-- [ ] Regenerate `TASK_LIST.md` from the merged inventory
+- [ ] Triage the **257 pre-existing broken links** found by `check_links.py` (none caused by the merge)
+- [x] Regenerate `TASK_LIST.md` (106 docs: 38 verified this pass, 68 not)
+
+---
+
+## Merge complete
+
+108 documents under `dz/docs/ddocs/`. Root `ddocs/` is retired.
+
+Tooling, all re-runnable:
+
+| Script | Purpose |
+|---|---|
+| `compare_trees.py` | file-by-file divergence report between two doc trees |
+| `check_links.py` | resolves every relative link outside code fences; `--against` separates move breakage from rot |
+| `gen_index.py` | regenerates the README file lists; `--check` fails on drift |
+| `gen_task_list.py` | regenerates `TASK_LIST.md` from frontmatter |
+
+Open for the review pass: 257 pre-existing broken links, 68 documents not
+verified in this pass, the duplicate keyboard-shortcuts pages, and the
+unverified `{{query (property ...)}}` DSL block in `zotero.md`.

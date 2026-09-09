@@ -9,7 +9,7 @@ What default paths does Logseq use, grouped by platform — Windows, Linux, macO
 
 ## Answer
 
-Full table: [`ddocs/reference/platforms/default-paths.md`](../../../ddocs/reference/platforms/default-paths.md). The shape:
+Full table: [`ddocs/reference/platforms/default-paths.md`](../ddocs/reference/platforms/default-paths.md). The shape:
 
 - **Desktop (all three OSes)** shares one layout: DB graphs under `~/logseq/graphs/<encoded>/`, the global dot-dir `~/.logseq/` (registry, plugins, plugin settings), auth at `~/logseq/auth.json`, CLI config at `~/logseq/cli.edn`. Only `<userData>` (which holds `configs.edn` and the embedding sidecar) and the log/launcher locations differ per OS.
 - **Mobile (Android, iOS)** stores DB graphs in the WebView's OPFS, not on the filesystem. Native paths (Documents, iCloud container, SAF roots) serve file graphs, pickers, and shares.
@@ -69,6 +69,6 @@ Logseq never calls `app.setPath`. `<userData>` and the electron-log location fol
 
 ## Related
 
-- [Default Paths by Platform](../../../ddocs/reference/platforms/default-paths.md)
+- [Default Paths by Platform](../ddocs/reference/platforms/default-paths.md)
 - Drift check: `dz/support-engineering/script/sync-limits/default-paths.edn` with `check_sync_limits.clj --declaration`
 - [025 — RTC Limits and Quotas](025-rtc-limits-and-quotas.md)
