@@ -17,12 +17,13 @@ This is the merged documentation index for Logseq, organized by the Diátaxis fr
 - [First Graph](tutorials/getting-started/02-first-graph.md)
 - [Basic Editing](tutorials/getting-started/03-basic-editing.md)
 - [Linking Pages](tutorials/getting-started/04-linking-pages.md)
-- [Semantic Search](tutorials/getting-started/semantic-search.md)
+- [Turn On Semantic Search](tutorials/getting-started/semantic-search.md)
 - [Advanced Queries Tutorial](tutorials/advanced/advanced-queries-tutorial.md)
 - [Custom Theme Tutorial](tutorials/advanced/custom-theme-tutorial.md)
 - [Workflow Automation Tutorial](tutorials/advanced/workflow-automation-tutorial.md)
 - [Real-Time Sync Tutorial](tutorials/collaboration/real-time-sync.md)
 - [MCP Integration Tutorial](tutorials/integrations/mcp-integration.md)
+- [Build a UI on the db-worker API](tutorials/integrations/build-a-db-worker-ui.md)
 - [Flashcards Basics](tutorials/knowledge-management/flashcards-basics.md)
 - [First Plugin Tutorial](tutorials/plugins/first-plugin.md)
 - [Todo Basics](tutorials/task-management/todo-basics.md)
@@ -58,11 +59,14 @@ This is the merged documentation index for Logseq, organized by the Diátaxis fr
 - [Research Workflow](how-to/workflows/research-workflow.md)
 - [Task Management Workflows](how-to/workflows/task-management-workflows.md)
 - [Zettelkasten Method](how-to/workflows/zettelkasten-method.md)
+- [External Vector Index](how-to/integrations/external-vector-index.md)
 
 ## Reference
 
 - [Reference Root](reference/)
 - [HTTP API](reference/api/http-api.md)
+- [db-worker HTTP API](reference/api/db-worker-http-api.md)
+- [db-worker thread-api Reference (generated)](reference/api/thread-api.generated.md)
 - [MCP Server API](reference/api/mcp-server.md)
 - [Plugin API](reference/api/plugin-api.md)
 - [Semantic Search API](reference/api/semantic-search-api.md)
@@ -80,10 +84,12 @@ This is the merged documentation index for Logseq, organized by the Diátaxis fr
 - [Slash Commands](reference/interface/slash-commands.md)
 - [Templates System](reference/interface/templates-system.md)
 - [Mobile Differences](reference/platforms/mobile-differences.md)
+- [Default Paths by Platform](reference/platforms/default-paths.md)
 - [Code Blocks](reference/syntax/code-blocks.md)
 - [Dynamic Variables](reference/syntax/dynamic-variables.md)
 - [Query System](reference/advanced/query-system.md)
 - [Query Patterns](reference/advanced/query-patterns.md)
+- [Sync Limits, Throttles, and Batch Sizes](reference/features/sync-limits.md)
 
 ## Explanation
 
@@ -104,7 +110,7 @@ This is the merged documentation index for Logseq, organized by the Diátaxis fr
 - [Local-First Architecture](explanation/concepts/local-first-architecture.md)
 - [Plugin Architecture](explanation/concepts/plugin-architecture.md)
 - [Handbooks System](explanation/features/handbooks-system.md)
-- [How Embeddings Work](explanation/features/how-embeddings-work.md)
+- [How Semantic Search Works](explanation/features/how-embeddings-work.md)
 - [E2EE Encryption](explanation/security/e2ee-encryption.md)
 
 ## Templates
