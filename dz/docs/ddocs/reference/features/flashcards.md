@@ -5,6 +5,7 @@ type: reference
 status: stable
 lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]

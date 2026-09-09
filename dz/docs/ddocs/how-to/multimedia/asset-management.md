@@ -5,6 +5,7 @@ version: 'Since v0.5.0'
 quadrant: 'How-To Guide'
 lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 verifiedScope: 'Remote Graphs (RTC Sync) section only'
 platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
 related-docs:

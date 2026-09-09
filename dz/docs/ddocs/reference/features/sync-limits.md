@@ -4,6 +4,7 @@ description: 'Every limit, quota, rate limit, timeout, and batch size in Logseq 
 type: reference
 status: active-development
 lastVerified: '2026-09-09'
+reviewStatus: authored-from-source
 logseqVersion: '2.0.x'
 platforms: [desktop, mobile]
 graphType: [db]

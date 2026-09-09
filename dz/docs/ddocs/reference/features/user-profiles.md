@@ -5,6 +5,7 @@ quadrant: 'Reference'
 platform: 'Desktop (macOS/Windows/Linux)'
 lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 related-docs:
   - '../../tutorials/collaboration/real-time-sync.md'
   - '../../explanation/security/e2ee-encryption.md'

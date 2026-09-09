@@ -7,12 +7,18 @@ every field comes from each document's frontmatter.
 | | Count |
 |---|---|
 | Documents | 106 |
-| Verified in the current pass (>= 2026-09-01) | 38 |
-| Not verified in the current pass | 68 |
+| Authored from source — trusted | 10 |
+| Merged this pass — base inherited, needs a line-by-line audit | 28 |
+| Not reviewed | 68 |
 
-## Not verified in the current pass
+`merged-not-fully-audited` means the two copies were reconciled against source and
+every ported claim was verified, but content inherited from the surviving base was
+not re-read line by line. Two wrong claims have already been found in that bucket,
+so it is a review target, not a finished state.
 
-These carry an older date, or none. Highest priority for the review pass.
+## Not reviewed
+
+Older date, or none. Highest priority.
 
 | Document | Last verified | Against |
 |---|---|---|
@@ -85,16 +91,10 @@ These carry an older date, or none. Highest priority for the review pass.
 | `tutorials/getting-started/04-linking-pages.md` | 2026-05-30 | — |
 | `tutorials/queries/charts-with-hiccup.md` | 2026-05-30 | — |
 
-## Verified in the current pass
+## Merged this pass — needs a line-by-line audit
 
 | Document | Date | Against | Scope |
 |---|---|---|---|
-| `explanation/features/how-embeddings-work.md` | 2026-09-06 | `—` | full |
-| `how-to/integrations/external-vector-index.md` | 2026-09-06 | `—` | full |
-| `reference/api/db-worker-http-api.md` | 2026-09-06 | `—` | full |
-| `reference/api/semantic-search-api.md` | 2026-09-06 | `—` | full |
-| `tutorials/getting-started/semantic-search.md` | 2026-09-06 | `—` | full |
-| `tutorials/integrations/build-a-db-worker-ui.md` | 2026-09-08 | `—` | full |
 | `explanation/features/handbooks-system.md` | 2026-09-09 | `be800f1711` | full |
 | `how-to/backup/backup-restore.md` | 2026-09-09 | `be800f1711` | full |
 | `how-to/content/create-flashcard-deck.md` | 2026-09-09 | `be800f1711` | full |
@@ -114,16 +114,27 @@ These carry an older date, or none. Highest priority for the review pass.
 | `reference/configuration/css-variables.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/configuration/keyboard-shortcuts.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/database/schema-overview.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/features/asset-sync.md` | 2026-09-09 | `—` | full |
 | `reference/features/flashcards.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/features/pdf-annotations.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/features/sync-limits.md` | 2026-09-09 | `—` | full |
 | `reference/features/user-profiles.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/platforms/default-paths.md` | 2026-09-09 | `—` | full |
-| `reference/platforms/uri-schemes.md` | 2026-09-09 | `—` | full |
 | `reference/syntax/code-blocks.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/syntax/dynamic-variables.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/collaboration/real-time-sync.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/knowledge-management/flashcards-basics.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/task-management/project-planning.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/task-management/todo-basics.md` | 2026-09-09 | `be800f1711` | full |
+
+## Authored from source
+
+| Document | Date | Against |
+|---|---|---|
+| `explanation/features/how-embeddings-work.md` | 2026-09-06 | `—` |
+| `how-to/integrations/external-vector-index.md` | 2026-09-06 | `—` |
+| `reference/api/db-worker-http-api.md` | 2026-09-06 | `—` |
+| `reference/api/semantic-search-api.md` | 2026-09-06 | `—` |
+| `tutorials/getting-started/semantic-search.md` | 2026-09-06 | `—` |
+| `tutorials/integrations/build-a-db-worker-ui.md` | 2026-09-08 | `—` |
+| `reference/features/asset-sync.md` | 2026-09-09 | `—` |
+| `reference/features/sync-limits.md` | 2026-09-09 | `—` |
+| `reference/platforms/default-paths.md` | 2026-09-09 | `—` |
+| `reference/platforms/uri-schemes.md` | 2026-09-09 | `—` |

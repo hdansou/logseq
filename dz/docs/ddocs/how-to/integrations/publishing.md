@@ -4,6 +4,7 @@ description: 'How to publish a page to the web and customize the published desig
 status: stable
 lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web]
 graphType: [db]

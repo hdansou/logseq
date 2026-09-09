@@ -4,6 +4,7 @@ description: "The architecture behind Logseq's hybrid keyword + vector search: t
 type: explanation
 status: active-development
 lastVerified: '2026-09-06'
+reviewStatus: authored-from-source
 logseqVersion: '2.0.x'
 platforms: [desktop]
 graphType: [db]

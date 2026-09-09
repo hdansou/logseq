@@ -5,6 +5,7 @@ since-version: 'v65.0'
 quadrant: 'How-To'
 last-verified: '2026-09-09'
 verified-against: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 platform: 'All'
 related-docs:
   - 'tutorials/task-management/todo-basics.md'

@@ -6,6 +6,7 @@ quadrant: 'Explanation'
 platform: 'Desktop (macOS/Windows/Linux), Web'
 lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 related-docs:
   - '../../how-to/multimedia/video-embed.md'
   - '../../tutorials/getting-started/01-installation.md'

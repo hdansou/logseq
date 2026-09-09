@@ -6,6 +6,7 @@ quadrant: 'Reference'
 platform: 'Desktop (macOS/Windows/Linux) — ⚠️ Not available on mobile'
 lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 related-docs:
   - '../../how-to/multimedia/asset-management.md'
   - '../../reference/schema/built-in-classes.md#logseqclasspdf-annotation'

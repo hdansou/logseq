@@ -6,6 +6,7 @@ quadrant: 'How-To Guide'
 platform: 'Desktop (macOS/Windows/Linux)'
 last-verified: '2026-09-09'
 verified-against: 'be800f1711'
+reviewStatus: merged-not-fully-audited
 related-docs:
   - '../multimedia/asset-management.md'
   - '../../reference/features/pdf-annotations.md'

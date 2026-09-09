@@ -4,6 +4,7 @@ description: 'Every URI scheme Logseq registers, rewrites internally, or consume
 type: reference
 status: active-development
 lastVerified: '2026-09-09'
+reviewStatus: authored-from-source
 logseqVersion: '2.0.x'
 platforms: [desktop, mobile, web]
 graphType: [file, db]

@@ -4,6 +4,7 @@ description: 'Connect a new frontend to a running Logseq graph over the db-worke
 type: tutorial
 status: active-development
 lastVerified: '2026-09-08'
+reviewStatus: authored-from-source
 logseqVersion: '2.0.x'
 platforms: [desktop]
 graphType: [db]

@@ -4,6 +4,7 @@ description: 'Extract blocks from a Logseq DB graph, embed them yourself, and qu
 type: how-to
 status: active-development
 lastVerified: '2026-09-06'
+reviewStatus: authored-from-source
 logseqVersion: '2.0.x'
 platforms: [desktop]
 graphType: [db]
