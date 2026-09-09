@@ -2,7 +2,8 @@
 title: 'CLI Basics'
 description: 'How to use the Logseq command-line interface for automation and scripting'
 status: stable
-lastVerified: '2026-05-30'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 cliVersion: 'source-backed'
 platforms: [desktop]
@@ -15,13 +16,13 @@ relatedDocs:
 
 # CLI Basics
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09
 
 > Source-backed Logseq CLI basics for working with DB graphs from the terminal.
 
 ## Scope
 
-This page matches the current command surface implemented in `src/main/logseq/cli/`.
+This page matches the current command surface. The CLI itself is written in OCaml under `cli/lib/`; the authoritative command list is `cli/lib/command_id.ml` and the option catalog is `cli/lib/command_registry.ml`. The ClojureScript code under `src/main/logseq/cli/` is only the supporting layer (`server.cljs`, `transport.cljs`, `root_dir.cljs`) that the CLI drives.
 
 > **Removed:** The old `@logseq/cli` npm install/update/uninstall story is not current for this source-backed CLI.
 > **Removed:** The old flat command model (`logseq list`, `logseq show my-graph`, `logseq export`, `logseq import-edn`, `logseq validate`, `logseq append`, `logseq mcp-server`) does not match the current command table.
@@ -36,7 +37,11 @@ This page matches the current command surface implemented in `src/main/logseq/cl
 - `query list` exposes built-in queries such as `task-search`, `recent-updated`, `list-status`, and `list-priority`.
 - `show` now supports `--page-hierarchy`, `--linked-references`, and `--ref-id-footer`.
 - `sync download --progress` streams realtime download progress when requested.
-- `agent bridge`, `completion`, `debug pull`, `skill show`, `skill install`, and `example` are current utility commands.
+- `agent bridge`, `completion`, `debug pull`, `doctor`, `skill show`, `skill install`, and `example` are current utility commands.
+- `doctor` runs CLI diagnostics (db-worker-node script, root dir, running servers).
+- `graph switch` and `graph remove` are part of the current graph surface.
+- `graph validate --fix` can repair validation problems, not just report them.
+- `upsert` now also covers `asset`, `tag`, and `property`; `remove` covers `block`, `page`, `tag`, and `property`.
 
 ## Prerequisites
 
@@ -103,9 +108,15 @@ Current query shapes:
 - `upsert page --graph my-graph --page Home`
 - `upsert block --graph my-graph --content "New block"`
 - `upsert task --graph my-graph --page Home --status doing`
+- `upsert asset --graph my-graph --path /tmp/diagram.png`
+- `upsert tag --graph my-graph --name Project`
+- `upsert property --graph my-graph --name owner --type default --cardinality one`
+- `remove block --graph my-graph --id 123`
 - `remove page --graph my-graph --page Home`
+- `remove tag --graph my-graph --name Project`
+- `remove property --graph my-graph --name owner`
 
-Use `upsert block` for generic tag/property mutation. Use `upsert task` for task-specific status and priority fields.
+Use `upsert block` for generic tag/property mutation (`--update-tags`, `--update-properties`, `--remove-tags`, `--remove-properties`). Use `upsert task` for task-specific status, priority, scheduled, and deadline fields. Use `upsert tag` and `upsert property` to edit the ontology itself.
 
 ## Graph Management
 
@@ -113,11 +124,16 @@ Use `upsert block` for generic tag/property mutation. Use `upsert task` for task
 
 - `graph create --graph my-graph`
 - `graph create --graph my-graph --enable-sync --e2ee-password "my-secret"`
+- `graph switch --graph my-graph`
+- `graph remove --graph my-graph`
 - `graph info --graph my-graph`
-- `graph export --graph my-graph --type edn --file /tmp/my-graph.edn --include-timestamps --exclude-built-in-pages --exclude-namespaces user,project`
+- `graph export --graph my-graph --type edn --file /tmp/my-graph.edn --edn-options '{:export-type :graph :include-timestamps? true}' --pretty-print`
 - `graph export --graph my-graph --type sqlite --file /tmp/my-graph.sqlite`
 - `graph import --graph my-graph --type edn --input /tmp/my-graph.edn`
 - `graph validate --graph my-graph`
+- `graph validate --graph my-graph --fix`
+
+`graph export` takes its fine-grained options as an EDN map through `-e/--edn-options`. The older flat flags `--include-timestamps`, `--exclude-built-in-pages`, and `--exclude-namespaces` were retired and are now rejected at parse time.
 
 ### Backups
 
@@ -135,6 +151,7 @@ Use `upsert block` for generic tag/property mutation. Use `upsert task` for task
 - `server restart --graph my-graph`
 - `sync status --graph my-graph`
 - `sync start --graph my-graph --e2ee-password "my-secret"`
+- `sync stop --graph my-graph`
 - `sync upload --graph my-graph`
 - `sync download --graph my-graph --progress`
 - `sync asset download --graph my-graph --id 123`
@@ -152,6 +169,7 @@ Use `upsert block` for generic tag/property mutation. Use `upsert task` for task
 - `agent bridge --graph my-graph`
 - `completion zsh`
 - `debug pull --uuid 11111111-1111-1111-1111-111111111111 --graph my-graph`
+- `doctor`
 - `skill show`
 - `skill install --global`
 - `example upsert page`
@@ -173,6 +191,8 @@ Sync and login flows use the configured cloud and sync settings, with `~/logseq/
 - `query list` includes built-in and custom queries.
 - `sync download` can stream progress when `--progress` is enabled.
 - `show` is for entity trees, not graph metadata.
+- `doctor` is the quickest check when a graph command hangs or the worker will not start.
+- Global options apply to every command: `--config`, `-g/--graph`, `--root-dir`, `--timeout-ms`, `-o/--output` (`human`, `json`, `edn`; default `human`), `-v/--verbose`, `--profile`, `-h/--help`, `--version`. The CLI root directory defaults to `~/logseq`.
 
 ## Troubleshooting
 
@@ -185,6 +205,7 @@ logseq graph info --graph exact-graph-name
 
 ### "Cannot connect to Logseq"
 
+- Run `logseq doctor` first; it checks the db-worker-node script, the root directory, and running servers.
 - Ensure the graph exists and the CLI root directory is correct.
 - Check the relevant sync config with `logseq sync config get`.
 - Use `logseq login` when a cloud-authenticated sync flow is required.

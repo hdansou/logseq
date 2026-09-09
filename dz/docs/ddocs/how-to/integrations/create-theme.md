@@ -2,7 +2,8 @@
 title: 'Create a Theme'
 description: 'How to create and publish custom themes for Logseq'
 status: stable
-lastVerified: '2026-05-30'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web]
 graphType: [file, db]
@@ -15,7 +16,7 @@ relatedDocs:
 
 # Create a Theme
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09
 
 > How to create and package a custom theme for Logseq.
 
@@ -26,6 +27,9 @@ Logseq themes are CSS overrides. Personal themes live in `logseq/custom.css`; sh
 - Theme state is driven by `html[data-theme="light|dark"]` and `html[data-color="..."]`, with backward-compatible classes on `body`.
 - Plugin themes can be registered declaratively with `logseq.themes` or imperatively with `logseq.provideTheme(theme)`.
 - Logseq also exposes `html[data-font]` and `html[data-font-global]` for font-aware styling.
+- A selected plugin theme is injected as a `<link rel="stylesheet">` into `document.head` after all app CSS, and the selection is persisted separately for light and dark mode.
+- Newer shared UI (shui/Tailwind) reads HSL *channel* tokens such as `--background`, `--popover`, `--border`, and `--primary`, so a complete theme has to set those in addition to `--ls-*`.
+- The repository ships an authoritative, source-derived theme guide at `libs/guides/custom_theme_guide.md`.
 
 ## Theme Basics
 
@@ -67,11 +71,28 @@ Press `Cmd+R` (macOS) or `Ctrl+R` (Windows/Linux).
 
 ## Theme Structure
 
+A personal theme is a single file inside your graph:
+
 ```
-your-theme/
-├── custom.css          # Personal theme entrypoint
-├── package.json        # For plugin distribution
-└── README.md           # Documentation
+<your-graph>/
+└── logseq/
+    └── custom.css      # Personal theme entrypoint
+```
+
+A shareable theme plugin is a package:
+
+```
+logseq-my-theme/
+├── package.json        # logseq.themes declares each CSS file
+├── index.html          # Plugin entry file
+├── icon.png
+├── README.md
+├── screenshots/
+│   ├── light.png
+│   └── dark.png
+└── themes/
+    ├── my-theme-light.css
+    └── my-theme-dark.css
 ```
 
 ---
@@ -84,7 +105,7 @@ Logseq's current theme contract is built on three layers:
 - Logseq aliases: `--lx-*`
 - Semantic variables: `--ls-*`
 
-Override the semantic variables first. The current source defines the defaults in `packages/ui/src/vars-classic.css` and `packages/ui/src/colors.css`.
+Override the semantic variables first. The current source defines the defaults in `src/main/frontend/shui/vars-classic.css` (semantic and layout variables, plus the light/dark defaults for `data-color=logseq`) and `src/main/frontend/shui/colors.css` (accent palettes selected by `html[data-color=...]`). The raw Radix scales live in `src/main/frontend/shui/radix.css` and `src/main/frontend/shui/radix-hsl.css`.
 
 ```css
 html[data-theme='dark'] {
@@ -118,6 +139,27 @@ Scope theme CSS by these hooks when needed:
 | `html[data-font="serif"|"mono"]`, `html[data-font-global="true"]` | Font preference hooks |
 | `html.is-mobile`, `html.is-electron`, `html.is-mac`, `html.is-native-iphone` | Platform-specific fixes |
 
+### shui/Tailwind HSL tokens
+
+Overriding only `--ls-*` leaves the newer shared UI (dialogs, popovers, dropdowns, buttons) on the default palette. Those components read HSL **channel** tokens, because consumers call `hsl(var(--primary))`:
+
+```css
+html[data-theme='dark'] {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 96%;
+  --popover: 222 47% 10%;
+  --popover-foreground: 210 40% 96%;
+  --border: 217 33% 24%;
+  --input: 217 33% 24%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 210 40% 98%;
+  --accent: 199 89% 48%;
+  --ring: 199 89% 48%;
+}
+```
+
+Write `--primary: 199 89% 48%`, not `--primary: hsl(199 89% 48%)`.
+
 ---
 
 ## Personal Theme Template
@@ -126,23 +168,92 @@ Scope theme CSS by these hooks when needed:
 /* logseq/custom.css */
 
 html[data-theme='light'] {
+  color-scheme: light;
+
+  /* Backgrounds */
   --ls-primary-background-color: #ffffff;
   --ls-secondary-background-color: #f8fafc;
+  --ls-tertiary-background-color: #eef2f7;
+  --ls-quaternary-background-color: #e2e8f0;
+
+  /* Text */
   --ls-primary-text-color: #1e293b;
   --ls-secondary-text-color: #334155;
+  --ls-title-text-color: #0f172a;
+
+  /* Links and tags */
   --ls-link-text-color: #0369a1;
   --ls-link-text-hover-color: #0c4a6e;
+  --ls-link-ref-text-color: var(--ls-link-text-color);
+  --ls-block-ref-link-text-color: #0284c7;
+  --ls-tag-text-color: #0369a1;
+
+  /* Active states */
+  --ls-active-primary-color: #0369a1;
+  --ls-active-secondary-color: #0284c7;
+
+  /* Borders and guides */
+  --ls-border-color: #cbd5e1;
+  --ls-secondary-border-color: #e2e8f0;
+  --ls-tertiary-border-color: rgb(15 23 42 / 0.08);
+  --ls-guideline-color: rgb(15 23 42 / 0.08);
   --ls-focus-ring-color: rgba(14, 165, 233, 0.35);
+
+  /* Blocks and properties */
+  --ls-block-bullet-color: #94a3b8;
+  --ls-block-bullet-border-color: #cbd5e1;
+  --ls-block-highlight-color: #e0f2fe;
+  --ls-block-properties-background-color: #f1f5f9;
+  --ls-page-properties-background-color: #f1f5f9;
+
+  /* Selection */
+  --ls-selection-background-color: #dbeafe;
+  --ls-selection-text-color: #0f172a;
 }
 
 html[data-theme='dark'] {
+  color-scheme: dark;
+
   --ls-primary-background-color: #111827;
   --ls-secondary-background-color: #172033;
+  --ls-tertiary-background-color: #202b42;
+  --ls-quaternary-background-color: #2a3650;
+
   --ls-primary-text-color: #d6deeb;
   --ls-secondary-text-color: #eef2ff;
+  --ls-title-text-color: #f8fafc;
+
   --ls-link-text-color: #7dd3fc;
   --ls-link-text-hover-color: #bae6fd;
+  --ls-link-ref-text-color: var(--ls-link-text-color);
+  --ls-block-ref-link-text-color: #38bdf8;
+  --ls-tag-text-color: #93c5fd;
+
+  --ls-active-primary-color: #7dd3fc;
+  --ls-active-secondary-color: #38bdf8;
+
+  --ls-border-color: #334155;
+  --ls-secondary-border-color: #475569;
+  --ls-tertiary-border-color: rgb(148 163 184 / 0.18);
+  --ls-guideline-color: rgb(148 163 184 / 0.18);
+  --ls-focus-ring-color: rgb(56 189 248 / 0.45);
+
+  --ls-block-bullet-color: #64748b;
+  --ls-block-bullet-border-color: #475569;
+  --ls-block-highlight-color: rgb(14 165 233 / 0.22);
+  --ls-block-properties-background-color: #1e293b;
+  --ls-page-properties-background-color: #1e293b;
+
   --ls-selection-background-color: rgb(56 189 248 / 0.32);
+  --ls-selection-text-color: #f8fafc;
+}
+
+/* Global typography and layout tokens */
+:root {
+  --ls-font-family: 'Inter', -apple-system, sans-serif;
+  --ls-page-text-size: 16px;
+  --ls-page-title-size: 28px;
+  --ls-main-content-max-width: 830px;
 }
 ```
 
@@ -159,9 +270,8 @@ html[data-theme='dark'] {
   --ls-font-family: 'Inter', sans-serif;
 }
 
-/* Code blocks use CodeMirror; target the editor class */
-.CodeMirror pre,
-.extensions__code .cm-editor .cm-content {
+/* Code blocks use CodeMirror 5; target its line class */
+.CodeMirror pre.CodeMirror-line {
   font-family: 'JetBrains Mono', monospace;
 }
 ```
@@ -217,9 +327,16 @@ a.tag[data-ref='important'] {
   border-radius: 8px;
 }
 
-.CodeMirror pre,
-.cm-editor .cm-content {
+.CodeMirror pre.CodeMirror-line {
   font-family: 'JetBrains Mono', monospace;
+}
+```
+
+Logseq's CodeMirror theme class is `.cm-s-lsradix` (with `.cm-s-light` / `.cm-s-dark` companions). `resources/css/codemirror.lsradix.css` already bridges most `--lx-*` and `--ls-*` values, so override syntax colors only when you need to:
+
+```css
+.cm-s-lsradix.cm-s-dark .CodeMirror-linenumber {
+  color: var(--ls-secondary-text-color);
 }
 ```
 
@@ -234,6 +351,22 @@ a.tag[data-ref='important'] {
   text-decoration: underline;
 }
 ```
+
+### Bullets and Property Panels
+
+```css
+.bullet-container .bullet {
+  width: 6px;
+  height: 6px;
+}
+
+.block-properties {
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+```
+
+Keep bullet and block-control hit areas touch-friendly; shrinking them breaks mobile interaction.
 
 ---
 
@@ -254,6 +387,7 @@ Current source supports two plugin registrations:
   "author": "Your Name",
   "logseq": {
     "id": "logseq-theme-mytheme",
+    "main": "index.html",
     "title": "My Theme",
     "icon": "./icon.svg",
     "effect": true,
@@ -357,7 +491,8 @@ Study these for inspiration:
 
 - **CSS Variables**: [css-variables.md](../../reference/configuration/css-variables.md)
 - **Custom CSS**: [custom-css.md](custom-css.md)
+- **In-repo source of truth**: `libs/guides/custom_theme_guide.md`
 
 ---
 
-_Last updated: 2026-05-30_
+_Last updated: 2026-09-09_

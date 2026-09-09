@@ -1,9 +1,11 @@
 ---
 title: 'Integrating Zotero with Logseq'
-status: 'Stable'
-version: 'Built-in since v0.4.0; enhanced with plugins'
+status: 'Stable (file resolution only)'
+version: 'Built-in Zotero Web API integration removed in bcc478b5f7 (#12276); file/path integration remains'
 quadrant: 'How-To Guide'
 platform: 'Desktop (macOS/Windows/Linux)'
+last-verified: '2026-09-09'
+verified-against: 'be800f1711'
 related-docs:
   - '../multimedia/asset-management.md'
   - '../../reference/features/pdf-annotations.md'
@@ -12,16 +14,19 @@ related-docs:
 
 # Integrating Zotero with Logseq
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-09
 
 ## Overview
 
-Zotero is a popular reference management tool for researchers and academics. Logseq includes a **built-in Zotero integration** that connects to the Zotero Web API, allowing you to search and import Zotero items directly as Logseq pages. You can also enhance this workflow with third-party plugins and manual import methods.
+Zotero is a popular reference management tool for researchers and academics. Logseq no longer ships an in-app Zotero **importer**; what remains in the current source is Zotero **file resolution** -- Logseq can open PDFs and other attachments that live in your Zotero data directory, and the file-graph importer converts Zotero attachment links into `zotero-link://` / `zotero-path://` assets.
+
+> **Removed:** The built-in Zotero Web API integration -- the **Settings > Zotero settings** pane, the API key / user ID fields, and the `/Zotero` search-and-import command -- is gone from the current source. Commit `bcc478b5f7` ("refactor: separate og and db version", #12276) deleted `src/main/frontend/extensions/zotero/{api,extractor,handler,schema,setting}.cljs`, leaving only `src/main/frontend/extensions/zotero.cljs` (101 lines) with the file-opening helpers. Do not expect to search or import a Zotero library from inside Logseq at `be800f1711`.
 
 **What This Guide Covers**:
 
-- Built-in Zotero integration via the Zotero Web API
-- Importing Zotero libraries and individual items
+- What the current source still does with Zotero data (file resolution, macros, `zotero://` links)
+- Configuring the Zotero paths in `logseq/config.edn`
+- Third-party plugin and manual import routes, which are now the only way to get item metadata into a graph
 - Syncing PDFs and annotations
 - Citation workflows
 - Linking references to pages
@@ -29,75 +34,62 @@ Zotero is a popular reference management tool for researchers and academics. Log
 **Prerequisites**:
 
 - Zotero installed ([https://www.zotero.org](https://www.zotero.org))
-- A Zotero account with [syncing enabled](https://www.zotero.org/support/sync)
-- A Zotero API key (create one at [https://www.zotero.org/settings/keys](https://www.zotero.org/settings/keys))
-- Logseq Desktop app
+- Logseq Desktop app (Zotero file resolution builds `file://` URLs, so it is desktop-only)
 - Basic familiarity with both tools
+- For the plugin and manual routes only: a Zotero account with [syncing enabled](https://www.zotero.org/support/sync) and, where a plugin asks for it, a [Zotero API key](https://www.zotero.org/settings/keys)
 
 ## Findings: New Capabilities
 
-- Zotero settings are profile-aware. Logseq stores the active profile separately, so multiple Zotero configurations can coexist in the same graph.
-- The built-in PDF handling now distinguishes imported Zotero files from linked Zotero files, with separate resolution paths for `zotero-path://` and `zotero-link://` assets.
-- The current Zotero settings defaults include citekey preference, attachment and note import toggles, page prefix, extra tags, overwrite mode, and both Zotero attachment directory paths.
+- Zotero settings are profile-aware: `:zotero/settings-v2` in `config.edn` is a map of profile name to settings, and the active profile is stored in local storage under `:zotero/setting-profile` (`src/main/frontend/extensions/zotero.cljs:53-60`).
+- That profile awareness is only partial. PDF path resolution and the file-graph importer both read the `"default"` profile unconditionally (`src/main/frontend/extensions/pdf/assets.cljs:220`, `deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1268,1813,3356-3357`), so a non-default profile will not change how attachments resolve.
+- PDF handling distinguishes imported Zotero files from linked Zotero files, with separate resolution paths for `zotero-path://` and `zotero-link://` assets (`src/main/frontend/extensions/pdf/assets.cljs:218-232`).
+- The settings map still carries citekey preference, attachment and note import toggles, page prefix, extra tags, overwrite mode, and both Zotero directory paths (`src/main/frontend/extensions/zotero.cljs:35-44`) -- but with the importer removed, only the two directory paths are still read by anything.
+- Only four Zotero i18n keys survive (`:zotero/attachments`, `:zotero/notes`, `:zotero/imported-file-warning`, `:zotero/linked-file-warning`, `src/resources/dicts/en.edn:2005-2008`), which is a good proxy for how much of the feature is left.
 
 ---
 
-## Method 1: Built-in Zotero Integration (Recommended)
+## Method 1: Built-in Zotero File Resolution
 
-Logseq has a built-in Zotero integration that communicates directly with the Zotero Web API. This does **not** require any plugin installation.
+This is what the current source actually provides. It lets Logseq **open** Zotero-managed files; it does not import bibliographic metadata.
 
 ### Setup
 
-**Step 1: Enable Zotero Syncing**
+There is no Zotero settings pane. Configure the paths directly in your graph's `logseq/config.edn`:
 
-The built-in integration requires Zotero cloud syncing to be enabled, since it connects to the Zotero Web API.
+```clojure
+:zotero/settings-v2
+{"default"
+ {:zotero-data-directory                   "/Users/you/Zotero"
+  :zotero-linked-attachment-base-directory "/Users/you/Zotero/linked"}}
+```
 
-1. In Zotero, go to Edit (or Zotero menu on macOS) > Preferences > Sync
-2. Sign in with your Zotero account
-3. Enable syncing
+The top-level key is a **profile name**. `zotero.cljs` picks the profile stored in local storage under `:zotero/setting-profile`, falling back to the first profile in the map. Everything else that touches these paths -- PDF resolution and the file-graph importer -- hardcodes `"default"`, so keep your working settings there.
 
-**Step 2: Create a Zotero API Key**
-
-1. Go to [https://www.zotero.org/settings/keys](https://www.zotero.org/settings/keys)
-2. Note your **userID** (displayed on that page; this is a number, not your username)
-3. Click **Create new private key**
-4. Grant at least **Allow library access** permission
-5. If you want to include notes, select **Allow notes access**
-6. Save the key
-
-**Step 3: Configure Zotero Settings in Logseq**
-
-1. Open Logseq
-2. Go to **Settings** > **Zotero settings**
-3. Enter your **API key** and **User ID**
-4. Configure additional options:
-   - **Type**: `user` (for personal library) or `group` (for group libraries; use your group ID instead)
-    - **Prefer citekey**: Use the citation key as the page name when Zotero provides one; otherwise Logseq uses the item title
-   - **Include attachments**: Whether to import attachment links
-   - **Include notes**: Whether to import Zotero notes
-   - **Page insert prefix**: The prefix for imported pages (default: `@`). You can set it to a namespace like `zotero/` for hierarchical organization
-   - **Extra tags**: Additional tags to add to imported items
-   - **Zotero data directory**: Path to your local Zotero data folder (enables opening imported PDFs directly)
-   - **Zotero linked attachment base directory**: Path for Zotero linked file attachments
-
-### Usage
-
-**Import Individual Items**:
-
-1. In Logseq, type the `/Zotero` slash command
-2. Search for a Zotero item by title, author, or any text
-3. Select an item from the results
-4. Logseq creates a page with the item's metadata (title, authors, tags, etc.)
-
-**Import All Items**:
+> **Removed:** Step-by-step instructions for **Settings > Zotero settings**, the API key and user ID fields, and the `/Zotero` slash command. None of those exist at `be800f1711`.
 
 > **Removed:** The current Zotero settings UI no longer exposes a built-in **Add all** bulk-import control.
 
-Use the `/Zotero` command to import items individually.
-
-**Re-importing**
-
 > **Removed:** The current source does not document an automatic append-on-reimport behavior. If you need a fresh import, delete the existing page first and import it again.
+
+### Usage
+
+Two macros render an **Open** button for a Zotero attachment (`src/main/frontend/components/block.cljs:1887-1894`):
+
+```text
+{{zotero-imported-file <item-key> "<filename>"}}
+{{zotero-linked-file "<relative-path>"}}
+```
+
+- `{{zotero-imported-file}}` resolves to `<zotero-data-directory>/storage/<item-key>/<filename>`.
+- `{{zotero-linked-file}}` resolves under `<zotero-linked-attachment-base-directory>`, stripping a leading `attachments:` prefix.
+- If the matching directory setting is blank, Logseq renders a warning instead of the button ("This is a Zotero imported file, set Zotero data directory to open the file in Logseq.").
+- PDFs open in Logseq's own PDF viewer; anything else opens in a new tab.
+
+Asset paths beginning with `zotero-link://` or `zotero-path://`, and asset external URLs beginning with `zotero://`, are resolved the same way (`src/main/frontend/extensions/pdf/assets.cljs:218-232`). The file-graph importer produces those prefixes when it converts a Zotero attachment link (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1727-1730`), so a graph imported from a file graph that used the old Zotero integration keeps working.
+
+### Getting metadata in
+
+Because the importer is gone, use one of the routes below -- a third-party plugin, a CSV export, or Better Notes Markdown export -- to create the reference pages themselves, and use the macros above (or a plain `file://` link) to attach the PDF.
 
 ### Optional: Better BibTeX
 
@@ -105,18 +97,19 @@ For consistent citation keys (e.g., `smith2024` instead of the full item title):
 
 1. Install [Better BibTeX for Zotero](https://retorque.re/zotero-better-bibtex/)
 2. Configure your preferred citation key format (e.g., `[auth:lower][year]`)
-3. In Logseq Zotero settings, enable **Prefer citekey**
-4. Logseq will now use the Better BibTeX citation key as the page name
+3. Use those keys as your Logseq page names when you create reference pages
+
+The `:prefer-citekey?` setting still exists in the settings map but is no longer read by anything in the app, since the importer that consumed it was removed.
 
 ---
 
 ## Method 2: Third-Party Plugins
 
-If you do not have Zotero syncing enabled, or need additional features, you can use community plugins.
+With the built-in importer removed, a community plugin is the closest replacement for searching a Zotero library from inside Logseq. Check each plugin's compatibility with the current Logseq version before relying on it.
 
 ### Logseq Citation Manager
 
-If you prefer a plugin-based approach or don't use Zotero cloud syncing:
+A plugin-based approach that reads a local Zotero library:
 
 - **Plugin**: [logseq-citation-manager](https://github.com/sawhney17/logseq-citation-manager/) by sawhney17
 - Supports local Zotero libraries
@@ -207,7 +200,7 @@ For each reference, create a page:
 
 ### Zotero Data Directory
 
-The built-in integration can open PDFs stored in Zotero's local data directory. Configure the **Zotero data directory** path in Logseq's Zotero settings so that Logseq can locate imported file attachments.
+Logseq can open PDFs stored in Zotero's local data directory. Set `:zotero-data-directory` under `:zotero/settings-v2` in `logseq/config.edn` so Logseq can locate imported file attachments.
 
 **Default Zotero Data Directory Locations**:
 
@@ -215,7 +208,7 @@ The built-in integration can open PDFs stored in Zotero's local data directory. 
 - **Windows**: `C:\Users\YourName\Zotero\`
 - **Linux**: `~/Zotero/`
 
-For linked file attachments (as opposed to imported/stored attachments), set the **Zotero linked attachment base directory** in settings.
+For linked file attachments (as opposed to imported/stored attachments), set `:zotero-linked-attachment-base-directory`.
 
 ### Copy PDFs to Logseq
 
@@ -246,14 +239,20 @@ Copy-Item "C:\Users\YourName\Zotero\storage\ABC123\paper.pdf" "C:\path\to\logseq
 
 ### Zotero Link (Alternative)
 
-Instead of copying, link directly to Zotero storage. Logseq supports the `zotero://` protocol:
+Instead of copying, point at Zotero storage. Either use the macro, which follows your configured data directory:
+
+```text
+{{zotero-imported-file ABC123 "paper.pdf"}}
+```
+
+Or hard-code an absolute path:
 
 ```markdown
 - [[smith2024]]
   - pdf:: file:///Users/yourname/Zotero/storage/ABC123/paper.pdf
 ```
 
-Note: `file://` links are desktop-only and break if the Zotero storage path changes.
+Note: `file://` links are desktop-only and break if the Zotero storage path changes. The macro form survives a move, as long as you update `:zotero-data-directory`.
 
 ---
 
@@ -302,13 +301,13 @@ Note: `file://` links are desktop-only and break if the Zotero storage path chan
 - Format: `smith2024` (author + year)
 - Unique keys prevent collisions: `smith2024a`, `smith2024b`
 
-**Use in Logseq** (with the default `@` prefix):
+**Use in Logseq**. The old importer prefixed page names with `@` by default (`:page-insert-prefix`); that convention is still a good one to keep by hand:
 
 ```markdown
 - According to [[@smith2024]], the results show...
 ```
 
-If you changed the page insert prefix (e.g., to `zotero/`):
+A namespace prefix works equally well for hierarchical organization:
 
 ```markdown
 - According to [[zotero/smith2024]], the results show...
@@ -388,14 +387,14 @@ If you changed the page insert prefix (e.g., to `zotero/`):
 
 ### Reading Workflow
 
-**1. Import Reference**
+**1. Create the Reference Page**
 
-- Use `/Zotero` command to search and import from your synced library
-- Creates page with `@` prefix (e.g., `[[@smith2024]]`)
+- Create the page by hand, via a citation plugin, or from a CSV / Better Notes export
+- Name it with the citation key and a prefix, e.g. `[[@smith2024]]`
 
 **2. Add PDF**
 
-- If Zotero data directory is configured, imported file attachments are accessible directly
+- If `:zotero-data-directory` is configured, use `{{zotero-imported-file <item-key> "<filename>"}}`
 - Or copy PDF to `assets/smith2024.pdf` and link: `pdf:: ![](../assets/smith2024.pdf)`
 
 **3. First Pass Reading**
@@ -457,17 +456,21 @@ If you changed the page insert prefix (e.g., to `zotero/`):
 
 ## Troubleshooting
 
-### Built-in Integration Not Working
+### `/Zotero` Does Nothing
 
-**Problem**: `/Zotero` command does not return results.
+**Problem**: There is no `/Zotero` slash command and no Zotero pane in Settings.
+
+**Cause**: Expected. The Web API integration was removed in `bcc478b5f7` (#12276). Use a community plugin or one of the manual import routes below instead.
+
+### "This is a Zotero imported file" Warning Instead of an Open Button
+
+**Problem**: A `{{zotero-imported-file}}` or `{{zotero-linked-file}}` macro renders a warning.
 
 **Solutions**:
 
-1. Verify Zotero cloud syncing is enabled and items are synced
-2. Check API key and User ID in Settings > Zotero settings (User ID is a number, not your username)
-3. Ensure the API key has at least "Allow library access" permission
-4. For group libraries, use the group ID and set type to `group`
-5. Restart Logseq
+1. Set `:zotero-data-directory` (imported files) or `:zotero-linked-attachment-base-directory` (linked files) under `:zotero/settings-v2` in `logseq/config.edn`
+2. Put them under the `"default"` profile -- PDF resolution and the importer ignore other profiles
+3. Reload the graph after editing `config.edn`
 
 ### PDFs Not Opening
 
@@ -476,20 +479,20 @@ If you changed the page insert prefix (e.g., to `zotero/`):
 **Solutions**:
 
 1. Verify PDF exists at specified path
-2. Set the **Zotero data directory** in Zotero settings so Logseq can resolve imported file paths
-3. For linked attachments, set the **Zotero linked attachment base directory**
+2. Set `:zotero-data-directory` in `config.edn` so Logseq can resolve imported file paths
+3. For linked attachments, set `:zotero-linked-attachment-base-directory`
 4. Use relative paths: `../assets/file.pdf` (not absolute) for PDFs stored in the graph
 5. Check file permissions (read access required)
 
 ### Citation Keys Not Working
 
-**Problem**: Pages are created with full titles instead of citation keys
+**Problem**: Pages end up with full titles instead of citation keys
 
 **Solutions**:
 
 1. Install [Better BibTeX for Zotero](https://retorque.re/zotero-better-bibtex/)
-2. Enable **Prefer citekey** in Logseq Zotero settings
-3. Ensure Better BibTeX has generated citation keys for your items (check the Extra field in Zotero item info)
+2. Ensure Better BibTeX has generated citation keys for your items (check the Extra field in Zotero item info)
+3. Name pages from the citekey when you create them; Logseq no longer does this for you
 
 ---
 
@@ -518,8 +521,8 @@ If you changed the page insert prefix (e.g., to `zotero/`):
 **Do**:
 
 - Maintain complete bibliographic data in Zotero
-- Use the built-in integration to import items to Logseq for note-taking
-- Use Zotero for PDF organization
+- Bring items into Logseq for note-taking through a plugin or export, and keep Logseq pages thin
+- Use Zotero for PDF organization, and point Logseq at it with `:zotero-data-directory`
 
 **Don't**:
 
@@ -528,19 +531,19 @@ If you changed the page insert prefix (e.g., to `zotero/`):
 
 ### Consistent Naming
 
-**Citation Keys**: Use Better BibTeX auto-generation with the "Prefer citekey" option enabled in Logseq.
+**Citation Keys**: Use Better BibTeX auto-generation and name your Logseq pages from the generated key.
 
 - `smith2024` (lowercase, consistent format)
 - Avoid manual keys (leads to conflicts)
 
-**Page Prefix**: The default `@` prefix (e.g., `@smith2024`) keeps Zotero-imported pages distinct from regular pages.
+**Page Prefix**: An `@` prefix (e.g., `@smith2024`) -- the old importer's default -- keeps reference pages distinct from regular pages.
 
 ### Regular Syncs
 
 **Zotero Syncing**:
 
-- The built-in integration reads from the Zotero Web API, so ensure your Zotero library is synced
-- Changes in Zotero are reflected when you next search or import
+- Logseq reads Zotero files from disk, so what matters is that Zotero has actually downloaded the attachments locally
+- If you use a plugin that reads the Zotero Web API, keep your library synced so the plugin sees current items
 
 ### Backup Both Tools
 
@@ -554,21 +557,23 @@ If you changed the page insert prefix (e.g., to `zotero/`):
 
 ## Zotero Settings Reference
 
-The built-in Zotero settings are stored in your graph's `logseq/config.edn` under the `:zotero/settings-v2` key. The available settings are:
+Zotero settings live in your graph's `logseq/config.edn` under `:zotero/settings-v2`, keyed by profile name. Defaults come from `src/main/frontend/extensions/zotero.cljs:35-48`.
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `:type` | Library type: `:user` or `:group` | `:user` |
-| `:prefer-citekey?` | Use Better BibTeX citation key as page name | `true` |
-| `:include-attachments?` | Import attachment links | `true` |
-| `:attachments-block-text` | Heading text for attachments block | `"[[Attachments]]"` |
-| `:include-notes?` | Import Zotero notes | `true` |
-| `:overwrite-mode?` | Overwrite existing page data on re-import | `false` |
-| `:notes-block-text` | Heading text for notes block | `"[[Notes]]"` |
-| `:zotero-data-directory` | Path to local Zotero data folder | `""` |
-| `:zotero-linked-attachment-base-directory` | Path for linked file attachments | `""` |
-| `:extra-tags` | Additional tags for imported items | `""` |
-| `:page-insert-prefix` | Prefix for imported page names | `"@"` |
+| Setting | Description | Default | Still read? |
+|---------|-------------|---------|-------------|
+| `:zotero-data-directory` | Path to local Zotero data folder | `""` | Yes |
+| `:zotero-linked-attachment-base-directory` | Path for linked file attachments | `""` | Yes |
+| `:type` | Library type: `:user` or `:group` | `:user` | No |
+| `:prefer-citekey?` | Use Better BibTeX citation key as page name | `true` | No |
+| `:include-attachments?` | Import attachment links | `true` | No |
+| `:attachments-block-text` | Heading text for attachments block | localized `:zotero/attachments`, `"Attachments"` in English | No |
+| `:include-notes?` | Import Zotero notes | `true` | No |
+| `:notes-block-text` | Heading text for notes block | localized `:zotero/notes`, `"Notes"` in English | No |
+| `:overwrite-mode?` | Overwrite existing page data on re-import | `false` | No |
+| `:extra-tags` | Additional tags for imported items | `""` | No |
+| `:page-insert-prefix` | Prefix for imported page names | `"@"` | No |
+
+The "Still read?" column reflects `be800f1711`: only the two directory paths are consumed, by `zotero.cljs`, `pdf/assets.cljs`, and the file-graph importer. The rest are leftovers from the removed importer. `:zotero/api-key-v2` and `:zotero/setting-profile` also still appear in the local-storage spec (`src/main/frontend/spec/storage.cljc:18-19`), but nothing reads the API key.
 
 ---
 
@@ -591,5 +596,5 @@ The built-in Zotero settings are stored in your graph's `logseq/config.edn` unde
 
 ---
 
-**Status**: Stable (built-in feature)
+**Status**: Reduced scope -- file resolution only; the built-in Zotero Web API importer was removed in `bcc478b5f7` (#12276)
 **Feedback**: Report issues on [Logseq GitHub](https://github.com/logseq/logseq) or [Logseq Forums](https://discuss.logseq.com/)
