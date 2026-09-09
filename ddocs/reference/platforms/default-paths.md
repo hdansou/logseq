@@ -12,6 +12,7 @@ relatedDocs:
     - '[Mobile Differences](mobile-differences.md)'
     - '[db-worker HTTP API](../api/db-worker-http-api.md)'
     - '[Sync Limits, Throttles, and Batch Sizes](../features/sync-limits.md)'
+    - '[URI Schemes](uri-schemes.md)'
 ---
 
 # Default Paths by Platform

@@ -1,0 +1,72 @@
+;; Declaration of the enumerable facts in ddocs/reference/platforms/uri-schemes.md.
+;;
+;; Covers the scheme *names* (three of which are duplicated across the Electron
+;; main process, the renderer, and two mobile manifests — a rename that misses
+;; one of them is exactly the bug this catches), plus the openExternal allowlist.
+;;
+;; The deep-link route tables are NOT covered: they are `cond` branches in
+;; electron/url.cljs and mobile/deeplink.cljs, which this gate cannot read.
+;;
+;;   check_sync_limits.clj --root <logseq-checkout> --declaration uri-schemes.edn
+
+[;; ---- scheme names, Electron main process -------------------------------
+ {:symbol LSP_SCHEME
+  :file "src/electron/electron/core.cljs"
+  :expected "logseq"
+  :doc "OS-level deep-link scheme"}
+ {:symbol FILE_LSP_SCHEME
+  :file "src/electron/electron/core.cljs"
+  :expected "lsp"
+  :doc "app page + plugin loader scheme"}
+ {:symbol FILE_ASSETS_SCHEME
+  :file "src/electron/electron/core.cljs"
+  :expected "assets"
+  :doc "local-file scheme"}
+
+ ;; ---- the renderer's copy of LSP_SCHEME ---------------------------------
+ ;; Carries a ";; Keep same as electron/electron.core" comment and nothing
+ ;; enforces it. This entry is that enforcement.
+ {:symbol LSP_SCHEME
+  :file "src/main/frontend/util/url.cljs"
+  :expected "logseq"
+  :doc "renderer's duplicate of the deep-link scheme"}
+
+ ;; ---- the "assets://" literal shared by common code ---------------------
+ {:symbol asset-protocol
+  :file "deps/common/src/logseq/common/config.cljs"
+  :expected "assets://"
+  :doc "common-config/asset-protocol"}
+
+ ;; ---- lsp:// prefixes ---------------------------------------------------
+ {:regex "\\(defonce STATIC_URL \\(str LSP_PROTOCOL \"([^\"]*)\"\\)\\)"
+  :file "src/electron/electron/core.cljs"
+  :expected "logseq.com/"
+  :doc "STATIC_URL host — the app's own origin"}
+ {:regex "\\(defonce PLUGIN_URL \\(str LSP_PROTOCOL \"([^\"]*)\"\\)\\)"
+  :file "src/electron/electron/core.cljs"
+  :expected "logseq.io/plugins/"
+  :doc "PLUGIN_URL prefix"}
+ {:regex "\\(defonce EXTERNAL_PLUGIN_URL \\(str LSP_PROTOCOL \"([^\"]*)\"\\)\\)"
+  :file "src/electron/electron/core.cljs"
+  :expected "logseq.io/external/"
+  :doc "EXTERNAL_PLUGIN_URL prefix"}
+
+ ;; ---- mobile scheme registration ----------------------------------------
+ ;; If either manifest drifts from "logseq", deep links break on that platform
+ ;; only, which is hard to notice from a desktop checkout.
+ {:regex "<key>CFBundleURLSchemes</key>\\s*<array>\\s*<string>([^<]*)</string>"
+  :file "ios/App/App/Info.plist"
+  :expected "logseq"
+  :doc "iOS registered URL scheme"}
+ {:regex "<data android:scheme=\"([^\"]*)\" */>"
+  :file "android/app/src/main/AndroidManifest.xml"
+  :expected "logseq"
+  :doc "Android registered URL scheme"}
+
+ ;; ---- external-link protocol allowlist ----------------------------------
+ ;; Also declared in asset-sync.edn, deliberately: both pages state it, and
+ ;; either gate failing should point at the page it belongs to.
+ {:regex "ALLOWED_EXTERNAL_PROTOCOLS\\s*=\\s*(\\[[^\\]]*\\])"
+  :file "resources/js/preload.js"
+  :expected "['https:', 'http:', 'mailto:', 'zotero:', 'file:']"
+  :doc "protocols openExternal will follow"}]

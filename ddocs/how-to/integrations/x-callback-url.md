@@ -8,9 +8,10 @@ platforms: [desktop, mobile]
 graphType: [file, db]
 relatedDocs:
   howTo:
-    - '[Quick Capture](quick-capture.md)'
+    - '[Quick Capture](../content/quick-capture.md)'
   reference:
     - '[HTTP API](../../reference/api/http-api.md)'
+    - '[URI Schemes](../../reference/platforms/uri-schemes.md)'
 ---
 
 # X-Callback-URL
@@ -217,6 +218,12 @@ Save-ToLogseq "Meeting notes from today" "TODAY"
 
 ## Mobile Integration
 
+> **Verify before relying on this section.** As of `origin/master` @ `be800f1711` (2026-09-08), the mobile
+> deep-link router (`src/main/mobile/deeplink.cljs`) handles only the `graph`, `mobile`, and `shared` hosts —
+> there is no `x-callback-url` branch, and an unmatched host is silently ignored. The recipes below may date
+> from an earlier build. See [URI Schemes](../../reference/platforms/uri-schemes.md#deep-link-routes) for the
+> full desktop and mobile route tables, and prefer `logseq://shared` or the OS share sheet on mobile.
+
 ### iOS Shortcuts
 
 1. Open Shortcuts app
@@ -293,7 +300,7 @@ echo "Saved to Logseq"
 
 ## See Also
 
-- **Quick Capture**: [quick-capture.md](quick-capture.md)
+- **Quick Capture**: [quick-capture.md](../content/quick-capture.md)
 - **HTTP API**: [http-api.md](../../reference/api/http-api.md)
 
 ---
