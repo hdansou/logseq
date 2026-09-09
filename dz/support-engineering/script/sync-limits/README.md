@@ -15,4 +15,14 @@ Two entry kinds in `sync-limits.edn`:
 
 When it fails, fix the source if the change was accidental; otherwise update **both** `sync-limits.edn` and the reference page. The declaration and the page are meant to be edited together.
 
+## Declarations
+
+| File | Gates |
+|---|---|
+| `sync-limits.edn` | `ddocs/reference/features/sync-limits.md` — every numeric limit, throttle and batch size |
+| `asset-sync.edn` | `ddocs/reference/features/asset-sync.md` — the rendering format sets and the server's response content-type map |
+| `uri-schemes.edn` | `ddocs/reference/platforms/uri-schemes.md` — the scheme constants (including their duplicates in the renderer and the two mobile manifests) and the `openExternal` allowlist |
+
+Pass the others with `--declaration <file>`. Set-valued and map-valued `:expected` work with `:symbol` entries; `common-config/img-formats` is a `defn`, so it uses a `:regex` whose capture group is compared as a string.
+
 Requires babashka (edamame bundled).

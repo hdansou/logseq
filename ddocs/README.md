@@ -85,11 +85,13 @@ This is the merged documentation index for Logseq, organized by the Diátaxis fr
 - [Templates System](reference/interface/templates-system.md)
 - [Mobile Differences](reference/platforms/mobile-differences.md)
 - [Default Paths by Platform](reference/platforms/default-paths.md)
+- [URI Schemes](reference/platforms/uri-schemes.md)
 - [Code Blocks](reference/syntax/code-blocks.md)
 - [Dynamic Variables](reference/syntax/dynamic-variables.md)
 - [Query System](reference/advanced/query-system.md)
 - [Query Patterns](reference/advanced/query-patterns.md)
 - [Sync Limits, Throttles, and Batch Sizes](reference/features/sync-limits.md)
+- [Assets: Link Syntax, File Types, and Sync](reference/features/asset-sync.md)
 
 ## Explanation
 
