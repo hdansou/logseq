@@ -1,335 +1,160 @@
 ---
-title: 'How Text Embeddings Work'
-description: "Understanding the technology behind Logseq's semantic search"
+title: 'How Semantic Search Works'
+description: "The architecture behind Logseq's hybrid keyword + vector search: the embedding sidecar, the zvec index, and how the two result sets are fused"
 type: explanation
-status: stable
-lastVerified: '2026-01-29'
-logseqVersion: '0.11.x'
+status: active-development
+lastVerified: '2026-09-06'
+logseqVersion: '2.0.x'
+platforms: [desktop]
+graphType: [db]
 relatedDocs:
   tutorials:
     - '[Semantic Search Tutorial](../../tutorials/getting-started/semantic-search.md)'
   reference:
     - '[Semantic Search API](../../reference/api/semantic-search-api.md)'
+    - '[db-worker HTTP API](../../reference/api/db-worker-http-api.md)'
 ---
 
-# How Text Embeddings Work
+# How Semantic Search Works
 
-> Understanding the AI technology that powers Logseq's semantic search.
+> Why Logseq blends vector similarity into keyword search instead of replacing it, and how the pieces fit together.
 
-## The Core Idea
+## The problem
 
-Text embeddings convert words into numbers that capture meaning. Similar concepts get similar numbers.
+Full-text search finds blocks that contain the words you typed. It cannot find the block that says "the outliner drops the caret when two clients edit the same parent" when you search for *concurrent editing bugs* — there is no lexical overlap at all.
+
+Vector search solves that, but it fails in the opposite direction: ask it for an exact page title and it will happily return four things that are *about* the same topic and rank the exact match fifth. Neither approach alone produces a search box people trust.
+
+Logseq therefore runs both and fuses the results. **Semantic search is not a separate feature or a separate mode** — there is no "semantic search" endpoint. It is an additional ranking signal folded into the existing `search-blocks` call, and it can be silently absent without breaking anything.
+
+That last property drives most of the design. Every stage below is allowed to fail, and every failure degrades to plain keyword search rather than to an error.
+
+## The shape of the system
 
 ```
-"dog" → [0.12, 0.85, -0.33, 0.67, ...]  (384 numbers)
-"puppy" → [0.15, 0.82, -0.31, 0.69, ...]  (similar!)
-"car" → [-0.45, 0.11, 0.72, -0.23, ...]  (different)
+                      ┌──────────────────────────────┐
+   your query ───────►│ frontend/search.cljs         │
+                      │ stamps the user's setting     │
+                      └──────────────┬───────────────┘
+                                     │ :thread-api/search-blocks
+                                     ▼
+                      ┌──────────────────────────────┐
+                      │ worker/handler/search.cljs   │
+                      │ embeds the query (≤50 ms)     │──────► embedding sidecar
+                      └──────────────┬───────────────┘        (Python, HTTP)
+                                     │ + :query-embedding
+                                     ▼
+                      ┌──────────────────────────────┐
+                      │ worker/search.cljs           │
+                      │                              │
+                      │   SQLite FTS  ──┐            │
+                      │   fuzzy match ──┼─► RRF ─────┼──► ranked results
+                      │   zvec ANN    ──┘            │
+                      └──────────────────────────────┘
+                                     │
+                                     ▼
+                            zvec HNSW collection
+                            (on disk, per graph)
 ```
 
-When you search for "dog", the system finds blocks whose numbers are close to the query's numbers.
+Four processes are involved on the desktop: the renderer, the db-worker (a Node process), the Python embedding sidecar, and — inside the db-worker — the native zvec library. The renderer never talks to the sidecar or to zvec directly.
 
----
+## Why a Python sidecar
 
-## Why This Matters
+Embedding text requires a transformer model. Logseq could have bundled an ONNX runtime into the Electron binary, but that would add tens of megabytes to every download for a feature most users never enable, on every platform, whether or not it is supported there.
 
-### Traditional Search Limitations
+Instead the app shells out to a small stdlib HTTP server (`sidecar/embedding_server.py`) backed by `sentence-transformers`, and installs it into a virtualenv under the user's data directory **the first time semantic search is switched on**. Users who never enable it pay nothing.
 
-Keyword search only finds exact matches:
+The sidecar speaks the OpenAI embeddings shape — `POST /v1/embeddings` with `{"input": [...]}`. This is deliberate: it is a well-known contract, it makes the sidecar trivially replaceable, and it means the endpoint can be pointed at any compatible server by setting `LOGSEQ_EMBEDDINGS_URL`. Nothing in the app assumes the sidecar is the one that ships with it.
 
-- "dog" finds "dog"
-- Misses: "puppy", "canine", "Golden Retriever"
+The default model is `all-MiniLM-L6-v2` at 384 dimensions, and vectors come back L2-normalized, so cosine similarity is just a dot product.
 
-### Semantic Search Advantages
+## Why zvec, and what the index actually holds
 
-Vector similarity finds meaning:
+Vector search needs an approximate-nearest-neighbour index. Logseq uses `@zvec/zvec`, a native library with per-platform bindings, storing one collection per graph at `<root>/graphs/<graph>/search/vector`.
 
-- "dog" finds related concepts
-- Works with synonyms
-- Handles paraphrasing
-- Understands context
+The collection holds one document per indexed block:
 
----
+| Field | Type | Purpose |
+|---|---|---|
+| `embedding` | `VECTOR_FP32`, HNSW, cosine | the vector, dimension from the model |
+| `page` | `STRING`, inverted index | lets a page-scoped search filter |
+| `title` | `STRING` | carried through to ranking, not indexed |
 
-## Logseq's Architecture
+An important asymmetry: **the text that gets embedded is not the text that gets full-text indexed.** The FTS table stores a sanitized title; the vector document stores the raw one. For pages and classes that raw title includes its namespace parents, so a page nested under `Projects/Infra` embeds with that lineage attached and matches queries about infrastructure even when the page's own name doesn't mention it.
 
-### Three-Worker System
+### The context chunk that was tried and withdrawn
 
-Logseq uses separate threads to keep the UI responsive:
+Today's chunk is deliberately thin, and it is worth knowing that this is a retreat rather than a starting position.
 
-```
-┌─────────────────┐
-│   Main Thread   │ ← React UI
-│   (Browser UI)  │
-└────────┬────────┘
-         │
-    ┌────┴────┐
-    │         │
-    ▼         ▼
-┌───────┐ ┌──────────┐
-│  DB   │ │Inference │
-│Worker │→│ Worker   │ ← ML Operations
-└───────┘ └──────────┘
-    │         │
-    ▼         ▼
-DataScript   HNSW Index
-```
-
-### Components
-
-| Component        | Purpose             |
-| ---------------- | ------------------- |
-| DB Worker        | Database operations |
-| Inference Worker | ML model execution  |
-| HNSW Index       | Fast vector search  |
-| Transformers.js  | Model framework     |
-
----
-
-## The Embedding Model
-
-### MiniLM-L6-v2
-
-Logseq uses a compact, efficient model:
-
-- **Name**: Xenova/all-MiniLM-L6-v2
-- **Size**: ~80MB
-- **Output**: 384-dimensional vectors
-- **Speed**: ~50ms per query
-- **Quality**: Excellent for semantic similarity
-
-### Why This Model?
-
-- Small enough for browsers
-- Fast enough for real-time search
-- Accurate enough for note-taking
-- WebGPU acceleration when available
-
----
-
-## The Search Process
-
-### 1. Indexing (Background)
-
-When you write content:
+[ADR 077](../../../docs/agent-guide/077-vector-embedding-context.md) proposed embedding a bounded *context chunk* per block, so that meaning split across neighbouring blocks would still be findable. That design shipped with the original zvec work as context version 2. Each block embedded a labelled six-part text:
 
 ```
-Your text → Tokenize → Model → Embedding → HNSW Index
+Page: Infrastructure
+Path: Runbooks > Incident response
+Previous: Page the on-call engineer
+Block: Escalate if unacknowledged after 15 minutes
+Children: Use the escalation rota, Do not skip tiers
+Next: File a postmortem within 48 hours
 ```
 
-1. **Tokenize**: Split text into model-friendly pieces
-2. **Encode**: Convert tokens to numbers
-3. **Embed**: Generate 384-dimension vector
-4. **Store**: Add to HNSW index
+Segments were capped at 320 characters, parents walked up to three levels, and children were limited to two.
 
-### 2. Searching (Real-time)
+It was removed four weeks later, and the reason is instructive. The ADR anticipated the danger and wrote a constraint against it: *"Do not compute sibling or child context by sorting the same parent children for every block."* Full rebuilds honoured that — they precomputed a children-and-neighbours cache once and reused it across batches. But the **incremental** path, which runs on every transaction, had no cache to hand and fell back to walking each block's parent's children and sorting them, once per changed block. Editing became measurably slower as graphs grew.
 
-When you search:
+The fix collapsed the whole mechanism: `:vector-title` became the plain unsanitized title, and it is now computed only when a vector index actually exists. Bumping the context version to `3` invalidated every index built under the old scheme.
 
-```
-Query → Embedding → HNSW Search → Results
-```
+So the trade-off the ADR was weighing is still open, not settled. Richer context genuinely does raise recall. What sank it was not the embedding cost but the *invalidation* cost — a block's vector depending on its neighbours means neighbour edits dirty it, and there was no cheap incremental way to discover that. Anyone revisiting this should start from the incremental path, not the rebuild path.
 
-1. **Embed query**: Same process as indexing
-2. **HNSW search**: Find nearest neighbors
-3. **Rank results**: Combine with keyword scores
+### Why the index can be thrown away
 
----
+The collection stores a `metadata.json` recording the model id, the dimension, and the context version. On startup those are compared against what the running platform would produce. Any mismatch — a model swap, a dimension change, a bump to the chunking strategy — invalidates the whole index and triggers a rebuild.
 
-## Vector Similarity
+This is cheap to reason about precisely because the index is disposable. It is derived data: it can always be rebuilt from the graph, so the system never has to migrate it.
 
-### Distance Metrics
+## Fusing two rankings
 
-Logseq uses **cosine similarity** measured as distance:
+The interesting problem is combining a keyword ranking and a vector ranking whose scores mean completely different things. A BM25-ish rank and a cosine similarity are not comparable numbers.
 
-- **0.0**: Identical meaning
-- **0.3**: Very similar
-- **0.6**: Somewhat related (threshold)
-- **1.0**: Unrelated
+Logseq uses **Reciprocal Rank Fusion**, which throws the raw scores away and uses only each result's *position* in its own list. Each source contributes `weight / (k + rank + 1)`, with `k = 60`. Keyword results carry a weight of `1.25` against the vector side's `1.0`.
 
-### Filtering
+Crucially, fusion only engages when there are vector results at all. A search that produced none — flag off, no index, embedding timed out — keeps its original keyword ranking untouched rather than being re-scored through a one-sided RRF.
 
-Results with distance ≥ 0.6 are excluded as not relevant enough.
+That asymmetry is the design's core opinion: **keyword search wins ties.** Vector hits are there to surface things keyword search missed entirely, not to reorder things it already found correctly. Two further guards push the same way:
 
-### Score Conversion
+- Vector hits are capped at 10 per query, and anything scoring at or below `0.5` is discarded. That number reads like a similarity cutoff but is not one: the score is `1/(1+distance)`, so the threshold only excludes results further than distance `1` — anti-correlated vectors, essentially. The cap of 10 is doing far more filtering work than the floor is.
+- A small term-match boost re-injects lexical evidence into vector-only hits, so a vector result that happens to contain your actual search terms outranks one that merely feels related. Matching the first query term in the title is worth the most; matching only in the surrounding context is worth an order of magnitude less.
 
-```
-semantic_score = 1 / (1 + distance)
-```
+The net effect is that turning semantic search on should never make a query that already worked worse. It adds a tail of results, it does not reshuffle the head.
 
-- Distance 0.0 → Score 1.0
-- Distance 0.3 → Score 0.77
-- Distance 0.5 → Score 0.67
+## Failure is the normal case
 
----
+The query-embedding call has a **50 millisecond budget**. If the sidecar has not answered by then, the worker abandons the embedding, logs a warning, and reruns the search keyword-only.
 
-## HNSW Index
+Fifty milliseconds is far less than a cold sentence-transformer needs, which is intentional: search must stay responsive while you type, and a warm sidecar answers in single-digit milliseconds. But it has a consequence worth internalising — **the first search after the sidecar starts will almost always come back keyword-only**, and so will every search if the sidecar is wedged. From the outside, "semantic search is broken" and "semantic search is slow" look identical.
 
-### What is HNSW?
+This is why anything diagnosing the feature should supply its own `:query-embedding` rather than relying on the worker to produce one; that path skips the timeout entirely and tests the index rather than the clock. The [Semantic Search API reference](../../reference/api/semantic-search-api.md) covers how.
 
-Hierarchical Navigable Small World is a data structure for fast approximate nearest neighbor search.
+The same tolerance runs through the rest of the stack. No vector index on the platform? The option is ignored. Sidecar unreachable? Keyword-only. Index empty or stale? Zero vector hits, keyword results unaffected. There is no configuration in which the search box stops working because the semantic layer is unhappy.
 
-### Why HNSW?
+## Why it only runs on Apple silicon
 
-- **Fast**: O(log n) search time
-- **Scalable**: Handles millions of vectors
-- **Accurate**: >95% recall of true nearest neighbors
-- **Memory efficient**: Fits in browser memory
+The feature is gated to macOS on arm64, and the gate is enforced independently in three places — the settings row is only offered there, the Electron sidecar refuses to start elsewhere, and the db-worker's Node platform only builds a vector index when it is both on macOS arm64 *and* given an embedding endpoint.
 
-### How It Works
+The last condition is worth calling out because it changed: there is no default endpoint any more. A db-worker started without `--embedding-endpoint` (or `LOGSEQ_EMBEDDINGS_URL`) builds no vector index at all, regardless of platform. Semantic search is opt-in at the process level, not just in the UI.
 
-Imagine a network of connected vectors:
+Browser and mobile builds have no vector support whatsoever — their platform adapter simply has no vector implementation, so the code path is unreachable rather than disabled.
 
-1. Start at a random high-level entry point
-2. Greedily move toward query vector
-3. Descend to finer layers
-4. Return k nearest neighbors
+## What this rules out
 
----
+Some consequences follow directly from the architecture and are worth knowing before you build on it:
 
-## Hybrid Search
+- **The CLI has no semantic search.** `logseq search` does not call `search-blocks` at all; it runs a Datascript substring query. Enabling the setting changes nothing about CLI results.
+- **Plugins cannot force it on.** `logseq.App.search` reaches the same fused pipeline, but the frontend overwrites the flag from application state, so a plugin gets semantic ranking only when the user has already enabled it.
+- **There is no "search by vector" API.** You cannot ask for vector hits alone. The only way in is a normal search that happens to carry an embedding.
 
-### Combining Methods
+## Related
 
-Logseq uses weighted combination:
-
-```
-final_score = (0.9 × keyword_score) + (0.1 × semantic_score) + bonuses
-```
-
-### Why This Balance?
-
-- **Exact matches are important**: Users often know what they want
-- **Semantic helps discovery**: Surfaces related content
-- **Graceful degradation**: Works even if semantic fails
-
-### Bonuses
-
-- Page match: +0.02
-- Tagged block: +0.01
-
----
-
-## What Gets Indexed
-
-### Included
-
-✅ Page titles  
-✅ Block content  
-✅ Property values  
-✅ Regular content
-
-### Excluded
-
-❌ System pages (logseq/\*)  
-❌ Hidden entities  
-❌ Empty blocks  
-❌ Blocks currently being indexed
-
-### Staleness Detection
-
-Blocks are re-indexed when:
-
-- Content changes
-- Title updates
-- Last update > last embedding time
-
----
-
-## Performance Considerations
-
-### Initial Indexing
-
-First-time indexing processes all blocks:
-
-- ~100 blocks/second
-- 10,000 blocks ≈ 2 minutes
-- Progress shown in UI
-
-### Incremental Updates
-
-After initial index:
-
-- Only changed blocks re-indexed
-- Background processing
-- Minimal impact on UI
-
-### Memory Usage
-
-| Graph Size     | Approximate Memory |
-| -------------- | ------------------ |
-| 1,000 blocks   | ~5MB               |
-| 10,000 blocks  | ~50MB              |
-| 100,000 blocks | ~500MB             |
-
----
-
-## Storage
-
-### OPFS (Origin Private File System)
-
-The HNSW index is persisted to browser storage:
-
-- Survives browser restarts
-- Per-graph storage
-- Automatic cleanup
-
-### Transit Format
-
-Logseq uses Transit for serialization:
-
-- Efficient binary format
-- Fast read/write
-- Compact storage
-
----
-
-## Limitations
-
-### Language Support
-
-- Best performance: English
-- Good: European languages
-- Limited: CJK, RTL languages
-
-### Context Window
-
-- ~256 tokens per block
-- Long blocks may be truncated
-- Consider splitting long content
-
-### Semantic Gaps
-
-Model may not understand:
-
-- Domain-specific jargon
-- Personal abbreviations
-- Very recent concepts
-
----
-
-## Future Improvements
-
-### Planned Enhancements
-
-- Larger models for better accuracy
-- Local fine-tuning
-- Multi-lingual models
-- Longer context windows
-
-### Research Areas
-
-- Cross-modal search (images)
-- Query expansion
-- Personalized embeddings
-
----
-
-## See Also
-
-- **[Semantic Search Tutorial](../../tutorials/getting-started/semantic-search.md)**
-- **[Semantic Search API](../../reference/api/semantic-search-api.md)**
-- **[System Overview](../architecture/system-overview.md)**
-
----
-
-_Last updated: 2026-01-29_
+- [Semantic Search Tutorial](../../tutorials/getting-started/semantic-search.md) — turning it on and confirming it works
+- [Semantic Search API](../../reference/api/semantic-search-api.md) — options, constants, and the platform contract
+- [db-worker HTTP API](../../reference/api/db-worker-http-api.md) — invoking `search-blocks` from outside the app

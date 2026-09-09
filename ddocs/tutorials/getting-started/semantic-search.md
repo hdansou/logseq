@@ -1,365 +1,148 @@
 ---
-title: 'Semantic Search'
-description: 'Learn to use AI-powered semantic search to find content by meaning'
+title: 'Turn On Semantic Search'
+description: 'Enable meaning-based search in your Logseq DB graph and confirm it is actually working'
 type: tutorial
-status: stable
-lastVerified: '2026-01-29'
-logseqVersion: '0.11.x'
+status: active-development
+lastVerified: '2026-09-06'
+logseqVersion: '2.0.x'
 platforms: [desktop]
 graphType: [db]
-difficulty: intermediate
-timeToComplete: '20 minutes'
-prerequisites: ['first-graph']
+difficulty: beginner
+timeToComplete: '15 minutes, plus indexing time'
+prerequisites: ['A DB graph', 'macOS on Apple silicon', 'Python 3 installed']
 relatedDocs:
   reference:
     - '[Semantic Search API](../../reference/api/semantic-search-api.md)'
   explanation:
-    - '[How Embeddings Work](../../explanation/features/how-embeddings-work.md)'
-  howTo:
-    - '[Semantic Search Queries](../../how-to/queries/semantic-search.md)'
+    - '[How Semantic Search Works](../../explanation/features/how-embeddings-work.md)'
 ---
 
-# Semantic Search
+# Turn On Semantic Search
 
-> Learn to find content by meaning, not just keywords.
+In this tutorial you will switch on semantic search, wait for your graph to be indexed, and run a search that finds a block **by meaning rather than by wording**. By the end you will be able to tell — from what you see on screen — whether semantic search is genuinely running or whether Logseq has quietly fallen back to ordinary keyword search.
 
-## What You'll Learn
+No prior setup is needed beyond a DB graph you already use.
 
-- 🔍 What semantic search is
-- ⚙️ How to enable it
-- 🎯 How to search effectively
-- 📊 Understanding results
-- 🔧 Troubleshooting
+## Before you start
 
-**Time:** ~20 minutes
+Semantic search has hard requirements. Check these first, because if any of them is missing the setting will not appear at all:
 
----
+- **macOS on Apple silicon** (M1 or later). Intel Macs, Windows, Linux, mobile, and the web app do not support it.
+- **A DB graph.** File-based graphs are not supported.
+- **Python 3 on your system.** Run `python3 --version` in a terminal. If that fails, install Python 3 before continuing.
 
-## What is Semantic Search?
+You will also need disk space and patience for the first run: Logseq downloads a language model of roughly 90 MB and builds a virtual environment the first time you enable the feature.
 
-Traditional search finds exact matches:
+## Step 1 — Enable the setting
 
-- Search for "dog" → finds blocks containing "dog"
+1. Open **Settings** (<kbd>⌘</kbd> + <kbd>,</kbd>).
+2. Go to the **Features** section.
+3. Turn on **Semantic search**.
 
-Semantic search finds meaning:
+**What you should see:** the toggle moves to the on position and stays there.
 
-- Search for "dog" → also finds "puppy", "canine", "pet", "German Shepherd"
+**If instead you see a warning** reading *"Install Python 3 to enable semantic search"*, Logseq could not find `python3` on your PATH. Install Python 3, restart Logseq, and repeat this step.
 
-### How It Works
+**If you cannot find the toggle at all**, your machine does not meet the requirements above — most commonly because it is an Intel Mac. The row is hidden rather than disabled.
 
-1. **Embedding Model**: Converts text to numbers (vectors)
-2. **Vector Index**: Stores and organizes these vectors
-3. **Similarity Search**: Finds content with similar meaning
+## Step 2 — Let the model install
 
----
+The first time you enable semantic search, Logseq sets up a Python environment in the background and downloads the embedding model. This is a one-time cost, and it takes a few minutes on a normal connection.
 
-## Step 1: Enable Semantic Search
-
-### Requirements
-
-- Database graph (not file-based)
-- Logseq Desktop (not web)
-- ~500MB disk space for model
-
-### Enable Feature
-
-1. Open **Settings** (gear icon)
-2. Go to **Features**
-3. Toggle **Semantic Search** ON
-4. Wait for model download (~100MB)
-
-### First-Time Setup
-
-After enabling:
-
-1. Model downloads automatically
-2. Your graph is indexed (may take minutes for large graphs)
-3. Status shows in bottom-right
-
----
-
-## Step 2: Use Semantic Search
-
-### Quick Search
-
-Press `Cmd+K` (macOS) or `Ctrl+K` (Windows/Linux) and type naturally:
-
-Instead of:
-
-```
-"meeting notes project alpha"
-```
-
-Try:
-
-```
-"discussions about the new product launch"
-```
-
-### Search Command
-
-Use `/Semantic Search` on any page for dedicated search.
-
-### CLI Search
+Nothing in the interface reports this directly. To watch it happen, open a terminal and tail the sidecar's log:
 
 ```bash
-logseq search "concepts related to learning"
+tail -f ~/Library/Application\ Support/Logseq/embedding-server/embedding-server.log
 ```
 
----
-
-## Step 3: Understand Results
-
-### Hybrid Scoring
-
-Search results combine:
-
-- **90%**: Keyword match score
-- **10%**: Semantic similarity score
-
-### Result Display
-
-Each result shows:
-
-- Block content
-- Match type indicator
-- Source page
-
-### Example Results
-
-Query: "machine learning"
-
-| Block                     | Match Type              |
-| ------------------------- | ----------------------- |
-| "Machine learning basics" | Keyword + Semantic      |
-| "Neural network tutorial" | Semantic only           |
-| "Training AI models"      | Semantic only           |
-| "ML algorithm overview"   | Keyword (ML) + Semantic |
-
----
-
-## Step 4: Search Effectively
-
-### Good Semantic Queries
-
-✅ **Natural language**
+**What you should see:** lines showing pip installing `sentence-transformers`, then eventually:
 
 ```
-"ideas for improving productivity"
+Embedding server listening on http://127.0.0.1:<port>/v1/embeddings
 ```
 
-✅ **Concepts and topics**
+Once that line appears, the model is downloaded and warmed up.
 
-```
-"health and wellness goals"
-```
+## Step 3 — Restart Logseq and reopen your graph
 
-✅ **Questions**
+Close Logseq completely and reopen it, then open the graph you want to search.
 
-```
-"how to set up development environment"
-```
+This step matters. Enabling the setting checks that Python exists, but the embedding service and the vector index are wired up when a graph's worker starts. Until you reopen the graph, searches will keep returning keyword-only results.
 
-### Less Effective Queries
+## Step 4 — Wait for indexing
 
-❌ **Single keywords**
+Logseq now embeds every block in your graph. On a small graph this is quick; on a large one it can take a while, and it runs in the background while you work.
 
-```
-"python"  # Too broad
+There is deliberately **no progress bar for this stage** — the embedding pass is hidden from the search-index progress indicator so it cannot block or alarm you while you work. So rather than watching the interface, confirm the index landed on disk:
+
+```bash
+ls ~/logseq/graphs/*/search/vector/
 ```
 
-❌ **Very specific terms**
+**What you should see:** a `metadata.json` file alongside the collection's data files. Check its contents:
 
-```
-"UUID-12345"  # Use keyword search
-```
-
-❌ **Abbreviations**
-
-```
-"API"  # Try "application programming interface"
+```bash
+cat ~/logseq/graphs/*/search/vector/metadata.json
 ```
 
----
-
-## Step 5: Combine Search Methods
-
-### Hybrid Search (Default)
-
-Both keyword and semantic search run together:
-
-- Exact matches rank highest
-- Similar concepts appear below
-- Best of both worlds
-
-### Force Keyword Only
-
-For exact matches, use quotes:
-
-```
-"exact phrase match"
+```json
+{"embedding-model-id":"all-MiniLM-L6-v2","embedding-dimension":384,"context-version":3}
 ```
 
-### Tag/Property Search
+If that file is missing, indexing has not completed yet. To force a rebuild rather than wait, run the **Rebuild search index** command from the command palette (<kbd>⌘</kbd> + <kbd>⇧</kbd> + <kbd>P</kbd>) — that path *does* show progress and ends with a *"Search indices rebuilt"* notification.
 
-Combine with structured queries:
+## Step 5 — Search by meaning
+
+Now the payoff. You want a query that shares **no words** with the block you expect to find — otherwise keyword search would have found it anyway and you have learned nothing.
+
+Pick a block you know exists, then search for a paraphrase of it. For example, if your graph contains:
+
+> *Weekly sync moved to Thursdays because half the team is out on Fridays*
+
+then search for:
 
 ```
-#project related to machine learning
+schedule change for the recurring meeting
 ```
 
----
+**What you should see:** the block appears in your results, despite sharing only the word *"the"* with your query.
 
-## How Indexing Works
+Try two or three such paraphrases. Semantic matches tend to appear below exact keyword matches — that is by design, and the next step explains how to tell them apart.
 
-### Automatic Updates
+## Step 6 — Confirm it is really semantic
 
-When you edit content:
+This is the step that separates "it works" from "it looks like it works". Search for something that **only** a semantic match could satisfy, and compare against a nonsense control:
 
-1. Block marked as "stale"
-2. Re-indexed within minutes
-3. New embedding stored
+1. Search a paraphrase, as in step 5, and note the results.
+2. Now search a string that appears nowhere in your graph and means nothing — `qqzzx plover` — and note that you get nothing.
+3. Search a paraphrase of a block again, but deliberately misspell every significant word: `skedule chnge recuring meting`.
 
-### Manual Re-index
+**What you should see:** step 3 still finds the block. Keyword and fuzzy matching cannot bridge that many misspellings at once, so a hit here is strong evidence the vector index is doing the work.
 
-If search seems off:
-
-1. Settings → Features
-2. Click "Re-index semantic search"
-3. Wait for completion
-
-### What Gets Indexed
-
-✅ Indexed:
-
-- Page titles
-- Block content
-- Property values
-
-❌ Not indexed:
-
-- System pages (logseq/\*)
-- Hidden blocks
-- Empty blocks
-
----
-
-## Performance
-
-### Index Size
-
-- ~384 dimensions per block
-- ~1.5KB per block average
-- 10,000 blocks ≈ 15MB index
-
-### Search Speed
-
-- Query embedding: ~50ms
-- Vector search: ~10ms
-- Total: ~100ms for most queries
-
-### Large Graphs
-
-For graphs with 50,000+ blocks:
-
-- Initial indexing: 5-15 minutes
-- Use "pause indexing" during intensive work
-- Results may be slightly delayed after major edits
-
----
+If step 3 returns nothing while step 5 worked, you were probably seeing fuzzy keyword matching all along.
 
 ## Troubleshooting
 
-### "No semantic results"
+**Searches feel identical to before.**
+The most likely cause is the 50 millisecond budget Logseq gives the embedding service. If the service is slow to wake, the search quietly falls back to keyword-only. Run a few searches in a row — once the service is warm, later searches should start showing semantic hits. If they never do, continue below.
 
-1. Check semantic search is enabled
-2. Wait for initial indexing to complete
-3. Try re-indexing in settings
+**Nothing works and you want a definitive answer.**
+Run the diagnostic script, which tests the index directly and bypasses the timeout:
 
-### "Results don't seem relevant"
-
-1. Rephrase query as natural language
-2. Be more specific about topic
-3. Check indexed content is meaningful (not just links)
-
-### "Indexing stuck"
-
-1. Check status in bottom-right
-2. Restart Logseq
-3. If persists, try re-indexing
-
-### "High memory usage"
-
-Normal during:
-
-- Initial indexing
-- Model loading
-- Large search operations
-
-Reduce by:
-
-- Closing other apps
-- Waiting for indexing to complete
-
----
-
-## Technical Details
-
-### Embedding Model
-
-- **Model**: Xenova/all-MiniLM-L6-v2
-- **Dimensions**: 384
-- **Technology**: HuggingFace Transformers.js
-- **Acceleration**: WebGPU when available
-
-### Vector Index
-
-- **Algorithm**: HNSW (Hierarchical Navigable Small World)
-- **Library**: hnswlib-wasm
-- **Storage**: OPFS (Origin Private File System)
-
-### Distance Threshold
-
-- **Max distance**: 0.6
-- **Score formula**: `1 / (1 + distance)`
-- **Higher score** = more relevant
-
----
-
-## Practice Exercise
-
-1. Enable semantic search on your graph
-2. Wait for indexing to complete
-3. Try these searches:
-
-```
-"things I want to accomplish"
-"interesting articles to read"
-"notes from meetings"
-"ideas for projects"
+```bash
+dz/support-engineering/script/semantic-search/test_semantic_search.clj "your query"
 ```
 
-4. Compare results with keyword-only search (use quotes)
-5. Notice how semantic finds related concepts
+It reports whether the sidecar is reachable, whether the index exists, and whether vector hits come back — and tells you which of those is at fault.
 
----
+**You changed your mind.**
+Turn the toggle off in Settings. The embedding service stops immediately. The index stays on disk; delete `~/logseq/graphs/<graph>/search/vector/` if you want the space back.
 
-## What's Next?
+## What you learned
 
-- **[Semantic Search Queries](../../how-to/queries/semantic-search.md)** - Advanced usage
-- **[How Embeddings Work](../../explanation/features/how-embeddings-work.md)** - Technical deep-dive
-- **[Semantic Search API](../../reference/api/semantic-search-api.md)** - For developers
+You enabled semantic search, watched the model install, confirmed the index on disk, and — most usefully — established a repeatable test that distinguishes real semantic matching from fuzzy keyword matching.
 
----
+## Next steps
 
-## Summary
-
-✅ Enabled semantic search in settings  
-✅ Used natural language queries  
-✅ Understood hybrid scoring  
-✅ Learned indexing process  
-✅ Troubleshot common issues
-
----
-
-_Last updated: 2026-01-29_
+- [How Semantic Search Works](../../explanation/features/how-embeddings-work.md) — why results are ordered the way they are, and why keyword matches still win
+- [Semantic Search API](../../reference/api/semantic-search-api.md) — querying it from a plugin or script
