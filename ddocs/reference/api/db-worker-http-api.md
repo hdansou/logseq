@@ -191,7 +191,7 @@ Every method **not** in that set also asserts lock ownership before executing.
 
 ### What the CLI does about it
 
-The only compatibility check in the codebase is **exact revision match, enforced by the CLI**: `cli/server.cljs:106 revision-mismatch?` and `cli/lib/server_runtime.ml:670 revision_matches` compare the worker's `revision` against the CLI's own build and, on mismatch, stop the worker and start one from the CLI's bundled runtime. The Electron app does not currently enforce this (see `docs/agent-guide/db-worker/001-db-worker-node-restart-on-version-mismatch.md`, which is CLI-only as of `d2ab772`).
+The only compatibility check in the codebase is **exact revision match, enforced by the CLI**: `cli/server.cljs:106 revision-mismatch?` and `cli/lib/server_runtime.ml:670 revision_matches` compare the worker's `revision` against the CLI's own build and, on mismatch, stop the worker and start one from the CLI's bundled runtime. The Electron app does not currently enforce this (see `dz/docs/10-agent-guide/db-worker/001-db-worker-node-restart-on-version-mismatch.md`, which is CLI-only as of `d2ab772`).
 
 ### What a third-party client should do
 

@@ -19,7 +19,7 @@ relatedDocs:
 >
 > Generation notice:
 > This page currently describes the legacy `deps/cli` command surface.
-> For the newer db-worker-node-based CLI, see `docs/cli/logseq-cli.md` and `docs/cli/cli-generations.md`.
+> For the newer db-worker-node-based CLI, see `docs/cli/logseq-cli.md` and `dz/docs/10-agent-guide/cli/cli-generations.md`.
 
 ## Prerequisites
 

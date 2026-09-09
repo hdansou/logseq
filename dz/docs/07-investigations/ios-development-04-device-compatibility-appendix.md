@@ -108,5 +108,5 @@ When QA or development verifies a device:
 
 - Investigation index: [ios-development-00-index.md](./ios-development-00-index.md)
 - Features and compatibility: [ios-development-02-features.md](./ios-development-02-features.md)
-- Sync docs (maintained): [docs/agent-guide/db-sync/db-sync-guide.md](../../../docs/agent-guide/db-sync/db-sync-guide.md)
-- Sync protocol (maintained): [docs/agent-guide/db-sync/protocol.md](../../../docs/agent-guide/db-sync/protocol.md)
+- Sync docs (maintained): [dz/docs/10-agent-guide/db-sync/db-sync-guide.md](../10-agent-guide/db-sync/db-sync-guide.md)
+- Sync protocol (maintained): [dz/docs/10-agent-guide/db-sync/protocol.md](../10-agent-guide/db-sync/protocol.md)

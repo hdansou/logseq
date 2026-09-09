@@ -196,7 +196,7 @@ From repository root:
 - Added/updated `cli-e2e` cases when command behavior changed.
 - Ran `bb dev:lint-and-test` (or explained scope-limited alternative).
 - Verified manual runs for key scenarios.
-- Updated CLI docs (`docs/cli/logseq-cli.md`, `docs/cli/logseq-cli-v2.md`, and comparison docs) for user-facing changes.
+- Updated CLI docs (`docs/cli/logseq-cli.md`, `dz/docs/10-agent-guide/cli/logseq-cli-v2.md`, and comparison docs) for user-facing changes.
 
 ---
 

@@ -57,7 +57,7 @@ The renderer-facing event contract is the `defmethod handle` set in `frontend/ha
 - `/v1/` is the only protocol marker. No `/v2`, no negotiation (`git grep` for `protocol-version`/`api-version` is empty).
 - `:thread-api/get-version` is in `non-repo-methods` but **has no definition** anywhere. Invoking it returns `No method found`.
 - `/healthz.revision` = `logseq.common.version/REVISION`, a `goog-define` set at build time; `"dev"` in dev builds.
-- Enforcement exists only in the CLI: `cli/server.cljs:106` and `cli/lib/server_runtime.ml:670` compare revisions exactly and restart mismatched workers. Electron does not (`docs/agent-guide/db-worker/001-*.md` is a plan, CLI-only so far).
+- Enforcement exists only in the CLI: `cli/server.cljs:106` and `cli/lib/server_runtime.ml:670` compare revisions exactly and restart mismatched workers. Electron does not (`dz/docs/10-agent-guide/db-worker/001-*.md` is a plan, CLI-only so far).
 
 ### Generating the reference instead of writing it
 

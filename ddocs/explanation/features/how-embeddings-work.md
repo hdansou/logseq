@@ -87,7 +87,7 @@ An important asymmetry: **the text that gets embedded is not the text that gets 
 
 Today's chunk is deliberately thin, and it is worth knowing that this is a retreat rather than a starting position.
 
-[ADR 077](../../../docs/agent-guide/077-vector-embedding-context.md) proposed embedding a bounded *context chunk* per block, so that meaning split across neighbouring blocks would still be findable. That design shipped with the original zvec work as context version 2. Each block embedded a labelled six-part text:
+[ADR 077](../../../dz/docs/10-agent-guide/077-vector-embedding-context.md) proposed embedding a bounded *context chunk* per block, so that meaning split across neighbouring blocks would still be findable. That design shipped with the original zvec work as context version 2. Each block embedded a labelled six-part text:
 
 ```
 Page: Infrastructure
