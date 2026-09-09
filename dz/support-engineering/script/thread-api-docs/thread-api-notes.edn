@@ -1,0 +1,73 @@
+;; Hand-written notes joined into the generated thread-api reference by method name.
+;;
+;; A generator can enumerate methods and params; it cannot say what a method is
+;; FOR or whether it is safe to build on. That is what this file is for.
+;;
+;; The generator's --check gate fails if an entry here names a method that no
+;; longer exists in source, so this file cannot drift silently either.
+;;
+;; :stability  :stable    — used by the renderer's own remote transport; changes are rare and deliberate
+;;             :internal  — exists, works, but shape may change without notice
+;;             :dangerous — destructive or bypasses validation; do not expose to a UI
+;;
+;; Only add an entry after reading the method's source at the revision you care about.
+
+{:thread-api/q
+ {:doc "Datascript query. Args are [repo [query & inputs]] — note the inputs vector wraps the query."
+  :stability :stable}
+
+ :thread-api/pull
+ {:doc "Pull one entity: [repo selector id]. `id` may be a db/id or a lookup ref such as [:block/uuid ...]."
+  :stability :stable}
+
+ :thread-api/search-blocks
+ {:doc "Fused keyword + vector search: [repo text option]. Vector path needs :feature/enable-semantic-search? true; supply :query-embedding to skip the 50 ms sidecar budget."
+  :stability :stable}
+
+ :thread-api/get-render-snapshots
+ {:doc "Pre-resolved view data: [repo {:blocks :children :resources}] → {:basis-rev :slots :groups}. The renderer's own view-model read API."
+  :stability :internal}
+
+ :thread-api/apply-outliner-ops
+ {:doc "The write path: [repo ops opts]. Ops are validated against the malli op-schema. Route ALL edits through this, never :thread-api/transact."
+  :stability :stable}
+
+ :thread-api/transact
+ {:doc "Raw Datascript transact. Bypasses outliner validation and semantic undo. Do not call from a UI."
+  :stability :dangerous}
+
+ :thread-api/undo-redo-undo
+ {:doc "Undo the last semantic op for the graph: [repo]."
+  :stability :internal}
+
+ :thread-api/undo-redo-redo
+ {:doc "Redo: [repo]."
+  :stability :internal}
+
+ :thread-api/create-or-open-db
+ {:doc "Open (or create) the graph's databases: [repo opts]. The renderer calls this on graph switch."
+  :stability :stable}
+
+ :thread-api/list-db
+ {:doc "List graphs under the worker's root-dir. Not repo-bound."
+  :stability :stable}
+
+ :thread-api/export-edn
+ {:doc "Export the graph as EDN: [repo opts]. Used by the CLI and backup paths."
+  :stability :internal}
+
+ :thread-api/import-db-binary
+ {:doc "Import a raw SQLite database. Also exposed as POST /v1/import-db-binary?repo=."
+  :stability :internal}
+
+ :thread-api/unsafe-unlink-db
+ {:doc "Deletes the graph's database files. No confirmation, no undo."
+  :stability :dangerous}
+
+ :thread-api/search-upsert-blocks
+ {:doc "Push blocks into FTS and schedule their embedding: [repo blocks]. Normally driven by the worker's own db listener, not by clients."
+  :stability :internal}
+
+ :thread-api/search-build-blocks-indice-in-worker
+ {:doc "Full search-index rebuild: [repo & [force?]]. Also rebuilds the vector index when metadata is stale."
+  :stability :internal}}

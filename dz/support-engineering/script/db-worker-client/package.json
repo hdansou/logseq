@@ -1,0 +1,15 @@
+{
+  "name": "logseq-db-worker-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal client adapter for the Logseq db-worker-node HTTP + SSE API",
+  "type": "module",
+  "main": "client.mjs",
+  "scripts": {
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "transit-js": "0.8.874"
+  },
+  "engines": { "node": ">=18" }
+}
