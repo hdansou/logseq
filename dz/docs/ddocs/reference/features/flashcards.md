@@ -85,7 +85,7 @@ If a cloze body contains more than one `\\` separator, only the text after the *
 
 The `:logseq.property.fsrs/state` map stores all FSRS scheduling data including:
 
-- `stability` - memory stability (days until 90% retention probability)
+- `stability` - memory stability, as defined by FSRS (the retention probability it targets is the library's, not Logseq's — see [Scheduling parameters](#scheduling-parameters))
 - `difficulty` - item difficulty (0-10)
 - `reps` - total review count
 - `lapses` - times forgotten
@@ -110,12 +110,25 @@ Free Spaced Repetition Scheduler (FSRS) is a modern algorithm based on the memor
 | **Good**  | Normal recall            | Standard interval increase |
 | **Easy**  | Instant recall           | Longer interval            |
 
-### Retention Target
+The four ratings map to `:again` / `:hard` / `:good` / `:easy` and are passed straight to
+the library; the interval effects above describe FSRS behaviour generally, since Logseq
+does not compute them itself.
 
-FSRS schedules reviews to maintain ~90% retention:
+### Scheduling parameters
 
-- Too early: Wasted effort
-- Too late: Increased forgetting
+Logseq does not configure FSRS. `fsrs.cljs` requires
+`open-spaced-repetition.cljc-fsrs.core` (`:20`) and calls it without passing weights,
+a desired-retention value, or any other parameter, so whatever that library ships as
+its defaults is what applies. The dependency is pinned by git SHA in `deps.edn:53-54`,
+not by version.
+
+> **Removed:** "FSRS schedules reviews to maintain ~90% retention." That figure is the
+> FSRS algorithm's conventional default target, not a value Logseq sets or reads — there
+> is no `retention`, `desired-retention` or parameter reference anywhere in
+> `src/main/frontend/extensions/fsrs.cljs`. The only occurrence of the word in Logseq's
+> source is `true-retention-percent` (`fsrs.cljs:526`), an unrelated statistic — cards in
+> review state over all cards — that lives inside the commented-out block and is not
+> exposed.
 
 ---
 
