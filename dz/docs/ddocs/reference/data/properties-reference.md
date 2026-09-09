@@ -2,7 +2,9 @@
 title: 'Properties Reference'
 status: 🟢 Stable
 quadrant: 'Reference'
-last-verified: '2026-04-28'
+last-verified: '2026-09-09'
+verified-against: 'be800f1711'
+review-status: audited
 platform: 'Desktop + Mobile'
 related-docs:
   - '[Database Graph Schema Reference](../database/schema-overview.md)'
@@ -10,7 +12,10 @@ related-docs:
 tags: ['properties', 'db-graphs', 'schema', 'reference']
 ---
 
-This page documents the 109 built-in DB-graph properties currently declared in `deps/db/src/logseq/db/frontend/property.cljs`.
+This page documents the **118** built-in DB-graph properties currently declared in
+`built-in-properties` at `deps/db/src/logseq/db/frontend/property.cljs:20-704` (entries span
+lines 43-704). Schema version at the audited commit is `65.33`
+(`deps/db/src/logseq/db/frontend/schema.cljs:33`).
 
 ## Scope
 
@@ -18,7 +23,27 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 - `Type` comes from `:schema :type`.
 - `Card.` is `many` only when `:cardinality :many` is set; otherwise it is `one`.
 - `Visibility` is derived from `:public?` and `:hide?`.
-- `Definition` only includes code-backed descriptions, backing attributes, defaults, closed values, restricted classes, or queryability.
+- `Definition` only includes code-backed descriptions, backing attributes, defaults, closed values, restricted classes, queryability (`:queryable?`), and RTC sync exclusion (`:rtc {:rtc/ignore-attr-when-syncing true}`, `deps/db/src/logseq/db/frontend/property.cljs:14-15`).
+
+### How the count of 118 was derived
+
+Two independent counts over `git show origin/master:deps/db/src/logseq/db/frontend/property.cljs`:
+
+1. Top-level ident keys inside the `defkeywords` form (lines 43-704), matched at their
+   fixed 5-space indentation: **118**.
+2. The same keys grouped by namespace, summed:
+   `logseq.property` 39, `block` 13, `logseq.property.asset` 11, `logseq.property.view` 10,
+   `logseq.property.table` 6, `logseq.property.repeat` 6, `logseq.property.pdf` 5,
+   `logseq.property.class` 5, `logseq.property.history` 4, `logseq.property.user` 3,
+   `logseq.property.recycle` 3, `logseq.property.reaction` 2,
+   `logseq.property.linked-references` 2, `logseq.property.fsrs` 2, and one each for
+   `logseq.property.sync`, `logseq.property.publish`, `logseq.property.node`,
+   `logseq.property.journal`, `logseq.property.comments`, `logseq.property.code`,
+   `logseq.property.agent` = **118**.
+
+The tables below list all 118. The previous revision of this page listed 109 and predated
+the nine properties added in schema versions 65.26-65.33
+(`src/main/frontend/worker/db/migrate.cljs:152-164`).
 
 ## Property Definition Metadata
 
@@ -50,8 +75,8 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 
 | Ident                          | Title                 | Type         | Card.  | Visibility       | Definition                                |
 | ------------------------------ | --------------------- | ------------ | ------ | ---------------- | ----------------------------------------- |
-| `:block/alias`                 | Alias                 | `page`       | `many` | public           | Backed by `:block/alias`.                 |
-| `:block/tags`                  | Tags                  | `class`      | `many` | public           | Backed by `:block/tags`.                  |
+| `:block/alias`                 | Alias                 | `page`       | `many` | public           | Backed by `:block/alias`. Queryable.      |
+| `:block/tags`                  | Tags                  | `class`      | `many` | public           | Backed by `:block/tags`. Queryable.       |
 | `:block/parent`                | Node parent           | `entity`     | `one`  | internal, hidden | Backed by `:block/parent`.                |
 | `:block/order`                 | Node order            | `string`     | `one`  | internal, hidden | Backed by `:block/order`.                 |
 | `:block/collapsed?`            | Node collapsed?       | `checkbox`   | `one`  | internal, hidden | Backed by `:block/collapsed?`.            |
@@ -60,7 +85,7 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 | `:block/link`                  | Node links to         | `entity`     | `one`  | internal, hidden | Backed by `:block/link`.                  |
 | `:block/title`                 | Node title            | `string`     | `one`  | internal, hidden | Backed by `:block/title`.                 |
 | `:block/closed-value-property` | Closed value property | `entity`     | `one`  | internal, hidden | Backed by `:block/closed-value-property`. |
-| `:block/journal-day`           | Journal date          | `raw-number` | `one`  | internal, hidden | Backed by `:block/journal-day`.           |
+| `:block/journal-day`           | Journal date          | `raw-number` | `one`  | internal, hidden | Backed by `:block/journal-day`. Queryable. |
 | `:block/created-at`            | Node created at       | `datetime`   | `one`  | internal, hidden | Backed by `:block/created-at`.            |
 | `:block/updated-at`            | Node updated at       | `datetime`   | `one`  | internal, hidden | Backed by `:block/updated-at`.            |
 
@@ -68,7 +93,7 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 
 | Ident                                                 | Title                           | Type       | Card.  | Visibility | Definition                                                                                   |
 | ----------------------------------------------------- | ------------------------------- | ---------- | ------ | ---------- | -------------------------------------------------------------------------------------------- |
-| `:logseq.property.class/extends`                      | Extends                         | `class`    | `many` | public     | This enables tags to inherit properties from other tags                                      |
+| `:logseq.property.class/extends`                      | Extends                         | `class`    | `many` | public     | This enables tags to inherit properties from other tags. Queryable.                          |
 | `:logseq.property.class/properties`                   | Tag Properties                  | `property` | `many` | public     | -                                                                                            |
 | `:logseq.property.class/bidirectional-property-title` | Bidirectional property title    | `string`   | `one`  | public     | -                                                                                            |
 | `:logseq.property.class/enable-bidirectional?`        | Enable bidirectional properties | `checkbox` | `one`  | public     | When enabled, this tag will show reverse nodes that link to the current node via properties. |
@@ -106,17 +131,19 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 
 | Ident                        | Title     | Type       | Card. | Visibility | Definition                                                                                                           |
 | ---------------------------- | --------- | ---------- | ----- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| `:logseq.property/status`    | Status    | `default`  | `one` | public     | Default: `:logseq.property/status.todo`. Closed values: `Backlog`, `Todo`, `Doing`, `In Review`, `Done`, `Canceled`. |
+| `:logseq.property/status`    | Status    | `default`  | `one`  | public     | Default: `:logseq.property/status.todo`. Closed values: `Backlog`, `Todo`, `Doing`, `In Review`, `Done`, `Canceled`. Queryable. |
 | `:logseq.property/priority`  | Priority  | `default`  | `one` | public     | Closed values: `Low`, `Medium`, `High`, `Urgent`.                                                                    |
-| `:logseq.property/deadline`  | Deadline  | `datetime` | `one` | public     | Use it to finish something at a specific date(time).                                                                 |
-| `:logseq.property/scheduled` | Scheduled | `datetime` | `one` | public     | Use it to plan something to start at a specific date(time).                                                          |
+| `:logseq.property/deadline`  | Deadline  | `datetime` | `one`  | public     | Use it to finish something at a specific date(time). Queryable.                                                     |
+| `:logseq.property/scheduled` | Scheduled | `datetime` | `one`  | public     | Use it to plan something to start at a specific date(time). Queryable.                                              |
+| `:logseq.property/assignee`  | Assignee  | `node`     | `many` | public     | Restricted classes: `#{:logseq.class/Page}`. Queryable. Added in schema `65.30`.                                    |
 
 ## Repeating Task Properties
 
 | Ident                                       | Title                       | Type       | Card. | Visibility       | Definition                                                                                                          |
 | ------------------------------------------- | --------------------------- | ---------- | ----- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `:logseq.property.repeat/recur-frequency`   | Repeating recur frequency   | `number`   | `one` | internal         | Default: `1`.                                                                                                       |
-| `:logseq.property.repeat/recur-unit`        | Repeating recur unit        | `default`  | `one` | internal         | Default: `:logseq.property.repeat/recur-unit.day`. Closed values: `Minute`, `Hour`, `Day`, `Week`, `Month`, `Year`. |
+| `:logseq.property.repeat/recur-frequency`   | Repeating recur frequency   | `number`   | `one` | internal         | Default: `1`. Queryable.                                                                                            |
+| `:logseq.property.repeat/recur-unit`        | Repeating recur unit        | `default`  | `one` | internal         | Default: `:logseq.property.repeat/recur-unit.day`. Closed values: `Minute`, `Hour`, `Day`, `Week`, `Month`, `Year`. Queryable. |
+| `:logseq.property.repeat/repeat-type`       | Repeating type              | `default`  | `one` | internal         | Default: `:logseq.property.repeat/repeat-type.double-plus`. Closed values: `Advance from completion`, `Advance from scheduled`, `Advance from scheduled, skip to future`. Queryable. Added in schema `65.26`. |
 | `:logseq.property.repeat/repeated?`         | Node Repeats?               | `checkbox` | `one` | internal, hidden | Queryable.                                                                                                          |
 | `:logseq.property.repeat/temporal-property` | Repeating Temporal Property | `property` | `one` | internal, hidden | -                                                                                                                   |
 | `:logseq.property.repeat/checked-property`  | Repeating Checked Property  | `property` | `one` | internal, hidden | -                                                                                                                   |
@@ -127,12 +154,17 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 | ----------------------------------------------- | ------------------------- | ---------- | ------ | ---------------- | ------------------------------------------------------------------------------------------------------ |
 | `:logseq.property.linked-references/includes`   | Included references       | `node`     | `many` | internal, hidden | -                                                                                                      |
 | `:logseq.property.linked-references/excludes`   | Excluded references       | `node`     | `many` | internal, hidden | -                                                                                                      |
-| `:logseq.property.view/type`                    | View Type                 | `default`  | `one`  | internal, hidden | Default: `:logseq.property.view/type.table`. Closed values: `Table View`, `List View`, `Gallery View`. |
+| `:logseq.property.view/type`                    | View Type                 | `default`  | `one`  | internal, hidden | Default: `:logseq.property.view/type.table`. Closed values: `Table View`, `List View`, `Gallery View`. Queryable. |
 | `:logseq.property.view/feature-type`            | View Feature Type         | `keyword`  | `one`  | internal, hidden | Not queryable.                                                                                         |
 | `:logseq.property.view/group-by-property`       | View group by property    | `property` | `one`  | internal, hidden | Queryable.                                                                                             |
-| `:logseq.property.view/sort-groups-by-property` | View sort groups by       | `property` | `one`  | internal, hidden | -                                                                                                      |
-| `:logseq.property.view/sort-groups-desc?`       | View sort groups DESC     | `checkbox` | `one`  | internal, hidden | Scalar default: `true`.                                                                                |
-| `:logseq.property.table/sorting`                | View sorting              | `coll`     | `one`  | internal, hidden | -                                                                                                      |
+| `:logseq.property.view/gallery-asset-property`  | Gallery asset property    | `property` | `one`  | internal, hidden | Added in schema `65.33`.                                                                               |
+| `:logseq.property.view/gallery-display-properties` | Gallery display properties | `property` | `many` | internal, hidden | Added in schema `65.33`.                                                                            |
+| `:logseq.property.view/gallery-card-size`       | Gallery card size         | `keyword`  | `one`  | internal, hidden | Scalar default: `:default`. Not synced over RTC. Added in schema `65.33`.                              |
+| `:logseq.property.view/gallery-card-width`      | Gallery card width        | `raw-number` | `one` | internal, hidden | Not synced over RTC. Added in schema `65.33`.                                                        |
+| `:logseq.property.view/gallery-card-height`     | Gallery card height       | `raw-number` | `one` | internal, hidden | Not synced over RTC. Added in schema `65.33`.                                                        |
+| `:logseq.property.view/sort-groups-by-property` | View sort groups by       | `property` | `one`  | internal, hidden | Not synced over RTC.                                                                                   |
+| `:logseq.property.view/sort-groups-desc?`       | View sort groups DESC     | `checkbox` | `one`  | internal, hidden | Scalar default: `true`. Not synced over RTC.                                                           |
+| `:logseq.property.table/sorting`                | View sorting              | `coll`     | `one`  | internal, hidden | Not synced over RTC.                                                                                   |
 | `:logseq.property.table/filters`                | View filters              | `map`      | `one`  | internal, hidden | -                                                                                                      |
 | `:logseq.property.table/hidden-columns`         | View hidden columns       | `keyword`  | `many` | internal, hidden | -                                                                                                      |
 | `:logseq.property.table/ordered-columns`        | View ordered columns      | `coll`     | `one`  | internal, hidden | -                                                                                                      |
@@ -151,7 +183,7 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 | `:logseq.property.asset/width`              | Image width           | `raw-number` | `one` | internal, hidden | Queryable.                          |
 | `:logseq.property.asset/height`             | Image height          | `raw-number` | `one` | internal, hidden | Queryable.                          |
 | `:logseq.property.asset/checksum`           | File checksum         | `string`     | `one` | internal, hidden | -                                   |
-| `:logseq.property.asset/last-visit-page`    | Last visit page       | `raw-number` | `one` | internal, hidden | -                                   |
+| `:logseq.property.asset/last-visit-page`    | Last visit page       | `raw-number` | `one` | internal, hidden | Not synced over RTC.                |
 | `:logseq.property.asset/remote-metadata`    | File remote metadata  | `map`        | `one` | internal, hidden | Metadata of asset in remote storage |
 | `:logseq.property.asset/resize-metadata`    | Asset resize metadata | `map`        | `one` | internal, hidden | -                                   |
 | `:logseq.property.asset/align`              | Asset alignment       | `keyword`    | `one` | internal, hidden | Not queryable.                      |
@@ -188,3 +220,43 @@ This page documents the 109 built-in DB-graph properties currently declared in `
 | `:logseq.property.reaction/emoji-id`       | Reaction emoji                                                 | `string`   | `one` | internal, hidden | -          |
 | `:logseq.property.reaction/target`         | Reaction target                                                | `node`     | `one` | internal, hidden | -          |
 | `:logseq.property.sync/large-title-object` | Reference to large block title stored in remote object storage | `map`      | `one` | internal, hidden | -          |
+
+## Comment and Agent Properties
+
+| Ident                              | Title             | Type     | Card.  | Visibility       | Definition                                                                       |
+| ---------------------------------- | ----------------- | -------- | ------ | ---------------- | -------------------------------------------------------------------------------- |
+| `:logseq.property.comments/blocks` | Commented blocks  | `node`   | `many` | internal, hidden | Backs `:logseq.class/Comments`. Added in schema `65.27`.                          |
+| `:logseq.property.agent/session-id`| Agent Session ID  | `string` | `one`  | public, hidden   | Stores the AgentBridge session ID for a routed task. Added in schema `65.31`.     |
+
+## Findings: New Capabilities
+
+Nine built-in properties existed in `origin/master` (`be800f1711`) but were absent from the
+previous revision of this page. All nine were introduced between schema `65.26` and `65.33`
+(`src/main/frontend/worker/db/migrate.cljs:152-164`) and are now listed in the tables above.
+
+| Ident                                              | Source                                | Schema | Notes                                                                               |
+| -------------------------------------------------- | ------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
+| `:logseq.property.repeat/repeat-type`              | `property.cljs:381-393`               | 65.26  | Closed-value repeat strategy; defaults to `repeat-type.double-plus`.                  |
+| `:logseq.property.comments/blocks`                 | `property.cljs:262-266`               | 65.27  | Ships with the new `:logseq.class/Comments` class (`class.cljs:44-48`).               |
+| `:logseq.property/assignee`                        | `property.cljs:401-408`               | 65.30  | First public, many-cardinality task property scoped to `:logseq.class/Page`.          |
+| `:logseq.property.agent/session-id`                | `property.cljs:685-690`               | 65.31  | AgentBridge session routing.                                                          |
+| `:logseq.property.view/gallery-asset-property`     | `property.cljs:463-467`               | 65.33  | Gallery view configuration.                                                           |
+| `:logseq.property.view/gallery-display-properties` | `property.cljs:469-474`               | 65.33  | Gallery view configuration.                                                           |
+| `:logseq.property.view/gallery-card-size`          | `property.cljs:476-482`               | 65.33  | Scalar default `:default`; RTC-ignored.                                               |
+| `:logseq.property.view/gallery-card-width`         | `property.cljs:484-489`               | 65.33  | RTC-ignored.                                                                          |
+| `:logseq.property.view/gallery-card-height`        | `property.cljs:491-496`               | 65.33  | RTC-ignored.                                                                          |
+
+Two related classes also arrived alongside these properties and are not property definitions,
+but affect which properties appear on a node: `:logseq.class/Comments` and
+`:logseq.class/Comment` (`deps/db/src/logseq/db/frontend/class.cljs:44-52`), bringing the
+built-in class count to 18.
+
+### Properties removed from the schema
+
+> **Removed:** `:block/pre-block?`, `:logseq.property.embedding/hnsw-label` and
+> `:logseq.property.embedding/hnsw-label-updated-at` were deleted in schema `65.25`
+> (`src/main/frontend/worker/db/migrate.cljs:149-151`, a `:delete-properties` migration).
+> They were never listed on this page; they are noted here so the removal is not
+> re-discovered as a gap. `:logseq.property.asset/external-src` (added in `65.14`,
+> `migrate.cljs:134`) no longer exists in `built-in-properties` either; the current asset URL property is
+> `:logseq.property.asset/external-url` (`property.cljs:559-563`).
