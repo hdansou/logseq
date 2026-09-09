@@ -13,9 +13,13 @@ relatedDocs:
     - '[MCP Server](../../reference/api/mcp-server.md)'
 ---
 
-# CLI Basics
+## CLI Basics
 
 > How to use the Logseq CLI to interact with your graphs from the terminal.
+>
+> Generation notice:
+> This page currently describes the legacy `deps/cli` command surface.
+> For the newer db-worker-node-based CLI, see `docs/cli/logseq-cli.md` and `docs/cli/cli-generations.md`.
 
 ## Prerequisites
 

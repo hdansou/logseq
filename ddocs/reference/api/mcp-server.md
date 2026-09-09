@@ -317,16 +317,31 @@ Generate structured template for a new page.
 
 Add to `claude_desktop_config.json`:
 
+Choose the command path that matches your CLI generation:
+
+- Legacy CLI (`deps/cli`): use the legacy package binary path.
+- New CLI (`src/main/logseq/cli`): use the root build output.
+
 ```json
 {
   "mcpServers": {
-    "logseq": {
+    "logseq-legacy": {
       "command": "node",
       "args": [
         "/path/to/logseq/deps/cli/dist/logseq.js",
         "mcp-server",
         "-g",
         "/path/to/your/graph",
+        "--stdio"
+      ]
+    },
+    "logseq": {
+      "command": "node",
+      "args": [
+        "/path/to/logseq/dist/logseq.js",
+        "mcp-server",
+        "--graph",
+        "your-graph-name",
         "--stdio"
       ]
     }
