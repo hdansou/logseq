@@ -3,13 +3,15 @@ title: 'User Profiles'
 status: 'Active Development'
 quadrant: 'Reference'
 platform: 'Desktop (macOS/Windows/Linux)'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 related-docs:
   - '../../tutorials/collaboration/real-time-sync.md'
   - '../../explanation/security/e2ee-encryption.md'
   - '../../how-to/collaboration/sharing-graphs.md'
 ---
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 # User Profiles Reference
 
@@ -23,7 +25,7 @@ User profile entities are created automatically when a user first makes an edit 
 
 - Display user identity in collaborative editing sessions
 - Show user presence indicators (who's online)
-- Attribute edits to specific users via `:logseq.property/created-by` references
+- Attribute edits to specific users via `:logseq.property/created-by-ref` references
 
 ## Built-in Properties
 
@@ -53,7 +55,7 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 - `"Alice Johnson"`
 - `"Bob Smith"`
 
-**Code Reference**: [property.cljs:580-584](../../../deps/db/src/logseq/db/frontend/property.cljs#L580-L584)
+**Code Reference**: [property.cljs:620-624](../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L624)
 
 ---
 
@@ -84,7 +86,7 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 
 **Privacy Note**: Email is shared with collaborators in remote graphs. If privacy is a concern, use a dedicated collaboration email.
 
-**Code Reference**: [property.cljs:585-589](../../../deps/db/src/logseq/db/frontend/property.cljs#L585-L589)
+**Code Reference**: [property.cljs:625-629](../../../deps/db/src/logseq/db/frontend/property.cljs#L625-L629)
 
 ---
 
@@ -107,23 +109,25 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 - **Public**: Visible to all collaborators
 - **Required**: No (defaults to initials-based avatar)
 
-**Default Behavior**: If no avatar is set, Logseq generates an initials-based avatar using the user's name (e.g., "AJ" for "Alice Johnson") with a dynamically generated background color based on the user's UUID (via the `uniqolor` library in `shui-util/uuid-color`).
+**Default Behavior**: If no avatar is set, Logseq generates an initials-based avatar using the user's name (e.g., "AJ" for "Alice Johnson") with a dynamically generated background color based on the user's UUID (via the `uniqolor` library in `uuid-color`, `deps/shui/src/logseq/shui/util.cljs:46-52`). Initials are computed grapheme-aware -- two characters for Latin/number names, one otherwise (`initials`, `src/main/frontend/components/avatar.cljs:30-40`).
 
-**Avatar Upload**: Logseq provides a presigned URL mechanism for uploading avatars to its cloud storage. See `new-task--upload-user-avatar` in `src/main/frontend/handler/user.cljs`.
+**Avatar Upload**: Logseq provides a presigned-URL mechanism for uploading avatars to its cloud storage: `<upload-user-avatar` requests a URL from `/logseq/get_presigned_user_avatar_put_url` and PUTs the image to it (`src/main/frontend/handler/user.cljs:392-405`). As of `be800f1711` its only caller is the RTC debug UI (`src/main/frontend/db/rtc/debug_ui.cljs:74`) -- there is no end-user avatar upload control.
 
-**Code Reference**: [property.cljs:590-594](../../../deps/db/src/logseq/db/frontend/property.cljs#L590-L594)
+**Code Reference**: [property.cljs:630-634](../../../deps/db/src/logseq/db/frontend/property.cljs#L630-L634)
 
 ---
 
 ## How Profiles Are Created
 
-User profiles are **not** manually configured through a dedicated settings UI. Instead, they are created automatically by the `add-created-by-ref-hook` pipeline in `src/main/frontend/worker/pipeline.cljs`:
+User profiles are **not** manually configured through a dedicated settings UI. Instead, they are created automatically by the `add-created-by-ref-hook` pipeline in `src/main/frontend/worker/pipeline.cljs:411`:
 
 1. When a user makes an edit in a synced graph, the system reads the user's JWT ID token
-2. If no profile entity exists for that user UUID, one is created as a page entity with `:logseq.property.user/name` (set to the Cognito username) and `:logseq.property.user/email` (from the token)
-3. The new or existing profile entity is then referenced via `:logseq.property/created-by` on edited blocks
+2. If no profile entity exists for that user UUID, one is created as a page entity (`:block/tags :logseq.class/Page`, `:block/uuid` = the token's `sub`) with `:logseq.property.user/name` (set to the token's `cognito:username`) and `:logseq.property.user/email` (`gen-created-by-block`, `src/main/frontend/worker/pipeline.cljs:396-408`)
+3. The new or existing profile entity is then referenced via `:logseq.property/created-by-ref` on edited blocks (`src/main/frontend/worker/pipeline.cljs:421-434`)
 
-Note: The avatar property is defined in the schema but is **not** automatically set during profile creation.
+The hook is skipped for undo/redo transactions and for RTC/download-graph transactions (`pipeline.cljs:412-414`).
+
+Note: The avatar property is defined in the schema but is **not** set by `gen-created-by-block` during profile creation.
 
 ---
 
@@ -131,24 +135,25 @@ Note: The avatar property is defined in the schema but is **not** automatically 
 
 ### User Presence Indicator
 
-In shared graphs, online users appear in the header area. The `rtc-collaborators` component in `src/main/frontend/components/header.cljs` displays avatars for each online user.
+In shared graphs, online users appear in the header area. The `rtc-collaborators` component (`src/main/frontend/components/header.cljs:120-149`) displays an avatar for each online user, plus a user-plus button that opens the collaboration members dialog.
 
 **Avatar Display**:
 
 - Initials on a colored background (color derived from user UUID via `uniqolor`)
-- The avatar is rendered using the `shui/avatar` component at small sizes (e.g., `w-5 h-5` = 20x20px in the header)
+- The avatar is rendered by `frontend.components.avatar/user-avatar` (`src/main/frontend/components/avatar.cljs:42-62`), which wraps `shui/avatar`, at small sizes (`w-5 h-5` = 20x20px in the header, `header.cljs:144`)
+- If `avatar-src` is supplied, an `<img>` is rendered; otherwise the initials fallback is used (`avatar.cljs:58-62`)
 
 **Online User Data**: The presence system provides `:user/email`, `:user/name`, `:user/uuid`, and `:user/editing-block-uuid` for each online user.
 
 ### Editing Indicators
 
-When collaborators edit blocks, their avatar appears next to the block being edited. The `editing-user-avatar` function in `src/main/frontend/components/block.cljs` renders the editing user's initials with their unique color.
+When collaborators edit blocks, their avatar appears next to the block being edited. The `editing-user-avatar` function (`src/main/frontend/components/block.cljs:2234-2244`) renders the editing user's initials at `w-4 h-4` with their unique color.
 
-**Cursor Colors**: Each user gets a unique color dynamically generated from their UUID using the `uniqolor` library (not a fixed palette). The color is computed with saturation range [55, 70] and lightness 70.
+**Cursor Colors**: Each user gets a unique color dynamically generated from their UUID using the `uniqolor` library (not a fixed palette). The color is computed with saturation range [55, 70], lightness 70 and `differencePoint` 60 (`deps/shui/src/logseq/shui/util.cljs:46-52`); it is applied to the fallback background at 50/255 alpha (`avatar.cljs:47-49`).
 
 ### Block Attribution
 
-Edits are attributed to users via the `:logseq.property/created-by` property, which references the user's profile entity.
+Edits are attributed to users via the `:logseq.property/created-by-ref` property ("Node created by", `deps/db/src/logseq/db/frontend/property.cljs:653`), which references the user's profile entity.
 
 ---
 
@@ -215,9 +220,18 @@ You can query user profiles in a graph using DataScript:
 
 Note: Not all user entities will have an avatar set, so querying for all three fields with an inner join may return fewer results than expected.
 
+### Where Profile Data Is Consumed
+
+Besides the header presence list and block editing indicators, profile properties are read by:
+
+- Comments (`:logseq.property.user/avatar`, `src/main/frontend/components/block/comments_model.cljs:130`)
+- The recycle bin / trash view, which shows who deleted a node (`src/main/frontend/components/recycle.cljs:30-33`)
+
+> **Not implemented:** there is no profile settings screen, no `logseq profile ...` CLI command, and no plugin API for reading or writing `logseq.property.user/*`. Profiles are created and maintained entirely by the pipeline hook described above.
+
 ### Initial Data Export
 
-User profile datoms are included in the initial data export via `get-all-user-datoms` in `deps/db/src/logseq/db/common/initial_data.cljs`. This function finds all entities with `:logseq.property.user/email` and returns their complete datom sets.
+User profile datoms are included in the initial data export via `get-all-user-datoms` (`deps/db/src/logseq/db/common/initial_data.cljs:396`, called at `:432`). This function finds all entities with `:logseq.property.user/email` and returns their complete datom sets.
 
 ---
 
@@ -225,7 +239,7 @@ User profile datoms are included in the initial data export via `get-all-user-da
 
 ### Property Definitions
 
-**Source**: [deps/db/src/logseq/db/frontend/property.cljs](../../../deps/db/src/logseq/db/frontend/property.cljs#L580-L594)
+**Source**: [deps/db/src/logseq/db/frontend/property.cljs:620-634](../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L634)
 
 The user profile properties are defined as part of the `built-in-properties` map. All three share the same schema structure: string type, not hidden, and public.
 
@@ -262,5 +276,6 @@ The user profile properties do **not** have explicit entries in the DataScript s
 
 ---
 
+**Last Updated**: September 2026
 **Status**: Active Development (Profile features expanding for RTC)
 **Feedback**: Report profile issues on [GitHub](https://github.com/logseq/logseq/issues)

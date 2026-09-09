@@ -233,6 +233,16 @@ Stored in SQLite via Datascript:
 
 Note: `/Cloze` is the only flashcard-related slash command currently registered. There are no `/card` or `/cards` slash commands.
 
+### Macros
+
+`{{cloze ...}}` is the only registered flashcard macro (`component-macro/register`, `src/main/frontend/extensions/fsrs.cljs:482`).
+
+> **Not implemented:** a `{{cards ...}}` query macro. It exists only as a commented-out `TODO` (`src/main/frontend/extensions/fsrs.cljs:477-480`). Card collections are defined with `:logseq.class/Cards` blocks instead (see above).
+
+### Plugin API
+
+There is no flashcard read/write plugin API. The only flashcard-related surface is the read-only `:enabled-flashcards` field returned by `getUserConfigs` (`src/main/logseq/api/app.cljs:65`).
+
 ---
 
 ## Best Practices

@@ -2,7 +2,8 @@
 title: 'CSS Variables Reference'
 description: "Complete reference for Logseq's CSS custom properties for theme customization"
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, mobile, web]
 graphType: [file, db]
@@ -15,7 +16,7 @@ relatedDocs:
 
 # CSS Variables Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Complete reference for Logseq's CSS custom properties (variables) used in theming and customization.
 
@@ -259,7 +260,7 @@ Semantic color levels for consistent theming:
 
 ## Status Colors
 
-Status styling in Logseq primarily uses Tailwind utility classes with Radix color tokens rather than dedicated CSS custom properties. The relevant utility classes are:
+Status styling in Logseq primarily uses Tailwind utility classes with Radix color tokens rather than dedicated CSS custom properties. These classes are defined in `src/main/frontend/common.css`:
 
 ```css
 /* Error */
@@ -373,11 +374,12 @@ html[data-theme='dark'][data-color='myTheme'] {
 
 CSS variables are defined in:
 
-- `packages/ui/src/vars-classic.css` - Core layout/sizing variables and `data-color=logseq` light/dark theme colors
-- `packages/ui/src/radix.css` - Radix color scale definitions (`--rx-*`)
-- `packages/ui/src/radix-hsl.css` - Radix HSL format variants (`--rx-*-hsl`)
-- `packages/ui/src/colors.css` - Logseq extended Radix mappings (`--lx-*`)
-- `packages/ui/src/index.css` - UI component variables (shadcn/Tailwind tokens)
+- `src/main/frontend/shui/vars-classic.css` - Core layout/sizing variables and `data-color=logseq` light/dark theme colors
+- `src/main/frontend/shui/radix.css` - Radix color scale definitions (`--rx-*`)
+- `src/main/frontend/shui/radix-hsl.css` - Radix HSL format variants (`--rx-*-hsl`)
+- `src/main/frontend/shui/colors.css` - Logseq extended Radix mappings (`--lx-*`)
+- `src/main/frontend/shui/index.css` - UI component variables (shadcn/Tailwind tokens)
+- `src/main/frontend/common.css` - Status utility classes (`.text-error`, `.bg-warning`, ...)
 - `resources/css/shui.css` - Shadcn UI overrides and `data-color=none` variables
 - `src/main/frontend/components/theme.css` - Z-index levels, scrollbar, and theme selectors
 
@@ -391,4 +393,4 @@ CSS variables are defined in:
 
 ---
 
-_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

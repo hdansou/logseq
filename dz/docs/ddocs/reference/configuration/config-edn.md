@@ -2,7 +2,8 @@
 title: 'config.edn Reference'
 description: "Complete reference for Logseq's config.edn configuration file"
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -19,7 +20,7 @@ relatedDocs:
 
 # config.edn Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Complete reference for all configuration options in Logseq's `config.edn` file. For DB-specific configuration, see [config-edn-db.md](config-edn-db.md).
 
@@ -37,7 +38,7 @@ The `config.edn` file controls Logseq's behavior and appearance. It's located in
 | Category   | Key Options                                                | Description                 |
 | ---------- | ---------------------------------------------------------- | --------------------------- |
 | UI         | `:ui/show-brackets?`, `:ui/enable-tooltip?`                | Visual appearance           |
-| Features   | `:feature/enable-journals?`, `:feature/enable-flashcards?` | Enable/disable features     |
+| Features   | `:feature/enable-flashcards?`, `:feature/enable-search-remove-accents?` | Enable/disable features |
 | Editor     | `:editor/logical-outdenting?`, `:block/title-max-length`   | Editor behavior             |
 | Shortcuts  | `:shortcuts`                                               | Custom keyboard shortcuts   |
 | Navigation | `:default-home`, `:start-of-week`                          | Home page and calendar      |
@@ -90,16 +91,23 @@ Enable or disable major Logseq features.
 | Key                                              | Type      | Default | Description                                                                   |
 | ------------------------------------------------ | --------- | ------- | ----------------------------------------------------------------------------- |
 | `:feature/enable-search-remove-accents?`         | `boolean` | `true`  | Ignore accents when searching. Rebuild index after changing (`Ctrl+C Ctrl+S`) |
-| `:feature/enable-journals?`                      | `boolean` | `true`  | Enable journals feature                                                       |
 | `:feature/enable-flashcards?`                    | `boolean` | `true`  | Enable flashcards/spaced repetition                                           |
 | `:feature/disable-scheduled-and-deadline-query?` | `boolean` | `false` | Disable built-in task query on journal pages                                  |
+| `:feature/enable-grammarly?`                     | `boolean` | `false` | Reserve an extra editor row so the Grammarly overlay has room                 |
 
 ```clojure
 {:feature/enable-search-remove-accents? true
- :feature/enable-journals? true
  :feature/enable-flashcards? true
  :feature/disable-scheduled-and-deadline-query? false}
 ```
+
+> `:feature/enable-grammarly?` is read at `src/main/frontend/state.cljs:666-668` and its
+> only effect is at `src/main/frontend/components/editor.cljs:747` (textarea `minRows`
+> becomes `2` instead of `1`). It is not part of the validated `config.edn` schema.
+
+> **Removed:** `:feature/enable-journals?` no longer exists in the codebase — no
+> reference remains anywhere in `src/` or `deps/` at `be800f1711`. Setting it has no
+> effect.
 
 ---
 
@@ -318,37 +326,16 @@ Add custom styling, scripts, and text macros.
 
 ## 14. Graph View
 
-| Key                    | Type  | Default | Description                 |
-| ---------------------- | ----- | ------- | --------------------------- |
-| `:graph/settings`      | `map` | `nil`   | Graph view display settings |
-| `:graph/forcesettings` | `map` | `nil`   | Graph physics settings      |
-
-### `:graph/settings` Sub-keys
-
-| Sub-key            | Type      | Default | Description                |
-| ------------------ | --------- | ------- | -------------------------- |
-| `:orphan-pages?`   | `boolean` | `true`  | Show pages with no links   |
-| `:builtin-pages?`  | `boolean` | `false` | Show built-in system pages |
-| `:excluded-pages?` | `boolean` | `false` | Show excluded pages        |
-| `:journal?`        | `boolean` | `false` | Show journal pages         |
-
-### `:graph/forcesettings` Sub-keys
-
-| Sub-key            | Type  | Default | Description                       |
-| ------------------ | ----- | ------- | --------------------------------- |
-| `:link-dist`       | `int` | `180`   | Distance between linked nodes     |
-| `:charge-strength` | `int` | `-600`  | Node repulsion (negative = repel) |
-| `:charge-range`    | `int` | `600`   | Max distance for charge force     |
-
-```clojure
-{:graph/settings {:orphan-pages? true
-                  :builtin-pages? false
-                  :journal? false}
-
- :graph/forcesettings {:link-dist 180
-                       :charge-strength -600
-                       :charge-range 600}}
-```
+> **Removed:** `:graph/settings` and `:graph/forcesettings` are no longer read from
+> `config.edn`, and neither key (nor the sub-keys `:link-dist`, `:charge-strength`,
+> `:charge-range`) appears anywhere in `src/` or `deps/` at `be800f1711`.
+>
+> Graph-view state is now persisted per graph in browser local storage under the key
+> `logseq.graph.settings.<repo>` (`src/main/frontend/components/graph.cljs:31-34`).
+> The stored map holds `:view-mode`, `:selected-tag-ids`, `:created-at-filter`,
+> `:depth`, `:link-distance`, `:grid-layout?`, `:show-journals?` and `:open-groups`
+> (`src/main/frontend/components/graph.cljs:22-29`), and is edited from the graph
+> view's own settings panel rather than from `config.edn`.
 
 ---
 
@@ -451,6 +438,11 @@ Add custom styling, scripts, and text macros.
 
 ### `:logbook/settings` Sub-keys (File-Graph Only)
 
+> **Unverified:** at `be800f1711` the key `:logbook/settings` survives only as an entry
+> in the DB-graph deprecation list (`deps/common/src/logseq/common/config.cljs:117`).
+> None of the sub-keys below are read anywhere in `src/` or `deps/`, so treat them as
+> historical documentation for older file-graph builds.
+
 | Sub-key                          | Type      | Default | Description                              |
 | -------------------------------- | --------- | ------- | ---------------------------------------- |
 | `:with-second-support?`          | `boolean` | `true`  | Include seconds in timestamps            |
@@ -484,6 +476,9 @@ Add custom styling, scripts, and text macros.
 | `:block/content-max-length` | `:block/title-max-length`       | Use new key          |
 | `:arweave/gateway`          | N/A                             | No longer supported  |
 | `:dwim/settings`            | N/A                             | Removed from codebase |
+| `:feature/enable-journals?` | N/A                             | Removed from codebase |
+| `:graph/settings`           | Graph view settings panel       | No longer read from config.edn |
+| `:graph/forcesettings`      | Graph view settings panel       | No longer read from config.edn |
 
 ---
 
@@ -497,8 +492,8 @@ Add custom styling, scripts, and text macros.
  :ui/show-brackets? true
 
  ;; Features
- :feature/enable-journals? true
  :feature/enable-flashcards? true
+ :feature/enable-search-remove-accents? true
 
  ;; Editor
  :block/title-max-length 10000
@@ -514,9 +509,6 @@ Add custom styling, scripts, and text macros.
 
  ;; Macros
  :macros {"docs" "https://docs.logseq.com/#/page/$1"}
-
- ;; Graph View
- :graph/settings {:orphan-pages? true :journal? false}
 
  ;; Mobile
  :quick-capture-options {:insert-today? true}}
@@ -534,7 +526,9 @@ Add custom styling, scripts, and text macros.
 
 - [templates/config.edn](https://github.com/logseq/logseq/blob/master/deps/common/resources/templates/config.edn)
 - [common_config.cljc](https://github.com/logseq/logseq/blob/master/src/main/frontend/schema/handler/common_config.cljc)
+- [file-only-config (DB-graph deprecations)](https://github.com/logseq/logseq/blob/master/deps/common/src/logseq/common/config.cljs)
+- [config_edn.cljs (deprecated key validation)](https://github.com/logseq/logseq/blob/master/src/main/frontend/handler/common/config_edn.cljs)
 
 ---
 
-_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

@@ -2,7 +2,8 @@
 title: 'Database Graph config.edn Reference'
 description: 'Configuration reference specifically for Logseq Database (DB) graphs'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [db]
@@ -16,7 +17,7 @@ relatedDocs:
 
 # Database Graph config.edn Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Configuration reference for **Database (DB) graphs** in Logseq. Highlights differences from file-based graphs and lists deprecated options.
 
@@ -135,10 +136,12 @@ All options from [config-edn.md](config-edn.md) work in DB graphs **except** the
 
 ```clojure
 {:feature/enable-search-remove-accents? true
- :feature/enable-journals? true
  :feature/enable-flashcards? true
  :feature/disable-scheduled-and-deadline-query? false}
 ```
+
+> **Removed:** `:feature/enable-journals?` no longer exists in the codebase (no
+> reference remains in `src/` or `deps/` at `be800f1711`). Setting it has no effect.
 
 > Whiteboards are always enabled (`:feature/enable-whiteboards?` ignored).
 
@@ -194,15 +197,14 @@ All options from [config-edn.md](config-edn.md) work in DB graphs **except** the
 
 **DB-Specific**: Queries use namespaced property keywords like `:logseq.property/priority`.
 
-### Graph View ✅
+### Graph View
 
-```clojure
-{:graph/settings {:orphan-pages? true
-                  :builtin-pages? false
-                  :journal? false}
- :graph/forcesettings {:link-dist 180
-                       :charge-strength -600}}
-```
+> **Removed:** `:graph/settings` and `:graph/forcesettings` are no longer read from
+> `config.edn`. Graph-view state (view mode, depth, link distance, grid layout,
+> show-journals) is now stored per graph in browser local storage under the key
+> `logseq.graph.settings.<repo>` — see
+> `src/main/frontend/components/graph.cljs:32-95`. Adjust these settings from the
+> graph view's settings panel instead.
 
 ### Export & Publishing ✅
 
@@ -251,7 +253,6 @@ All options from [config-edn.md](config-edn.md) work in DB graphs **except** the
 
  ;; Features
  :feature/enable-search-remove-accents? true
- :feature/enable-journals? true
  :feature/enable-flashcards? true
 
  ;; Editor
@@ -277,9 +278,6 @@ All options from [config-edn.md](config-edn.md) work in DB graphs **except** the
  {:sort-by-priority
   (fn [result]
     (sort-by (fn [h] (get h :logseq.property/priority "Z")) result))}
-
- ;; Graph View
- :graph/settings {:orphan-pages? true :builtin-pages? false}
 
  ;; Mobile
  :quick-capture-options {:insert-today? true}}
@@ -376,7 +374,8 @@ DB graphs validate config against Malli schema:
 - [Schema Definition](https://github.com/logseq/logseq/blob/master/src/main/frontend/schema/handler/common_config.cljc)
 - [Config Template](https://github.com/logseq/logseq/blob/master/deps/common/resources/templates/config.edn)
 - [Deprecated Keys (`file-only-config`)](https://github.com/logseq/logseq/blob/master/deps/common/src/logseq/common/config.cljs)
+- [Graph view settings storage](https://github.com/logseq/logseq/blob/master/src/main/frontend/components/graph.cljs)
 
 ---
 
-_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

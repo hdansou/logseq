@@ -2,7 +2,8 @@
 title: 'Keyboard Shortcuts Reference'
 description: 'Complete reference for all Logseq keyboard shortcuts and command palette commands'
 status: stable
-lastVerified: '2026-03-10'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -16,7 +17,7 @@ relatedDocs:
 
 # Keyboard Shortcuts Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 > Complete reference for all built-in commands available in Logseq's command palette (`Cmd/Ctrl+Shift+P`).
 
@@ -35,7 +36,7 @@ relatedDocs:
 | [Basics](#basics)                                     | 18       | Copy, paste, search, undo/redo |
 | [Block Command Editing](#block-command-editing)       | 14       | Cursor movement, kill, select  |
 | [Block Editing](#block-editing)                       | 16       | Create, move, indent blocks    |
-| [Block Selection](#block-selection)                   | 15       | Select and manipulate blocks   |
+| [Block Selection](#block-selection)                   | 16       | Select and manipulate blocks   |
 | [Formatting](#formatting)                             | 5        | Bold, italic, highlight        |
 | [Navigating](#navigating)                             | 21       | Move around, go to pages       |
 | [Toggle](#toggle)                                     | 13       | Toggle UI elements             |
@@ -43,7 +44,7 @@ relatedDocs:
 | [PDF](#pdf)                                           | 4        | PDF viewer controls            |
 | [Auto-complete](#auto-complete)                       | 5        | Auto-complete menu controls    |
 | [Sidebar](#sidebar)                                   | 3        | Right sidebar controls         |
-| [Dev Tools](#dev-tools)                               | 8        | Developer mode tools           |
+| [Dev Tools](#dev-tools)                               | 10       | Developer mode tools           |
 | [Other Commands](#other-commands)                     | 22       | Graph, export, misc            |
 
 ---
@@ -125,6 +126,7 @@ relatedDocs:
 | `:editor/add-property-icon`                | `p i`                             | Add icon                 |
 | `:editor/add-property-priority`            | `p p`                             | Add task priority        |
 | `:editor/add-property-status`              | `p s`                             | Add task status          |
+| `:editor/add-comment`                      | `ctrl+space`                      | Add comment              |
 | `:editor/add-reaction`                     | `p r`                             | Add reaction             |
 | `:editor/delete-selection`                 | `backspace` or `delete`           | Delete selected blocks   |
 | `:editor/open-edit`                        | `enter`                           | Edit selected block      |
@@ -247,7 +249,9 @@ relatedDocs:
 
 | Command ID                        | Shortcut | Description            |
 | --------------------------------- | -------- | ---------------------- |
+| `:dev/export-client-ops-sqlite`   | ---      | Export client ops sqlite |
 | `:dev/gc-graph`                   | ---      | Garbage collect graph  |
+| `:dev/recompute-checksum`         | ---      | Recompute graph checksum |
 | `:dev/replace-graph-with-db-file` | ---      | Replace with db.sqlite |
 | `:dev/rtc-start`                  | ---      | RTC Start              |
 | `:dev/rtc-stop`                   | ---      | RTC Stop               |
@@ -262,8 +266,8 @@ relatedDocs:
 
 | Command ID                         | Shortcut       | Description                |
 | ---------------------------------- | -------------- | -------------------------- |
-| `:command/run`                     | `mod+shift+1`  | Run git command (desktop)  |
-| `:command/toggle-favorite`         | `mod+shift+f`  | Toggle favorite            |
+| `:shell/run`                       | `mod+shift+1`  | Run shell command (desktop) |
+| `:page/toggle-favorite`            | `mod+shift+f`  | Toggle favorite            |
 | `:editor/copy-page-url`           | ---            | Copy page URL (desktop)    |
 | `:editor/insert-youtube-timestamp` | `mod+shift+y`  | Insert YouTube timestamp   |
 | `:go/search-themes`               | Mac: `mod+shift+i` / Win: `alt+shift+i` | Search themes |
@@ -323,4 +327,4 @@ Add custom shortcuts in `config.edn`:
 
 ---
 
-_Last updated: 2026-03-10 | [Report an issue](https://github.com/logseq/logseq/issues)_
+_Last updated: 2026-09-09 | [Report an issue](https://github.com/logseq/logseq/issues)_

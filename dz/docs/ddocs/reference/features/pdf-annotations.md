@@ -4,13 +4,15 @@ status: '🟠 Desktop Only'
 version: 'Since v0.5.0'
 quadrant: 'Reference'
 platform: 'Desktop (macOS/Windows/Linux) — ⚠️ Not available on mobile'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
 related-docs:
   - '../../how-to/multimedia/asset-management.md'
   - '../../reference/schema/built-in-classes.md#logseqclasspdf-annotation'
   - '../../tutorials/getting-started/basic-editing.md'
 ---
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-09
 
 # PDF Annotations Reference
 
@@ -92,6 +94,8 @@ Logseq includes a full-featured PDF viewer with annotation capabilities built on
 | 🔲       | Area selection mode         | Cmd or Shift |
 | 🔍       | Find / Search               | Alt+F        |
 | ✕        | Close PDF viewer            | Alt+X        |
+
+Bindings are registered as the `:pdf/*` shortcut namespace: `:pdf/previous-page` `alt+p`, `:pdf/next-page` `alt+n`, `:pdf/close` `alt+x`, `:pdf/find` `alt+f` (`src/main/frontend/modules/shortcut/config.cljs:54-64`).
 
 ---
 
@@ -313,7 +317,7 @@ Once saved, the screenshot is a standard image asset. You can:
 
 ### File-Based Graphs (Legacy)
 
-> **Note**: The current codebase has removed file-based graph support for PDF annotations. The `ensure-ref-block!` function now delegates exclusively to `db-based-ensure-ref-block!`. The EDN format below is retained for reference only if working with older Logseq versions.
+> **Removed:** The current codebase has removed file-based graph support for PDF annotations. `ensure-ref-block!` (`src/main/frontend/extensions/pdf/assets.cljs:112-114`) now delegates unconditionally to `db-based-ensure-ref-block!` (`assets.cljs:78`). The EDN format below is retained only as historical reference for older Logseq versions.
 
 **Highlights File**: `assets/{filename}.edn`
 
@@ -368,7 +372,7 @@ Once saved, the screenshot is a standard image asset. You can:
  :logseq.property.pdf/hl-image [:block/uuid #uuid "image-asset-uuid"]}
 ```
 
-**Class Definition**: [`class.cljs:81-88`](../../deps/db/src/logseq/db/frontend/class.cljs#L81-L88)
+**Class Definition**: [`class.cljs:91-98`](../../deps/db/src/logseq/db/frontend/class.cljs#L91-L98)
 
 ```clojure
 :logseq.class/Pdf-annotation
@@ -439,7 +443,7 @@ Once saved, the screenshot is a standard image asset. You can:
 - Keep PDF visible while editing graph
 - Separate zoom/navigation state
 
-**Code Reference**: [`windows.cljs:74-121`](../../src/main/frontend/extensions/pdf/windows.cljs#L74-L121)
+**Code Reference**: [`windows.cljs:74-122`](../../src/main/frontend/extensions/pdf/windows.cljs#L74-L122)
 
 ### Copy Block Reference
 
@@ -669,21 +673,23 @@ git commit -m "Add PDF annotations for research paper"
 
 **Key Files**:
 
-- `core.cljs` (~1100 lines) — PDF viewer, highlight management
-- `assets.cljs` (~320 lines) — Asset inflation, annotation persistence
-- `toolbar.cljs` (~650 lines) — Toolbar UI, outline view, search finder
-- `utils.cljs` (~200 lines) — Zoom, scroll, coordinate conversion
-- `utils.js` (~384 lines) — PDF.js integration utilities (rect math, scroll-to-highlight)
-- `finder.js` (~1067 lines) — PDF.js find controller fork (text search engine)
-- `windows.cljs` (~121 lines) — External window management
+- `core.cljs` (1118 lines) — PDF viewer, highlight management
+- `assets.cljs` (334 lines) — Asset inflation, annotation persistence
+- `toolbar.cljs` (645 lines) — Toolbar UI, outline view, search finder
+- `utils.cljs` (200 lines) — Zoom, scroll, coordinate conversion
+- `utils.js` (395 lines) — PDF.js integration utilities (rect math, scroll-to-highlight)
+- `finder.js` (1066 lines) — PDF.js find controller fork (text search engine)
+- `windows.cljs` (122 lines) — External window management
 
 **Key Functions**:
 
-- `pdf-viewer` (core.cljs:770) — Main PDF viewer component
-- `pdf-highlights` (core.cljs:546) — Highlight rendering and management
-- `add-hl!` (core.cljs:566) — Create new highlight (local fn inside `pdf-highlights`)
-- `inflate-asset` (assets.cljs:35) — Convert PDF path to asset object
-- `ensure-ref-block!` (assets.cljs:99) — Create annotation block in DB graph
+- `pdf-viewer` (core.cljs:791) — Main PDF viewer component
+- `pdf-highlights` (core.cljs:557) — Highlight rendering and management
+- `add-hl!` (core.cljs:577) — Create new highlight (local fn inside `pdf-highlights`)
+- `pdf-highlights-ctx-menu` (core.cljs:126) — Colour picker / highlight context menu
+- `inflate-asset` (assets.cljs:34) — Convert PDF path to asset object
+- `db-based-ensure-ref-block!` (assets.cljs:78) — Create the annotation block
+- `ensure-ref-block!` (assets.cljs:112) — Thin wrapper that delegates to `db-based-ensure-ref-block!`
 
 ---
 
@@ -704,7 +710,7 @@ git commit -m "Add PDF annotations for research paper"
 
 ---
 
-**Last Updated**: March 2026
+**Last Updated**: September 2026
 **Status**: 🟠 Desktop Only (Mobile support missing)  
 **Feedback**: Report PDF issues on [GitHub](https://github.com/logseq/logseq/issues) with `pdf` label
 
