@@ -26,6 +26,7 @@ def frontmatter(path):
         text = open(path, encoding="utf-8").read()
     except OSError:
         return None, None
+    text = re.sub(r"\A(?:<!--.*?-->\s*)+", "", text, flags=re.S)  # generated files lead with HTML comments
     if text.startswith("---"):
         end = text.find("\n---", 3)
         fm = text[3:end] if end > 0 else ""

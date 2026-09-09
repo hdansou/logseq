@@ -9,7 +9,8 @@ every field comes from each document's frontmatter.
 | Documents | 106 |
 | Authored from source — trusted | 10 |
 | Merged this pass — base inherited, needs a line-by-line audit | 28 |
-| Not reviewed | 68 |
+| Generated, gated in CI | 1 |
+| Not reviewed | 67 |
 
 `merged-not-fully-audited` means the two copies were reconciled against source and
 every ported claim was verified, but content inherited from the surviving base was
@@ -47,7 +48,6 @@ Older date, or none. Highest priority.
 | `how-to/workflows/zettelkasten-method.md` | — | — |
 | `reference/advanced/query-patterns.md` | — | — |
 | `reference/advanced/query-system.md` | — | — |
-| `reference/api/thread-api.generated.md` | — | — |
 | `reference/formatting/markdown-syntax.md` | — | — |
 | `reference/interface/keyboard-shortcuts.md` | — | — |
 | `reference/interface/slash-commands.md` | — | — |

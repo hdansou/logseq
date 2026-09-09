@@ -136,7 +136,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 - [MCP Server Reference](reference/api/mcp-server.md)
 - [Plugin API Reference](reference/api/plugin-api.md)
 - [Semantic Search API](reference/api/semantic-search-api.md)
-- [db-worker thread-api Reference](reference/api/thread-api.generated.md)
+- [db-worker thread-api Reference (generated)](reference/api/thread-api.generated.md)
 
 #### [Configuration](reference/configuration/)
 

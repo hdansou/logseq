@@ -10,6 +10,7 @@ import os, re, sys, datetime
 
 def fm(path):
     t = open(path, encoding="utf-8").read()
+    t = re.sub(r"\A(?:<!--.*?-->\s*)+", "", t, flags=re.S)   # generated files lead with HTML comments
     g = lambda k: (re.search(rf"^{k}:\s*['\"]?(.+?)['\"]?\s*$", t[:t.find('\n---',3)] if t.startswith('---') else '', re.M) or [None,None])[1]
     return (g("lastVerified") or g("last-verified"),
             g("verifiedAgainst") or g("verified-against"),
@@ -29,7 +30,8 @@ rows.sort(key=lambda r: (r[1] or "0000-00-00", r[0]))
 
 authored = [r for r in rows if r[4] == "authored-from-source"]
 merged   = [r for r in rows if r[4] == "merged-not-fully-audited"]
-old      = [r for r in rows if r not in authored and r not in merged]
+gen      = [r for r in rows if r[4] == "generated-gated"]
+old      = [r for r in rows if r not in authored and r not in merged and r not in gen]
 L = ["# Documentation status", "",
      f"Generated {datetime.date.today()} by",
      "`dz/support-engineering/script/doc-inventory/gen_task_list.py`. Do not edit by hand —",
@@ -38,6 +40,7 @@ L = ["# Documentation status", "",
      f"| Documents | {len(rows)} |",
      f"| Authored from source — trusted | {len(authored)} |",
      f"| Merged this pass — base inherited, needs a line-by-line audit | {len(merged)} |",
+     f"| Generated, gated in CI | {len(gen)} |",
      f"| Not reviewed | {len(old)} |", "",
      "`merged-not-fully-audited` means the two copies were reconciled against source and",
      "every ported claim was verified, but content inherited from the surviving base was",
