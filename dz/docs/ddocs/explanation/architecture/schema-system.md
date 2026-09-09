@@ -6,7 +6,7 @@ quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
 related-docs:
   - '[Database Properties Guide](../../tutorials/development/db-properties.md)'
-  - '[Schema Reference](../../../dz/docs/03-features/database-graphs/schema-reference.md)'
+  - '[Schema Reference](../../../../../dz/docs/03-features/database-graphs/schema-reference.md)'
   - '[Query System](../../reference/advanced/query-system.md)'
 tags:
   ['schema', 'database', 'datascript', 'malli', 'architecture', 'properties']
@@ -576,15 +576,15 @@ if (isDb) {
 **Continue Learning:**
 
 1. **[Database Properties Guide](../../tutorials/development/db-properties.md)** - Plugin API for properties
-2. **[Complete Schema Reference](../../../dz/docs/03-features/database-graphs/schema-reference.md)** - Full property/class list
+2. **[Complete Schema Reference](../../../../../dz/docs/03-features/database-graphs/schema-reference.md)** - Full property/class list
 3. **[Query System](../../reference/advanced/query-system.md)** - Datalog queries
-4. **[Schema Migration Guide](../../../dz/docs/08-processes/schema-migration-best-practices.md)** - For contributors
+4. **[Schema Migration Guide](../../../../../dz/docs/08-processes/schema-migration-best-practices.md)** - For contributors
 
 **For Contributors:**
 
-- [Schema Change PR Checklist](../../../dz/docs/08-processes/schema-change-pr-checklist.md)
-- [Schema Integrity Reports](../../../dz/docs/07-investigations/schema-integrity-08-index.md)
-- [RTC Sync Schema Changes](../../../dz/docs/08-processes/rtc-sync-schema-changes.md)
+- [Schema Change PR Checklist](../../../../../dz/docs/08-processes/schema-change-pr-checklist.md)
+- [Schema Integrity Reports](../../../../../dz/docs/07-investigations/schema-integrity-08-index.md)
+- [RTC Sync Schema Changes](../../../../../dz/docs/08-processes/rtc-sync-schema-changes.md)
 
 ---
 

@@ -21,7 +21,7 @@ This guide shows how to extract every block from a DB graph, embed the blocks yo
 
 **Use this approach when** you need the vectors themselves, need to run on Windows or Linux, need a model other than `all-MiniLM-L6-v2`, or need chunking that Logseq does not do. **Do not use it** if you only need ranked search results — call `logseq.App.search` over [`POST /api`](#appendix-querying-logseqs-own-index-instead) instead and let Logseq do the work.
 
-Logseq's own vectors are not readable. The query path never returns a stored embedding, so re-embedding is the supported way to get them. See [investigation 023](../../../dz/docs/07-investigations/023-graph-vector-embeddings-for-agents.md).
+Logseq's own vectors are not readable. The query path never returns a stored embedding, so re-embedding is the supported way to get them. See [investigation 023](../../../../../dz/docs/07-investigations/023-graph-vector-embeddings-for-agents.md).
 
 ## Assumptions
 
@@ -210,6 +210,6 @@ Enable the server in Settings → Features → HTTP server and set a token. Resu
 
 ## Related
 
-- [Investigation 023 — Graph Vector Embeddings for Agentic Work](../../../dz/docs/07-investigations/023-graph-vector-embeddings-for-agents.md)
+- [Investigation 023 — Graph Vector Embeddings for Agentic Work](../../../../../dz/docs/07-investigations/023-graph-vector-embeddings-for-agents.md)
 - [Semantic Search API](../../reference/api/semantic-search-api.md) — the built-in pipeline's constants and contracts
 - [db-worker HTTP API](../../reference/api/db-worker-http-api.md) — extraction over `thread-api/q`

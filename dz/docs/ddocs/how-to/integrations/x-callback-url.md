@@ -68,10 +68,10 @@ logseq://x-callback-url/<action>?[parameters]
 
 ### Supported Actions
 
-| Action           | Description                           |
-| ---------------- | ------------------------------------- |
-| `quickCapture`   | Capture text, URLs, or notes          |
-| `invokeCommand`  | Invoke an editor command by name      |
+| Action          | Description                      |
+| --------------- | -------------------------------- |
+| `quickCapture`  | Capture text, URLs, or notes     |
+| `invokeCommand` | Invoke an editor command by name |
 
 ---
 
@@ -79,12 +79,12 @@ logseq://x-callback-url/<action>?[parameters]
 
 ### `quickCapture` Parameters
 
-| Parameter | Description     | Example                      |
-| --------- | --------------- | ---------------------------- |
-| `content` | Text to capture | `content=My note`            |
-| `url`     | Web address     | `url=https://example.com`    |
-| `title`   | Link title      | `title=Example Site`         |
-| `page`    | Target page     | `page=Ideas` or `page=TODAY` |
+| Parameter | Description                                                     | Example                      |
+| --------- | --------------------------------------------------------------- | ---------------------------- |
+| `content` | Text to capture                                                 | `content=My note`            |
+| `url`     | Web address                                                     | `url=https://example.com`    |
+| `title`   | Link title                                                      | `title=Example Site`         |
+| `page`    | Target page                                                     | `page=Ideas` or `page=TODAY` |
 | `append`  | When already editing, append instead of inserting at the cursor | `append=true`                |
 
 When `page` is omitted, Logseq first checks `quick-capture-options.insert-today?`. If that is enabled, or if you pass `page=TODAY`, it targets today's journal. Otherwise it uses config `quick-capture-options.default-page`, then the currently open page, then today's journal when journals are enabled, or a "quick capture" page when journals are disabled.
@@ -105,10 +105,10 @@ Available template placeholders: `{time}`, `{date}`, `{text}`, `{url}`.
 
 ### `invokeCommand` Parameters
 
-| Parameter | Description              | Example                   |
-| --------- | ------------------------ | ------------------------- |
-| `action`  | Command name to invoke   | `action=toggle-theme`     |
-| `payload` | Optional command payload | `payload=some-value`      |
+| Parameter | Description              | Example               |
+| --------- | ------------------------ | --------------------- |
+| `action`  | Command name to invoke   | `action=toggle-theme` |
+| `payload` | Optional command payload | `payload=some-value`  |
 
 ---
 

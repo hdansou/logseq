@@ -195,7 +195,7 @@ The only compatibility check in the codebase is **exact revision match, enforced
 
 ### What a third-party client should do
 
-1. **Pin a revision.** Record the `revision` you developed against; check `/healthz` on connect and warn or refuse on drift. The [client adapter](../../../dz/support-engineering/script/db-worker-client/client.mjs) does this via `connect({ expectedRevision })`.
+1. **Pin a revision.** Record the `revision` you developed against; check `/healthz` on connect and warn or refuse on drift. The [client adapter](../../../../../dz/support-engineering/script/db-worker-client/client.mjs) does this via `connect({ expectedRevision })`.
 2. **Regenerate the method reference** for the revision you target. The [generated thread-api reference](thread-api.generated.md) is produced from the `def-thread-api` declarations by `dz/support-engineering/script/thread-api-docs/gen_thread_api_docs.clj`; running it with `--check` fails when the committed reference no longer matches source.
 3. **Prefer methods the renderer's own remote transport uses** (`persist_db/remote.cljs`) — those change least, because the app depends on them the same way you do.
 

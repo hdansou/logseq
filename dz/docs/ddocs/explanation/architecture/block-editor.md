@@ -582,9 +582,9 @@ const block = await logseq.Editor.getBlock({ uuid: blockUuid })
 
 **For Contributors:**
 
-- [Outliner Core Source](../../../deps/outliner/src/logseq/outliner/core.cljs)
-- [Editor Handler Source](../../../src/main/frontend/handler/editor.cljs)
-- [Block Order Implementation](../../../deps/db/src/logseq/db/common/order.cljs)
+- [Outliner Core Source](../../../../../deps/outliner/src/logseq/outliner/core.cljs)
+- [Editor Handler Source](../../../../../src/main/frontend/handler/editor.cljs)
+- [Block Order Implementation](../../../../../deps/db/src/logseq/db/common/order.cljs)
 
 ---
 

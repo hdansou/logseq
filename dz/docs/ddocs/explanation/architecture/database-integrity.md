@@ -622,14 +622,14 @@ if (!valid.success) {
 1. **[Schema System](./schema-system.md)** - Data model details
 2. **[Block Editor Architecture](./block-editor.md)** - Transaction flow
 3. **[RTC Collaboration](../../tutorials/collaboration/rtc-setup.md)** - Multi-client validation
-4. **[Complete Investigation Reports](../../../dz/docs/07-investigations/schema-integrity-08-index.md)** - 8-part deep dive
+4. **[Complete Investigation Reports](../../../../../dz/docs/07-investigations/schema-integrity-08-index.md)** - 8-part deep dive
 
 **For Contributors:**
 
-- [Validation Source Code](../../../deps/db/src/logseq/db/frontend/validate.cljs)
-- [Malli Schema Definitions](../../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
-- [Migration System](../../../src/main/frontend/worker/db/migrate.cljs)
-- [PR Review Standards](../../../dz/docs/07-investigations/schema-integrity-07-pr-review-standards.md)
+- [Validation Source Code](../../../../../deps/db/src/logseq/db/frontend/validate.cljs)
+- [Malli Schema Definitions](../../../../../deps/db/src/logseq/db/frontend/malli_schema.cljs)
+- [Migration System](../../../../../src/main/frontend/worker/db/migrate.cljs)
+- [PR Review Standards](../../../../../dz/docs/07-investigations/schema-integrity-07-pr-review-standards.md)
 
 ---
 

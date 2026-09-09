@@ -507,8 +507,8 @@ This reference documents Logseq's advanced query system—powerful Datalog queri
 
 **For Contributors:**
 
-- [Query System Source Code](../../../src/main/frontend/db/query_dsl.cljs)
-- [Custom Query Functions](../../../src/main/frontend/db/query_custom.cljs)
+- [Query System Source Code](../../../../../src/main/frontend/db/query_dsl.cljs)
+- [Custom Query Functions](../../../../../src/main/frontend/db/query_custom.cljs)
 
 ---
 
