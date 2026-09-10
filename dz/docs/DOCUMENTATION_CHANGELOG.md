@@ -10,6 +10,13 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-09-10 — New investigation
+
+- [2026-09-10] `07-investigations/027-login-and-account-features.md` — **added**: why Logseq has a login when graphs are local, what each account-gated feature needs (sync, collaboration, encryption, publish, early access), and how far the plan limits are really enforced.
+- [2026-09-10] `07-investigations/027-login-and-account-features.md` — **corrected** after a full re-verification: login goes through the Amplify modal (the cited Cognito password function is a test helper); `/file-sync/user_info` is the live user-info endpoint, not legacy; RSA keys are ensured for every logged-in user and can prompt for a password; sync graphs are always encrypted from the app; invites are manager-only on the server; the no-plan-enforcement claim is now verified directly instead of cited from 025.
+- [2026-09-10] `07-investigations/027-login-and-account-features.md` — **updated**: added who is in `rtc_2025_07_10` today (Open Collective backers at $5 and sponsors at $15, until Pro launches; supplied, not in source), the Settings login prompt that names Open Collective, and that the dormant `pro-account?` check ignores that group.
+- [2026-09-10] `07-investigations/028-default-image-size.md` — **added**: why images render at a hard-coded 250px, which asset properties resizing actually writes (`resize-metadata`, not `width`/`height`), why `config.edn` can't set a default, and a `custom.css` workaround that restyles only un-resized images.
+
 ### 2026-05-30 — Full Re-audit (Batch 17: ddocs/how-to tail + reference — 8 of 8 completed)
 
 - [2026-05-30] `ddocs/how-to/integrations/custom-js.md` — **updated**: aligned custom-js guidance to current runtime surface, removed stale sandbox framing, and documented current built-in file/API capabilities.
