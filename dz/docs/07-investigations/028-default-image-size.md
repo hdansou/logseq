@@ -81,7 +81,7 @@ Resizing is unavailable on native mobile, in breadcrumbs, in positioned properti
 ## Other routes
 
 - **Plugin (unverified).** The plugin API passes fully qualified property names through unchanged (`src/main/logseq/api/block.cljs:44-57`), so a plugin could try writing `:logseq.property.asset/resize-metadata` on new assets. Whether a write to that hidden built-in property is accepted, and whether a JS object arrives in the right map shape, was not checked.
-- **Code change.** Replace the hard-coded 250 at `block.cljs:1161` with a new `config.edn` key, for example `:asset/default-image-width`. This belongs on a branch off master.
+- **Code change.** Replace the hard-coded 250 at `block.cljs:1161` with a new `config.edn` key. Scoped in [Default Image Width in config.edn](../10-agent-guide/proposed/2026-09-10-config-default-image-width.md) as `:ui/default-image-width`. This belongs on a branch off master.
 
 ## Not verified
 
