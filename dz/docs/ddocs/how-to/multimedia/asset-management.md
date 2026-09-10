@@ -291,7 +291,7 @@ Assets are files embedded in your Logseq graph — images, PDFs, videos, audio, 
 - Timestamp prevents name collisions
 - Spaces replaced with hyphens
 
-**Code Reference**: [`assets.cljs`](../../src/main/frontend/handler/assets.cljs)
+**Code Reference**: [`assets.cljs`](../../../../../src/main/frontend/handler/assets.cljs)
 
 ### Database Graphs
 
@@ -309,7 +309,7 @@ Assets stored as `:logseq.class/Asset` blocks with properties:
 ;; File stored on disk as: assets/<block-uuid>.png
 ```
 
-**Asset Class Definition**: [`class.cljs:58-64`](../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64)
+**Asset Class Definition**: [`class.cljs:58-64`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64)
 
 ```clojure
 :logseq.class/Asset
@@ -371,7 +371,7 @@ Collaborators download on-demand
 Decrypt and save to local assets/
 ```
 
-**Code Reference**: [`assets.cljs:301-334`](../../src/main/frontend/handler/assets.cljs#L301-L334)
+**Code Reference**: [`assets.cljs:301-334`](../../../../../src/main/frontend/handler/assets.cljs#L301-L334)
 
 ```clojure
 (defn new-task--rtc-upload-asset
@@ -395,7 +395,7 @@ Decrypt and save to local assets/
 
 **Download Flow**: Similar but reversed (GET request, decrypt, write to local assets).
 
-**Size Limit**: 100 MB per asset (see [`assets.cljs:22-25`](../../src/main/frontend/handler/assets.cljs#L22-L25)):
+**Size Limit**: 100 MB per asset (see [`assets.cljs:22-25`](../../../../../src/main/frontend/handler/assets.cljs#L22-L25)):
 
 ```clojure
 (defn exceed-limit-size?
@@ -456,7 +456,7 @@ assets/
 - Keep assets outside graph folder
 - Useful for team templates, branding
 
-**Code Reference**: [`assets.cljs:27-58`](../../src/main/frontend/handler/assets.cljs#L27-L58)
+**Code Reference**: [`assets.cljs:27-58`](../../../../../src/main/frontend/handler/assets.cljs#L27-L58)
 
 ```clojure
 (defn alias-enabled?
@@ -856,9 +856,9 @@ assets/*.zip
 
 **Core Implementation**:
 
-- [`src/main/frontend/handler/assets.cljs`](../../src/main/frontend/handler/assets.cljs) (~418 lines) — Asset upload/download logic
-- [`deps/db/src/logseq/db/frontend/class.cljs`](../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64) — Asset class definition
-- [`deps/db/src/logseq/db/frontend/asset.cljs`](../../deps/db/src/logseq/db/frontend/asset.cljs) — Database asset utilities
+- [`src/main/frontend/handler/assets.cljs`](../../../../../src/main/frontend/handler/assets.cljs) (~418 lines) — Asset upload/download logic
+- [`deps/db/src/logseq/db/frontend/class.cljs`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64) — Asset class definition
+- [`deps/db/src/logseq/db/frontend/asset.cljs`](../../../../../deps/db/src/logseq/db/frontend/asset.cljs) — Database asset utilities
 
 **Key Functions**:
 

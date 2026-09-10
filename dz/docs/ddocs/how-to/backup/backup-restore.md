@@ -55,9 +55,9 @@ Logseq writes graph backups through the shared db-worker SQLite backup flow. Des
 | **Windows** | `%USERPROFILE%\logseq\graphs\<GraphDirName>\backup\` |
 | **Linux**   | `~/logseq/graphs/<GraphDirName>/backup/`           |
 
-> **Corrected:** DB graphs live under `~/logseq/graphs`, not `~/.logseq/graphs`. The default is `"~/logseq/graphs"` ([config.cljs:55](../../deps/common/src/logseq/common/config.cljs#L55)), expanded from `$HOME` and overridable with the `LOGSEQ_GRAPHS_DIR` environment variable ([graph.cljs:111-126](../../deps/common/src/logseq/common/graph.cljs#L111-L126)). `~/.logseq` is a different directory, used for plugins and app-level config.
+> **Corrected:** DB graphs live under `~/logseq/graphs`, not `~/.logseq/graphs`. The default is `"~/logseq/graphs"` ([config.cljs:55](../../../../../deps/common/src/logseq/common/config.cljs#L55)), expanded from `$HOME` and overridable with the `LOGSEQ_GRAPHS_DIR` environment variable ([graph.cljs:111-126](../../../../../deps/common/src/logseq/common/graph.cljs#L111-L126)). `~/.logseq` is a different directory, used for plugins and app-level config.
 
-`<GraphDirName>` is the graph name URI-encoded, not the graph name verbatim: `encodeURIComponent` is applied, then `%20` is restored to a space and the remaining `%` escapes become `~` ([graph_dir.cljs:6-12](../../deps/common/src/logseq/common/graph_dir.cljs#L6-L12)). A graph called `my/graph` therefore lives in a directory named `my~2Fgraph`.
+`<GraphDirName>` is the graph name URI-encoded, not the graph name verbatim: `encodeURIComponent` is applied, then `%20` is restored to a space and the remaining `%` escapes become `~` ([graph_dir.cljs:6-12](../../../../../deps/common/src/logseq/common/graph_dir.cljs#L6-L12)). A graph called `my/graph` therefore lives in a directory named `my~2Fgraph`.
 
 ### Navigate to Backups
 
@@ -176,7 +176,7 @@ logseq graph backup restore --graph my-graph --src my-graph-nightly-20260101T000
 logseq graph backup remove --graph my-graph --src my-graph-nightly-20260101T000000Z
 ```
 
-`--src` takes a backup **name** as reported by `graph backup list` (JSON output: `data.backups[].name`), and `--dst` is the name of the new graph the backup is restored into. `restore` and `remove` also take `--graph` to say which graph's backup tree to look in. Verified against the CLI end-to-end lifecycle case in [cli-e2e/spec/non_sync_cases.edn:182-198](../../cli-e2e/spec/non_sync_cases.edn#L182-L198).
+`--src` takes a backup **name** as reported by `graph backup list` (JSON output: `data.backups[].name`), and `--dst` is the name of the new graph the backup is restored into. `restore` and `remove` also take `--graph` to say which graph's backup tree to look in. Verified against the CLI end-to-end lifecycle case in [cli-e2e/spec/non_sync_cases.edn:182-198](../../../../../cli-e2e/spec/non_sync_cases.edn#L182-L198).
 
 ## Backup Metadata
 
@@ -191,10 +191,10 @@ Each `metadata.edn` file currently stores:
 
 ## Notes
 
-- `list-backups` returns `:name`, `:created-at`, `:size-bytes`, and `:source` when metadata is present ([graph_backup.cljs:161-167](../../src/main/logseq/db_worker/graph_backup.cljs#L161-L167)). `:created-at` comes from the backup `db.sqlite`'s mtime, while retention and throttling sort on `:created-at-ms` from `metadata.edn`.
-- Backup directory names are deduplicated rather than overwritten: if `<graph>-<timestamp>` already exists, a `-1`, `-2`, ... suffix is appended ([graph_backup.cljs:192-211](../../src/main/logseq/db_worker/graph_backup.cljs#L192-L211)).
-- A failed snapshot leaves nothing behind. The snapshot is written to a temp file inside the reserved directory and renamed into place only on success; on failure the temp file and the empty directory are removed ([graph_backup.cljs:213-219, 260-288](../../src/main/logseq/db_worker/graph_backup.cljs#L260-L288)).
-- The browser/web build has a separate, unrelated "auto backup" feature that asks you to pick a folder and writes timestamped copies into a `backups` subdirectory of that handle ([export.cljs:229-267](../../src/main/frontend/handler/export.cljs#L229-L267)). Do not confuse that `backups/` directory with the desktop/CLI `backup/` tree described here.
+- `list-backups` returns `:name`, `:created-at`, `:size-bytes`, and `:source` when metadata is present ([graph_backup.cljs:161-167](../../../../../src/main/logseq/db_worker/graph_backup.cljs#L161-L167)). `:created-at` comes from the backup `db.sqlite`'s mtime, while retention and throttling sort on `:created-at-ms` from `metadata.edn`.
+- Backup directory names are deduplicated rather than overwritten: if `<graph>-<timestamp>` already exists, a `-1`, `-2`, ... suffix is appended ([graph_backup.cljs:192-211](../../../../../src/main/logseq/db_worker/graph_backup.cljs#L192-L211)).
+- A failed snapshot leaves nothing behind. The snapshot is written to a temp file inside the reserved directory and renamed into place only on success; on failure the temp file and the empty directory are removed ([graph_backup.cljs:213-219, 260-288](../../../../../src/main/logseq/db_worker/graph_backup.cljs#L260-L288)).
+- The browser/web build has a separate, unrelated "auto backup" feature that asks you to pick a folder and writes timestamped copies into a `backups` subdirectory of that handle ([export.cljs:229-267](../../../../../src/main/frontend/handler/export.cljs#L229-L267)). Do not confuse that `backups/` directory with the desktop/CLI `backup/` tree described here.
 
 > **Removed:** The old CLI export examples are not part of this backup/restore doc's current command surface.
 > **Removed:** The claim that "the desktop backup-folder shortcut points at the graph's `backup/` directory" -- there is no such shortcut in the desktop UI. The only folder-picker in the source is the web-only `choose-backup-folder` flow above.
@@ -208,11 +208,11 @@ Each `metadata.edn` file currently stores:
 Best for: a one-off copy you keep somewhere else.
 
 1. Open the **⋯** menu in the top-right of the app
-2. Choose **Export graph** ([header.cljs:227-230](../../src/main/frontend/components/header.cljs#L227-L230))
-3. Click **Export SQLite DB** ([export.cljs:126-129](../../src/main/frontend/components/export.cljs#L126-L129))
+2. Choose **Export graph** ([header.cljs:227-230](../../../../../src/main/frontend/components/header.cljs#L227-L230))
+3. Click **Export SQLite DB** ([export.cljs:126-129](../../../../../src/main/frontend/components/export.cljs#L126-L129))
 4. Save the file to an external drive or cloud folder
 
-The same dialog also offers **Export both SQLite DB and assets**, which produces a `.zip`. Prefer it if your graph has assets -- the plain SQLite export does not include them ([en.edn:666, 678-680](../../src/resources/dicts/en.edn#L666)).
+The same dialog also offers **Export both SQLite DB and assets**, which produces a `.zip`. Prefer it if your graph has assets -- the plain SQLite export does not include them ([en.edn:666, 678-680](../../../../../src/resources/dicts/en.edn#L666)).
 
 ### Method 2: CLI backup
 
@@ -286,7 +286,7 @@ You may have restored an older backup. Try a more recent one.
 4. **Document your process** - Know your backup schedule
 5. **Keep an assets-inclusive export too** - the `.zip` export carries assets that a bare `.sqlite` file does not
 
-> **Removed:** "Markdown export is human-readable." The DB export dialog offers SQLite, SQLite+assets `.zip`, and EDN -- there is no Markdown option, and the app itself says of the EDN export: "Don't rely on this as a primary backup" ([en.edn:632-635, 661-666](../../src/resources/dicts/en.edn#L632-L635)).
+> **Removed:** "Markdown export is human-readable." The DB export dialog offers SQLite, SQLite+assets `.zip`, and EDN -- there is no Markdown option, and the app itself says of the EDN export: "Don't rely on this as a primary backup" ([en.edn:632-635, 661-666](../../../../../src/resources/dicts/en.edn#L632-L635)).
 
 ---
 

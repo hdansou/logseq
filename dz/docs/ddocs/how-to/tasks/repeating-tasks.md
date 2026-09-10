@@ -31,7 +31,7 @@ Repeating tasks in Logseq automatically reschedule themselves when completed. Th
 ## Findings: New Capabilities
 
 - `repeat/repeat-type` is a first-class setting with three behaviors: `dotted-plus` advances from completion, `plus` advances from the original scheduled date, and `double-plus` advances from the scheduled date while skipping forward to the next future occurrence.
-- `repeat/repeat-type` defaults to `double-plus`, both as the property default value ([property.cljs:392](../../deps/db/src/logseq/db/frontend/property.cljs#L392)) and as the runtime fallback when the property is absent ([commands.cljs:201-202](../../src/main/frontend/worker/commands.cljs#L201-L202)).
+- `repeat/repeat-type` defaults to `double-plus`, both as the property default value ([property.cljs:392](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L392)) and as the runtime fallback when the property is absent ([commands.cljs:201-202](../../../../../src/main/frontend/worker/commands.cljs#L201-L202)).
 - `repeat/checked-property` lets a repeating task use a property other than `status` as its completion toggle.
 - Repeat properties are preserved by the graph parser/exporter round-trip for repeated timestamps.
 
@@ -82,7 +82,7 @@ To enable repeating on a task through the interface, open the scheduled or deadl
 
 ### Property Details
 
-**From code ([property.cljs:354-399](../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399)):**
+**From code ([property.cljs:354-399](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399)):**
 
 ```clojure
 :logseq.property.repeat/recur-frequency
@@ -241,7 +241,7 @@ When a task has both `scheduled` and `deadline` properties, completion reschedul
 - **`temporal-property` is set** -- that property is advanced first, and the other of scheduled/deadline is also advanced if the task has it.
 - **`temporal-property` is not set** -- every one of `scheduled`/`deadline` that is present on the task is advanced. It does *not* silently default to `scheduled`.
 
-**From code ([commands.cljs:224-249](../../src/main/frontend/worker/commands.cljs#L224-L249)):**
+**From code ([commands.cljs:224-249](../../../../../src/main/frontend/worker/commands.cljs#L224-L249)):**
 
 ```clojure
 (def ^:private repeat-temporal-property-idents
@@ -272,7 +272,7 @@ When a task has both `scheduled` and `deadline` properties, completion reschedul
   (mapcat #(compute-reschedule-property-tx db entity %) (reschedule-property-idents entity)))
 ```
 
-If neither `scheduled` nor `deadline` is present, nothing is rescheduled -- `compute-reschedule-property-tx` returns nothing without a current date value ([commands.cljs:209](../../src/main/frontend/worker/commands.cljs#L209)).
+If neither `scheduled` nor `deadline` is present, nothing is rescheduled -- `compute-reschedule-property-tx` returns nothing without a current date value ([commands.cljs:209](../../../../../src/main/frontend/worker/commands.cljs#L209)).
 
 ## Managing Repeating Tasks
 
@@ -367,7 +367,7 @@ When you mark a repeating task as DONE, Logseq runs a command pipeline (defined 
 
 The task is modified in place -- no new copy is created. The same block gets its date updated and status reset.
 
-**From code ([commands.cljs:18-25](../../src/main/frontend/worker/commands.cljs#L18-L25)):**
+**From code ([commands.cljs:18-25](../../../../../src/main/frontend/worker/commands.cljs#L18-L25)):**
 
 ```clojure
 [:repeated-task
@@ -417,7 +417,7 @@ Combine for flexible scheduling:
   repeat/temporal-property:: scheduled
 ```
 
-When `temporal-property` is set to `scheduled`, the scheduled date is the primary date advanced, but the deadline is also rescheduled when present. If `temporal-property` is not set, every date property present on the task (`scheduled` and/or `deadline`) is advanced ([commands.cljs:231-246](../../src/main/frontend/worker/commands.cljs#L231-L246)).
+When `temporal-property` is set to `scheduled`, the scheduled date is the primary date advanced, but the deadline is also rescheduled when present. If `temporal-property` is not set, every date property present on the task (`scheduled` and/or `deadline`) is advanced ([commands.cljs:231-246](../../../../../src/main/frontend/worker/commands.cljs#L231-L246)).
 
 ### With Task Properties
 

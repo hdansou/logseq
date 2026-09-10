@@ -373,7 +373,7 @@ Once saved, the screenshot is a standard image asset. You can:
  :logseq.property.pdf/hl-image [:block/uuid #uuid "image-asset-uuid"]}
 ```
 
-**Class Definition**: [`class.cljs:91-98`](../../deps/db/src/logseq/db/frontend/class.cljs#L91-L98)
+**Class Definition**: [`class.cljs:91-98`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L91-L98)
 
 ```clojure
 :logseq.class/Pdf-annotation
@@ -444,7 +444,7 @@ Once saved, the screenshot is a standard image asset. You can:
 - Keep PDF visible while editing graph
 - Separate zoom/navigation state
 
-**Code Reference**: [`windows.cljs:74-122`](../../src/main/frontend/extensions/pdf/windows.cljs#L74-L122)
+**Code Reference**: [`windows.cljs:74-122`](../../../../../src/main/frontend/extensions/pdf/windows.cljs#L74-L122)
 
 ### Copy Block Reference
 
@@ -525,7 +525,7 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **Code Evidence**: No mobile-specific checks in PDF extension:
 
-- [`core.cljs`](../../src/main/frontend/extensions/pdf/core.cljs) — Assumes full browser environment
+- [`core.cljs`](../../../../../src/main/frontend/extensions/pdf/core.cljs) — Assumes full browser environment
 - No fallback to native PDF viewer
 
 **Investigation Report**: See [PDF Platform Compatibility Investigation](../../dz/docs/07-investigations/pdf-feature-platform-compatibility-investigation.md)
@@ -670,7 +670,7 @@ git commit -m "Add PDF annotations for research paper"
 
 ## Code Reference
 
-**Core Implementation**: [`src/main/frontend/extensions/pdf/`](../../src/main/frontend/extensions/pdf/)
+**Core Implementation**: [`src/main/frontend/extensions/pdf/`](../../../../../src/main/frontend/extensions/pdf/)
 
 **Key Files**:
 

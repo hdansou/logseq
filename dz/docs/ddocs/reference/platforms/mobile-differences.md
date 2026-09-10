@@ -434,7 +434,7 @@ const isWeb = Capacitor.getPlatform() === 'web'
 2. Create annotations on desktop, view on mobile
 3. Use PDF links to jump to external viewer
 
-**Code Reference:** [src/main/frontend/extensions/pdf/core.cljs:1090](../../src/main/frontend/extensions/pdf/core.cljs#L1090)
+**Code Reference:** [src/main/frontend/extensions/pdf/core.cljs:1090](../../../../../src/main/frontend/extensions/pdf/core.cljs#L1090)
 
 ---
 
@@ -454,7 +454,7 @@ const isWeb = Capacitor.getPlatform() === 'web'
 2. Upload videos to video hosting service
 3. Use timestamps in text instead of video blocks
 
-**Code Reference:** [src/main/frontend/extensions/video/youtube.cljs:212](../../src/main/frontend/extensions/video/youtube.cljs#L212)
+**Code Reference:** [src/main/frontend/extensions/video/youtube.cljs:212](../../../../../src/main/frontend/extensions/video/youtube.cljs#L212)
 
 ---
 

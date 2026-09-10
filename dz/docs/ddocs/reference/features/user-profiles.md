@@ -56,7 +56,7 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 - `"Alice Johnson"`
 - `"Bob Smith"`
 
-**Code Reference**: [property.cljs:620-624](../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L624)
+**Code Reference**: [property.cljs:620-624](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L624)
 
 ---
 
@@ -87,7 +87,7 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 
 **Privacy Note**: Email is shared with collaborators in remote graphs. If privacy is a concern, use a dedicated collaboration email.
 
-**Code Reference**: [property.cljs:625-629](../../../deps/db/src/logseq/db/frontend/property.cljs#L625-L629)
+**Code Reference**: [property.cljs:625-629](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L625-L629)
 
 ---
 
@@ -114,7 +114,7 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 
 **Avatar Upload**: Logseq provides a presigned-URL mechanism for uploading avatars to its cloud storage: `<upload-user-avatar` requests a URL from `/logseq/get_presigned_user_avatar_put_url` and PUTs the image to it (`src/main/frontend/handler/user.cljs:392-405`). As of `be800f1711` its only caller is the RTC debug UI (`src/main/frontend/db/rtc/debug_ui.cljs:74`) -- there is no end-user avatar upload control.
 
-**Code Reference**: [property.cljs:630-634](../../../deps/db/src/logseq/db/frontend/property.cljs#L630-L634)
+**Code Reference**: [property.cljs:630-634](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L630-L634)
 
 ---
 
@@ -240,7 +240,7 @@ User profile datoms are included in the initial data export via `get-all-user-da
 
 ### Property Definitions
 
-**Source**: [deps/db/src/logseq/db/frontend/property.cljs:620-634](../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L634)
+**Source**: [deps/db/src/logseq/db/frontend/property.cljs:620-634](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L634)
 
 The user profile properties are defined as part of the `built-in-properties` map. All three share the same schema structure: string type, not hidden, and public.
 
