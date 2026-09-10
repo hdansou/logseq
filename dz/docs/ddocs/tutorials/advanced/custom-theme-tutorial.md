@@ -8,9 +8,9 @@ lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 related-docs:
-  - '[Custom CSS Guide](../../how-to/customization/custom-css.md)'
+  - '[Custom CSS Guide](../../how-to/integrations/custom-css.md)'
   - '[Theme Development](../../developer/theme-development.md)'
-  - '[CSS Variables Reference](../../reference/styling/css-variables.md)'
+  - '[CSS Variables Reference](../../reference/configuration/css-variables.md)'
 tags: ['themes', 'CSS', 'customization', 'design']
 ---
 
@@ -1624,7 +1624,7 @@ You've created a complete custom theme! 🎉
 **Resources:**
 
 - [Logseq Theme Gallery](https://github.com/logseq/awesome-logseq#themes)
-- [CSS Variables Reference](../../reference/styling/css-variables.md)
+- [CSS Variables Reference](../../reference/configuration/css-variables.md)
 - [Logseq Discord #themes Channel](https://discord.gg/logseq)
 - [Theme Development Guide](../../developer/theme-development.md)
 

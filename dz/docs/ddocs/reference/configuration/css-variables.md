@@ -10,7 +10,7 @@ platforms: [desktop, mobile, web]
 graphType: [file, db]
 relatedDocs:
   howTo:
-    - '[Create Custom Theme](../../how-to/plugins/create-theme.md)'
+    - '[Create Custom Theme](../../how-to/integrations/create-theme.md)'
   reference:
     - '[Plugin API Reference](../api/plugin-api.md)'
 ---
@@ -388,7 +388,7 @@ CSS variables are defined in:
 
 ## See Also
 
-- **Theme Creation**: [how-to/plugins/create-theme.md](../../how-to/plugins/create-theme.md)
+- **Theme Creation**: [how-to/plugins/create-theme.md](../../how-to/integrations/create-theme.md)
 - **Plugin API**: [plugin-api.md](../api/plugin-api.md) for UI injection
 - **Radix Colors**: [radix-ui.com/colors](https://www.radix-ui.com/colors)
 

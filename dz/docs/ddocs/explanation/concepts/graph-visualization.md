@@ -5,7 +5,7 @@ version: 'Logseq v0.10.9'
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
 related-docs:
-  - '[Linked References](../../tutorials/getting-started/linked-references.md)'
+  - '[Linked References](linked-references.md)'
   - '[Graph Navigation How-To](../../how-to/navigation/graph-navigation.md)'
   - '[Search Strategies](../../how-to/navigation/search-strategies.md)'
 tags: ['graph', 'visualization', 'navigation', 'connections', 'knowledge-graph']
@@ -742,7 +742,7 @@ Result: Work-related project pages only
 
 **Related Guides:**
 
-- [Linked References Tutorial](../../tutorials/getting-started/linked-references.md)
+- [Linked References Tutorial](linked-references.md)
 - [Navigation Strategies](../../how-to/navigation/graph-navigation.md)
 - [Search Techniques](../../how-to/navigation/search-strategies.md)
 

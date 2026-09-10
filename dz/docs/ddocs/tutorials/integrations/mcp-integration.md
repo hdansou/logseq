@@ -10,7 +10,7 @@ reviewStatus: audited
 related-docs:
   - '[CLI Development Guide](../../reference/tools/cli-reference.md)'
   - '[Database Properties](../development/db-properties.md)'
-  - '[Plugin Development](./first-plugin.md)'
+  - '[Plugin Development](../plugins/first-plugin.md)'
 tags: ['mcp', 'ai', 'claude', 'integration', 'api']
 ---
 
@@ -596,7 +596,7 @@ You now have an AI client talking to your live Logseq graph.
 
 1. **[CLI Development Guide](../../reference/tools/cli-reference.md)** - The OCaml CLI (separate from MCP)
 2. **[Database Properties](../development/db-properties.md)** - DB schema behind `upsertNodes`
-3. **[Plugin Development](./first-plugin.md)** - Build in-app integrations
+3. **[Plugin Development](../plugins/first-plugin.md)** - Build in-app integrations
 4. **[MCP Specification](https://modelcontextprotocol.io)** - Official MCP docs
 
 ### Where to look in the source:

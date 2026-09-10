@@ -11,7 +11,7 @@ graphType: [db]
 sinceVersion: '0.10.5'
 relatedDocs:
   tutorials:
-    - '[MCP Integration Tutorial](../../tutorials/plugins/mcp-integration.md)'
+    - '[MCP Integration Tutorial](../../tutorials/integrations/mcp-integration.md)'
   reference:
     - '[HTTP API Reference](http-api.md)'
 ---
@@ -390,7 +390,7 @@ Note: When connecting to the desktop app's MCP endpoint, requests must include a
 
 - **HTTP API**: [http-api.md](http-api.md) for general API access
 - **MCP Specification**: [modelcontextprotocol.io](https://modelcontextprotocol.io/)
-- **Tutorial**: [MCP Integration Tutorial](../../tutorials/plugins/mcp-integration.md)
+- **Tutorial**: [MCP Integration Tutorial](../../tutorials/integrations/mcp-integration.md)
 
 ---
 

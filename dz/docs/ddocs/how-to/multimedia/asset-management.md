@@ -879,7 +879,7 @@ assets/*.zip
 **How-To Guides**:
 
 - [Video Embedding](../multimedia/video-embed.md) — YouTube, Vimeo, local videos
-- [PDF Annotations](../multimedia/pdf-annotations.md) — Working with PDF files
+- [PDF Annotations](../../reference/features/pdf-annotations.md) — Working with PDF files
 
 **References**:
 

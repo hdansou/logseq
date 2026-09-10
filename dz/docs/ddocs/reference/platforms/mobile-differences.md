@@ -638,7 +638,7 @@ Heavy editing            On-the-go review
 **For Users:**
 
 - [Getting Started on Mobile](../../tutorials/getting-started/mobile-app.md)
-- [Logseq Sync Setup](../../how-to/sync/real-time-sync.md)
+- [Logseq Sync Setup](../../tutorials/collaboration/real-time-sync.md)
 - [Feature Requests](https://github.com/logseq/logseq/discussions)
 
 ---

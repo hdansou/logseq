@@ -7,7 +7,7 @@ platform: 'Desktop + Mobile'
 related-docs:
   - '[Local-First Architecture](./local-first-architecture.md)'
   - '[File Organization](./file-organization.md)'
-  - '[Database Integrity](../developer/database-integrity.md)'
+  - '[Database Integrity](../architecture/database-integrity.md)'
 tags: ['graphs', 'architecture', 'file-based', 'database', 'storage']
 ---
 
@@ -1321,7 +1321,7 @@ Not yet available
 
 - [Local-First Architecture](./local-first-architecture.md)
 - [File Organization](./file-organization.md)
-- [Database Integrity](../developer/database-integrity.md)
+- [Database Integrity](../architecture/database-integrity.md)
 
 ---
 

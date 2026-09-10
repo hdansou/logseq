@@ -7,7 +7,7 @@ platform: 'Desktop + Mobile'
 related-docs:
   - '[File vs Database Graphs](./file-vs-database.md)'
   - '[E2EE Encryption](../security/e2ee-encryption.md)'
-  - '[Database Integrity](../developer/database-integrity.md)'
+  - '[Database Integrity](../architecture/database-integrity.md)'
 tags: ['architecture', 'local-first', 'privacy', 'offline', 'sync']
 ---
 
