@@ -168,7 +168,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 #### [Interface](reference/interface/)
 
-- 🟢 [Keyboard Shortcuts Reference](reference/interface/keyboard-shortcuts.md)
+- [Keyboard Shortcuts (moved)](reference/interface/keyboard-shortcuts.md)
 - 🟢 [Slash Commands Reference](reference/interface/slash-commands.md)
 - 🟢 [Templates System](reference/interface/templates-system.md)
 

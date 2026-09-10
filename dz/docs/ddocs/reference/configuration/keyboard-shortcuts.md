@@ -4,7 +4,7 @@ description: 'Complete reference for all Logseq keyboard shortcuts and command p
 status: stable
 lastVerified: '2026-09-09'
 verifiedAgainst: 'be800f1711'
-reviewStatus: merged-not-fully-audited
+reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
 graphType: [file, db]
@@ -21,6 +21,12 @@ relatedDocs:
 > **Last revised:** 2026-09-09
 
 > Complete reference for all built-in commands available in Logseq's command palette (`Cmd/Ctrl+Shift+P`).
+
+> **Verified against source.** All 153 command rows below were diffed against
+> `src/main/frontend/modules/shortcut/config.cljs` at `be800f1711`: every command id exists and
+> every binding matches, including the platform-conditional ones written `(if mac? … …)` in
+> source. This page is the canonical shortcut reference; the former duplicate at
+> `../interface/keyboard-shortcuts.md` now redirects here.
 
 ## Legend
 
@@ -318,6 +324,17 @@ Add custom shortcuts in `config.edn`:
 | `mod`   | Cmd (Mac) / Ctrl (Win) | `mod+k`                   |
 | `false` | Disable shortcut       | `:editor/highlight false` |
 | `[...]` | Multiple bindings      | `["ctrl+j" "down"]`       |
+
+**Square brackets are stored under a long name.** `[` and `]` are normalized to
+`open-square-bracket` and `close-square-bracket` on the way in
+(`src/main/frontend/modules/shortcut/utils.cljs:56-57`) and rendered back to `[` and `]` for
+display (`:92-93`). That is why `:go/backward` reads `mod+[` in this table but is written
+`"mod+open-square-bracket"` in `config.cljs:331`. Either form is accepted in `config.edn`.
+
+**A command with no default binding is unbound, not undefined.** Entries shown as `---` exist and
+are invokable from the command palette; they simply ship without a key. `:graph/add`
+(`config.cljs:368`) and `:graph/db-add` (`:372`) are declared with an `:fn` and no `:binding` key
+at all.
 
 ---
 
