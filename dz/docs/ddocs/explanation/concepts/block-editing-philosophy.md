@@ -1,11 +1,14 @@
 ---
 title: 'Block-Based Editing Philosophy'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: wip-unverified
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
 related-docs:
-  - '[Block Editing Tutorial](../../tutorials/getting-started/block-editing.md)'
+  - '[Basic Editing Tutorial](../../tutorials/getting-started/03-basic-editing.md)'
   - '[File Organization](./file-organization.md)'
   - '[Graph Visualization](./graph-visualization.md)'
 tags: ['blocks', 'outliner', 'philosophy', 'concepts', 'editing']
@@ -56,21 +59,35 @@ This document explains why Logseq uses block-based editing (outliner approach) i
 **Key Properties:**
 
 ```markdown
-1. UUID: Every block has unique identifier
-   Example: abc-123-def-456-ghi
+1. UUID: Every block has a unique identifier (`:block/uuid`)
+   Example: 6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6
 
-2. Content: Text, images, embeds, properties
+2. Title: The block's text lives in `:block/title`
    Example: "Meeting notes from Jan 22"
 
-3. Hierarchy: Parent-child relationships
+3. Hierarchy: Parent-child relationships (`:block/parent`)
    Example: Parent → Child → Grandchild
 
-4. Properties: Metadata attached to block
-   Example: id:: custom-id, tags:: [[Project]]
+4. Ordering: Siblings are ordered by `:block/order`
+   Example: a fractional index string, not an integer position
 
-5. References: Links to/from other blocks
-   Example: ((block-ref)) or backlinks
+5. Tags: `:block/tags` points at class entities
+   Example: a block tagged Task, or a page tagged Project
+
+6. References: Links to/from other blocks (`:block/refs`)
+   Example: [[6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6]] or backlinks
 ```
+
+Every one of those attributes is declared in the DB graph schema
+([`schema.cljs:56-108`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)):
+`:block/uuid` at `:61`, `:block/parent` at `:62`, `:block/order` at `:64`,
+`:block/page` at `:68`, `:block/refs` at `:71`, `:block/tags` at `:73`,
+`:block/title` at `:93`.
+
+> **Note:** In a DB graph the block's text attribute is `:block/title`, not
+> `:block/content`. `:block/content` is not in the schema at all — it survives
+> only as a plugin-SDK compatibility shim
+> ([`sdk/utils.cljs:56`](../../../../../src/main/logseq/sdk/utils.cljs)).
 
 ### Block Anatomy
 
@@ -78,23 +95,42 @@ This document explains why Logseq uses block-based editing (outliner approach) i
 
 ```markdown
 • Block content goes here ← Bullet point
-property:: value ← Property (indented)
+  Property Name: value ← Property (rendered under the block)
 
 - Child block ← Child (indented)
   - Grandchild ← Grandchild (double indent)
 ```
 
+Properties are not typed as `key:: value` text in a DB graph — that is
+file-graph Markdown syntax. You attach a property through the UI, e.g. the
+`/Add property` slash command
+([`commands.cljs:354-358`](../../../../../src/main/frontend/commands.cljs)),
+and it is stored as its own DataScript attribute keyed by the property's
+`:db/ident`.
+
 **Technical Structure:**
 
 ```clojure
-{:block/uuid #uuid "abc-123-def-456"
- :block/content "Block content goes here"
+{:db/id 1234
+ :block/uuid #uuid "6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6"
+ :block/title "Block content goes here"
  :block/parent {:db/id 789}
  :block/page {:db/id 456}
- :block/properties {:property "value"}
+ :block/order "a0"
  :block/refs [{:db/id 123}]
- :block/created-at 1737504000000}
+ :block/tags [{:db/id 42}]
+ :block/created-at 1737504000000
+ :user.property/severity {:db/id 999}}
 ```
+
+Note the last line: a user property is a **top-level attribute** on the block,
+namespaced by its `:db/ident`. There is no `:block/properties` attribute in the
+schema, so a `[?b :block/properties ?p]` clause in a `:where` matches nothing.
+The key is intercepted at *entity* lookup time, where it synthesises a
+`{property-ident value}` map from the entity's own datoms
+([`entity_plus.cljc:138-146`](../../../../../deps/db/src/logseq/db/common/entity_plus.cljc),
+dispatched at `:162-163`) — so `(:block/properties some-entity)` works, but the
+query clause does not.
 
 ---
 
@@ -104,7 +140,7 @@ property:: value ← Property (indented)
 
 **Outliner:** A tool for hierarchical note-taking where every piece of content can be nested, reordered, and referenced independently.
 
-**Historical Outliers:**
+**Historical Outliners:**
 
 ```markdown
 Classic outliner apps:
@@ -123,13 +159,23 @@ Classic outliner apps:
 Not just text:
 
 - Text blocks: "This is a thought"
-- Code blocks: `javascript ...`
-- Image blocks: ![](image.png)
-- Embed blocks: {{embed [[Page]]}}
-- Query blocks: #+BEGIN_QUERY ...
+- Code blocks: tagged `Code` (/Code block)
+- Quote blocks: tagged `Quote` (/Quote)
+- Math blocks: tagged `Math` (/Math block)
+- Query blocks: tagged `Query` (/Query, /Advanced Query)
+- Asset blocks: tagged `Asset` (images and other uploads)
 ````
 
-**2. Infinite Nesting**
+These are not different data structures — each is an ordinary block carrying a
+built-in class on `:block/tags`. `Query` (`:54`), `Asset` (`:68`), `Code-block`
+(`:76`), `Quote-block` (`:81`) and `Math-block` (`:86`) are all declared in the
+same `built-in-classes` map as `Task` and `Template`
+([`class.cljs:17-105`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
+The slash commands that create them live in
+[`commands.cljs:246-257`](../../../../../src/main/frontend/commands.cljs)
+(code, quote, math) and `:325-326` (query, advanced query).
+
+**2. Deep Nesting**
 
 ```markdown
 - Level 1
@@ -137,20 +183,37 @@ Not just text:
     - Level 3
       - Level 4
         - Level 5
-          - Level 6... (unlimited depth)
+          - Level 6...
 ```
+
+Nesting is just a chain of `:block/parent` refs, so the outliner imposes no
+depth limit of its own — there is no maximum-depth check anywhere in
+[`deps/outliner/`](../../../../../deps/outliner/src/logseq/outliner/). Practical
+limits come from rendering and from your own ability to read the result.
 
 **3. Each Block is Addressable**
 
 ```markdown
 Every block can be:
 
-- Referenced: ((block-ref))
+- Referenced: [[6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6]]
 - Linked to: From anywhere
-- Embedded: {{embed ((block-ref))}}
+- Embedded: /Node embed
 - Queried: Find blocks by properties
 - Moved: To any page/location
 ```
+
+> **References to a block and references to a page are the same construct.**
+> A DB graph stores every reference in `:block/title` as `[[<uuid>]]` — even a
+> `#Tag`, which `replace-tags-with-id-refs` rewrites to the same `[[<uuid>]]`
+> form
+> ([`content.cljs:162-179`](../../../../../deps/db/src/logseq/db/frontend/content.cljs)).
+> The renderer resolves that UUID to whatever it names, and the `block-reference`
+> component simply delegates to `page-reference`
+> ([`components/block.cljs:1320-1338`, `:1369-1375`](../../../../../src/main/frontend/components/block.cljs)).
+> The file-graph `((uuid))` form is *not* rendered as a reference here: the
+> `["Block_ref" id]` branch of `link-cp` returns the literal string
+> ([`components/block.cljs:1553-1557`](../../../../../src/main/frontend/components/block.cljs)).
 
 **4. Structure Emerges**
 
@@ -192,12 +255,17 @@ Example:
 Logseq approach:
 
 - Reference specific block
-- ((block-ref)) shows exact content
+- [[uuid]] shows exact content
 - Click to navigate directly
 
 Example:
-"See the risk: ((abc-123))" ← Exact location
+"See the risk: [[6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6]]" ← Exact location
 ```
+
+You do not type the UUID by hand. "Copy block ref" wraps the block's
+`:block/uuid` in page-ref brackets and puts that on the clipboard
+([`editor.cljs:3646-3657`](../../../../../src/main/frontend/handler/editor.cljs),
+which calls `page-ref/->page-ref`).
 
 ### 2. Context Preservation
 
@@ -221,18 +289,24 @@ Current context: Wherever you use it
 Monday journal:
 
 - Met with Sarah about database refactor
-  id:: db-refactor-note
+  ↑ has :block/uuid 6721a3f0-…-a1b2c3d4e5f6
 
 Tuesday project plan:
 
-- Database work: ((db-refactor-note))
+- Database work: [[6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6]]
   ↑ Shows full Monday context
 
 Friday review:
 
-- Check progress: ((db-refactor-note))
+- Check progress: [[6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6]]
   ↑ Same note, new context
 ```
+
+The UUID is not something you assign. Every block gets one at creation —
+`:block/uuid` is `:db.unique/identity` in the schema
+([`schema.cljs:61`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)) —
+and the editor inserts the bracketed form for you. The file-graph `id::`
+property does not exist here.
 
 ### 3. Flexible Organization
 
@@ -271,11 +345,24 @@ Simple blocks:
 Composed view:
 
 - [[Project Alpha]]
-  - {{embed ((risk-block))}}
-  - {{embed ((mitigation-block))}}
-  - {{embed ((owner-block))}}
-  - {{embed ((status-block))}}
+  - /Node embed → Risk: Database scalability
+  - /Node embed → Mitigation: Add read replicas
+  - /Node embed → Owner: Sarah
+  - /Node embed → Status: In progress
 ```
+
+> **`{{embed}}` is gone.** The macro still parses, but the renderer replaces it
+> with a deprecation warning that points you at the slash command:
+> `"{{embed}} is deprecated. Use '/Node embed' command instead."`
+> ([`components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs),
+> string at [`en.edn:157`](../../../../../src/resources/dicts/en.edn)).
+> `/Node embed` ([`commands.cljs:105-108`, `:233-236`](../../../../../src/main/frontend/commands.cljs))
+> opens a block search, and picking a result inserts a new sibling block whose
+> `:block/link` points at the chosen block
+> ([`components/editor.cljs:290-306`](../../../../../src/main/frontend/components/editor.cljs));
+> `:block/link` is the schema attribute described as "which block this block
+> links to, used for tag, embeds"
+> ([`schema.cljs:76-78`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)).
 
 ---
 
@@ -352,15 +439,15 @@ Characteristics:
 
 ```markdown
 - Project goal: Improve performance
-  deadline:: Q2 2026
+  Deadline: Jun 30, 2026        ← property on the block
   - Why: User complaints about speed
   - Metric: Load time < 2 seconds
 - Approach 1: Database optimization
-  owner:: [[Sarah]]
+  Owner: [[Sarah]]              ← property on the block
   - Cost: $10k
   - Timeline: 8 weeks
 - Approach 2: Caching layer
-  owner:: [[John]]
+  Owner: [[John]]               ← property on the block
   - Cost: $5k
   - Timeline: 4 weeks
 ```
@@ -414,7 +501,7 @@ Characteristics:
 Atomic block:
 
 - Risk: Database performance
-  severity:: high
+  Severity: High                ← property on the block
 
 Reused in:
 
@@ -444,7 +531,7 @@ Easy to reference
 Link to specific idea:
 
 - Design decision: Use REST not GraphQL
-  rationale:: ((simplicity-argument))
+  Rationale: [[6721a3f0-1b2c-4d5e-8f90-a1b2c3d4e5f6]]
 
 Not: "See design document section 3.2.1"
 But: Direct reference to exact reasoning
@@ -515,7 +602,7 @@ Together: Complete picture
 
 ```markdown
 - Improve application performance
-  goal:: Q2 2026
+  Goal: Q2 2026                 ← property on the block
 
   - Approach 1: Frontend optimization
     - Bundle size reduction
@@ -586,6 +673,14 @@ Sarah proposed we use microservices"
   - Contributions
     - Project Alpha approach (2026-01-22)
 ```
+
+> **A `/` in a page title is not part of the title.** Creating `Person/Sarah`
+> creates *two* pages — `Person`, and a page whose `:block/title` is just
+> `Sarah` filed under it, via `split-namespace-pages`
+> ([`page.cljs:385-390`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
+> Two different parents can therefore each hold a leaf called `Sarah`
+> ([`page_test.cljs:65-72`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs)).
+> There is no `:block/namespace` attribute in the DB schema.
 
 **This is the power of blocks:** Same content, multiple organizational views through references.
 
@@ -686,8 +781,16 @@ Publishing requires:
 
 - Conversion/transformation
 - Manual restructuring
-- Separate publishing tool
 ```
+
+Logseq ships the conversion step: `export-blocks` renders a selection as
+Markdown, OPML or HTML
+([`components/export.cljs:196-203`, `:275`](../../../../../src/main/frontend/components/export.cljs)),
+and the whole graph can go out as a zip (`export-repo-as-zip!`,
+[`handler/export.cljs:131`](../../../../../src/main/frontend/handler/export.cljs)),
+a debug transit dump (`:135`), a SQLite DB (`:146`) or Roam JSON (`:191`).
+What it does not do is restructure an outline into prose — that part is still
+yours.
 
 ---
 
@@ -856,11 +959,30 @@ Logseq (2021), Obsidian (evolved):
 - Privacy-first (local-first)
 - Open source options
 - Plugin ecosystems
-- Multiple graph modes
-- Standards-based (Markdown)
 
 Philosophy: Own your data, build your tools
 ```
+
+### The Move to a Database Graph
+
+Logseq's own history has a second chapter. It began as an outliner over
+Markdown files, where the block tree was reconstructed by parsing indentation.
+Today's DB graph stores the tree directly: `:block/parent` is a DataScript ref
+and sibling order is a fractional-index string on `:block/order`
+([`order.cljs`](../../../../../deps/db/src/logseq/db/common/order.cljs), backed
+by the `clj-fractional-indexing` dependency at
+[`deps/db/deps.edn:14`](../../../../../deps/db/deps.edn)). Fractional indexing is
+what lets a drag-and-drop reorder write a single datom instead of renumbering
+every sibling.
+
+Graphs live under `~/logseq/graphs`
+([`config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)),
+and at this revision the graph switcher lists only DB graphs — it filters the
+repo list through `config/db-based-graph?` with the comment "use
+`config/db-based-graph?` to avoid loading old file graphs"
+([`components/repo.cljs:318-323`](../../../../../src/main/frontend/components/repo.cljs)).
+The philosophy above is unchanged by that move; the storage format is not the
+philosophy.
 
 ### Influence from Zettelkasten
 
@@ -963,7 +1085,7 @@ Node 5
 
 **Related:**
 
-- [Block Editing Tutorial](../../tutorials/getting-started/block-editing.md)
+- [Basic Editing Tutorial](../../tutorials/getting-started/03-basic-editing.md)
 - [Linked References](./linked-references.md)
 - [Graph Visualization](./graph-visualization.md)
 

@@ -1,7 +1,10 @@
 ---
 title: 'Meeting Notes Workflow'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: wip-unverified
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
 related-docs:
@@ -27,6 +30,37 @@ Learn how to capture, organize, and act on meeting notes in Logseq. This workflo
 
 ---
 
+## Before You Start: how this maps onto a DB graph
+
+The outlines below are written as plain text so you can read them at a glance.
+Four things to know about how the same structure is actually built in a DB
+graph:
+
+- **Properties are structured data, not text.** Typing `type:: Meeting` into a
+  block leaves you with a block whose text is `type:: Meeting`. Add properties
+  with the `/Add property` slash command
+  (`src/main/frontend/commands.cljs:354-358`), which mints a property entity and
+  attaches a typed value. `key:: value` lines below are shorthand for "this node
+  carries this property", never literal syntax to type.
+- **Property idents are generated, not guessable.** A property you create called
+  "Attendees" is stored as `:user.property/Attendees-<8 random chars>`
+  (`deps/db/src/logseq/db/frontend/property.cljs:852-859` →
+  `deps/db/src/logseq/db/frontend/db_ident.cljc:66-88`). Resolve user properties
+  by title in queries; never hard-code the ident.
+- **Tasks are properties, not `TODO` markers.** `TODO`, `DOING`, `DEADLINE:` and
+  `[#A]` are file-graph text markers. A DB-graph task is a node tagged `#Task`
+  carrying `:logseq.property/status`, `:logseq.property/priority`,
+  `:logseq.property/deadline` and `:logseq.property/scheduled`
+  (`deps/db/src/logseq/db/frontend/class.cljs:40-42`).
+- **`A/B/C` page names are split into a page hierarchy.** Creating
+  `[[Meetings/2026-01-22-Kickoff]]` creates two pages — `Meetings` and
+  `2026-01-22-Kickoff` — linked by `:block/parent`, with the top page filed under
+  the built-in **Library** page. The leaf page's title is `2026-01-22-Kickoff`,
+  not the full path (`deps/outliner/src/logseq/outliner/page.cljs:385-388`;
+  `deps/outliner/test/logseq/outliner/page_test.cljs:33-49`).
+
+---
+
 ## Table of Contents
 
 1. [Pre-Meeting Preparation](#pre-meeting-preparation)
@@ -42,17 +76,41 @@ Learn how to capture, organize, and act on meeting notes in Logseq. This workflo
 
 ## Pre-Meeting Preparation
 
+### Define a Meeting tag once
+
+Before you create your first meeting page, create the tag that every meeting
+will carry, and give it the properties every meeting needs. Do this once:
+
+1. Create a page called `Meeting` and turn it into a tag, or type `#Meeting` in
+   a block and let Logseq create it.
+2. On the tag page, add the properties meetings should have. User property types
+   you can choose from are `:default` (text), `:number`, `:date`, `:datetime`,
+   `:checkbox`, `:url`, `:node` and `:asset`
+   (`deps/db/src/logseq/db/frontend/property/type.cljs:19-21`).
+
+A workable property set for meetings:
+
+| Property   | Type       | Notes                                            |
+| ---------- | ---------- | ------------------------------------------------ |
+| Date       | `:date`    | Points at a journal page                         |
+| Time       | `:default` | Free text, e.g. `14:00-15:00`                    |
+| Project    | `:node`    | Points at the project page                       |
+| Attendees  | `:node`    | Set cardinality to multiple to list many people  |
+| Meeting URL| `:url`     | Video link                                       |
+
+Once the tag carries these properties, tagging any page or block `#Meeting`
+offers them for filling in.
+
 ### Create Meeting Page
 
 **Standard Meeting Page:**
 
 ```markdown
-- [[Meetings/2026-01-22-Project-Alpha-Kickoff]]
-  type:: [[Meeting]]
-  date:: [[2026-01-22]]
-  time:: 14:00-15:00
-  project:: [[Projects/Alpha]]
-  attendees:: [[Person/Sarah]], [[Person/John]], [[Person/Alice]]
+- [[Meetings/2026-01-22-Project-Alpha-Kickoff]]   #Meeting
+  Date:: [[Jan 22nd, 2026]]
+  Time:: 14:00-15:00
+  Project:: [[Alpha]]
+  Attendees:: [[Sarah]], [[John]], [[Alice]]
 
   ## Pre-Meeting
 
@@ -62,17 +120,17 @@ Learn how to capture, organize, and act on meeting notes in Logseq. This workflo
 
   ### Goals
 
-  - [ ] Define project scope
-  - [ ] Assign initial responsibilities
-  - [ ] Set next milestones
+  - Define project scope
+  - Assign initial responsibilities
+  - Set next milestones
 
   ### Agenda
 
-  - [ ] Introductions (5 min)
-  - [ ] Project overview (10 min)
-  - [ ] Technical approach discussion (25 min)
-  - [ ] Next steps (10 min)
-  - [ ] Q&A (10 min)
+  - Introductions (5 min)
+  - Project overview (10 min)
+  - Technical approach discussion (25 min)
+  - Next steps (10 min)
+  - Q&A (10 min)
 
   ### Questions to Ask
 
@@ -82,22 +140,27 @@ Learn how to capture, organize, and act on meeting notes in Logseq. This workflo
 
   ### Preparation Done
 
-  - [x] Review project brief ((project-brief-ref))
-  - [x] Prepare technical questions
-  - [x] Share agenda with attendees
+  - Review project brief   (link to the brief block)
+  - Prepare technical questions
+  - Share agenda with attendees
 ```
+
+Two notes on the above:
+
+- The property lines are what the page shows after you add the properties with
+  `/Add property`. They are not text you type.
+- The agenda items are plain blocks. If you want them to be checkable tasks,
+  give them a status — see [Action Items](#action-items).
 
 ### Recurring Meeting Setup
 
-**Template for Series:**
+**Series page:**
 
 ```markdown
-- [[Meetings/Weekly-Team-Sync]]
-  type:: [[Recurring Meeting]]
-  frequency:: weekly
-  day:: Wednesday
-  time:: 10:00-11:00
-  attendees:: [[Team/Engineering]]
+- [[Weekly-Team-Sync]]   #Meeting
+  Frequency:: weekly
+  Time:: 10:00-11:00
+  Attendees:: [[Engineering]]
 
   ## Standard Agenda
 
@@ -109,264 +172,153 @@ Learn how to capture, organize, and act on meeting notes in Logseq. This workflo
 
   ## Meeting Notes
 
-  - [[2026-01-22]] ((latest-meeting))
-  - [[2026-01-15]] ((previous-meeting))
-  - [[2026-01-08]]
+  - [[Jan 22nd, 2026]]
+  - [[Jan 15th, 2026]]
+  - [[Jan 8th, 2026]]
 ```
+
+There is no scheduling engine behind `Frequency` — it is a property you read,
+not one Logseq acts on. Recurrence that Logseq actually acts on is a task
+feature (`:logseq.property.repeat/*`,
+`deps/db/src/logseq/db/frontend/property.cljs:354-393`), and it repeats a task's
+`Scheduled`/`Deadline`, not a meeting page.
 
 ---
 
 ## Meeting Note Template
 
+### How templates work in a DB graph
+
+A template is a **block tagged `Template`** (`:logseq.class/Template`,
+`deps/db/src/logseq/db/frontend/class.cljs:100-102`). There is no `template::`
+property and no `{{title}}` placeholder.
+
+To create one:
+
+1. Write the block tree you want to reuse.
+2. Tag the top block `Template` and give it a name. Note that an inline
+   `#Template` typed into a block's text is **stripped** — `Template` is one of
+   the block-kind tags removed from inline text
+   (`deps/db/src/logseq/db/frontend/class.cljs:130-140`), so set the tag from the
+   block's tag control rather than by typing it mid-sentence.
+3. Insert it later with the `/Template` slash command
+   (`src/main/frontend/commands.cljs:339-343`).
+
+**Template variables.** Exactly five `<% %>` variables are substituted
+(`deps/outliner/src/logseq/outliner/template.cljs:104-112`):
+
+| Variable            | Expands to                              |
+| ------------------- | --------------------------------------- |
+| `<% today %>`       | Page ref to today's journal             |
+| `<% yesterday %>`   | Page ref to yesterday's journal         |
+| `<% tomorrow %>`    | Page ref to tomorrow's journal          |
+| `<% time %>`        | Current time, `HH:MM`                   |
+| `<% current page %>`| Page ref to the page you insert it on   |
+
+Anything else between `<%` and `%>` is left in place literally
+(`deps/outliner/src/logseq/outliner/template.cljs:127-128`). In particular
+`<% title %>`, `<% date %>` and `{{title}}` do nothing.
+
 ### Basic Template
 
+Create this tree once and tag the top block `Template`:
+
 ```markdown
-template:: meeting-note
+- Meeting note   #Template
+  - <% today %> meeting   #Meeting
+    Time::
+    Project::
+    Attendees::
 
-- [[Meetings/<% today %>-{{title}}]]
-  type:: [[Meeting]]
-  date:: [[<% today %>]]
-  time::
-  project:: [[Projects/]]
-  attendees:: [[Person/]]
-  tags:: #meeting
+    ## Pre-Meeting
 
-  ## Pre-Meeting
+    ### Context
 
-  ### Context
+    Why are we meeting?
 
-  Why are we meeting?
+    ### Goals
 
-  ### Goals
+    - Goal 1
+    - Goal 2
 
-  - [ ] Goal 1
-  - [ ] Goal 2
-  - [ ] Goal 3
+    ### Agenda
 
-  ### Agenda
+    - Topic 1 (X min)
+    - Topic 2 (X min)
 
-  - [ ] Topic 1 (X min)
-  - [ ] Topic 2 (X min)
-  - [ ] Topic 3 (X min)
+    ## Meeting Notes
 
-  ***
+    ### Discussion
 
-  ## Meeting Notes
+    ### Key Points
 
-  ### Discussion
+    ### Decisions
 
-  ### Key Points
+    ### Questions & Open Items
 
-  - id:: key-point-1
-  - id:: key-point-2
+    ## Post-Meeting
 
-  ### Decisions
+    ### Action Items
 
-  - id:: decision-1
-  - id:: decision-2
+    - Action 1   #Task  (Status: Todo, Assignee, Deadline)
+    - Action 2   #Task  (Status: Todo, Assignee, Deadline)
 
-  ### Questions & Open Items
+    ### Follow-up Needed
 
-  - id:: question-1
-
-  ***
-
-  ## Post-Meeting
-
-  ### Action Items
-
-  - TODO Action 1
-    owner:: [[Person/]]
-    DEADLINE: <date>
-  - TODO Action 2
-    owner:: [[Person/]]
-    DEADLINE: <date>
-
-  ### Follow-up Needed
-
-  - [ ] Send summary email
-  - [ ] Schedule follow-up meeting
-  - [ ] Update project tracker
-
-  ### Next Meeting
-
-  SCHEDULED: <date>
+    - Send summary email
+    - Schedule follow-up meeting
+    - Update project tracker
 ```
+
+The meeting's title still has to be typed each time — no template variable
+supplies it.
 
 ### Enhanced Template
 
+The same block tree with more properties on the meeting node. Add each of these
+to the `Meeting` tag first so they are offered when you fill the template in:
+
 ```markdown
-template:: meeting-note-enhanced
+- Meeting note (enhanced)   #Template
+  - <% today %> meeting   #Meeting
+    Time::
+    Duration::
+    Location::
+    Meeting URL::
+    Recording::
+    Project::
+    Attendees::
+    Organizer::
+    Decision maker::
 
-- [[Meetings/<% today %>-{{title}}]]
-  type:: [[Meeting]]
-  date:: [[<% today %>]]
-  time::
-  duration::
-  location::
-  meeting-link::
-  recording::
-  project:: [[Projects/]]
-  attendees:: [[Person/]]
-  attendee-roles::
+    ## Pre-Meeting
 
-  - Organizer: [[Person/]]
-  - Decision Maker: [[Person/]]
-  - Subject Expert: [[Person/]]
-    tags:: #meeting
-    status:: scheduled
+    ### Context & Background
+    ### Meeting Goals
+    ### Success Criteria
+    ### Agenda (with time boxes)
+    ### Pre-Reading Materials
+    ### Questions to Address
+    ### Preparation Checklist
 
-  ## Pre-Meeting
+    ## During Meeting
 
-  ### Context & Background
+    ### Attendance
+    ### Discussion Notes
+    ### Key Points
+    ### Decisions Made
+    ### Disagreements & Debates
+    ### Parking Lot
+    ### Questions & Open Items
 
-  Why this meeting? What's the history?
+    ## Post-Meeting
 
-  ### Meeting Goals
-
-  What do we want to accomplish?
-
-  - [ ] Goal 1
-  - [ ] Goal 2
-
-  ### Success Criteria
-
-  How will we know the meeting was successful?
-
-  - Criterion 1
-  - Criterion 2
-
-  ### Agenda (with time boxes)
-
-  - [ ] Introduction & goals alignment (5 min)
-  - [ ] Topic 1 (15 min)
-  - [ ] Topic 2 (20 min)
-  - [ ] Decisions & next steps (15 min)
-  - [ ] Q&A (5 min)
-
-  ### Pre-Reading Materials
-
-  - ((doc-1))
-  - ((doc-2))
-
-  ### Questions to Address
-
-  - Question 1
-  - Question 2
-
-  ### Preparation Checklist
-
-  - [ ] Agenda shared 24h in advance
-  - [ ] Materials sent to attendees
-  - [ ] Room/video link confirmed
-  - [ ] Previous action items reviewed
-
-  ***
-
-  ## During Meeting
-
-  ### Attendance
-
-  Present: [[Person/Sarah]], [[Person/John]]
-  Absent: [[Person/Alice]] (sick)
-
-  ### Discussion Notes
-
-  Chronological capture:
-
-  **14:05** - Meeting started
-
-  **14:15** - Topic 1 discussion
-
-  **14:30** - Key decision made
-
-  ### Key Points
-
-  Main takeaways:
-
-  - id:: key-1
-  - id:: key-2
-
-  ### Decisions Made
-
-  - Decision 1 id:: decision-1
-    - Rationale: Why we chose this
-    - Alternatives considered: What we didn't choose
-    - Decision maker: [[Person/Sarah]]
-
-  ### Disagreements & Debates
-
-  - Issue: Different opinions on approach
-  - Perspectives: Sarah prefers A, John prefers B
-  - Resolution: Decided on A because...
-
-  ### Parking Lot
-
-  Off-topic items to address later:
-
-  - Item 1
-  - Item 2
-
-  ### Questions & Open Items
-
-  Unresolved questions:
-
-  - Question 1 id:: open-1
-  - Question 2 id:: open-2
-
-  ***
-
-  ## Post-Meeting
-
-  ### Action Items
-
-  - TODO Action 1 id:: action-1
-    owner:: [[Person/Sarah]]
-    DEADLINE: <date>
-    priority:: [#A]
-    context:: [[Context/Office]]
-    depends-on::
-
-  ### Follow-up Tasks
-
-  - [ ] Send meeting summary to attendees
-  - [ ] Share recording/transcript
-  - [ ] Update project documentation ((project-doc))
-  - [ ] Schedule follow-up meeting if needed
-  - [ ] Close related tasks from previous meetings
-
-  ### Next Steps
-
-  What happens after this meeting?
-
-  1. Step 1
-  2. Step 2
-  3. Step 3
-
-  ### Next Meeting
-
-  - Topic: Follow-up discussion
-  - SCHEDULED: <date>
-  - Agenda: ((follow-up-agenda))
-
-  ### Meeting Metrics
-
-  - Goals achieved: 2/3
-  - Time used: 55/60 min
-  - Attendee count: 7
-  - Action items created: 5
-
-  ### Retrospective
-
-  What went well:
-
-  - Clear agenda helped focus
-  - Good participation
-
-  What could improve:
-
-  - Started 5 min late
-  - Ran over on Topic 2
+    ### Action Items
+    ### Follow-up Tasks
+    ### Next Steps
+    ### Next Meeting
+    ### Meeting Metrics
+    ### Retrospective
 ```
 
 ---
@@ -394,9 +346,15 @@ and cons for 20 minutes.
   - John: Suggests adding TypeScript
     - Pros: Type safety, better IDE support
     - Cons: Learning curve
-  - Decision: Use React + TypeScript id:: decision-framework
+  - Decision: Use React + TypeScript
     - Rationale: Best of both worlds
 ```
+
+To point at a decision block later, copy its block reference from the block's
+context menu. A block ref is the block's **UUID** in double parentheses —
+`((0195b1cb-6b1f-7d70-94b8-6f1b2e4dbb31))` — and the parser accepts nothing else
+(`deps/common/src/logseq/common/util/block_ref.cljs:9`). Made-up names like
+`((decision-framework))` are inert text.
 
 ### Real-Time Techniques
 
@@ -406,27 +364,32 @@ and cons for 20 minutes.
 While typing:
 
 - Use abbreviations first, expand later
-- Add IDs to important blocks (id:: xyz)
 - Drop timestamps for context (14:15)
-- Link people [[Person/Name]]
-- Link projects [[Projects/Name]]
-- Use TODO for actions immediately
-- Tag decisions with DECISION::
+- Link people [[Name]] and projects [[Name]]
+- Tag the meeting node #Meeting
+- Give an action item a status the moment it is spoken
 ```
 
 **Keyboard Shortcuts:**
 
-```markdown
-Essential during meetings:
+| Shortcut     | What it does                                                        |
+| ------------ | ------------------------------------------------------------------- |
+| `Cmd/Ctrl+Enter` | Cycle task status: none → Todo → Doing → Done → none            |
+| `Tab`        | Indent (show hierarchy)                                             |
+| `Shift+Tab`  | Outdent                                                             |
+| `/Todo`, `/Doing`, `/Done` | Set a status directly                                 |
+| `/Deadline`, `/Scheduled`  | Set a task date                                       |
+| `/Add property`            | Attach any property                                   |
+| `[[`         | Link a node                                                         |
 
-- Cmd+Enter: Create TODO
-- Tab: Indent (show hierarchy)
-- Shift+Tab: Outdent
-- /link: Quick page link
-- /deadline: Set deadline
-- /todo: Create task
-- Cmd+Shift+A: Add to-do checkbox
-```
+`Cmd/Ctrl+Enter` is bound to `:editor/cycle-todo`
+(`src/main/frontend/modules/shortcut/config.cljs:167-168`); the cycle it walks is
+Todo → Doing → Done → cleared
+(`src/main/frontend/handler/editor.cljs:819-832`). The status slash commands are
+generated from the `Status` property's closed values
+(`src/main/frontend/commands.cljs:100-102, 151-166`), and `/Deadline` and
+`/Scheduled` set `:logseq.property/deadline` and `:logseq.property/scheduled`
+(`src/main/frontend/commands.cljs:265-276, 664-668`).
 
 ### Capture Priorities
 
@@ -460,19 +423,22 @@ Essential during meetings:
 
 ### Create Actionable Tasks
 
+Setting `Status`, `Deadline` or `Scheduled` on a block automatically tags it
+`#Task` unless one of its existing tags already supplies that property
+(`deps/outliner/src/logseq/outliner/property.cljs:108-116`, applied at
+`:205-206`). So `/Todo` on a block is all it takes to make it a task.
+
 **Good Action Item:**
 
 ```markdown
 ✅ Specific and actionable:
 
-- TODO Review API documentation and create
-  summary of authentication endpoints
-  owner:: [[Person/Sarah]]
-  DEADLINE: <2026-01-25 Fri>
-  project:: [[Projects/Alpha]]
-  context:: [[Context/Office]]
-  time-estimate:: 2h
-  related-decision:: ((decision-api-approach))
+- Review API documentation and create a summary of authentication endpoints   #Task
+  Status:: Todo
+  Assignee:: [[Sarah]]
+  Deadline:: Jan 25th, 2026
+  Priority:: High
+  Project:: [[Alpha]]
 ```
 
 **Bad Action Item:**
@@ -480,42 +446,61 @@ Essential during meetings:
 ```markdown
 ❌ Vague:
 
-- TODO API stuff
-  owner:: Sarah
+- API stuff   #Task
+  Status:: Todo
 ```
 
-### Action Item Template
+### The built-in task properties
 
-```markdown
-- TODO [Action verb] [specific task] [clear outcome]
-  owner:: [[Person/Name]]
-  DEADLINE: <date>
-  project:: [[Projects/Name]]
-  priority:: [#A]
-  context:: [[Context/Office]]
-  time-estimate:: 2h
-  blocked-by:: ((prerequisite))
-  related-discussion:: ((meeting-section))
-```
+| Property                      | Type        | Values                                                                 |
+| ----------------------------- | ----------- | ---------------------------------------------------------------------- |
+| `:logseq.property/status`     | closed set  | Backlog, Todo, Doing, In Review, Done, Canceled — default **Todo**      |
+| `:logseq.property/priority`   | closed set  | Low, Medium, High, Urgent                                              |
+| `:logseq.property/deadline`   | `:datetime` | Stored as epoch milliseconds                                           |
+| `:logseq.property/scheduled`  | `:datetime` | Stored as epoch milliseconds                                           |
+| `:logseq.property/assignee`   | `:node`     | Multiple values allowed; values must be pages                          |
+
+Sources: `deps/db/src/logseq/db/frontend/property.cljs:300-321` (status, with the
+six idents at `:313-318` and the `Todo` default at `:320`), `:323-338`
+(priority), `:340-346` and `:347-353` (deadline / scheduled), `:401-408`
+(assignee).
+
+`Priority` is a closed set of the four names above — `[#A]`, `[#B]` and `[#C]`
+are file-graph syntax and do not parse. `Assignee` is the built-in owner
+property; there is no `owner` or `assigned-to` property.
 
 ### Track Meeting-Specific Actions
 
-**Query on Meeting Page:**
+Advanced queries are written with the `/Advanced Query` slash command, which
+tags the block `#Query` (`:logseq.class/Query`) and stores the query map in
+`:logseq.property/query` as a Clojure code block
+(`src/main/frontend/commands.cljs:125-132`). There is no `#+BEGIN_QUERY` wrapper
+in a DB graph — that is file-graph syntax and renders a deprecation warning
+instead of results (`src/main/frontend/components/block.cljs:5057-5058`).
+
+**Open action items on the meeting page you are looking at:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Action items from this meeting"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?current-page
          :where
-         [?b :block/marker ?m]
-         [(contains? #{"TODO" "DOING"} ?m)]
+         [?p :block/name ?current-page]
          [?b :block/page ?p]
-         [?p :block/name ?current-page]]
- :inputs [:current-page]
- :collapsed? false}
-#+END_QUERY
+         (task ?b #{"Todo" "Doing"})]
+ :inputs [:current-page]}
 ```
+
+Why the `task` rule and not `[?b :logseq.property/status ?s]`: `Todo` is the
+property's **default value**, and a default is not a datom — a direct clause
+silently misses every task nobody has touched. The `task` rule reads through the
+default (`deps/db/src/logseq/db/frontend/rules.cljc:297-300`). Built-in rules are
+injected automatically when their name appears in `:where`
+(`src/main/frontend/worker/handler/query.cljs:185-204`), so you never pass
+`:rules` or bind `%` yourself.
+
+`:current-page` resolves to the lowercased page title, which is what
+`:block/name` holds (`deps/db/src/logseq/db/frontend/inputs.cljs:69, 84-86`;
+`deps/db/src/logseq/db/frontend/schema.cljs:90`).
 
 ---
 
@@ -534,16 +519,13 @@ Essential during meetings:
 
 2. Verify action items
 
-   - Clear owners assigned
+   - Assignee set on each
    - Reasonable deadlines
-   - Proper priority
+   - Priority where it matters
 
-3. Mark meeting complete
-   status:: completed
-
-4. Update related pages
+3. Update related pages
    - Add decisions to project page
-   - Link from daily note
+   - Link from today's journal
 ```
 
 ### Send Summary (15 min)
@@ -563,54 +545,54 @@ Thanks for joining today's meeting on [Topic].
 
 **Key Decisions:**
 
-1. ((decision-1))
-2. ((decision-2))
+1. ...
+2. ...
 
 **Action Items:**
 
-- Sarah: ((action-1)) - Due Jan 25
-- John: ((action-2)) - Due Jan 27
+- Sarah: ... - Due Jan 25
+- John: ... - Due Jan 27
 
 **Open Questions:**
 
-- ((question-1))
-- ((question-2))
+- ...
+- ...
 
 **Next Meeting:** [Date/Time]
-
-Full notes: [Link to Logseq page if shared]
 
 Thanks,
 [Your name]
 ```
+
+Copy the decision text out of the graph; a `((uuid))` block ref pasted into an
+email is meaningless outside Logseq.
 
 ### Link to Related Pages
 
 **Create Network:**
 
 ```markdown
-From meeting page, link to:
+From the meeting page, link to:
 
 1. Project page
 
-   - [[Projects/Alpha]]
-   - Add meeting reference
+   - [[Alpha]] via the Project property
    - Update project status
 
-2. Daily note
+2. Today's journal
 
-   - [[2026-01-22]]
-   - Add ((meeting-reference))
+   - Reference the meeting node from the day's entry
 
 3. People pages
 
-   - [[Person/Sarah]]
-   - Link action items
+   - [[Sarah]] via Attendees / Assignee
 
 4. Topic pages
-   - [[Topics/API Design]]
-   - Reference decisions
+   - [[API Design]]
 ```
+
+Each of these links shows up on the other side under **Linked References** — you
+do not need to add a back-link by hand.
 
 ---
 
@@ -618,22 +600,19 @@ From meeting page, link to:
 
 ### 1-on-1 Meetings
 
-**Template:**
-
 ```markdown
-- [[Meetings/1-1-Sarah-2026-01-22]]
-  type:: [[1-on-1]]
-  with:: [[Person/Sarah]]
-  date:: [[2026-01-22]]
-  frequency:: biweekly
+- [[1-1-Sarah-2026-01-22]]   #Meeting
+  With:: [[Sarah]]
+  Date:: [[Jan 22nd, 2026]]
+  Frequency:: biweekly
 
   ## Agenda
 
-  - [ ] How's it going? (check-in)
-  - [ ] Current project status
-  - [ ] Any blockers?
-  - [ ] Career development
-  - [ ] Feedback both ways
+  - How's it going? (check-in)
+  - Current project status
+  - Any blockers?
+  - Career development
+  - Feedback both ways
 
   ## Sarah's Topics
 
@@ -649,22 +628,21 @@ From meeting page, link to:
 
   ## Action Items
 
-  - TODO
-
   ## Private Notes
-
-  ## (Not shared)
 ```
+
+> **Unverified:** "Private Notes" is a convention, not a feature. Nothing in the
+> graph restricts who can read a block; the only publish-related property found
+> at this revision is `:logseq.property/publishing-public?`
+> (`deps/db/src/logseq/db/frontend/property.cljs:414-419`), which controls
+> publishing, not in-app visibility.
 
 ### Project Meetings
 
-**Template:**
-
 ```markdown
-- [[Meetings/Project-Alpha-Weekly-2026-01-22]]
-  type:: [[Project Meeting]]
-  project:: [[Projects/Alpha]]
-  date:: [[2026-01-22]]
+- [[Project-Alpha-Weekly-2026-01-22]]   #Meeting
+  Project:: [[Alpha]]
+  Date:: [[Jan 22nd, 2026]]
 
   ## Status Update
 
@@ -686,19 +664,18 @@ From meeting page, link to:
 
   - Blocker: Need DBA review
   - Timeline: This week
-  - Owner: [[Person/John]]
+  - Owner: [[John]]
 
   ### 2. Frontend Approach
 
   - Decision needed: React vs Vue
-  - Discussion: ((discussion-notes))
-  - Decision: React id:: decision-framework
+  - Decision: React
 
   ## Risks & Issues
 
   - Risk: Dependency on external API
     - Mitigation: Build mock service
-    - Owner: [[Person/Sarah]]
+    - Owner: [[Sarah]]
 
   ## Next Week Plan
 
@@ -707,15 +684,17 @@ From meeting page, link to:
   - Design review meeting
 ```
 
+If you make "Sprint velocity", "Open issues" and similar into `:number`
+properties so you can chart them later, remember that a number property's value
+is a **ref to a value entity** — read it through `:logseq.property/value`, not
+directly (`deps/db/src/logseq/db/frontend/property/type.cljs:52-57`).
+
 ### Brainstorming Sessions
 
-**Template:**
-
 ```markdown
-- [[Meetings/Brainstorm-Feature-Ideas-2026-01-22]]
-  type:: [[Brainstorming]]
-  project:: [[Projects/Alpha]]
-  date:: [[2026-01-22]]
+- [[Brainstorm-Feature-Ideas-2026-01-22]]   #Meeting
+  Project:: [[Alpha]]
+  Date:: [[Jan 22nd, 2026]]
 
   ## Challenge
 
@@ -751,25 +730,24 @@ From meeting page, link to:
 
   ## Selected Ideas
 
-  - TODO Prototype interactive tutorial
-    owner:: [[Person/Sarah]]
-    DEADLINE: <2026-02-05>
+  - Prototype interactive tutorial   #Task
+    Status:: Todo
+    Assignee:: [[Sarah]]
+    Deadline:: Feb 5th, 2026
 
-  - TODO Create sample data set
-    owner:: [[Person/John]]
-    DEADLINE: <2026-02-01>
+  - Create sample data set   #Task
+    Status:: Todo
+    Assignee:: [[John]]
+    Deadline:: Feb 1st, 2026
 ```
 
 ### Retrospectives
 
-**Template:**
-
 ```markdown
-- [[Meetings/Sprint-Retrospective-2026-01-22]]
-  type:: [[Retrospective]]
-  project:: [[Projects/Alpha]]
-  sprint:: Sprint 5
-  date:: [[2026-01-22]]
+- [[Sprint-Retrospective-2026-01-22]]   #Meeting
+  Project:: [[Alpha]]
+  Sprint:: Sprint 5
+  Date:: [[Jan 22nd, 2026]]
 
   ## Sprint Metrics
 
@@ -791,14 +769,14 @@ From meeting page, link to:
 
   ## What Should We Try? 💡
 
-  - Action: Block "no meeting" time
-    owner:: [[Person/Manager]]
+  - Block "no meeting" time   #Task
+    Assignee:: [[Manager]]
 
-  - Action: Requirement template
-    owner:: [[Person/Product]]
+  - Requirement template   #Task
+    Assignee:: [[Product]]
 
-  - Action: Fix CI/CD stability
-    owner:: [[Person/DevOps]]
+  - Fix CI/CD stability   #Task
+    Assignee:: [[DevOps]]
 
   ## Appreciations 🙏
 
@@ -811,115 +789,185 @@ From meeting page, link to:
 
 ## Queries & Reports
 
+Two ways to query, both authored from the editor:
+
+- **`/Query`** takes a *simple query* in the DSL — `(and (tags Meeting) (task
+  Todo Doing))` (`src/main/frontend/commands.cljs:111-116`).
+- **`/Advanced Query`** takes a Datalog query map
+  (`src/main/frontend/commands.cljs:125-132`).
+
+Logseq decides which one you wrote by reading the block: a map is treated as an
+advanced query, anything else as a DSL query
+(`src/main/frontend/components/block.cljs:4090-4103`).
+
+The old `{{query …}}` macro is deprecated in a DB graph and renders a warning
+instead of results (`src/main/frontend/components/block.cljs:1870-1871`;
+`src/resources/dicts/en.edn:159`). Use `/Query`.
+
+The DSL filters that exist at this revision are `and`, `or`, `not`, `between`,
+`property`, `private-property`, `task` (alias `todo`), `priority`, `page`,
+`sample`, `tags`, a `[[page ref]]`, and a bare `"string"` for full-text search
+(`src/main/frontend/worker/query_dsl.cljs:548-576`). There is no `sort-by`,
+`page-property` or `namespace` filter.
+
 ### All Meetings
 
+Simple query (`/Query`):
+
 ```clojure
-#+BEGIN_QUERY
-{:title "All meetings"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/properties ?props]
-         [(get ?props :type) "Meeting"]]
- :result-transform (fn [result]
-                     (sort-by
-                       (fn [b]
-                         (get-in b [:block/properties :date]))
-                       > result))
- :collapsed? false}
-#+END_QUERY
+(tags Meeting)
 ```
+
+Advanced equivalent, which also picks up any tag that extends `Meeting`:
+
+```clojure
+{:query [:find (pull ?b [*])
+         :where
+         (tags ?b #{"Meeting"})]}
+```
+
+The `tags` rule matches a tag by title, `:db/ident` or entity id and follows
+`class-extends` down the tag tree
+(`deps/db/src/logseq/db/frontend/rules.cljc:265-288`).
 
 ### Meetings This Week
 
+If you capture meetings as blocks on journal pages, `between` filters on the
+journal day of the block's page
+(`deps/db/src/logseq/db/frontend/rules.cljc:94-100`):
+
 ```clojure
-#+BEGIN_QUERY
-{:title "Meetings this week"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?start ?end
          :where
-         [?b :block/properties ?props]
-         [(get ?props :type) "Meeting"]
-         [?b :block/refs ?date-page]
-         [?date-page :block/journal? true]
-         [?date-page :block/journal-day ?date]
-         [(>= ?date ?start)]
-         [(<= ?date ?end)]]
- :inputs [:monday :sunday]
- :collapsed? false}
-#+END_QUERY
+         (tags ?b #{"Meeting"})
+         (between ?b ?start ?end)]
+ :inputs [:-7d :today]}
 ```
+
+`:-7d` and `:today` both resolve to `YYYYMMDD` integers, which is what
+`:block/journal-day` stores
+(`deps/db/src/logseq/db/frontend/inputs.cljs:72, 100-102`).
+
+> **Watch the units.** `:today` is `YYYYMMDD`; `Deadline` and `Scheduled` are
+> epoch **milliseconds**. Comparing one against the other matches nothing and
+> reports no error. For a millisecond bound use the `-ms` / `-start` / `-end`
+> forms, e.g. `:+7d-end` or `:end-of-today-ms`
+> (`deps/db/src/logseq/db/frontend/inputs.cljs:73, 75-76`).
+>
+> `:monday`, `:sunday` and `:7d-ago` are **not** query inputs — they match no
+> dispatch branch and are handed to the query unresolved
+> (`deps/db/src/logseq/db/frontend/inputs.cljs:69-81, 143-160`).
 
 ### Action Items by Person
 
 ```clojure
-#+BEGIN_QUERY
-{:title "My meeting action items"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?person
          :where
-         [?b :block/marker ?m]
-         [(contains? #{"TODO" "DOING"} ?m)]
-         [?b :block/refs ?p]
-         [?p :block/name ?person]]
- :inputs ["person/sarah"]
- :collapsed? false}
-#+END_QUERY
+         [?p :block/title ?person]
+         [?b :logseq.property/assignee ?p]
+         (task ?b #{"Todo" "Doing"})]
+ :inputs ["Sarah"]}
 ```
+
+`:logseq.property/assignee` is a `:node` property, so its value is the person's
+page entity — match it on `:block/title`, not on a string
+(`deps/db/src/logseq/db/frontend/property.cljs:401-408`).
 
 ### Overdue Meeting Actions
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Overdue meeting actions"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
+         :in $ ?now
          :where
-         [?b :block/marker ?m]
-         [(contains? #{"TODO" "DOING"} ?m)]
-         [?b :block/deadline ?d]
-         [(< ?d [:today])]
+         (task ?b #{"Todo" "Doing"})
+         [?b :logseq.property/deadline ?d]
+         [(< ?d ?now)]]
+ :inputs [:right-now-ms]}
+```
+
+`:right-now-ms` is the current time in milliseconds
+(`deps/db/src/logseq/db/frontend/inputs.cljs:69, 108-109`), which is the same
+unit `Deadline` uses. Note that tasks with no deadline are excluded — there is no
+datom to match.
+
+To narrow this to actions that came out of meetings, add the meeting tag to the
+task's ancestry:
+
+```clojure
+{:query [:find (pull ?b [*])
+         :in $ ?now
+         :where
+         (task ?b #{"Todo" "Doing"})
+         [?b :logseq.property/deadline ?d]
+         [(< ?d ?now)]
          [?b :block/page ?p]
-         [?p :block/properties ?page-props]
-         [(get ?page-props :type) "Meeting"]]
- :collapsed? false}
-#+END_QUERY
+         (tags ?p #{"Meeting"})]
+ :inputs [:right-now-ms]}
 ```
 
 ### Meetings by Project
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Project Alpha meetings"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?project
          :where
-         [?b :block/properties ?props]
-         [(get ?props :type) "Meeting"]
-         [?b :block/refs ?p]
-         [?p :block/name ?project]]
- :inputs ["projects/alpha"]
- :result-transform (fn [result]
-                     (sort-by
-                       (fn [b]
-                         (get-in b [:block/properties :date]))
-                       > result))
- :collapsed? false}
-#+END_QUERY
+         (tags ?b #{"Meeting"})
+         [?b :block/refs ?proj]
+         [?proj :block/name ?project]]
+ :inputs ["alpha"]}
 ```
+
+Page inputs are lowercased page names. Because `A/B/C` titles are split into
+separate pages, pass the **leaf** — `"alpha"`, not `"projects/alpha"`.
+
+### Sorting and Titles
+
+Three things people reach for that do not work on a user query:
+
+- **`:title`** is only rendered for Logseq's own built-in queries
+  (`src/main/frontend/components/query.cljs:167-175`), so it is silently ignored
+  here. Put the heading in the parent block.
+- **`:group-by-page?`** returns `false` immediately for every DB graph
+  (`src/main/frontend/components/query/result.cljs:10-11`), and
+  `:breadcrumb-show?` never reaches the branch that reads it.
+- **`:limit`** and **`:order-by`** are not query-map keys at all. Bound the
+  result in `:where`, or sort in `:result-transform`.
+
+`:result-transform` does work, and it receives block **entities**, before rows
+are normalised (`src/main/frontend/worker/handler/render_resource/query.cljs:181-202`):
+
+```clojure
+{:query [:find (pull ?b [*])
+         :where (tags ?b #{"Meeting"})]
+ :result-transform (fn [result]
+                     (take 20 (sort-by :block/created-at > result)))}
+```
+
+`:view` is different: by the time a `:view` function runs, each row is a bare
+UUID, not an entity (`…/render_resource/query.cljs:15-20, 195-202`), so
+`(:block/title r)` inside a `:view` returns nil. Errors thrown inside a `:view`
+are swallowed and render as nothing (`src/main/frontend/extensions/sci.cljs`).
 
 ### Meeting Statistics
 
+Counting meetings created in the last 30 days:
+
 ```clojure
-#+BEGIN_QUERY
-{:title "Meeting stats this month"
- :query [:find (count ?b)
+{:query [:find (count ?b)
+         :in $ ?since
          :where
-         [?b :block/properties ?props]
-         [(get ?props :type) "Meeting"]
+         (tags ?b #{"Meeting"})
          [?b :block/created-at ?created]
-         [(- (js/Date.now) ?created) ?age]
-         [(< ?age 2592000000)]]}  ; 30 days
-#+END_QUERY
+         [(> ?created ?since)]]
+ :inputs [:-30d-start]}
 ```
+
+`:block/created-at` is epoch milliseconds
+(`deps/db/src/logseq/db/frontend/schema.cljs:86`), and `:-30d-start` resolves to
+the millisecond timestamp at the start of that day
+(`deps/db/src/logseq/db/frontend/inputs.cljs:73, 126-133`).
 
 ---
 
@@ -948,8 +996,8 @@ From meeting page, link to:
 ```markdown
 ✅ Do:
 
-- Capture decisions with IDs
-- Create TODOs immediately
+- Capture decisions in their own blocks so they can be referenced
+- Set a status on an action the moment it is agreed
 - Link people and projects
 - Note timestamps for key moments
 - Focus on outcomes, not transcription
@@ -959,7 +1007,7 @@ From meeting page, link to:
 - Trying to capture every word
 - Not linking to context
 - Vague action items
-- Forgetting to assign owners
+- Forgetting to set Assignee
 ```
 
 ### After Meeting
@@ -969,7 +1017,7 @@ From meeting page, link to:
 
 - Clean up notes
 - Send summary
-- Create action items
+- Fill in Assignee and Deadline on every action
 - Link to related pages
 - Update project status
 
@@ -1019,7 +1067,7 @@ From meeting page, link to:
 **Complete Meeting Flow:**
 
 ```markdown
-Monday 9 AM: Create meeting page
+Monday 9 AM: Create meeting page from the Meeting note template
 
 - Add agenda
 - Share with attendees
@@ -1029,29 +1077,27 @@ Tuesday 2 PM: Meeting starts
 
 - Follow agenda structure
 - Capture in blocks
-- Mark decisions with IDs
-- Create TODOs immediately
+- Give each action a status with Cmd/Ctrl+Enter
 - Note timestamps
 
 Tuesday 2:55 PM: Wrap up
 
 - Review action items
-- Confirm owners/deadlines
+- Confirm Assignee and Deadline
 - Schedule follow-up if needed
 
 Tuesday 3:05 PM: Post-meeting
 
 - Clean up notes (5 min)
 - Send summary email (10 min)
-- Link to project page
-- Add to daily note
+- Set the Project property
+- Reference the meeting from today's journal
 
 Tuesday 3:30 PM: Action items visible in:
 
 - Personal task queries
 - Project dashboard
-- Team member pages
-- Daily agenda
+- Assignee's page (via Linked References)
 
 Wednesday-Friday: Work on actions
 
@@ -1072,11 +1118,11 @@ Next Tuesday: Review completion
 
 **Implement This Workflow:**
 
-1. Create meeting template (10 min)
-2. Set up key queries (10 min)
-3. Practice with next meeting (live)
-4. Refine template based on needs (10 min)
-5. Share with team (optional)
+1. Create the `Meeting` tag and its properties (10 min)
+2. Create the meeting note template block (10 min)
+3. Set up key queries (10 min)
+4. Practice with next meeting (live)
+5. Refine based on needs (10 min)
 
 **After 1 Week:**
 

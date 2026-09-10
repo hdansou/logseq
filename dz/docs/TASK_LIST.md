@@ -25,24 +25,19 @@ Older date, or none. Highest priority.
 | Document | Last verified | Against |
 |---|---|---|
 | `_templates/frontmatter.md` | ' # YYYY-MM-DD | — |
-| `explanation/concepts/block-editing-philosophy.md` | — | — |
 | `explanation/concepts/file-organization.md` | — | — |
 | `explanation/concepts/file-vs-database.md` | — | — |
 | `explanation/concepts/graph-visualization.md` | — | — |
 | `explanation/concepts/linked-references.md` | — | — |
 | `explanation/concepts/local-first-architecture.md` | — | — |
-| `explanation/concepts/plugin-architecture.md` | — | — |
 | `how-to/optimization/performance-optimization.md` | — | — |
 | `how-to/organization/backup-strategies.md` | — | — |
 | `how-to/organization/import-export.md` | — | — |
 | `how-to/troubleshooting/troubleshooting-guide.md` | — | — |
-| `how-to/workflows/meeting-notes-workflow.md` | — | — |
 | `how-to/workflows/zettelkasten-method.md` | — | — |
-| `reference/formatting/markdown-syntax.md` | — | — |
 | `reference/interface/slash-commands.md` | — | — |
 | `reference/interface/templates-system.md` | — | — |
 | `reference/platforms/mobile-differences.md` | — | — |
-| `reference/plugin-apis/pr-12395/01-postmate-message-channel.md` | — | — |
 | `reference/plugin-apis/pr-12395/05-block-properties-class-defaults.md` | — | — |
 | `reference/plugin-apis/pr-12395/06-helpers-to-common-rename.md` | — | — |
 | `_templates/explanation-template.md` | 2026-01-29 | — |
@@ -61,6 +56,11 @@ Older date, or none. Highest priority.
 | `tutorials/getting-started/02-first-graph.md` | 2026-05-30 | — |
 | `tutorials/getting-started/03-basic-editing.md` | 2026-05-30 | — |
 | `tutorials/getting-started/04-linking-pages.md` | 2026-05-30 | — |
+| `explanation/concepts/block-editing-philosophy.md` | 2026-09-09 | be800f1711 |
+| `explanation/concepts/plugin-architecture.md` | 2026-09-09 | be800f1711 |
+| `how-to/workflows/meeting-notes-workflow.md` | 2026-09-09 | be800f1711 |
+| `reference/formatting/markdown-syntax.md` | 2026-09-09 | be800f1711 |
+| `reference/plugin-apis/pr-12395/01-postmate-message-channel.md` | 2026-09-09 | be800f1711 |
 
 ## Audited line by line
 
