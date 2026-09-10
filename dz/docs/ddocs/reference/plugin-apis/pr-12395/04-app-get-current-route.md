@@ -1,8 +1,20 @@
+---
+title: 'App.getCurrentRoute'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
+---
+
 # `App.getCurrentRoute`
+
+> **Shipped.** PR [#12395](https://github.com/logseq/logseq/pull/12395) is merged
+> (`a95483655b refactor: plugin libs (#12395)`); this API is present at `be800f1711`.
 
 ## Summary
 
-Returns the active reitit route the user is on — the path, parsed parameters, and the original template. Lets a plugin make page-aware decisions without subscribing to history events.
+Returns the active reitit route match — the path and the route template — so a plugin can make
+page-aware decisions without subscribing to navigation events. Unlike the rest of `Experiments`,
+this is a stable `IAppProxy` member.
 
 ## API
 
@@ -14,7 +26,40 @@ logseq.App.getCurrentRoute(): Promise<{
 }>
 ```
 
-Backed by Clojure `logseq.api.app/get_current_route`, which serializes `(state/get-route-match)` minus `:data`.
+As declared at `libs/src/LSPlugin.ts:526-530`.
+
+The implementation is three lines (`src/main/logseq/api/app.cljs:174-178`):
+
+```clojure
+(def get_current_route
+  (fn []
+    (some-> (state/get-route-match)
+            (dissoc :data)
+            (bean/->js))))
+```
+
+So the object you get back is **the whole reitit route match minus `:data`**, not a hand-built
+three-key record. `state/get-route-match` reads `:route-match` from app state
+(`src/main/frontend/state.cljs:839-841`). Expect `path` and `template` to be present, and expect
+additional keys the TypeScript type does not mention (reitit also carries `path-params`,
+`query-params` and `result`). `some->` means the whole call resolves to `undefined` before the
+router has matched anything — always null-check.
+
+> **Unverified:** the exact contents and key casing of `parameters` could not be determined from
+> source. Logseq's routes are declared without a `:coercion`
+> (`src/main/frontend/routes.cljs`, router built at `src/main/frontend/core.cljs:27-29`), and the
+> host reads path parameters from **`:path-params`**, not `:parameters` — for example
+> `state/get-current-page` uses `[:path-params :name]`
+> (`src/main/frontend/state.cljs:851-855`). Log the returned object once in the devtools console
+> before depending on a particular key.
+
+## Route templates
+
+The templates you can match against are the route table in
+`src/main/frontend/routes.cljs:29-60` — including `/`, `/graphs`, `/page/:name`,
+`/page/:name/block/:block-route-name`, `/all-pages`, `/graph`, `/settings` and `/import` — plus any
+route a plugin has added with `logseq.Experiments.registerRouteRenderer`
+(`src/main/frontend/components/plugins.cljs:1884`).
 
 ## Examples
 
@@ -22,21 +67,19 @@ Backed by Clojure `logseq.api.app/get_current_route`, which serializes `(state/g
 
 ```ts
 const r = await logseq.App.getCurrentRoute()
-// {
-//   path: '/page/2026-04-15',
-//   parameters: { name: '2026-04-15' },
-//   template: '/page/:name'
-// }
+console.log(r) // inspect the real shape before relying on any key
+// r.template === '/page/:name'
+// r.path     === '/page/2026-04-15'
 ```
 
-### Conditional behavior based on the current view
+### Conditional behaviour based on the current view
 
 ```ts
 const r = await logseq.App.getCurrentRoute()
 
 switch (r?.template) {
   case '/page/:name':
-    logseq.UI.showMsg(`On page ${r.parameters.name}`)
+    await logseq.UI.showMsg(`On page ${r.path}`)
     break
   case '/graph':
     enableGraphOverlay()
@@ -47,15 +90,21 @@ switch (r?.template) {
 }
 ```
 
-### Combine with `onRouteChanged` for reactive plugins
+### Combine with `onRouteChanged`
+
+`logseq.App.onRouteChanged` (`libs/src/LSPlugin.ts:604`) fires with `{ path, template }`, so for
+those two fields you do not need a second call. The host emits
+`(select-keys route [:template :path :parameters])` on navigation
+(`src/main/frontend/core.cljs:31-35`).
 
 ```ts
-logseq.App.onRouteChanged(async () => {
-  const r = await logseq.App.getCurrentRoute()
-  if (r?.template === '/page/:name') {
-    refreshContextSidebar(r.parameters.name)
+const off = logseq.App.onRouteChanged(async ({ path, template }) => {
+  if (template === '/page/:name') {
+    const r = await logseq.App.getCurrentRoute()
+    refreshContextSidebar(r)
   }
 })
+// off() to unsubscribe — IUserHook returns IUserOffHook
 ```
 
 ### Use inside a sidebar renderer
@@ -63,17 +112,26 @@ logseq.App.onRouteChanged(async () => {
 ```ts
 logseq.Experiments.registerSidebarRenderer('context', {
   title: 'Context',
-  subs: ['route/current'],
   render: () => {
     const React = logseq.Experiments.React as any
-    const [page, setPage] = React.useState<string | null>(null)
+    const [path, setPath] = React.useState<string | null>(null)
+
     React.useEffect(() => {
-      logseq.App.getCurrentRoute().then(r => setPage(r?.parameters?.name ?? null))
-    })
-    return React.createElement('div', null, page ? `Viewing: ${page}` : 'No page open')
-  }
+      const refresh = () =>
+        logseq.App.getCurrentRoute().then((r) => setPath(r?.path ?? null))
+      refresh()
+      // `subs` is inert — subscribe explicitly.
+      const off = logseq.App.onRouteChanged(refresh)
+      return () => off?.()
+    }, [])
+
+    return React.createElement('div', null, path ? `Viewing: ${path}` : 'No page open')
+  },
 })
 ```
+
+See [03-sidebar-renderer.md](./03-sidebar-renderer.md) for why the `subs` option cannot drive that
+refresh.
 
 ## Console testing
 
@@ -81,9 +139,13 @@ logseq.Experiments.registerSidebarRenderer('context', {
 logseq.api.get_current_route()
 ```
 
+Exported on the global host API at `src/main/logseq/api.cljs:87`.
+
 ## Source
 
-- TS type: `libs/src/LSPlugin.ts:1079`
-- Implementation: `src/main/logseq/api/app.cljs:176`
-- Exported on global API: `src/main/logseq/api.cljs:86`
-- Commit: `enhance(apis): add get_current_route function for route retrieval`
+- TS type: [`libs/src/LSPlugin.ts`](../../../../../../libs/src/LSPlugin.ts):526-530
+- Implementation: [`src/main/logseq/api/app.cljs`](../../../../../../src/main/logseq/api/app.cljs):174-178
+- Exported on the global API: [`src/main/logseq/api.cljs`](../../../../../../src/main/logseq/api.cljs):87
+- Route table: [`src/main/frontend/routes.cljs`](../../../../../../src/main/frontend/routes.cljs):29-60
+- Navigation hook: [`src/main/frontend/core.cljs`](../../../../../../src/main/frontend/core.cljs):31-35
+- Merge commit: `a95483655b refactor: plugin libs (#12395)`

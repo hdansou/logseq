@@ -1,34 +1,47 @@
 ---
 title: 'Workflow Automation Tutorial'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'Schema v65.33 / @logseq/libs v0.3.4'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 quadrant: 'Tutorial'
-platform: 'Desktop + Advanced'
+platform: '🟠 Desktop Only'
 related-docs:
   - '[Advanced Queries Tutorial](./advanced-queries-tutorial.md)'
-  - '[Plugin Development Guide](../../developer/plugin-development.md)'
-  - '[JavaScript API Reference](../../reference/api/javascript-api.md)'
+  - '[Plugin API Reference](../../reference/api/plugin-api.md)'
+  - '[Plugin Security Architecture](../../explanation/architecture/plugin-security.md)'
 tags: ['automation', 'workflows', 'plugins', 'scripting', 'productivity']
 ---
 
 # Workflow Automation Tutorial
 
-Automate repetitive tasks in Logseq using queries, plugins, and scripts. This hands-on tutorial teaches you to build custom automation workflows that save time and reduce manual work.
+Automate repetitive tasks in Logseq using queries, templates and a plugin. This hands-on tutorial builds a working automation plugin against a **DB graph**, using APIs verified to exist in `@logseq/libs` v0.3.4.
+
+> **This tutorial targets DB graphs.** The queries below use DB-graph attributes
+> (`:block/title`, `:logseq.property/status`, `:logseq.property/deadline`) and Datalog passed to
+> `logseq.DB.datascriptQuery`. If you are on a file graph, none of it applies — file graphs use
+> `#+BEGIN_QUERY` blocks and `:block/marker` / `:block/content`, which a DB graph cannot parse and
+> which no longer exist in the DB schema (they survive only in `deps/graph-parser/`).
+
+> **Before you start, read [Plugin Security Architecture](../../explanation/architecture/plugin-security.md).**
+> Logseq does not sandbox plugins. Everything you build here runs with full access to your graph,
+> your local files and the network. Automate on a graph you have backed up.
 
 **What You'll Build:**
 
-- Automated task processing
-- Smart page templates
-- Custom workflows with triggers
-- Scheduled operations
-- Batch processing scripts
-- Cross-graph automation
+- Query-driven task dashboards
+- Rule-based auto-tagging
+- A custom plugin registering slash commands and palette commands
+- Interval-based reminders
+- Batch update helpers
+- An external-service sync (GitHub issues)
 
 **Prerequisites:**
 
-- Comfortable with Logseq basics
-- Basic JavaScript knowledge (for plugins)
-- Understanding of Logseq queries
+- Comfortable with Logseq basics and a DB graph
+- Basic JavaScript knowledge
+- Understanding of Datalog queries — see [Advanced Queries Tutorial](./advanced-queries-tutorial.md)
 - Developer tools familiarity
 
 **Time:** 3-4 hours
@@ -55,10 +68,15 @@ Automate repetitive tasks in Logseq using queries, plugins, and scripts. This ha
 **Step 1: Enable Developer Mode**
 
 ```markdown
-1. Settings → Advanced → Developer mode (enable)
-2. Help → Developer tools (Ctrl+Shift+I / Cmd+Option+I)
-3. Console tab will be our workspace
+1. Settings → Advanced → Developer mode (toggle on)
+2. Open the devtools console (Ctrl+Shift+I / Cmd+Option+I)
+3. The Console tab is our workspace
 ```
+
+The toggle is `developer-mode-row` in `src/main/frontend/components/settings.cljs:568-575`; it sets
+`:ui/developer-mode?` in app state. Turning it on is what makes the **Load unpacked plugin** button
+appear on the Plugins dashboard — that button is gated on developer mode **and** Electron
+(`src/main/frontend/components/plugins.cljs:828-838`).
 
 **Step 2: Create Automation Workspace**
 
@@ -72,36 +90,33 @@ Create pages:
 - [[Logs/Automation]] - Activity logs
 ```
 
-**Step 3: Install Required Plugins**
+**Step 3: No marketplace plugins are required**
 
-```markdown
-From Marketplace:
-
-1. **logseq-plugin-developer-tools** - Development helpers
-2. **logseq-plugin-template** - Template system
-3. **logseq-plugin-task-runner** - Task automation
-4. **logseq-plugin-cron** - Scheduled operations (if available)
-```
+Everything in this tutorial is built with the SDK and the query engine. Earlier revisions of this
+page listed four marketplace plugins as prerequisites; none of them could be verified to exist, so
+they have been removed. If you want a scheduler or template plugin from the marketplace, pick one
+yourself — and read its source first (see [Plugin Security Architecture](../../explanation/architecture/plugin-security.md)).
 
 **Step 4: Project Structure**
 
+Your plugin lives outside the graph. Marketplace installs land in `~/.logseq/plugins`
+(`src/electron/electron/core.cljs:40`); an unpacked plugin you load yourself can live anywhere.
+DB graphs themselves live under `~/logseq/graphs`
+(`deps/common/src/logseq/common/config.cljs:55`) and are not a directory of Markdown files.
+
 ```
-graph-root/
-├── pages/
-│   ├── automation_hub.md
-│   ├── scripts.md
-│   └── workflows.md
-├── plugins/
-│   └── custom-automation/    # Our plugin
-│       ├── package.json
-│       ├── index.js
-│       └── workflows/
-│           ├── task-processor.js
-│           ├── template-engine.js
-│           └── scheduler.js
-└── templates/
-    └── auto-templates.md
+~/dev/logseq-automation-workflows/    # our unpacked plugin
+├── package.json                      # must contain a `logseq` object
+├── index.js
+└── workflows/
+    ├── task-processor.js
+    ├── template-runner.js
+    └── scheduler.js
 ```
+
+The `logseq` object in `package.json` is mandatory — the installer throws `Illegal logseq package`
+without it (`src/main/frontend/handler/plugin.cljs:1171-1172`). The plugin id comes from
+`logseq.id`, falling back to the package `name` (`:1173-1175`).
 
 ---
 
@@ -111,91 +126,94 @@ graph-root/
 
 **Goal:** Automatically collect and organize tasks.
 
-**Step 1: Create Smart Queries**
+These go in **Advanced Query** blocks (`/Advanced Query`). The map keys that do anything are
+`:query`, `:inputs`, `:rules`, `:result-transform`, `:view`, `:collapsed?` and
+`:remove-block-children?` — `:title` and `:breadcrumb-show?` are silently ignored, so put the
+heading in the block above.
+
+**Step 1: Overdue Tasks**
+
+Statuses are **closed-value refs**, not strings, so match the `:db/ident` of the status entity —
+never `[(= ?status "TODO")]`. The six status idents are `:logseq.property/status.backlog`, `.todo`,
+`.doing`, `.in-review`, `.done`, `.canceled`.
+
+`:logseq.property/deadline` and `/scheduled` are `:datetime` — **epoch milliseconds** — so compare
+them against `:start-of-today-ms`, not against `:today` (which is a `YYYYMMDD` integer).
 
 ```clojure
-;; Overdue Tasks Auto-Collection
-#+BEGIN_QUERY
-{:title "⚠️ Overdue Tasks"
- :query [:find (pull ?b [*])
-         :in $ ?today
+;; Block above: ## ⚠️ Overdue Tasks
+{:query [:find (pull ?b [:block/uuid :logseq.property/deadline])
+         :in $ ?start-of-today
          :where
-         [?b :block/marker ?marker]
-         [(contains? #{"TODO" "DOING"} ?marker)]
-         [?b :block/scheduled ?d]
-         [(< ?d ?today)]]
- :inputs [:today]
- :collapsed? false
+         [?b :block/tags :logseq.class/Task]
+         [?b :logseq.property/status ?s]
+         (or [?s :db/ident :logseq.property/status.todo]
+             [?s :db/ident :logseq.property/status.doing])
+         [?b :logseq.property/deadline ?d]
+         [(< ?d ?start-of-today)]]
+ :inputs [:start-of-today-ms]
  :result-transform (fn [result]
-   (sort-by
-     (fn [item]
-       (get-in item [:block/scheduled]))
-     result))
- :breadcrumb-show? false}
-#+END_QUERY
-
-;; Auto-Priority Tasks
-#+BEGIN_QUERY
-{:title "🔥 High Priority (Auto-Tagged)"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/marker ?marker]
-         [(contains? #{"TODO" "DOING"} ?marker)]
-         (or
-           [?b :block/priority "A"]
-           [?b :block/refs ?ref]
-           [?ref :block/name "urgent"])]
+                     (sort-by :logseq.property/deadline result))
  :collapsed? false}
-#+END_QUERY
 ```
 
-**Step 2: Auto-Categorization Query**
+**Step 2: High-priority tasks**
+
+Priorities are closed-value refs too: `:logseq.property/priority.low`, `.medium`, `.high`,
+`.urgent`.
 
 ```clojure
-;; Auto-Categorize Tasks by Context
-#+BEGIN_QUERY
-{:title "📋 Tasks by Context"
- :query [:find ?context (pull ?b [*])
+;; Block above: ## 🔥 High Priority
+{:query [:find (pull ?b [:block/uuid])
          :where
-         [?b :block/marker "TODO"]
-         [?b :block/refs ?ref]
-         [?ref :block/name ?context]
-         [(contains? #{"work" "home" "errands" "calls"} ?context)]]
- :result-transform (fn [result]
-   (let [grouped (group-by first result)]
-     (map
-       (fn [[ctx items]]
-         {:context ctx
-          :tasks (map second items)
-          :count (count items)})
-       grouped)))
- :view (fn [result]
-   [:div
-     (for [group result]
-       [:div.context-group
-         [:h3 (str (get group :context) " (" (get group :count) ")")]
-         [:ul
-           (for [task (get group :tasks)]
-             [:li (get-in task [:block/content])])]])])}
-#+END_QUERY
+         [?b :block/tags :logseq.class/Task]
+         [?b :logseq.property/status ?s]
+         (or [?s :db/ident :logseq.property/status.todo]
+             [?s :db/ident :logseq.property/status.doing])
+         (or-join [?b]
+                  (and [?b :logseq.property/priority ?p]
+                       (or [?p :db/ident :logseq.property/priority.high]
+                           [?p :db/ident :logseq.property/priority.urgent]))
+                  (and [?b :block/tags ?t]
+                       [?t :block/title "urgent"]))]
+ :collapsed? false}
 ```
 
-**Step 3: Auto-Update Mechanism**
+**Step 3: Group tasks by context tag**
 
-Create a template that auto-refreshes:
+Two `:find` columns means rows come back as tuples, so `:view` destructures them directly.
+`:view` runs in SCI, which silently drops `map-indexed`, `#()` and keyword-as-function — use plain
+`(fn ...)` and `(for ...)`, and give `:style` a **map**, never a string.
 
-```markdown
-- template:: auto-dashboard
-  template-including-parent:: false
-  - ## 🤖 Automated Dashboard
-  - Updated: {{currentTime}}
-  - {{query (and (task TODO DOING) (not (property status done)))}}
-  ***
-  - ### Stats
-    - Total Tasks: {{sum of tasks}}
-    - Due Today: {{today tasks}}
-    - Overdue: {{overdue count}}
+```clojure
+;; Block above: ## 📋 Tasks by Context
+{:query [:find ?context (pull ?b [:block/uuid :block/title])
+         :in $ [?context ...]
+         :where
+         [?b :block/tags :logseq.class/Task]
+         [?b :block/tags ?t]
+         [?t :block/title ?context]]
+ :inputs [["work" "home" "errands" "calls"]]
+ :view (fn [rows]
+         [:div
+          (for [[ctx group] (group-by (fn [row] (first row)) rows)]
+            [:div {:style {:margin-bottom "0.75rem"}}
+             [:h3 (str ctx " (" (count group) ")")]
+             [:ul
+              (for [[_ b] group]
+                [:li (get b :block/title)])]])])}
 ```
+
+**Step 4: Auto-refresh**
+
+There is nothing to configure. A query block re-runs when the data it depends on changes; you do
+not need a refresh mechanism, and there is no `{{currentTime}}` or `{{sum of tasks}}` template
+variable to drive one.
+
+> **Deleted:** an earlier revision of this page showed an "auto-dashboard" template using
+> `{{currentTime}}`, `{{sum of tasks}}`, `{{today tasks}}` and `{{overdue count}}`. None of these
+> exist. Logseq's `{{...}}` macros are the built-in `{{query ...}}` plus whatever you define under
+> `:macros` in `config.edn` (`deps/common/src/logseq/common/util/macro.cljs:1-40`).
 
 ### Auto-Tagging System
 
@@ -239,7 +257,8 @@ async function autoTagBlock(blockUuid) {
   const block = await logseq.Editor.getBlock(blockUuid)
   if (!block) return
 
-  const content = block.content
+  // BlockEntity.content is deprecated — use .title (libs/src/LSPlugin.ts, BlockEntity)
+  const content = block.title
   let modified = false
   let newContent = content
   let properties = {}
@@ -272,207 +291,157 @@ async function autoTagBlock(blockUuid) {
   }
 }
 
-// Hook into block edit events
-logseq.Editor.onInputSelectionEnd(async ({ uuid }) => {
-  await autoTagBlock(uuid)
+// React to block changes.
+// `logseq.DB.onChanged` fires for every transaction and hands you the changed blocks
+// (libs/src/LSPlugin.ts:978-983).
+logseq.DB.onChanged(async ({ blocks }) => {
+  for (const b of blocks) {
+    await autoTagBlock(b.uuid)
+  }
 })
 ```
+
+> `logseq.Editor.onInputSelectionEnd` (`libs/src/LSPlugin.ts:944-950`) does exist, but its event
+> carries `{ caret, point, start, end, text }` — **no `uuid`**. An earlier revision destructured
+> `{ uuid }` from it, which is always `undefined`. Use `logseq.DB.onChanged` for
+> block-level reactions, or `logseq.DB.onBlockChanged(uuid, cb)` (`:989-996`) for one block.
 
 **Step 3: Batch Tag Existing Blocks**
 
 ```javascript
-// Tag all untagged blocks
-async function batchAutoTag(pageFilter = null) {
-  const query = `
-    [:find (pull ?b [:block/uuid :block/content])
-     :where
-     [?b :block/content ?content]
-     ${
-       pageFilter ? `[?b :block/page ?p] [?p :block/name "${pageFilter}"]` : ''
-     }]
-  `
+// Tag all blocks on a page. :block/content does not exist in a DB graph — use :block/title.
+async function batchAutoTag(pageTitle = null) {
+  const query = pageTitle
+    ? `[:find (pull ?b [:block/uuid :block/title])
+        :in $ ?page-title
+        :where
+        [?p :block/title ?page-title]
+        [?b :block/page ?p]
+        [?b :block/title _]]`
+    : `[:find (pull ?b [:block/uuid :block/title])
+        :where [?b :block/title _]]`
 
-  const blocks = await logseq.DB.datascriptQuery(query)
+  const rows = pageTitle
+    ? await logseq.DB.datascriptQuery(query, pageTitle)
+    : await logseq.DB.datascriptQuery(query)
 
-  console.log(`Processing ${blocks.length} blocks...`)
+  console.log(`Processing ${rows.length} blocks...`)
 
-  for (const [block] of blocks) {
+  for (const [block] of rows) {
     await autoTagBlock(block.uuid)
   }
 
   console.log('Batch tagging complete!')
 }
 
-// Run on current page
-await batchAutoTag(logseq.Editor.getCurrentPage().name)
+// Run on current page — getCurrentPage() is async and may return a block, not a page
+const current = await logseq.Editor.getCurrentPage()
+if (current) await batchAutoTag(current.title ?? current.name)
 ```
+
+`logseq.Editor.getCurrentPage()` returns `Promise<PageEntity | BlockEntity | null>`
+(`libs/src/LSPlugin.ts:709`) — it must be awaited, and it can hand you a block when the user is
+zoomed in.
 
 ---
 
 ## Template Automation
 
-### Smart Template System
+### What Templates Actually Are
 
-**Goal:** Templates that adapt based on context.
+In a DB graph a template is a block tagged **`#Template`** — `:logseq.class/Template`
+(`deps/db/src/logseq/db/frontend/class.cljs:100-102`). It carries one built-in property,
+`:logseq.property/template-applied-to` ("Apply template to tags",
+`deps/db/src/logseq/db/frontend/property.cljs:696`), which makes the template offered automatically
+on blocks carrying those tags (`src/main/frontend/worker/pipeline.cljs:107`). Applying a template is
+the outliner operation `:apply-template`
+(`deps/outliner/src/logseq/outliner/op.cljs:265`, `op/construct.cljc:517-532`).
 
-**Step 1: Create Dynamic Template**
+> **Deleted:** earlier revisions of this page built a template engine on `{{input "..."}}`,
+> `{{input-multiline ...}}`, `{{select "..." [...]}}`, `{{cursor}}`, `{{date +7d}}`,
+> `{{auto-assign-participant}}` and `{{auto-create-followup-task}}`, driven by
+> `logseq.UI.prompt` and `logseq.UI.select`. **None of these exist.** `IUIProxy`
+> (`libs/src/LSPlugin.ts:1032-1043`) has exactly six members — `showMsg`, `closeMsg`,
+> `queryElementRect`, `queryElementById`, `checkSlotValid`, `resolveThemeCssPropsVals` — and no
+> prompt or picker. Logseq's `{{...}}` macros are the built-in `{{query ...}}` plus user macros
+> declared under `:macros` in `config.edn`
+> (`deps/common/src/logseq/common/util/macro.cljs:1-40`); there is no `input`, `select`, `cursor`
+> or `date` macro. The whole engine has been replaced below with the template API that does exist.
 
-```markdown
-- template:: smart-meeting-notes
-  - # {{date}} - {{input "Meeting Title"}}
-  - type:: [[meeting]]
-  - participants:: {{input-multiline "Participants (comma separated)"}}
-  - project:: [[{{select "Project" [[Project A]], [[Project B]], [[Project C]]}}]]
-  ***
-  - ## Agenda
-    - {{cursor}}
-  - ## Notes
-    -
-  - ## Action Items
-    - TODO {{auto-assign-participant}}
-  - ## Follow-up
-    - scheduled:: [[{{date +7d}}]]
-    - {{auto-create-followup-task}}
+### The Template API
+
+Five methods on `IAppProxy` (`libs/src/LSPlugin.ts:532-541`):
+
+```typescript
+logseq.App.getTemplate(name)                      // => Promise<BlockEntity | null>
+logseq.App.existTemplate(name)                    // => Promise<Boolean>
+logseq.App.createTemplate(targetUuid, name, opts) // opts?: { overwrite: boolean }
+logseq.App.removeTemplate(name)
+logseq.App.insertTemplate(targetUuid, name)       // insert by name into a target block
 ```
 
-**Step 2: Implement Template Processor**
+`insertTemplate` takes the **template's name**, not its content — you do not expand it yourself.
+
+**Step 1: Apply a template to a block**
 
 ```javascript
-// Template variable processor
-const templateVars = {
-  date: () => {
-    return new Date().toISOString().split('T')[0]
-  },
-
-  'date +7d': () => {
-    const future = new Date()
-    future.setDate(future.getDate() + 7)
-    return future.toISOString().split('T')[0]
-  },
-
-  currentTime: () => {
-    return new Date().toLocaleTimeString()
-  },
-
-  input: (prompt) => {
-    return logseq.UI.prompt(prompt)
-  },
-
-  select: (prompt, options) => {
-    return logseq.UI.select(prompt, options)
-  },
-
-  'auto-assign-participant': async () => {
-    // Get participants from block properties
-    const currentBlock = await logseq.Editor.getCurrentBlock()
-    const page = await logseq.Editor.getPage(currentBlock.page.id)
-    const participants = page.properties?.participants || ''
-
-    // Random assign
-    const names = participants.split(',').map((n) => n.trim())
-    return names[Math.floor(Math.random() * names.length)]
-  },
-}
-
-async function processTemplate(templateContent) {
-  let processed = templateContent
-
-  // Replace {{variable}} patterns
-  const varPattern = /{{([^}]+)}}/g
-  const matches = [...processed.matchAll(varPattern)]
-
-  for (const match of matches) {
-    const varName = match[1].trim()
-    const parts = varName.split(/\s+/)
-    const funcName = parts[0]
-    const args = parts.slice(1)
-
-    if (templateVars[varName]) {
-      const value = await templateVars[varName](...args)
-      processed = processed.replace(match[0], value)
-    } else if (templateVars[funcName]) {
-      const value = await templateVars[funcName](...args)
-      processed = processed.replace(match[0], value)
-    }
+async function applyTemplate(targetUuid, name) {
+  if (!(await logseq.App.existTemplate(name))) {
+    await logseq.UI.showMsg(`No template named "${name}"`, 'warning')
+    return
   }
-
-  return processed
+  await logseq.App.insertTemplate(targetUuid, name)
 }
 ```
 
-**Step 3: Auto-Template on Page Creation**
+**Step 2: Choose a template from context**
+
+Since there is no picker API, decide in code and insert by name:
 
 ```javascript
-// Auto-apply template based on page name pattern
-logseq.App.onPageCreated(async (page) => {
-  const pageName = page.originalName
-
-  // Meeting notes pattern: "YYYY-MM-DD - Meeting"
-  if (/^\d{4}-\d{2}-\d{2} - .+/.test(pageName)) {
-    const template = await getTemplate('smart-meeting-notes')
-    const processed = await processTemplate(template)
-    await logseq.Editor.insertBlock(page.uuid, processed)
-  }
-
-  // Project pages
-  if (pageName.startsWith('Project/')) {
-    const template = await getTemplate('project-template')
-    await insertTemplate(page.uuid, template)
-  }
-
-  // Daily note enhancements
-  if (/^\d{4}_\d{2}_\d{2}$/.test(pageName)) {
-    await enhanceDailyNote(page)
-  }
-})
-
-async function getTemplate(name) {
-  const template = await logseq.Editor.getBlock(name, { includeChildren: true })
-  return template
-}
-```
-
-### Context-Aware Templates
-
-**Goal:** Templates that adapt to time, location, or other context.
-
-```javascript
-// Context-aware template selection
-async function selectTemplateByContext() {
+function templateForNow() {
   const hour = new Date().getHours()
   const day = new Date().getDay()
 
-  let template
-
-  // Work hours template (9-5, weekdays)
-  if (hour >= 9 && hour < 17 && day >= 1 && day <= 5) {
-    template = 'work-task-template'
-  }
-  // Evening template
-  else if (hour >= 17 && hour < 22) {
-    template = 'evening-reflection-template'
-  }
-  // Weekend template
-  else if (day === 0 || day === 6) {
-    template = 'weekend-project-template'
-  }
-  // Default
-  else {
-    template = 'general-template'
-  }
-
-  return await getTemplate(template)
+  if (day === 0 || day === 6) return 'weekend-project'
+  if (hour >= 9 && hour < 17) return 'work-task'
+  if (hour >= 17 && hour < 22) return 'evening-reflection'
+  return 'general'
 }
 
-// Usage in slash command
-logseq.Editor.registerSlashCommand('smart-template', async () => {
-  const template = await selectTemplateByContext()
-  const processed = await processTemplate(template)
-  await logseq.Editor.insertAtEditingCursor(processed)
+logseq.Editor.registerSlashCommand('Smart template', async ({ uuid }) => {
+  await applyTemplate(uuid, templateForNow())
 })
 ```
 
----
+`registerSlashCommand(tag, action)` (`libs/src/LSPlugin.ts:666-669`) hands its callback an event
+carrying `{ uuid }` — the block the command was invoked in (`BlockCommandCallback`).
+
+**Step 3: Apply on a schedule, not on page creation**
+
+> **Deleted:** `logseq.App.onPageCreated` does not exist. The `IAppProxy` hook events are
+> `onCurrentGraphChanged`, `onGraphAfterIndexed`, `onThemeModeChanged`, `onThemeChanged`,
+> `onTodayJournalCreated`, `onBeforeCommandInvoked`, `onAfterCommandInvoked`,
+> `onBlockRendererSlotted`, `onMacroRendererSlotted`, `onPageHeadActionsSlotted`, `onRouteChanged`
+> and `onSidebarVisibleChanged` (`libs/src/LSPlugin.ts:559-605`). There is no page-created hook.
+
+The two hooks that get you close:
+
+```javascript
+// Fires when today's journal page is created (libs/src/LSPlugin.ts:565)
+logseq.App.onTodayJournalCreated(async ({ title }) => {
+  const page = await logseq.Editor.getPage(title)
+  if (page) await applyTemplate(page.uuid, 'daily-note')
+})
+
+// Fires on every route change (libs/src/LSPlugin.ts:604)
+logseq.App.onRouteChanged(({ path, template }) => {
+  console.log('navigated to', path, template)
+})
+```
+
+For anything else — "a page matching this name pattern was created" — watch transactions with
+`logseq.DB.onChanged` and filter yourself.
 
 ## Plugin-Based Workflows
 
@@ -488,6 +457,9 @@ Create `plugins/custom-automation/package.json`:
   "version": "1.0.0",
   "description": "Custom automation workflows",
   "main": "index.js",
+  "dependencies": {
+    "@logseq/libs": "^0.3.4"
+  },
   "logseq": {
     "id": "automation-workflows",
     "title": "Automation Workflows",
@@ -495,6 +467,11 @@ Create `plugins/custom-automation/package.json`:
   }
 }
 ```
+
+The `logseq` object is required; without it the installer throws `Illegal logseq package`
+(`src/main/frontend/handler/plugin.cljs:1171-1172`). The loader reads `logseq.entry`, then
+`logseq.main`, then the package `main` to find your entry file
+(`libs/src/LSPlugin.core.ts:719-728`).
 
 **Step 2: Main Plugin File**
 
@@ -545,11 +522,18 @@ function registerTaskProcessor() {
 async function processTaskWorkflow() {
   logseq.UI.showMsg('Processing tasks...', 'info')
 
-  // 1. Collect all TODO tasks
+  // 1. Collect all open tasks. Status is a closed-value ref, never a string.
+  //
+  // Priority is a ref too, so bind its :db/ident as its own :find column rather
+  // than hoping the pull spec brings it along.
   const tasks = await logseq.DB.datascriptQuery(`
-    [:find (pull ?b [*])
+    [:find (pull ?b [:block/uuid :block/title :logseq.property/deadline]) ?priority
      :where
-     [?b :block/marker "TODO"]]
+     [?b :block/tags :logseq.class/Task]
+     [?b :logseq.property/status ?s]
+     [?s :db/ident :logseq.property/status.todo]
+     [(get-else $ ?b :logseq.property/priority :none) ?p]
+     [(get-else $ ?p :db/ident :none) ?priority]]
   `)
 
   // 2. Categorize
@@ -560,8 +544,8 @@ async function processTaskWorkflow() {
     deferred: [],
   }
 
-  for (const [task] of tasks) {
-    const category = await categorizeTask(task)
+  for (const [task, priority] of tasks) {
+    const category = await categorizeTask(task, priority)
     categorized[category].push(task)
   }
 
@@ -578,12 +562,21 @@ async function processTaskWorkflow() {
   logseq.Editor.scrollToBlockInPage('Automation Hub', reportBlock.uuid)
 }
 
-async function categorizeTask(task) {
-  const content = task.content.toLowerCase()
-  const props = task.properties || {}
+// `priority` is the :db/ident of the priority ref, or ':none'.
+//
+// Note the key names: datascript_query serializes keywords with camelCase OFF and
+// strips the namespace only for the `block`, `db` and `file` namespaces
+// (src/main/logseq/sdk/utils.cljs:11-15, :29-52). So `:block/uuid` arrives as
+// `uuid`, but `:logseq.property/deadline` keeps its full form, colon included.
+async function categorizeTask(task, priority) {
+  const content = (task.title ?? '').toLowerCase()
 
-  // Urgent: has deadline or priority A
-  if (props.deadline || props.priority === 'A') {
+  // Urgent: has a deadline, or an urgent/high priority
+  if (
+    task[':logseq.property/deadline'] ||
+    priority === ':logseq.property/priority.urgent' ||
+    priority === ':logseq.property/priority.high'
+  ) {
     return 'urgent'
   }
 
@@ -642,9 +635,11 @@ function registerAutoArchive() {
       const cutoff = thirtyDaysAgo.getTime()
 
       const oldCompletedTasks = await logseq.DB.datascriptQuery(`
-      [:find (pull ?b [*])
+      [:find (pull ?b [:block/uuid :block/updated-at])
        :where
-       [?b :block/marker "DONE"]]
+       [?b :block/tags :logseq.class/Task]
+       [?b :logseq.property/status ?s]
+       [?s :db/ident :logseq.property/status.done]]
     `)
 
       const archivePage =
@@ -654,9 +649,10 @@ function registerAutoArchive() {
       let archived = 0
 
       for (const [task] of oldCompletedTasks) {
-        const created = task.createdAt || task.updatedAt
+        // :block/updated-at → "updated-at" (namespace stripped, no camelCasing)
+        const touched = task['updated-at']
 
-        if (created < cutoff) {
+        if (touched && touched < cutoff) {
           // Move to archive
           await logseq.Editor.moveBlock(task.uuid, archivePage.uuid)
           archived++
@@ -683,17 +679,27 @@ async function checkReminders() {
   const now = new Date()
   const todayStr = now.toISOString().split('T')[0]
 
-  // Find tasks due today
-  const dueTasks = await logseq.DB.datascriptQuery(`
-    [:find (pull ?b [*])
-     :where
-     [?b :block/marker ?m]
-     [(contains? #{"TODO" "DOING"} ?m)]
-     (or
-       [?b :block/deadline ?d]
-       [?b :block/scheduled ?d])
-     [(= ?d ${now.getTime()})]]
-  `)
+  // Find tasks due today. Deadlines are :datetime — epoch milliseconds — so compare
+  // against a millisecond window, not against a YYYYMMDD integer.
+  const startOfDay = new Date(now)
+  startOfDay.setHours(0, 0, 0, 0)
+  const endOfDay = startOfDay.getTime() + 24 * 60 * 60 * 1000
+
+  const dueTasks = await logseq.DB.datascriptQuery(
+    `[:find (pull ?b [:block/uuid :block/title])
+      :in $ ?start ?end
+      :where
+      [?b :block/tags :logseq.class/Task]
+      [?b :logseq.property/status ?s]
+      (or [?s :db/ident :logseq.property/status.todo]
+          [?s :db/ident :logseq.property/status.doing])
+      (or [?b :logseq.property/deadline ?d]
+          [?b :logseq.property/scheduled ?d])
+      [(>= ?d ?start)]
+      [(< ?d ?end)]]`,
+    startOfDay.getTime(),
+    endOfDay
+  )
 
   if (dueTasks.length > 0) {
     logseq.UI.showMsg(
@@ -717,57 +723,67 @@ async function checkReminders() {
 }
 
 // Batch Operations
+//
+// There is no prompt or picker API — IUIProxy has only showMsg, closeMsg,
+// queryElementRect, queryElementById, checkSlotValid and resolveThemeCssPropsVals
+// (libs/src/LSPlugin.ts:1032-1043). Take input through plugin settings instead:
+// useSettingsSchema declares the fields, logseq.settings reads them
+// (libs/src/LSPlugin.ts:1201, :1123).
 function registerBatchOperations() {
-  logseq.Editor.registerSlashCommand('batch-update', async () => {
-    const operation = await logseq.UI.prompt(
-      'Batch operation:\n1. Add tag\n2. Set property\n3. Change marker\n4. Archive'
-    )
+  logseq.useSettingsSchema([
+    {
+      key: 'batchTag',
+      type: 'string',
+      title: 'Batch tag',
+      description: 'Tag added by the batch-tag command (no leading #)',
+      default: 'triage',
+    },
+  ])
 
-    switch (operation) {
-      case '1':
-        await batchAddTag()
-        break
-      case '2':
-        await batchSetProperty()
-        break
-      case '3':
-        await batchChangeMarker()
-        break
-      case '4':
-        await batchArchive()
-        break
-    }
-  })
-}
-
-async function batchAddTag() {
-  const tag = await logseq.UI.prompt('Enter tag to add (without #):')
-  const query = await logseq.UI.prompt(
-    'Enter query selector:\n1. All TODO\n2. All DONE\n3. Current page\n4. Custom'
+  // One command per operation — the palette is the menu.
+  logseq.App.registerCommandPalette(
+    { key: 'automation-batch-tag-open-tasks', label: 'Batch: tag open tasks' },
+    async () => await batchTagOpenTasks()
   )
 
-  let blocks
+  logseq.App.registerCommandPalette(
+    { key: 'automation-batch-tag-current-page', label: 'Batch: tag current page' },
+    async () => await batchTagCurrentPage()
+  )
+}
 
-  switch (query) {
-    case '1':
-      blocks = await logseq.DB.datascriptQuery(`
-        [:find (pull ?b [:block/uuid])
-         :where [?b :block/marker "TODO"]]
-      `)
-      break
-    case '3':
-      const page = await logseq.Editor.getCurrentPage()
-      blocks = await logseq.Editor.getPageBlocksTree(page.name)
-      break
-    // Add more cases...
+async function batchTagOpenTasks() {
+  const tag = logseq.settings?.batchTag
+  if (!tag) return logseq.UI.showMsg('Set a batch tag in plugin settings', 'warning')
+
+  const rows = await logseq.DB.datascriptQuery(`
+    [:find (pull ?b [:block/uuid :block/title])
+     :where
+     [?b :block/tags :logseq.class/Task]
+     [?b :logseq.property/status ?s]
+     [?s :db/ident :logseq.property/status.todo]]
+  `)
+
+  for (const [block] of rows) {
+    await logseq.Editor.updateBlock(block.uuid, `${block.title} #${tag}`)
   }
 
-  for (const [block] of blocks) {
-    const current = await logseq.Editor.getBlock(block.uuid)
-    await logseq.Editor.updateBlock(block.uuid, `${current.content} #${tag}`)
+  logseq.UI.showMsg(`Tagged ${rows.length} blocks`, 'success')
+}
+
+async function batchTagCurrentPage() {
+  const tag = logseq.settings?.batchTag
+  const page = await logseq.Editor.getCurrentPage()
+  if (!tag || !page) return
+
+  // getPageBlocksTree returns BlockEntity[], NOT query tuples — do not destructure.
+  const blocks = await logseq.Editor.getPageBlocksTree(page.title ?? page.name)
+
+  for (const block of blocks ?? []) {
+    await logseq.Editor.updateBlock(block.uuid, `${block.title} #${tag}`)
   }
 
-  logseq.UI.showMsg(`Tagged ${blocks.length} blocks`, 'success')
+  logseq.UI.showMsg(`Tagged ${blocks?.length ?? 0} blocks`, 'success')
 }
 
 // Load plugin
@@ -777,14 +793,17 @@ logseq.ready(main).catch(console.error)
 **Step 3: Install and Test**
 
 ```markdown
-1. Settings → Plugins → Load unpacked plugin
-2. Select plugins/custom-automation folder
-3. Enable plugin
-4. Test slash commands:
-   - /process-tasks
-   - /batch-update
-5. Test keyboard shortcut: Mod+Shift+P
+1. Enable Settings → Advanced → Developer mode
+2. Open the Plugins dashboard (`t p`)
+3. Click "Load unpacked plugin" and select your plugin folder
+4. Test the slash command: /process-tasks
+5. Test the palette commands: "Batch: tag open tasks"
+6. Test the keyboard shortcut: Mod+Shift+P
 ```
+
+`t p` opens the dashboard — the `:ui/goto-plugins` shortcut
+(`src/main/frontend/modules/shortcut/config.cljs:464`). "Load unpacked plugin" only appears in
+developer mode on Electron (`src/main/frontend/components/plugins.cljs:828-838`).
 
 ---
 
@@ -869,62 +888,51 @@ setInterval(async () => {
 }, 60 * 1000) // Check every minute
 ```
 
-**Step 2: Custom Schedule Manager**
+**Step 2: Persisting schedules**
+
+> **Deleted:** an earlier revision managed schedules through a `logseq.UI.prompt` menu and saved
+> them with `logseq.App.setUserConfigs`. **Neither exists.** `IUIProxy` has no prompt
+> (`libs/src/LSPlugin.ts:1032-1043`), and `IAppProxy` exposes `getUserConfigs`
+> (`:412`) as **read-only** — the only writable config setter is
+> `setCurrentGraphConfigs(configs)` (`:510`), which writes the *graph's* `config.edn`, not
+> per-plugin state.
+
+Persist plugin state with the plugin settings API instead — `logseq.updateSettings(attrs)`
+(`libs/src/LSPlugin.ts:1210`) writes, `logseq.settings` reads (`:1123`), and
+`logseq.onSettingsChanged(cb)` (`:1215`) fires on change. Settings are stored per plugin by the host
+(`libs/src/LSPlugin.core.ts:573`, `:595`).
 
 ```javascript
-// Schedule manager with UI
-function createScheduleManager() {
-  logseq.App.registerCommand(
-    'manage-schedules',
-    {
-      key: 'automation-schedules',
-      label: 'Manage Schedules',
-    },
-    async () => {
-      const schedulesList = schedules
-        .map((s, i) => `${i + 1}. ${s.name} (${s.cron})`)
-        .join('\n')
-
-      const action = await logseq.UI.prompt(
-        `Schedules:\n${schedulesList}\n\nAction:\n` +
-          'A - Add new\nD - Delete\nR - Run now\nC - Cancel'
-      )
-
-      if (action === 'A') {
-        await addSchedule()
-      } else if (action === 'D') {
-        await deleteSchedule()
-      } else if (action === 'R') {
-        await runScheduleNow()
-      }
-    }
-  )
+function loadSchedules() {
+  return logseq.settings?.schedules ?? []
 }
 
-async function addSchedule() {
-  const name = await logseq.UI.prompt('Schedule name:')
-  const cron = await logseq.UI.prompt('Cron expression (e.g., 0 9 * * *):')
-  const actionType = await logseq.UI.prompt(
-    'Action type:\n1. Insert block\n2. Run query\n3. Custom function'
-  )
+function saveSchedules(next) {
+  logseq.updateSettings({ schedules: next })
+}
 
-  // Create schedule object
-  const schedule = {
-    name,
-    cron,
-    action: await buildScheduleAction(actionType),
+logseq.App.registerCommandPalette(
+  { key: 'automation-list-schedules', label: 'List automation schedules' },
+  async () => {
+    const list = loadSchedules()
+      .map((s, i) => `${i + 1}. ${s.name} (${s.cron})`)
+      .join('\n')
+    await logseq.UI.showMsg(list || 'No schedules configured', 'info')
   }
+)
 
-  schedules.push(schedule)
-
-  // Save to storage
-  await logseq.App.setUserConfigs({
-    customSchedules: schedules,
-  })
-
-  logseq.UI.showMsg(`Schedule "${name}" added!`, 'success')
-}
+logseq.onSettingsChanged((next, prev) => {
+  console.log('schedules changed', prev?.schedules, '→', next?.schedules)
+})
 ```
+
+For anything a user must type, declare it as a settings field with
+`logseq.useSettingsSchema([...])` (`libs/src/LSPlugin.ts:1201`) — that is the only user-input
+surface the SDK provides.
+
+> **Note:** `setInterval` in a plugin only runs while Logseq is open and the plugin is enabled.
+> Nothing in the SDK schedules work while the app is closed, and there is no cron facility in the
+> app.
 
 ---
 
@@ -990,25 +998,29 @@ async function batchAddProperty(pageName, propertyKey, propertyValue) {
   logseq.UI.showMsg('Batch update complete!', 'success')
 }
 
-// Example: Convert all TODO to DONE in page
-async function batchCompleteAllTasks(pageName) {
+// Example: mark every open task on a page as done.
+//
+// Status is a closed-value ref, so you cannot flip it by rewriting text. Set the
+// property to the target status entity with upsertBlockProperty.
+async function batchCompleteAllTasks(pageTitle) {
   const todos = await logseq.DB.datascriptQuery(
-    `
-    [:find (pull ?b [:block/uuid :block/content])
-     :in $ ?page-name
-     :where
-     [?p :block/name ?page-name]
-     [?b :block/page ?p]
-     [?b :block/marker "TODO"]]
-  `,
-    pageName.toLowerCase()
+    `[:find (pull ?b [:block/uuid])
+      :in $ ?page-title
+      :where
+      [?p :block/title ?page-title]
+      [?b :block/page ?p]
+      [?b :block/tags :logseq.class/Task]
+      [?b :logseq.property/status ?s]
+      [?s :db/ident :logseq.property/status.todo]]`,
+    pageTitle
   )
 
   for (const [block] of todos) {
     await batchUpdater.add(async () => {
-      await logseq.Editor.updateBlock(
+      await logseq.Editor.upsertBlockProperty(
         block.uuid,
-        block.content.replace('TODO', 'DONE')
+        'logseq.property/status',
+        ':logseq.property/status.done'
       )
     })
   }
@@ -1016,6 +1028,11 @@ async function batchCompleteAllTasks(pageName) {
   logseq.UI.showMsg(`Completed ${todos.length} tasks!`, 'success')
 }
 ```
+
+> **Unverified:** the exact argument shape `upsertBlockProperty` expects for a closed-value ref
+> could not be confirmed from `libs/src/LSPlugin.ts` — its signature is
+> `(block, key: string, value: any)` (`:918-925`) and the host-side coercion is not documented in
+> the type surface. Confirm against your own graph before running this over many blocks.
 
 ### Bulk Export/Import
 
@@ -1069,10 +1086,11 @@ async function importBlocksWithTransform(jsonData, transformer) {
   }
 }
 
-// Example transformer: Add timestamp to all blocks
+// Example transformer: Add timestamp to all blocks.
+// BlockEntity.content is deprecated — read .title.
 const addTimestampTransformer = async (block) => {
   return {
-    content: block.content,
+    content: block.title,
     properties: {
       ...block.properties,
       imported: new Date().toISOString(),
@@ -1116,17 +1134,23 @@ labels:: ${issue.labels.map((l) => l.name).join(', ')}
 created:: ${issue.created_at}
     `.trim()
 
-    // Check if already imported
-    const existing = await logseq.DB.datascriptQuery(`
-      [:find (pull ?b [:block/uuid])
-       :where
-       [?b :block/properties ?props]
-       [(get ?props :github-id) ?id]
-       [(= ?id ${issue.number})]]
-    `)
+    // Check if already imported. :block/properties does not exist in a DB graph —
+    // each property is its own attribute, keyed by the property entity's :db/ident.
+    const existing = await logseq.DB.datascriptQuery(
+      `[:find (pull ?b [:block/uuid])
+        :in $ ?prop-title ?id
+        :where
+        [?prop :block/tags :logseq.class/Property]
+        [?prop :block/title ?prop-title]
+        [?prop :db/ident ?ident]
+        [?b ?ident ?pv]
+        [?pv :logseq.property/value ?id]]`,
+      'github-id',
+      issue.number
+    )
 
     if (existing.length === 0) {
-      await logseq.Editor.appendBlockInPage(tasksPage.name, taskContent)
+      await logseq.Editor.appendBlockInPage(tasksPage.uuid, taskContent)
     }
   }
 
@@ -1141,13 +1165,26 @@ logseq.App.registerCommand(
     label: 'Sync GitHub Issues',
   },
   async () => {
-    const repo = await logseq.UI.prompt('GitHub repo (user/repo):')
-    const token = await logseq.UI.prompt('GitHub token:')
-
-    await syncGitHubIssues(repo, token)
+    // No prompt API exists. Read the values from plugin settings instead.
+    const { githubRepo, githubToken } = logseq.settings ?? {}
+    if (!githubRepo || !githubToken) {
+      return logseq.UI.showMsg('Set the GitHub repo and token in plugin settings', 'warning')
+    }
+    await syncGitHubIssues(githubRepo, githubToken)
   }
 )
+
+// Declare the settings fields once, at plugin start.
+logseq.useSettingsSchema([
+  { key: 'githubRepo', type: 'string', title: 'GitHub repo', description: 'user/repo', default: '' },
+  { key: 'githubToken', type: 'string', title: 'GitHub token', description: 'Personal access token', default: '' },
+])
 ```
+
+> **Security note.** A token you put in plugin settings is stored in plaintext by the host
+> (`libs/src/LSPlugin.core.ts:595`) and readable by any code running in the plugin frame — including
+> the plugin's own npm dependencies. See
+> [Plugin Security Architecture](../../explanation/architecture/plugin-security.md).
 
 **Example 2: Export to Notion**
 
@@ -1156,15 +1193,15 @@ logseq.App.registerCommand(
 async function exportToNotion(pageName, notionToken, databaseId) {
   const blocks = await logseq.Editor.getPageBlocksTree(pageName)
 
-  // Convert to Notion format
-  const notionBlocks = blocks.map((block) => ({
+  // Convert to Notion format. BlockEntity.content is deprecated — use .title.
+  const notionBlocks = (blocks ?? []).map((block) => ({
     object: 'block',
     type: 'paragraph',
     paragraph: {
       rich_text: [
         {
           type: 'text',
-          text: { content: block.content },
+          text: { content: block.title },
         },
       ],
     },
@@ -1205,10 +1242,12 @@ async function exportToNotion(pageName, notionToken, databaseId) {
 
 **Goal:** Trigger workflows via webhooks.
 
-```javascript
-// Simple webhook server (requires external setup)
-// This would run as a separate service
+> **Unverified:** Logseq exposes no inbound webhook endpoint to plugins. A plugin can only make
+> outbound requests; anything inbound requires a service you run yourself that the plugin polls, or
+> a plugin process outside the SDK. The code below is a client-side dispatcher for a payload you
+> fetched — not a listener.
 
+```javascript
 // In Logseq, register handler
 logseq.App.registerCommand(
   'setup-webhooks',
@@ -1217,20 +1256,15 @@ logseq.App.registerCommand(
     label: 'Setup Webhooks',
   },
   async () => {
-    const webhookUrl = await logseq.UI.prompt(
-      'Webhook URL (from external service):'
-    )
+    // Read the URL from plugin settings; persist plugin state with updateSettings,
+    // not with App.setUserConfigs (which does not exist).
+    const webhookUrl = logseq.settings?.webhookUrl
+    if (!webhookUrl) {
+      return logseq.UI.showMsg('Set the webhook URL in plugin settings', 'warning')
+    }
 
-    // Save configuration
-    await logseq.App.setUserConfigs({
-      webhookUrl: webhookUrl,
-    })
-
-    // Start listening (pseudo-code, needs actual implementation)
-    // In practice, you'd use a plugin that runs a local server
-    // or connects to a cloud webhook service
-
-    logseq.UI.showMsg('Webhooks configured!', 'success')
+    logseq.updateSettings({ webhookConfiguredAt: Date.now() })
+    logseq.UI.showMsg('Webhook configured', 'success')
   }
 )
 
@@ -1256,9 +1290,9 @@ async function createTaskFromWebhook(data) {
     new Date().toISOString().split('T')[0]
   )
 
-  const taskContent = `TODO ${data.title}\nsource:: webhook\ndetails:: ${data.details}`
-
-  await logseq.Editor.appendBlockInPage(today.name, taskContent)
+  await logseq.Editor.appendBlockInPage(today.uuid, data.title, {
+    properties: { source: 'webhook', details: data.details },
+  })
 
   logseq.UI.showMsg('Task created from webhook!', 'success')
 }
@@ -1285,8 +1319,8 @@ function withErrorHandling(fn, context = 'Operation') {
         (await logseq.Editor.createPage('Logs/Errors'))
 
       await logseq.Editor.appendBlockInPage(
-        errorLog.name,
-        `- ${new Date().toISOString()}: ${context} - ${error.message}`
+        errorLog.uuid,
+        `${new Date().toISOString()}: ${context} - ${error.message}`
       )
 
       // Notify user
@@ -1321,7 +1355,7 @@ class AutomationLogger {
       (await logseq.Editor.getPage(this.logPageName)) ||
       (await logseq.Editor.createPage(this.logPageName))
 
-    await logseq.Editor.appendBlockInPage(logPage.name, logEntry)
+    await logseq.Editor.appendBlockInPage(logPage.uuid, logEntry)
 
     // Also log to console
     console.log(`[${level}] ${message}`, data)
@@ -1361,35 +1395,42 @@ const logger = new AutomationLogger()
 
 ### Configuration Management
 
+`logseq.App.getUserConfigs()` (`libs/src/LSPlugin.ts:412`) is **read-only** — it returns the app's
+`AppUserConfigs` (`preferredThemeMode`, `preferredDateFormat`, `currentGraph`, …). There is no
+`setUserConfigs`. Plugin state belongs in plugin settings.
+
 ```javascript
-// Configuration system
+// Configuration system, built on the plugin settings API
 const Config = {
-  async get(key, defaultValue = null) {
-    const config = await logseq.App.getUserConfigs()
-    return config?.[key] ?? defaultValue
+  get(key, defaultValue = null) {
+    return logseq.settings?.[key] ?? defaultValue
   },
 
-  async set(key, value) {
-    const config = await logseq.App.getUserConfigs()
-    config[key] = value
-    await logseq.App.setUserConfigs(config)
+  set(key, value) {
+    logseq.updateSettings({ [key]: value })
   },
 
-  async getAll() {
+  getAll() {
+    return logseq.settings ?? {}
+  },
+
+  // App-level, read-only: theme mode, date format, current graph, etc.
+  async appConfigs() {
     return await logseq.App.getUserConfigs()
-  },
-
-  async reset() {
-    await logseq.App.setUserConfigs({})
   },
 }
 
 // Usage
-await Config.set('automation.taskProcessing.enabled', true)
-await Config.set('automation.schedules', schedules)
+Config.set('taskProcessingEnabled', true)
+Config.set('schedules', schedules)
 
-const enabled = await Config.get('automation.taskProcessing.enabled', false)
+const enabled = Config.get('taskProcessingEnabled', false)
 ```
+
+Keys are flat — `updateSettings` merges the object you pass into the stored settings
+(`libs/src/LSPlugin.ts:1206-1210`), so dotted names like `automation.taskProcessing.enabled` are
+stored as literal keys, not nested paths. To write the **graph's** `config.edn` instead, use
+`logseq.App.setCurrentGraphConfigs(configs)` (`:510`).
 
 ### Testing
 
@@ -1400,7 +1441,7 @@ const AutomationTests = {
     console.log('Running automation tests...')
 
     await this.testTaskProcessing()
-    await this.testTemplateExpansion()
+    await this.testTemplateApply()
     await this.testBatchOperations()
 
     console.log('All tests complete!')
@@ -1412,10 +1453,7 @@ const AutomationTests = {
     // Create test tasks
     const testPage = await logseq.Editor.createPage(`Test-${Date.now()}`)
 
-    await logseq.Editor.appendBlockInPage(
-      testPage.name,
-      'TODO Test task #urgent'
-    )
+    await logseq.Editor.appendBlockInPage(testPage.uuid, 'Test task #urgent')
 
     // Run processor
     await processTaskWorkflow()
@@ -1423,24 +1461,29 @@ const AutomationTests = {
     // Verify results
     // (Add assertions)
 
-    // Cleanup
-    await logseq.Editor.deletePage(testPage.name)
+    // Cleanup — deletePage takes a page name (libs/src/LSPlugin.ts:838)
+    await logseq.Editor.deletePage(testPage.title ?? testPage.name)
 
     console.log('✓ Task processing test passed')
   },
 
-  async testTemplateExpansion() {
-    console.log('Test: Template Expansion')
+  async testTemplateApply() {
+    console.log('Test: Template Apply')
 
-    const template = '{{date}} - {{currentTime}}'
-    const expanded = await processTemplate(template)
-
-    // Verify contains date and time
-    if (!expanded.includes('-') || expanded.includes('{{')) {
-      throw new Error('Template expansion failed')
+    if (!(await logseq.App.existTemplate('work-task'))) {
+      throw new Error('Fixture template "work-task" is missing')
     }
 
-    console.log('✓ Template expansion test passed')
+    const page = await logseq.Editor.createPage(`Test-tpl-${Date.now()}`)
+    await logseq.App.insertTemplate(page.uuid, 'work-task')
+
+    const tree = await logseq.Editor.getPageBlocksTree(page.title ?? page.name)
+    if (!tree || tree.length === 0) {
+      throw new Error('Template did not insert anything')
+    }
+
+    await logseq.Editor.deletePage(page.title ?? page.name)
+    console.log('✓ Template apply test passed')
   },
 
   async testBatchOperations() {
@@ -1484,49 +1527,60 @@ logseq.App.registerCommand(
 
 ## Summary
 
-You've built a complete automation system! 🎉
+You've built an automation system on APIs that exist. 🎉
 
 **What You've Built:**
 
-✅ Query-based auto-dashboards and tagging  
-✅ Smart template system with context awareness  
-✅ Custom plugin with workflow automation  
-✅ Scheduled tasks and reminders  
-✅ Batch operations for mass updates  
-✅ External integrations (GitHub, webhooks)  
-✅ Production-ready error handling and logging
+✅ DB-graph advanced queries for dashboards, using closed-value status/priority refs and
+   millisecond datetime comparisons
+✅ Rule-based auto-tagging driven by `logseq.DB.onChanged`
+✅ A custom plugin registering slash commands, palette commands and a toolbar item
+✅ Interval-based reminders (in-session only)
+✅ Batch operations over query results
+✅ A GitHub sync driven from plugin settings
+✅ Error handling and logging into the graph
 
 **Key Concepts:**
 
-- **Automation Layers:** Queries → Templates → Plugins → Integrations
-- **Event-Driven:** React to user actions and schedule
-- **Batch Processing:** Efficient bulk operations
-- **Error Handling:** Robust fallbacks and logging
-- **Testing:** Verify workflows work correctly
+- **Automation layers:** advanced queries → templates → plugin commands → integrations
+- **Event-driven:** `logseq.DB.onChanged`, `logseq.DB.onBlockChanged`, the `IAppProxy` hooks
+- **State lives in plugin settings**, not in app config — `logseq.updateSettings` / `logseq.settings`
+- **DB-graph attributes**, not file-graph ones: `:block/title` not `:block/content`,
+  `:logseq.property/status` refs not `:block/marker` strings
+
+**What the SDK does not give you** (verified absent at `be800f1711`):
+
+- No prompt or picker (`IUIProxy` has six members — `libs/src/LSPlugin.ts:1032-1043`)
+- No writable app config (`getUserConfigs` is read-only — `:412`)
+- No page-created hook (`:559-605` is the complete hook list)
+- No cron, no background execution while the app is closed
+- No inbound webhook endpoint
+- No sandbox around any of it — see
+  [Plugin Security Architecture](../../explanation/architecture/plugin-security.md)
 
 **Next Steps:**
 
 1. **Expand workflows** with your specific needs
-2. **Share plugins** with community
-3. **Integrate more tools** (Todoist, Calendar, etc.)
-4. **Optimize performance** for large graphs
-5. **Build UI** for easier workflow management
+2. **Share plugins** with the community
+3. **Optimize performance** on large graphs — every `datascriptQuery` runs over the whole graph
+4. **Build settings-driven UI** with `useSettingsSchema` and `provideUI`
 
 **Resources:**
 
-- [Logseq Plugin SDK](https://plugins-doc.logseq.com)
-- [JavaScript API Reference](../../reference/api/javascript-api.md)
+- [Plugin API Reference](../../reference/api/plugin-api.md)
+- [Advanced Queries Tutorial](./advanced-queries-tutorial.md)
+- [`libs/src/LSPlugin.ts`](../../../../../libs/src/LSPlugin.ts) — the authoritative type surface
+- [`libs/guides/`](../../../../../libs/guides/) — in-repo SDK guides
 - [Plugin Examples](https://github.com/logseq/logseq-plugin-samples)
 - [Community Plugins](https://github.com/logseq/marketplace)
-- [Discord #plugin-dev](https://discord.gg/logseq)
 
 **Tips for Automation Success:**
 
 - Start small, automate one pain point at a time
-- Test thoroughly before deploying
+- Check every API against `libs/src/LSPlugin.ts` before you build on it — a plausible name is not
+  an existing method
+- Back up before running any batch operation
 - Log everything for debugging
 - Handle errors gracefully
-- Document your workflows
-- Share and learn from community
 
 Happy automating! 🤖✨
