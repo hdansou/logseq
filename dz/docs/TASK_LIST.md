@@ -7,11 +7,11 @@ every field comes from each document's frontmatter.
 | | Count |
 |---|---|
 | Documents | 106 |
-| Audited line by line this pass | 18 |
+| Audited line by line this pass | 31 |
 | Authored from source — trusted | 10 |
-| Merged this pass — base inherited, needs a line-by-line audit | 28 |
+| Merged this pass — base inherited, needs a line-by-line audit | 27 |
 | Generated, gated in CI | 1 |
-| Not reviewed | 49 |
+| Not reviewed | 37 |
 
 `merged-not-fully-audited` means the two copies were reconciled against source and
 every ported claim was verified, but content inherited from the surviving base was
@@ -25,7 +25,6 @@ Older date, or none. Highest priority.
 | Document | Last verified | Against |
 |---|---|---|
 | `_templates/frontmatter.md` | ' # YYYY-MM-DD | — |
-| `explanation/architecture/plugin-security.md` | — | — |
 | `explanation/concepts/block-editing-philosophy.md` | — | — |
 | `explanation/concepts/file-organization.md` | — | — |
 | `explanation/concepts/file-vs-database.md` | — | — |
@@ -33,28 +32,19 @@ Older date, or none. Highest priority.
 | `explanation/concepts/linked-references.md` | — | — |
 | `explanation/concepts/local-first-architecture.md` | — | — |
 | `explanation/concepts/plugin-architecture.md` | — | — |
-| `how-to/multimedia/video-embed.md` | — | — |
 | `how-to/optimization/performance-optimization.md` | — | — |
 | `how-to/organization/backup-strategies.md` | — | — |
 | `how-to/organization/import-export.md` | — | — |
 | `how-to/troubleshooting/troubleshooting-guide.md` | — | — |
-| `how-to/workflows/daily-workflows.md` | — | — |
 | `how-to/workflows/meeting-notes-workflow.md` | — | — |
-| `how-to/workflows/research-workflow.md` | — | — |
-| `how-to/workflows/task-management-workflows.md` | — | — |
 | `how-to/workflows/zettelkasten-method.md` | — | — |
 | `reference/formatting/markdown-syntax.md` | — | — |
-| `reference/interface/keyboard-shortcuts.md` | — | — |
 | `reference/interface/slash-commands.md` | — | — |
 | `reference/interface/templates-system.md` | — | — |
 | `reference/platforms/mobile-differences.md` | — | — |
 | `reference/plugin-apis/pr-12395/01-postmate-message-channel.md` | — | — |
-| `reference/plugin-apis/pr-12395/02-hosted-renderer.md` | — | — |
-| `reference/plugin-apis/pr-12395/03-sidebar-renderer.md` | — | — |
-| `reference/plugin-apis/pr-12395/04-app-get-current-route.md` | — | — |
 | `reference/plugin-apis/pr-12395/05-block-properties-class-defaults.md` | — | — |
 | `reference/plugin-apis/pr-12395/06-helpers-to-common-rename.md` | — | — |
-| `tutorials/advanced/workflow-automation-tutorial.md` | — | — |
 | `_templates/explanation-template.md` | 2026-01-29 | — |
 | `_templates/how-to-template.md` | 2026-01-29 | — |
 | `_templates/reference-template.md` | 2026-01-29 | — |
@@ -64,9 +54,7 @@ Older date, or none. Highest priority.
 | `how-to/tasks/disable-task-time-tracking.md` | 2026-04-28 | — |
 | `explanation/architecture/system-overview.md` | 2026-05-30 | — |
 | `explanation/comparisons/rtc-vs-file-sync.md` | 2026-05-30 | — |
-| `explanation/concepts/file-vs-db.md` | 2026-05-30 | — |
 | `how-to/content/favorites-recent.md` | 2026-05-30 | — |
-| `how-to/content/view-types.md` | 2026-05-30 | — |
 | `how-to/integrations/custom-css.md` | 2026-05-30 | — |
 | `how-to/integrations/custom-js.md` | 2026-05-30 | — |
 | `tutorials/getting-started/01-installation.md` | 2026-05-30 | — |
@@ -81,18 +69,31 @@ Older date, or none. Highest priority.
 | `explanation/architecture/block-editor.md` | 2026-09-09 | `be800f1711` |
 | `explanation/architecture/data-architecture.md` | 2026-09-09 | `be800f1711` |
 | `explanation/architecture/database-integrity.md` | 2026-09-09 | `be800f1711` |
+| `explanation/architecture/plugin-security.md` | 2026-09-09 | `be800f1711` |
 | `explanation/architecture/schema-system.md` | 2026-09-09 | `be800f1711` |
 | `explanation/concepts/bidirectional-properties.md` | 2026-09-09 | `be800f1711` |
+| `explanation/concepts/file-vs-db.md` | 2026-09-09 | `be800f1711` |
 | `explanation/concepts/tag-properties-vs-page-properties.md` | 2026-09-09 | `be800f1711` |
 | `explanation/features/how-publishing-works.md` | 2026-09-09 | `be800f1711` |
 | `explanation/security/e2ee-encryption.md` | 2026-09-09 | `be800f1711` |
+| `how-to/content/view-types.md` | 2026-09-09 | `be800f1711` |
+| `how-to/multimedia/video-embed.md` | 2026-09-09 | `be800f1711` |
 | `how-to/queries/advanced-queries.md` | 2026-09-09 | `be800f1711` |
+| `how-to/workflows/daily-workflows.md` | 2026-09-09 | `be800f1711` |
+| `how-to/workflows/research-workflow.md` | 2026-09-09 | `be800f1711` |
+| `how-to/workflows/task-management-workflows.md` | 2026-09-09 | `be800f1711` |
 | `reference/advanced/query-patterns.md` | 2026-09-09 | `be800f1711` |
 | `reference/advanced/query-system.md` | 2026-09-09 | `be800f1711` |
+| `reference/configuration/keyboard-shortcuts.md` | 2026-09-09 | `be800f1711` |
 | `reference/data/properties-reference.md` | 2026-09-09 | `be800f1711` |
 | `reference/features/calculator.md` | 2026-09-09 | `be800f1711` |
+| `reference/interface/keyboard-shortcuts.md` | 2026-09-09 | `be800f1711` |
+| `reference/plugin-apis/pr-12395/02-hosted-renderer.md` | 2026-09-09 | `be800f1711` |
+| `reference/plugin-apis/pr-12395/03-sidebar-renderer.md` | 2026-09-09 | `be800f1711` |
+| `reference/plugin-apis/pr-12395/04-app-get-current-route.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/advanced/advanced-queries-tutorial.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/advanced/custom-theme-tutorial.md` | 2026-09-09 | `be800f1711` |
+| `tutorials/advanced/workflow-automation-tutorial.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/integrations/mcp-integration.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/plugins/first-plugin.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/queries/charts-with-hiccup.md` | 2026-09-09 | `be800f1711` |
@@ -118,7 +119,6 @@ Older date, or none. Highest priority.
 | `reference/configuration/config-edn-db.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/configuration/config-edn.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/configuration/css-variables.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/configuration/keyboard-shortcuts.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/database/schema-overview.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/features/flashcards.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/features/pdf-annotations.md` | 2026-09-09 | `be800f1711` | full |
