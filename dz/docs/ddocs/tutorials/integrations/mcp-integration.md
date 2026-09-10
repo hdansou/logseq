@@ -1,36 +1,38 @@
 ---
 title: 'Model Context Protocol (MCP) Integration'
 status: 🟡 Active Development
-version: 'Since v0.10.9+'
+version: 'Desktop MCP server added 2025-09-17 (a16c89b986)'
 quadrant: 'Tutorial'
-platform: 'Desktop + CLI'
+platform: 'Desktop (Electron)'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 related-docs:
   - '[CLI Development Guide](../../reference/tools/cli-reference.md)'
   - '[Database Properties](../development/db-properties.md)'
   - '[Plugin Development](./first-plugin.md)'
-tags: ['mcp', 'ai', 'claude', 'integration', 'cli', 'api']
+tags: ['mcp', 'ai', 'claude', 'integration', 'api']
 ---
 
 # Model Context Protocol (MCP) Integration
 
-This tutorial explains how to integrate Logseq with AI assistants using the Model Context Protocol (MCP). MCP enables Claude Desktop, Cline, and other AI tools to read, search, and modify your Logseq graphs directly.
+This tutorial explains how to connect an AI assistant to Logseq using the Model Context Protocol (MCP). Logseq Desktop ships an MCP server as an optional set of routes on its built-in HTTP API server, so any MCP client that speaks the **Streamable HTTP** transport can read, search, and modify the graph you currently have open.
 
 **What You'll Learn:**
 
-- Understanding MCP and Logseq's MCP server
-- Setting up MCP with Claude Desktop
-- Available MCP tools and their capabilities
-- Using MCP from the Logseq CLI
-- Advanced MCP integration patterns
+- What Logseq's MCP server actually is, and what it is not
+- Turning it on and finding its URL
+- The six tools it exposes, with their real input schemas
+- Exercising the endpoint by hand with `curl`
+- Troubleshooting sessions, auth, and host checks
 
 **Prerequisites:**
 
-- Logseq v0.10.9+ installed
-- Node.js 18+ for CLI usage
-- Claude Desktop (for Claude integration)
-- Basic command-line knowledge
+- **Logseq Desktop (Electron).** The MCP server lives in the Electron main process (`src/electron/electron/mcp_server.cljs`) and is registered only `(when (util/electron?) ...)` in the settings UI (`src/main/frontend/components/settings.cljs:1442-1446`). There is no web or mobile equivalent.
+- A **DB graph** open in the app. Every tool is routed to the db-worker thread API (`src/main/frontend/worker/handler/cli.cljs:33-56`).
+- An MCP client that supports the Streamable HTTP transport.
 
-**Time Required:** ~20 minutes
+**Time Required:** ~15 minutes
 
 ---
 
@@ -38,10 +40,10 @@ This tutorial explains how to integrate Logseq with AI assistants using the Mode
 
 1. [Understanding MCP](#1-understanding-mcp)
 2. [MCP Architecture in Logseq](#2-mcp-architecture-in-logseq)
-3. [Setting Up MCP Server](#3-setting-up-mcp-server)
-4. [Integrating with Claude Desktop](#4-integrating-with-claude-desktop)
+3. [Enabling the MCP Server](#3-enabling-the-mcp-server)
+4. [Connecting an MCP Client](#4-connecting-an-mcp-client)
 5. [Available MCP Tools](#5-available-mcp-tools)
-6. [Using MCP from CLI](#6-using-mcp-from-cli)
+6. [Exercising the Endpoint by Hand](#6-exercising-the-endpoint-by-hand)
 7. [Advanced Usage](#7-advanced-usage)
 8. [Troubleshooting](#8-troubleshooting)
 
@@ -58,22 +60,17 @@ The **Model Context Protocol** (MCP) is an open standard for connecting AI assis
 - **Search** across datasets
 - **Execute operations** with proper validation
 
-**Key Benefits:**
+Logseq's server implements the spec revision **2025-03-26**, which the source explicitly links to (`src/electron/electron/mcp_server.cljs:17`).
 
-- ✅ **Standardized Interface:** One protocol for multiple AI tools
-- ✅ **Bidirectional:** AI can both read and write to Logseq
-- ✅ **Structured Data:** JSON-based communication with schema validation
-- ✅ **Safe Operations:** Validation and dry-run support
+### What Logseq's MCP server is *not*
 
-### MCP vs Other Integrations
+Three clarifications, because they are easy to assume otherwise:
 
-| Feature                     | MCP                        | Plugin API | CLI        |
-| --------------------------- | -------------------------- | ---------- | ---------- |
-| **AI Assistant Access**     | ✅ Yes                     | ❌ No      | ⚠️ Manual  |
-| **Bidirectional (R/W)**     | ✅ Yes                     | ✅ Yes     | ✅ Yes     |
-| **Requires Logseq Running** | ⚠️ Desktop: Yes<br>CLI: No | ✅ Yes     | ❌ No      |
-| **Real-time Updates**       | ✅ Yes (Desktop)           | ✅ Yes     | ❌ No      |
-| **Remote Access**           | ✅ HTTP mode               | ❌ No      | ⚠️ Via API |
+- **It is not a CLI subcommand.** The old ClojureScript CLI under `deps/cli` was deleted in `52398ac7aa`. The current Logseq CLI is written in OCaml under `cli/lib/`, and its command registry (`cli/lib/command_registry.ml`) contains no MCP command.
+- **It is not an npm package you install.** There is nothing to `npm install`; the server is compiled into the desktop app.
+- **It is not a stdio server.** The only transport is `StreamableHTTPServerTransport` from `@modelcontextprotocol/sdk` (`src/electron/electron/mcp_server.cljs:4`).
+
+> **Not the same thing:** Logseq's cloud sync worker also exposes an MCP endpoint (`deps/db-sync/worker/entry.mjs:41-186`), built with `openApiMcpServer` from the Logseq server API's OpenAPI spec and served at `/mcp` on the worker origin. That is a hosted service for synced graphs, with a different tool set and different auth. This tutorial covers only the desktop server.
 
 ---
 
@@ -83,452 +80,312 @@ The **Model Context Protocol** (MCP) is an open standard for connecting AI assis
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│  AI Assistant (Claude Desktop, Cline, etc.)           │
-│  ┌──────────────────────────────────────────────────┐ │
-│  │  MCP Client                                      │ │
-│  └──────────┬───────────────────────────────────────┘ │
-└─────────────┼──────────────────────────────────────────┘
-              │ MCP Protocol (JSON-RPC)
-              │ Transport: STDIO or HTTP
+│  MCP Client (Streamable HTTP)                          │
+└─────────────┬──────────────────────────────────────────┘
+              │ JSON-RPC over HTTP
+              │ POST/GET/DELETE http://<host>:<port>/mcp
+              │ Session pinned by the `mcp-session-id` header
               ▼
 ┌────────────────────────────────────────────────────────┐
-│  Logseq MCP Server                                     │
-│  ┌──────────────────────────────────────────────────┐ │
-│  │  Tools:                                          │ │
-│  │  - listPages()    - getPage()                    │ │
-│  │  - searchBlocks() - upsertNodes()                │ │
-│  │  - listTags()     - listProperties()             │ │
-│  └──────────┬───────────────────────────────────────┘ │
+│  Logseq Desktop HTTP API server (Fastify)              │
+│  src/electron/electron/server.cljs                     │
+│    preHandler: bearer-token check (:83-101)            │
+│    /api   → generic API bridge                         │
+│    /mcp   → MCP routes, only when :mcp-enabled? (:178) │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  McpServer "Logseq MCP Server" v0.1.0            │  │
+│  │  6 registered tools (mcp_server.cljs:124-215)    │  │
+│  │  listPages   getPage      upsertNodes            │  │
+│  │  searchBlocks listTags    listProperties         │  │
+│  └──────────┬───────────────────────────────────────┘  │
 └─────────────┼──────────────────────────────────────────┘
-              │
+              │ each tool calls a `logseq.*` API method
+              │ (server.cljs:105-113 → renderer)
               ▼
 ┌────────────────────────────────────────────────────────┐
-│  Data Layer                                            │
-│  ┌────────────┐        ┌────────────────────────────┐ │
-│  │  CLI Mode  │───OR───│  API Mode (Desktop)        │ │
-│  │  (Direct   │        │  (IPC to running Logseq)   │ │
-│  │   SQLite)  │        │                            │ │
-│  └────────────┘        └────────────────────────────┘ │
+│  Renderer: window.logseq.api  (src/main/logseq/api.cljs)│
+│  → db-worker thread API (worker/handler/cli.cljs)      │
+│  → the graph currently open in the app                 │
 └────────────────────────────────────────────────────────┘
 ```
 
-### Two Operating Modes
+### One mode, not two
 
-**1. CLI Mode (Standalone)**
+There is a single operating mode. The MCP routes are mounted on the app's existing HTTP API server, on the same host and port — not on a separate port and not against the SQLite file directly:
 
-- MCP server reads directly from SQLite database
-- No running Logseq instance required
-- Read-only for safety (unless `--write` flag used)
-- Best for: Bulk operations, AI analysis, background processing
+```clojure
+;; src/electron/electron/server.cljs:144-154
+(defn- initialize-mcp-routes [^js server]
+  ...
+  (.post server "/mcp" ...)
+  (.get server "/mcp" desktop-mcp-server/handle-get-request)
+  (.delete server "/mcp" desktop-mcp-server/handle-delete-request))
+```
 
-**2. API Mode (Desktop Integration)**
+Consequences worth internalising:
 
-- MCP server communicates with running Logseq app via IPC
-- Real-time updates reflected immediately in UI
-- Full read/write capabilities
-- Best for: Interactive AI assistance, live editing
+- **The app must be running.** Tools reach the graph through the renderer (`server.cljs:105-113` sends `invokeLogseqAPI` to the window; `src/main/electron/listener.cljs:104-128` dispatches it onto `window.logseq.api`).
+- **The graph is whatever is open.** No tool takes a graph path or name; every call resolves against `(state/get-current-repo)` (`src/main/logseq/api/db_based/cli.cljs:27-32`).
+- **Writes land live.** `upsertNodes` transacts through the outliner and calls `ui-handler/re-render-root!` (`src/main/logseq/api/db_based/cli.cljs:42-54`), so changes appear in the UI immediately.
+
+### Sessions
+
+`StreamableHTTPServerTransport` is created with a random session id generator, and transports are kept in an atom keyed by session id (`mcp_server.cljs:12`, `:19-42`):
+
+- A POST with **no** `mcp-session-id` header and an `initialize` body creates a new transport and returns a session id.
+- Every later POST/GET/DELETE must carry `mcp-session-id`, or the server replies `400` with `"Bad Request: No valid session ID provided"` (POST) or `"Invalid or missing session ID"` (GET/DELETE).
 
 ---
 
-## 3. Setting Up MCP Server
+## 3. Enabling the MCP Server
 
-### Desktop: Enable MCP in Settings
+### Turn on the toggle
 
-1. **Open Settings** → **Advanced**
-2. **Enable "MCP Server"** toggle
-3. **Restart Logseq**
+MCP is off by default. It is a UI toggle, not a config-file edit:
 
-The MCP server will now listen for connections from AI assistants.
+1. Open **Settings → AI**.
+2. Enable **MCP Server**.
 
-![MCP Settings](./assets/mcp-settings.png)
+The setting's own description reads: *"Enable MCP Server to allow commmunication with local AI applications. MCP Server depends on HTTP API server."* (`src/resources/dicts/en.edn:1708-1709` — the typo is in the source string).
 
-**Default Configuration:**
+Toggling it on also flips the HTTP API server on for you if it was off, then restarts the server if it was already running (`src/main/frontend/components/settings.cljs:1421-1440`). The flag is persisted as the config item `:server/mcp-enabled?` (`src/electron/electron/server.cljs:40`).
 
-- **Host:** `localhost` (127.0.0.1)
-- **Port:** `12315` (HTTP mode)
-- **Transport:** HTTP with session management
+### Find the URL
+
+Defaults come from `src/electron/electron/server.cljs:20-21`:
+
+```clojure
+(defn get-host [] (or (cfgs/get-item :server/host) "127.0.0.1"))
+(defn get-port [] (or (cfgs/get-item :server/port) 12315))
+```
+
+So the default endpoint is:
+
+```
+http://127.0.0.1:12315/mcp
+```
+
+When MCP is enabled and the server is running, the app shows that exact URL in the API-server popup with a click-to-copy affordance (`src/main/frontend/components/server.cljs:196-201`). Use the copied string verbatim — see the host check below.
+
+### Auth tokens
+
+The Fastify `preHandler` hook applies to every route except `/`, and validates the `Authorization` header against the configured token list (`src/electron/electron/server.cljs:83-101, 167`):
+
+```clojure
+(defn- validate-auth-token [token]
+  (let [token (string/replace token "Bearer " "")]
+    (when-let [valid-tokens (cfgs/get-item :server/tokens)]
+      (when (or (string/blank? token)
+                (not (some #(or (= % token) (= (:value %) token)) valid-tokens)))
+        (throw (js/Error. "Access Denied!"))))))
+```
+
+Two behaviours follow:
+
+- If you have configured **no** tokens, `when-let` short-circuits and **no authentication is enforced** on `/mcp`.
+- If you have configured tokens, every MCP request needs `Authorization: Bearer <token>`. Manage tokens from the API-server popup's token panel.
+
+### Host / DNS-rebinding check
+
+The transport is created with DNS rebinding protection and an allow-list containing exactly the configured host and port (`mcp_server.cljs:31-32`):
+
+```clojure
+{:sessionIdGenerator (comp str random-uuid)
+ :enableDnsRebindingProtection true
+ :allowedHosts #js [(str host ":" port)]}
+```
+
+With the defaults, the only accepted `Host` header is `127.0.0.1:12315`. Pointing a client at `http://localhost:12315/mcp` sends `Host: localhost:12315`, which is not on the allow-list. Use the host string the app shows you.
 
 ---
 
-### CLI: Install Logseq CLI
+## 4. Connecting an MCP Client
 
-```bash
-# Install globally via npm
-npm install -g @logseq/cli
+Any client that speaks Streamable HTTP can connect. Point it at the URL from the previous section and, if you configured tokens, give it an `Authorization: Bearer <token>` header.
 
-# Verify installation
-logseq-cli --version
+> **Unverified:** The exact configuration file, key names, and schema for a given MCP client (Claude Desktop, Cline, etc.) are properties of that client, not of Logseq, and cannot be verified from the Logseq source tree. Consult your client's own documentation for how it declares a remote Streamable HTTP server. What Logseq guarantees is only the contract described here: `POST`/`GET`/`DELETE` on `http://<host>:<port>/mcp`, Streamable HTTP, optional bearer token.
+
+Once connected, the client should list six tools. The server identifies itself as (`mcp_server.cljs:220-222`):
+
+```clojure
+(McpServer. #js {:name "Logseq MCP Server"
+                 :version "0.1.0"})
 ```
-
-**Supported Platforms:**
-
-- ✅ macOS (Intel & Apple Silicon)
-- ✅ Linux (x64, arm64)
-- ✅ Windows 10+ (x64)
-
----
-
-### CLI: Start MCP Server
-
-#### Option 1: STDIO Mode (for Claude Desktop)
-
-```bash
-# Start MCP server with stdio transport
-logseq-cli mcp-server \
-  --graph /path/to/your/graph \
-  --stdio
-```
-
-**Use Case:** Claude Desktop, Cline, other MCP clients expecting stdio
-
-#### Option 2: HTTP Mode (for remote/web access)
-
-```bash
-# Start HTTP server
-logseq-cli mcp-server \
-  --graph /path/to/your/graph \
-  --host 127.0.0.1 \
-  --port 12315
-```
-
-**Use Case:** Testing, web clients, remote AI services
-
-#### Option 3: API Mode (connect to running Logseq)
-
-```bash
-# Connect to running Logseq Desktop instance
-logseq-cli mcp-server \
-  --api-server-token YOUR_TOKEN \
-  --stdio
-```
-
-**How to get API token:**
-
-1. Open Logseq → Settings → Advanced
-2. Enable "HTTP API Server"
-3. Copy the displayed token
-
----
-
-## 4. Integrating with Claude Desktop
-
-### Step 1: Configure Claude Desktop
-
-Edit Claude's MCP configuration file:
-
-**macOS:**
-
-```bash
-nano ~/Library/Application\ Support/Claude/claude_desktop_config.json
-```
-
-**Windows:**
-
-```bash
-notepad %APPDATA%\Claude\claude_desktop_config.json
-```
-
-**Linux:**
-
-```bash
-nano ~/.config/Claude/claude_desktop_config.json
-```
-
-### Step 2: Add Logseq MCP Server
-
-```json
-{
-  "mcpServers": {
-    "logseq": {
-      "command": "logseq-cli",
-      "args": [
-        "mcp-server",
-        "--graph",
-        "/Users/yourname/Documents/logseq-graph",
-        "--stdio"
-      ]
-    }
-  }
-}
-```
-
-**⚠️ Important:** Replace `/Users/yourname/Documents/logseq-graph` with your actual graph path.
-
-**To find your graph path:**
-
-```bash
-# macOS/Linux
-ls ~/Documents/logseq-*
-
-# Or open Logseq → Graph → Show graph folder
-```
-
-### Step 3: Restart Claude Desktop
-
-Close and reopen Claude Desktop. You should see a small 🔨 hammer icon indicating MCP tools are available.
-
-![Claude with MCP](./assets/claude-mcp-enabled.png)
-
-### Step 4: Test the Integration
-
-In Claude, type:
-
-```
-List all pages in my Logseq graph
-```
-
-Claude should call the `listPages` tool and display your pages.
 
 ---
 
 ## 5. Available MCP Tools
 
+Exactly six tools are registered, from the `api-tools` map (`src/electron/electron/mcp_server.cljs:124-215`), each wired up by `create-mcp-api-server` via `.registerTool` (`:224-231`). Input schemas are declared with **zod v3** (`zod/v3` is imported at `:6` with a comment noting zod 4 is incompatible with the MCP SDK).
+
+Each tool forwards to a `logseq.*` API method, which the server resolves to a renderer call:
+
+| Tool             | Underlying API method        | Required args | Optional args |
+| ---------------- | ---------------------------- | ------------- | ------------- |
+| `listPages`      | `logseq.cli.listPages`       | —             | `expand`      |
+| `getPage`        | `logseq.cli.getPageData`     | `pageName`    | —             |
+| `searchBlocks`   | `logseq.app.search`          | `searchTerm`  | —             |
+| `listTags`       | `logseq.cli.listTags`        | —             | `expand`      |
+| `listProperties` | `logseq.cli.listProperties`  | —             | `expand`      |
+| `upsertNodes`    | `logseq.cli.upsertNodes`     | `operations`  | `dry-run`     |
+
+> **Unverified:** The exact JSON *key spelling* in tool results. Results are ClojureScript maps keyed by namespaced attributes such as `:block/title` and `:block/uuid`, converted with `clj->js` and then `JSON.stringify`d by `mcp-success-response` (`mcp_server.cljs:77-81`). The attribute names below are what the source produces; confirm the serialized key form by calling the tool once against your own graph.
+
+---
+
 ### Tool 1: `listPages`
 
-List all pages in the graph.
+**Title:** "List Pages" · **Description:** "List all pages in a graph"
 
 **Input Schema:**
 
 ```typescript
 {
-  expand?: boolean  // Include additional page details (default: false)
+  expand?: boolean // "Provide additional detail on each page"
 }
 ```
 
-**Example Usage (Claude):**
+**Result** — every non-hidden page entity, from `logseq.api.db-based.tools/list-pages` (`src/main/logseq/api/db_based/tools.cljs:87`):
 
-```
-Show me all my pages in Logseq
-```
+- Without `expand`: `:block/title` and `:block/uuid` (stringified) only.
+- With `expand: true`: `:block/uuid`, `:block/title`, `:block/created-at`, `:block/updated-at`.
 
-**Example Response:**
-
-```json
-{
-  "pages": [
-    { "name": "Project Alpha", "uuid": "..." },
-    { "name": "Daily Notes", "uuid": "..." },
-    { "name": "Reading List", "uuid": "..." }
-  ]
-}
-```
-
-**With `expand: true`:**
-
-```json
-{
-  "pages": [
-    {
-      "name": "Project Alpha",
-      "uuid": "65f2...",
-      "createdAt": 1704067200000,
-      "updatedAt": 1735689600000,
-      "properties": { "status": "active" }
-    }
-  ]
-}
-```
+The source comments why the expanded form is still narrow: *"Until there are options to limit pages, return minimal info to avoid exceeding max payload size"*. There is no paging or limit argument.
 
 ---
 
 ### Tool 2: `getPage`
 
-Get a page's content including all its blocks.
+**Title:** "Get Page" · **Description:** "Get a page's content including its blocks. A property and a tag are pages."
 
 **Input Schema:**
 
 ```typescript
 {
-  pageName: string // Page name or UUID
+  pageName: string // "The page's name or uuid"
 }
 ```
 
-**Example Usage (Claude):**
+**Result** — from `get-page-data` (`tools.cljs:74`), a map with two keys:
 
-```
-Show me the content of my "Project Alpha" page
-```
+- `:entity` — the page entity with hidden properties removed, `:block/tags` and `:block/refs` dropped, `:block/uuid` stringified.
+- `:blocks` — the page's block tree (`otree/blocks->vec-tree`), each block with hidden properties removed and `:block/children` / `:block/page` dropped.
 
-**Example Response:**
+If the page is not found, the API returns `{error: "Page \"...\" not found"}` (`src/main/logseq/api/db_based/cli.cljs:34-40`), which the MCP layer surfaces as `"API Error: ..."` text content (`mcp_server.cljs:89-97`).
 
-```json
-{
-  "page": {
-    "name": "Project Alpha",
-    "uuid": "65f2...",
-    "blocks": [
-      {
-        "uuid": "abc1...",
-        "title": "Project goals",
-        "children": [
-          { "uuid": "def2...", "title": "Goal 1: Launch MVP" },
-          { "uuid": "ghi3...", "title": "Goal 2: Reach 1000 users" }
-        ]
-      }
-    ]
-  }
-}
-```
-
-**⚠️ Note:** Properties and tags are also pages, so you can fetch them with `getPage`.
+**Note:** Properties and tags are themselves pages, so `getPage` works on them too.
 
 ---
 
 ### Tool 3: `searchBlocks`
 
-Search for blocks containing specific text.
+**Title:** "Search Blocks" · **Description:** "Search graph for blocks containing search term"
 
 **Input Schema:**
 
 ```typescript
 {
-  searchTerm: string // Text to search for
+  searchTerm: string
 }
 ```
 
-**Example Usage (Claude):**
+This is the only tool that does not go through the `logseq.cli.*` family. It calls `logseq.app.search` with snippets disabled (`mcp_server.cljs:114-116`):
 
-```
-Search my Logseq for "machine learning"
+```clojure
+(call-api-fn "logseq.app.search" [(aget args "searchTerm") #js {:enable-snippet? false}])
 ```
 
-**Example Response:**
-
-```json
-{
-  "blocks": [
-    {
-      "uuid": "abc1...",
-      "content": "Learning about machine learning models",
-      "page": 123
-    },
-    {
-      "uuid": "def2...",
-      "content": "TODO Read machine learning paper",
-      "page": 456
-    }
-  ]
-}
-```
+which is `logseq.api/search` (`src/main/logseq/api.cljs:187-193`), the same search handler the app's own search uses.
 
 ---
 
 ### Tool 4: `listTags`
 
-List all tags (classes) in the graph.
+**Title:** "List Tags" · **Description:** "List all tags in a graph"
 
 **Input Schema:**
 
 ```typescript
 {
-  expand?: boolean  // Include tag details (parents, properties)
+  expand?: boolean // "Provide additional detail on each tag e.g. their parents (extends) and tag properties"
 }
 ```
 
-**Example Usage (Claude):**
+**Result** — from `list-tags` (`tools.cljs:40`), every entity tagged `:logseq.class/Tag`:
 
-```
-What tags do I have in my graph?
-```
+- Without `expand`: `:block/title` and `:block/uuid`.
+- With `expand: true`: the whole entity minus `:block/tags`, `:block/order`, `:block/refs`, `:block/name`, with `:logseq.property.class/extends` and `:logseq.property.class/properties` mapped down to their `:db/ident`s.
 
-**Example Response (expanded):**
-
-```json
-{
-  "tags": [
-    {
-      "name": "Project",
-      "uuid": "tag1...",
-      "extends": [], // Parent tags
-      "properties": ["status", "priority"]
-    },
-    {
-      "name": "Task",
-      "uuid": "tag2...",
-      "extends": ["00000002-1282-1814-5700-000000000000"], // Built-in Task class
-      "properties": ["due-date", "assigned-to"]
-    }
-  ]
-}
-```
+Note that parents come back as **`:db/ident` keywords** (for example `:logseq.class/Task`), not as UUIDs.
 
 ---
 
 ### Tool 5: `listProperties`
 
-List all properties in the graph.
+**Title:** "List Properties" · **Description:** "List all properties in a graph"
 
 **Input Schema:**
 
 ```typescript
 {
-  expand?: boolean  // Include property schema (type, cardinality)
+  expand?: boolean // "Provide additional detail on each property e.g. property type, cardinality"
 }
 ```
 
-**Example Usage (Claude):**
+**Result** — from `list-properties` (`tools.cljs:19`), every entity tagged `:logseq.class/Property`:
 
-```
-Show me all properties in my graph
-```
-
-**Example Response (expanded):**
-
-```json
-{
-  "properties": [
-    {
-      "name": "status",
-      "uuid": "prop1...",
-      "type": "default",
-      "cardinality": "one"
-    },
-    {
-      "name": "tags",
-      "uuid": "prop2...",
-      "type": "node",
-      "cardinality": "many"
-    }
-  ]
-}
-```
+- Without `expand`: `:block/title` and `:block/uuid`.
+- With `expand: true`: the whole entity minus `:block/tags`, `:block/order`, `:block/refs`, `:block/name`, `:db/index`, `:logseq.property/default-value`, with `:logseq.property/classes` mapped to `:db/ident`s.
 
 ---
 
 ### Tool 6: `upsertNodes`
 
-Create or edit pages, blocks, tags, and properties.
+**Title:** "Upsert Nodes"
 
-**⚠️ CRITICAL:** This tool is powerful and can modify your graph. Always use `dry-run: true` first!
+The tool description opens with a hard constraint that is part of the registered schema, not editorial advice: *"This tool must be called at most once per user request. Never re-call it unless explicitly asked."*
 
-**Input Schema:**
+**Input Schema** (`mcp_server.cljs:186-196`):
 
 ```typescript
 {
   operations: Array<{
-    operation: "add" | "edit"
-    entityType: "block" | "page" | "tag" | "property"
-    id: string | null  // UUID for edit, temp ID for add
-    data: {
-      title?: string           // Block content or page name
-      "page-id"?: string       // Parent page UUID (for blocks)
-      tags?: string[]          // Tag UUIDs to apply
-      "property-type"?: string
-      "property-cardinality"?: "one" | "many"
-      ...
+    operation: 'add' | 'edit'
+    entityType: 'block' | 'page' | 'tag' | 'property'
+    id?: string | number | null   // uuid string for `edit`; a temp string for `add` when later ops reference it
+    data: {                        // passthrough object; validated server-side
+      title?: string               // page/tag/property name, or block content
+      'page-id'?: string           // required when adding a block
+      tags?: string[]              // tag uuids
+      'property-type'?: string
+      'property-cardinality'?: 'one' | 'many'
+      'property-classes'?: string[]  // uuid strings or tag names
+      'class-extends'?: string[]     // uuid strings or tag names
+      'class-properties'?: string[]  // uuid strings or property names
     }
   }>
-  "dry-run"?: boolean  // Test without committing (default: false)
+  'dry-run'?: boolean // "Pretend to do batch update. Does everything except actually commit change to db e.g. validation."
 }
 ```
 
-**Example Usage (Claude):**
+**Server-side validation** is a malli schema in `logseq.api.db-based.tools` (`tools.cljs:265-301`), and it is stricter than the zod input schema:
 
-```
-Create a new page called "Meeting Notes" with a block "Discuss Q1 goals"
+- The operation map is `{:closed true}` — unknown top-level keys are rejected.
+- `add` + `block` requires both `:title` and `:page-id`, and allows only `:tags` besides.
+- `edit` + `block` requires `:id` to be a uuid string and allows **only** `:title` in `:data`. The source comments `;; :tags not supported yet`.
+- `add` for `page` / `tag` / `property` requires `:data {:title <string>}`.
+- Every other `edit` requires `:id` to be a uuid string.
+
+**Not supported yet** — `build-upsert-nodes-edn` throws before doing anything else (`tools.cljs:333-334`):
+
+```clojure
+(when (seq (filter #(and (#{"page" "tag" "property"} (:entityType %)) (= "edit" (:operation %))) operations*))
+  (throw (ex-info "Editing a page, tag or property isn't supported yet" {})))
 ```
 
-**MCP Tool Call:**
+So `edit` works on **blocks only**.
+
+**Example call:**
 
 ```json
 {
@@ -542,108 +399,108 @@ Create a new page called "Meeting Notes" with a block "Discuss Q1 goals"
     {
       "operation": "add",
       "entityType": "block",
-      "id": null,
       "data": {
         "page-id": "temp-meeting-notes",
         "title": "Discuss Q1 goals"
       }
     }
   ],
-  "dry-run": false
+  "dry-run": true
 }
 ```
 
-**⚠️ Best Practices:**
+**Result** — a one-line summary string, not the created nodes (`src/main/logseq/api/db_based/util.cljs:12-24`):
 
-1. Always use `"dry-run": true` first to validate
-2. Use `getPage` before `upsertNodes` to check existence
-3. Use temporary IDs (e.g., `"temp-inbox"`) for references
-4. Only call once per user request (not in loops)
+```
+Dry run: Added: {:page 1, :block 1}.
+```
+
+**Best practices** (the first three come from the tool's own description text):
+
+1. Check existence with `getPage` before creating a page, tag, or property.
+2. Use a temporary string `id` for a new node that later operations reference.
+3. Call the tool at most once per user request.
+4. Run with `"dry-run": true` first — validation still runs, but nothing is committed.
 
 ---
 
-## 6. Using MCP from CLI
+## 6. Exercising the Endpoint by Hand
 
-### Debug Individual Tools
+Everything below assumes the defaults (`127.0.0.1:12315`) and no configured tokens. Add `-H "Authorization: Bearer <token>"` to every request if you have tokens configured.
 
-The `--debug-tool` flag lets you test MCP tools without starting the server:
+### Step 1: Initialize and capture the session id
 
-```bash
-# List all pages
-logseq-cli mcp-server \
-  --graph /path/to/graph \
-  --debug-tool listPages
-
-# Get specific page
-logseq-cli mcp-server \
-  --graph /path/to/graph \
-  --debug-tool getPage \
-  --pageName "Project Alpha"
-
-# Search blocks
-logseq-cli mcp-server \
-  --graph /path/to/graph \
-  --debug-tool searchBlocks \
-  --searchTerm "TODO"
-```
-
-**Output Format:** JSON (can be piped to `jq` for processing)
+The Streamable HTTP transport requires the client to accept both JSON and SSE, so send both media types in `Accept`. Use `-D -` (or `-i`) so you can read the `mcp-session-id` response header:
 
 ```bash
-# Pretty-print with jq
-logseq-cli mcp-server \
-  --graph ~/logseq \
-  --debug-tool listPages | jq .
-```
-
----
-
-### Dry-Run Node Upserts
-
-Test `upsertNodes` operations without modifying the database:
-
-```bash
-# Test creating a page (JSON input)
-echo '{"operations":[{"operation":"add","entityType":"page","id":"temp-test","data":{"title":"Test Page"}}],"dry-run":true}' | \
-logseq-cli mcp-server \
-  --graph ~/logseq \
-  --debug-tool upsertNodes
-```
-
-**Expected Response:**
-
-```json
-{
-  "result": "Success (dry-run, no changes committed)",
-  "operations": [...]
-}
-```
-
----
-
-### HTTP Mode Testing
-
-Start HTTP server and test with `curl`:
-
-```bash
-# Terminal 1: Start server
-logseq-cli mcp-server \
-  --graph ~/logseq \
-  --host 127.0.0.1 \
-  --port 12315
-
-# Terminal 2: Test with curl
-curl -X POST http://127.0.0.1:12315/mcp \
-  -H "Content-Type: application/json" \
+curl -sS -D - http://127.0.0.1:12315/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
   -d '{
     "jsonrpc": "2.0",
+    "id": 1,
     "method": "initialize",
     "params": {
       "protocolVersion": "2025-03-26",
       "capabilities": {},
-      "clientInfo": { "name": "test-client", "version": "1.0.0" }
-    },
-    "id": 1
+      "clientInfo": { "name": "curl", "version": "1.0.0" }
+    }
+  }'
+```
+
+The response headers carry `mcp-session-id`. The Electron main-process console also logs `Initialize sessionId <id>` (`mcp_server.cljs:40`).
+
+### Step 2: List the tools
+
+```bash
+SID=<paste the mcp-session-id>
+
+curl -sS http://127.0.0.1:12315/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H "mcp-session-id: $SID" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+```
+
+You should see the six tools from section 5.
+
+### Step 3: Call a tool
+
+```bash
+curl -sS http://127.0.0.1:12315/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H "mcp-session-id: $SID" \
+  -d '{
+    "jsonrpc":"2.0","id":3,"method":"tools/call",
+    "params":{"name":"listPages","arguments":{"expand":true}}
+  }'
+```
+
+### Step 4: Close the session
+
+```bash
+curl -sS -X DELETE http://127.0.0.1:12315/mcp \
+  -H "mcp-session-id: $SID"
+```
+
+The server closes the transport and replies `{"ok":true}` (`mcp_server.cljs:62-70`).
+
+### Dry-running a write
+
+`dry-run` runs the full build-and-validate path and skips only the transaction (`src/main/logseq/api/db_based/cli.cljs:42-54`):
+
+```bash
+curl -sS http://127.0.0.1:12315/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -H "mcp-session-id: $SID" \
+  -d '{
+    "jsonrpc":"2.0","id":4,"method":"tools/call",
+    "params":{"name":"upsertNodes","arguments":{
+      "operations":[{"operation":"add","entityType":"page","id":"temp-test",
+                     "data":{"title":"Test Page"}}],
+      "dry-run":true}}
   }'
 ```
 
@@ -651,221 +508,112 @@ curl -X POST http://127.0.0.1:12315/mcp \
 
 ## 7. Advanced Usage
 
-### Use Case 1: AI-Powered Page Summaries
+### Use Case 1: Summarise a set of pages
 
-**Prompt to Claude:**
-
-```
-Summarize all pages with the "Project" tag in my Logseq graph
-```
-
-**What Claude Does:**
-
-1. Calls `listPages` to get all pages
-2. Filters pages with `tag: Project`
-3. Calls `getPage` for each project page
-4. Generates summaries and presents them
-
----
-
-### Use Case 2: Bulk Task Creation
-
-**Prompt to Claude:**
+**Prompt:**
 
 ```
-Create a page called "Q1 Goals" with these tasks:
-- Launch MVP
-- Reach 1000 users
-- Improve onboarding
+Summarize the pages tagged Project in my Logseq graph
 ```
 
-**What Claude Does:**
+**What the assistant can do with the available tools:**
 
-1. Calls `getPage("Q1 Goals")` to check if it exists
-2. If not found, calls `upsertNodes` with operations:
-   - Create page "Q1 Goals"
-   - Add 3 blocks with TODO markers
-   - Apply Task tag to each block
+1. `listTags(expand: true)` to find the `Project` tag and its uuid.
+2. `getPage("Project")` — a tag *is* a page, so this returns the tag's own page.
+3. `getPage(...)` per page of interest.
 
----
+Note the limitation honestly: there is **no** "list objects of a tag" tool, so a client cannot enumerate a tag's members in one call. It has to work from `listPages` plus per-page fetches, or from `searchBlocks`.
 
-### Use Case 3: Graph Analysis
+### Use Case 2: Create a page with blocks
 
-**Prompt to Claude:**
+**Prompt:**
 
 ```
-Analyze my Logseq graph and tell me:
-- How many pages I have
-- My most common tags
-- How many TODO items are incomplete
+Create a page called "Q1 Goals" with three blocks
 ```
 
-**What Claude Does:**
+1. `getPage("Q1 Goals")` to check existence.
+2. `upsertNodes` with `dry-run: true` — one `add`/`page` operation carrying a temp `id`, then three `add`/`block` operations whose `data.page-id` is that temp id.
+3. Re-run with `dry-run` omitted.
 
-1. Calls `listPages` and counts
-2. Calls `listTags(expand: true)` for tag statistics
-3. Calls `searchBlocks("TODO")` to find incomplete tasks
-4. Presents analysis with insights
+To tag the blocks, pass `data.tags` as an array of **tag uuid strings** (the malli schema requires uuid strings, `tools.cljs:276`). The built-in Task class uuid used in the tool's own worked example is `00000002-1282-1814-5700-000000000000`.
+
+### Use Case 3: Graph inventory
+
+1. `listPages` and count.
+2. `listTags(expand: true)` and `listProperties(expand: true)` for the schema shape.
+3. `searchBlocks(...)` for text-level questions.
+
+> **Careful with task queries.** In a DB graph there are no `TODO`/`DOING` markers to search for. Task state is the closed-value property `:logseq.property/status`, whose values are the idents `:logseq.property/status.backlog`, `.todo`, `.doing`, `.in-review`, `.done`, `.canceled` (`deps/db/src/logseq/db/frontend/property.cljs:300-318`). `searchBlocks("TODO")` will not find open tasks.
 
 ---
 
 ## 8. Troubleshooting
 
-### Issue: MCP Tools Not Appearing in Claude
+### The client sees no tools, or cannot connect
 
-**Symptoms:** No 🔨 hammer icon in Claude Desktop
+1. **Is the toggle on?** Settings → AI → MCP Server. The routes are only registered when `:mcp-enabled?` is true at server start (`server.cljs:178-179`).
+2. **Is the HTTP server running?** MCP depends on it. Toggling MCP on enables it, but if you had already started/stopped the server you may need to restart it from the API-server popup.
+3. **Did you restart the server after toggling?** `initialize-mcp-routes` runs inside `start!`, so the routes only appear on a (re)start (`server.cljs:156-183`).
+4. **Check the main-process console.** Successful wiring logs `[server] MCP routes initialized` (`server.cljs:149`).
 
-**Solutions:**
+### `400 Bad Request: No valid session ID provided`
 
-1. **Check CLI installation:**
+You sent a non-`initialize` POST without an `mcp-session-id` header, or with a session id the server no longer holds. Re-run `initialize` and use the fresh id. Transports are dropped from the atom when they close (`mcp_server.cljs:34-37`).
 
-```bash
-which logseq-cli
-logseq-cli --version
-```
+### `400 Invalid or missing session ID` on GET/DELETE
 
-2. **Verify config path:**
+Same cause, on the GET (SSE stream) and DELETE (close) routes (`mcp_server.cljs:54-70`).
 
-```bash
-# macOS
-cat ~/Library/Application\ Support/Claude/claude_desktop_config.json
-```
+### `401` on every request
 
-3. **Test MCP server manually:**
+Tokens are configured and your `Authorization` header is missing or wrong (`server.cljs:83-101`). Copy a token from the API-server popup's token panel and send `Authorization: Bearer <token>`.
 
-```bash
-logseq-cli mcp-server --graph ~/logseq --stdio
-# Should wait for input (don't see errors)
-```
+### Requests rejected on host grounds
 
-4. **Check Claude logs:**
+DNS rebinding protection allows exactly `"<host>:<port>"` (`mcp_server.cljs:31-32`). If you configured the host as `127.0.0.1`, a client using `localhost` will be rejected. Either use the URL the app copies for you, or change `:server/host` to match what your client sends.
 
-```bash
-# macOS
-tail -f ~/Library/Logs/Claude/mcp*.log
-```
+### `"This endpoint must be called on a DB graph"` or empty results
 
----
+The tools resolve against the graph currently open in the desktop app. Open the DB graph you mean to query before calling.
 
-### Issue: "Graph not found" Error
+### An `upsertNodes` call fails validation
 
-**Symptoms:** MCP server fails to start with "Graph does not exist"
+Read the message: the malli explainer is humanized into the error text (`tools.cljs:343-345`), so it names the offending key. Common causes:
 
-**Solutions:**
-
-1. **Verify graph path:**
-
-```bash
-ls /path/to/your/graph
-# Should show: logseq/ pages/ etc.
-```
-
-2. **Use absolute paths (not ~):**
-
-```json
-{
-  "args": ["--graph", "/Users/yourname/Documents/logseq", "--stdio"]
-}
-```
-
-3. **Check graph is database-based:**
-
-```bash
-ls /path/to/graph/logseq/graphs-txid
-# Should exist for DB graphs
-```
-
----
-
-### Issue: "Permission Denied" on SQLite
-
-**Symptoms:** `SQLITE_CANTOPEN` error in CLI mode
-
-**Solutions:**
-
-```bash
-# Check file permissions
-ls -la /path/to/graph/logseq/graphs-txid/*.db
-
-# Fix permissions
-chmod 644 /path/to/graph/logseq/graphs-txid/*.db
-```
-
----
-
-### Issue: Stale Data in CLI Mode
-
-**Symptoms:** CLI mode shows outdated data while Logseq is running
-
-**Explanation:** CLI reads directly from SQLite, which may not reflect in-memory changes.
-
-**Solution:** Use API mode instead:
-
-```bash
-logseq-cli mcp-server \
-  --api-server-token YOUR_TOKEN \
-  --stdio
-```
-
----
-
-### Issue: HTTP Mode Session Errors
-
-**Symptoms:** "Invalid or missing session ID" in HTTP mode
-
-**Solutions:**
-
-1. **Initialize properly:**
-
-```bash
-# Send initialize request first
-curl -X POST http://localhost:12315/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"initialize",...}'
-```
-
-2. **Store and reuse session ID:**
-
-```bash
-# Extract mcp-session-id from response headers
-# Include in subsequent requests
-```
-
-3. **Check DNS rebinding protection:**
-
-```javascript
-// Server config includes:
-allowedHosts: ['localhost:12315']
-```
+- Editing a page, tag, or property — not supported yet (`tools.cljs:333-334`).
+- Passing `:tags` to an `edit` + `block` operation — the `:data` map is closed to `:title` only.
+- Passing a tag by name where a uuid string is required.
+- Adding a block without `data.page-id`.
 
 ---
 
 ## Next Steps
 
-**Congratulations!** You've integrated Logseq with AI assistants via MCP. 🎉
+You now have an AI client talking to your live Logseq graph.
 
 ### Continue Learning:
 
-1. **[CLI Development Guide](../../reference/tools/cli-reference.md)** - Full CLI reference
-2. **[Database Properties](../development/db-properties.md)** - DB schema for upsertNodes
-3. **[Plugin Development](./first-plugin.md)** - Build custom integrations
+1. **[CLI Development Guide](../../reference/tools/cli-reference.md)** - The OCaml CLI (separate from MCP)
+2. **[Database Properties](../development/db-properties.md)** - DB schema behind `upsertNodes`
+3. **[Plugin Development](./first-plugin.md)** - Build in-app integrations
 4. **[MCP Specification](https://modelcontextprotocol.io)** - Official MCP docs
 
-### Explore Advanced Topics:
+### Where to look in the source:
 
-- **Custom MCP Tools:** Extend Logseq's MCP server with custom tools
-- **Multi-Graph Support:** Connect multiple graphs to Claude
-- **Webhook Integration:** Trigger MCP operations from external events
-- **AI Workflows:** Automate complex graph operations with AI
+- `src/electron/electron/mcp_server.cljs` — transport, tool registry, tool descriptions
+- `src/electron/electron/server.cljs` — route mounting, auth, host/port
+- `src/main/logseq/api/db_based/cli.cljs` — the `logseq.cli.*` API methods
+- `src/main/logseq/api/db_based/tools.cljs` — result shapes and `upsertNodes` validation
+- `src/main/frontend/components/settings.cljs` — the settings toggle
 
 ---
 
 ## Additional Resources
 
 - **MCP Specification:** https://modelcontextprotocol.io
-- **Logseq CLI Source:** https://github.com/logseq/logseq/tree/master/deps/cli
-- **Claude Desktop:** https://claude.ai/download
-- **Cline (MCP Client):** https://github.com/clinebot/cline
+- **Logseq source:** https://github.com/logseq/logseq
+- **Cline (MCP Client):** https://github.com/cline/cline
 
 ---
 

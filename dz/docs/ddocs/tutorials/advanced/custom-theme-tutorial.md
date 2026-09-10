@@ -1,9 +1,12 @@
 ---
 title: 'Build a Custom Theme'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'Logseq DB (shui/radix token era)'
 quadrant: 'Tutorial'
 platform: 'Desktop + Mobile'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 related-docs:
   - '[Custom CSS Guide](../../how-to/customization/custom-css.md)'
   - '[Theme Development](../../developer/theme-development.md)'
@@ -62,7 +65,8 @@ mkdir logseq-theme-modern
 cd logseq-theme-modern
 
 # Create required files
-touch custom.css
+mkdir themes
+touch themes/light.css themes/dark.css
 touch package.json
 touch README.md
 touch LICENSE
@@ -79,22 +83,21 @@ Create `package.json`:
   "description": "A modern, clean theme for Logseq",
   "author": "Your Name",
   "license": "MIT",
+  "effect": true,
   "logseq": {
     "id": "logseq-theme-modern",
     "title": "Modern Theme",
-    "icon": "🎨",
-    "description": "A modern, clean theme for Logseq",
-    "effect": true,
+    "icon": "./icon.png",
     "themes": [
       {
         "name": "Modern Light",
-        "url": "./custom.css",
+        "url": "./themes/light.css",
         "description": "Light mode theme",
         "mode": "light"
       },
       {
         "name": "Modern Dark",
-        "url": "./custom.css",
+        "url": "./themes/dark.css",
         "description": "Dark mode theme",
         "mode": "dark"
       }
@@ -103,16 +106,27 @@ Create `package.json`:
 }
 ```
 
+Three things in that manifest are easy to get wrong:
+
+- **`effect` belongs at the top level, not inside `logseq`.** `LSPluginPkgConfig` (`libs/src/LSPlugin.ts:69-85`) has no `effect` key. It is picked from the package root by the "Pick legal attrs" list in `libs/src/LSPlugin.core.ts:696-711`, and marketplace installs write it onto the package root (`src/electron/electron/plugin.cljs:167`). A `logseq.effect` is silently ignored. (The in-repo guide `libs/guides/custom_theme_guide.md` shows it inside `logseq`; that is a defect in that guide.)
+- **`icon` is a resource path, not an emoji.** It is resolved through `_resolveResourceFullUrl` (`libs/src/LSPlugin.core.ts:739`).
+- **Ship one CSS file per mode.** The theme picker filters by `mode` against the app's current light/dark state (`src/main/frontend/components/plugins.cljs:94-96`). Themes with `mode` omitted are grouped as "light and dark" instead (`:98-101`). Pointing both entries at the same file means the dark entry ships light values.
+
+Declaring `logseq.themes` is what marks the package as a theme: `this._options.theme = Boolean(logseq.theme || !!logseq.themes)` (`libs/src/LSPlugin.core.ts:740`).
+
 **Step 3: Development Setup**
 
 Install in Logseq:
 
 ```markdown
-1. Open Logseq
-2. Go to Settings → Plugins → Load unpacked plugin
-3. Select your theme directory
-4. Enable the theme
+1. Open Logseq Desktop
+2. Settings → Advanced → enable Developer mode
+3. Open the Plugins dashboard (`t p`)
+4. Click "Load unpacked plugin" and select your theme directory
+5. Pick your theme from the Themes list
 ```
+
+Developer mode is `developer-mode-row` (`src/main/frontend/components/settings.cljs:568-575`); `t p` is bound to `:ui/goto-plugins` (`src/main/frontend/modules/shortcut/config.cljs:464-466`); the button comes from the string `:plugin/load-unpacked` (`src/resources/dicts/en.edn:1264`, rendered at `src/main/frontend/components/plugins.cljs:833-837`). The Themes list is the `installed-themes` dialog (`src/main/frontend/components/plugins.cljs:79-124`).
 
 ---
 
@@ -124,22 +138,27 @@ Install in Logseq:
 
 ```
 logseq-theme-modern/
-├── custom.css          # Main theme styles
-├── package.json        # Theme configuration
+├── themes/
+│   ├── light.css      # Registered as mode "light"
+│   └── dark.css       # Registered as mode "dark"
+├── package.json       # Theme configuration
+├── icon.png           # Referenced by logseq.icon
 ├── README.md          # Documentation
 ├── LICENSE            # License file
 ├── screenshots/       # Preview images
 │   ├── light-mode.png
 │   └── dark-mode.png
-├── src/              # Optional: source files
+├── src/               # Optional: source files you build into themes/
 │   ├── _variables.css
 │   ├── _typography.css
 │   ├── _components.css
 │   └── _layout.css
-└── .github/          # GitHub metadata
+└── .github/           # GitHub metadata
     └── workflows/
         └── release.yml
 ```
+
+Selecting a theme ejects the previously injected one and appends a `<link rel="stylesheet">` to `document.head` (`injectTheme`, `libs/src/common.ts:595-610`, called from `selectTheme`, `libs/src/LSPlugin.core.ts:1858-1884`). Because it lands after all app CSS, equal-specificity rules in your file win. Relative URLs inside it (fonts, images) resolve relative to the CSS file, so package your assets alongside it.
 
 ### Design System Document
 
@@ -183,9 +202,39 @@ Create `DESIGN.md`:
 
 ### CSS Variables Setup
 
+Logseq's UI reads **three** families of custom properties, and a theme that sets only the first will look half-finished:
+
+| Family        | Where it lives                                          | Format                          |
+| ------------- | ------------------------------------------------------- | ------------------------------- |
+| `--ls-*`      | Logseq's own semantic variables                          | Any CSS color                   |
+| shui/Tailwind | `--background`, `--foreground`, `--border`, `--primary`… | **Space-separated HSL channels** |
+| `--lx-*`      | The active neutral/accent scales (`--lx-gray-01…12`, `--lx-accent-01…12`) | Any CSS color |
+
+`src/main/frontend/common.css:33-34` shows all three in one declaration, with the fallback chain the app relies on:
+
+```css
+body {
+  color: var(--lx-gray-12, var(--ls-primary-text-color, hsl(var(--foreground))));
+  background-color: var(--lx-gray-01, var(--ls-primary-background-color, hsl(var(--background))));
+}
+```
+
+Note `hsl(var(--foreground))` — shui tokens are consumed *inside* `hsl()`, so you must write channels (`210 40% 96%`), never a full color. Writing `--primary: hsl(199 89% 48%)` produces `hsl(hsl(...))` and silently fails.
+
+**Which selector to scope to.** `frontend.components.theme` sets `data-theme` on the document element and maintains compatibility classes on `body` (`src/main/frontend/components/theme.cljs:52-56`):
+
+```clojure
+(.setAttribute doc "data-theme" theme)
+...
+(do (.add cls "dark") (doto cls-body (.remove "white-theme" "light-theme") (.add "dark-theme")))
+(do (.remove cls "dark") (doto cls-body (.remove "dark-theme") (.add "white-theme" "light-theme")))
+```
+
+So `html[data-theme='light'|'dark']` is the hook to use; `.white-theme` / `.light-theme` / `.dark-theme` are **body** classes kept for backward compatibility (the source comment points at logseq/logseq#4652). Do not write `.white-theme, html[data-theme='light'] { ... }` as one rule — they match different elements, and variables declared on `body` will not be visible to rules that resolve them on `html`.
+
 **Step 1: Define Color Palette**
 
-In `custom.css`:
+In `themes/light.css`:
 
 ```css
 /* ============================
@@ -193,8 +242,8 @@ In `custom.css`:
    ============================ */
 
 /* Light Mode Variables */
-.white-theme,
 html[data-theme='light'] {
+  color-scheme: light;
   /* Primary Colors */
   --ls-primary-background-color: #ffffff;
   --ls-secondary-background-color: #f7fafc;
@@ -224,18 +273,42 @@ html[data-theme='light'] {
   --ls-tag-text-color: #2c5282;
   --ls-tag-text-hover-color: #1a365d;
 
-  /* Code Colors */
-  --ls-codeblock-background-color: #f7fafc;
-  --ls-code-text-color: #2d3748;
+  /* Inline code (these are the real variable names) */
+  --ls-page-inline-code-bg-color: #f7fafc;
+  --ls-page-inline-code-color: #2d3748;
 
   /* Scrollbar */
   --ls-scrollbar-background-color: #edf2f7;
+  --ls-scrollbar-foreground-color: rgb(15 23 42 / 0.12);
   --ls-scrollbar-thumb-hover-color: #a0aec0;
-}
 
+  /* shui/Tailwind tokens — HSL channels, no hsl() wrapper */
+  --background: 0 0% 100%;
+  --foreground: 222 47% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  --primary: 211 61% 43%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222 47% 11%;
+  --muted: 210 40% 96%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 211 61% 43%;
+  --accent: 211 61% 43%;
+  --accent-foreground: 0 0% 100%;
+}
+```
+
+In `themes/dark.css`:
+
+```css
 /* Dark Mode Variables */
-.dark-theme,
 html[data-theme='dark'] {
+  color-scheme: dark;
+
   /* Primary Colors */
   --ls-primary-background-color: #1a202c;
   --ls-secondary-background-color: #2d3748;
@@ -265,15 +338,62 @@ html[data-theme='dark'] {
   --ls-tag-text-color: #90cdf4;
   --ls-tag-text-hover-color: #bee3f8;
 
-  /* Code Colors */
-  --ls-codeblock-background-color: #2d3748;
-  --ls-code-text-color: #e2e8f0;
+  /* Inline code */
+  --ls-page-inline-code-bg-color: #2d3748;
+  --ls-page-inline-code-color: #e2e8f0;
 
   /* Scrollbar */
   --ls-scrollbar-background-color: #2d3748;
+  --ls-scrollbar-foreground-color: rgb(148 163 184 / 0.35);
   --ls-scrollbar-thumb-hover-color: #4a5568;
+
+  /* shui/Tailwind tokens — HSL channels */
+  --background: 222 47% 11%;
+  --foreground: 210 40% 96%;
+  --card: 222 47% 13%;
+  --card-foreground: 210 40% 96%;
+  --popover: 222 47% 10%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 205 78% 66%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 33% 18%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 217 33% 16%;
+  --border: 217 33% 24%;
+  --input: 217 33% 24%;
+  --ring: 205 78% 66%;
+  --accent: 205 78% 66%;
+  --accent-foreground: 222 47% 11%;
 }
 ```
+
+**Step 1b: Map the `--lx-*` scales**
+
+Newer shui-heavy UI reads the active neutral and accent scales rather than `--ls-*`. If your theme is a complete palette, map them too, or menus, popovers, and the command palette will keep the stock neutrals:
+
+```css
+html[data-theme='dark'] {
+  --lx-gray-01: #1a202c;
+  --lx-gray-02: #1f2733;
+  --lx-gray-03: #2d3748;
+  --lx-gray-04: #374151;
+  --lx-gray-05: #4a5568;
+  --lx-gray-06: #5a6478;
+  --lx-gray-07: #718096;
+  --lx-gray-08: #94a3b8;
+  --lx-gray-09: #a0aec0;
+  --lx-gray-10: #cbd5e0;
+  --lx-gray-11: #e2e8f0;
+  --lx-gray-12: #f7fafc;
+
+  --lx-accent-09: #3182ce;
+  --lx-accent-10: #2b6cb0;
+  --lx-accent-11: #63b3ed;
+  --lx-accent-12: #ebf8ff;
+}
+```
+
+The scales themselves are defined by the accent palettes in `src/main/frontend/shui/colors.css`, selected by `html[data-color=...]`, over Radix raw palettes (`--rx-*`) in `src/main/frontend/shui/radix.css` and `radix-hsl.css`. Semantic `--ls-*` defaults and layout variables live in `src/main/frontend/shui/vars-classic.css`.
 
 **Step 2: Semantic Color Tokens**
 
@@ -302,47 +422,33 @@ Add semantic naming:
 }
 ```
 
-**Step 3: Apply to Markers**
+**Step 3: Apply to Tasks and Checkboxes**
+
+> **DB graphs have no `TODO` / `DOING` / `DONE` markers.** Task state is the closed-value property `:logseq.property/status`, whose values are the idents `:logseq.property/status.backlog`, `.todo`, `.doing`, `.in-review`, `.done`, `.canceled` (`deps/db/src/logseq/db/frontend/property.cljs:300-318`). It is declared with `:ui-position :block-left`, so it renders through `block-positioned-properties` (`src/main/frontend/components/block.cljs:1285`), as a property value with a tabler icon — not as a text marker.
+>
+> `.block-marker` and `.marker-switch` still exist in `src/main/frontend/components/block.css:945-958`, but nothing in the ClojureScript renders them any more; they are file-graph leftovers. There is also no `data-ref="TODO"` attribute: `data-ref` is set to a page name on page references (`src/main/frontend/components/block.cljs:804`) and to a uuid-or-title on block references (`:1275`) — never to a marker keyword. Any theme rule keyed on `[data-ref='TODO']` is dead CSS.
+
+Style the checkbox and the property surfaces instead:
 
 ```css
-/* Task Markers */
-.form-checkbox {
+/* Markdown task checkboxes / radios */
+.form-checkbox,
+.form-radio {
   border-radius: 4px;
   border-width: 2px;
 }
+```
 
-/* TODO Marker */
-.marker-switch[data-ref='TODO'],
-a.tag[data-ref='TODO'] {
-  color: var(--color-todo) !important;
-  background-color: transparent;
-  border: 2px solid var(--color-todo);
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-}
+`.form-checkbox` and `.form-radio` are styled in `src/main/frontend/components/theme.css:56-59` and driven by `--ls-page-checkbox-color` and `--ls-page-checkbox-border-color`, so prefer setting those variables:
 
-/* DOING Marker */
-.marker-switch[data-ref='DOING'],
-a.tag[data-ref='DOING'] {
-  color: var(--color-doing) !important;
-  background-color: var(--color-doing);
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-}
-
-/* DONE Marker */
-.marker-switch[data-ref='DONE'],
-a.tag[data-ref='DONE'] {
-  color: var(--color-success) !important;
-  background-color: transparent;
-  border: 2px solid var(--color-success);
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-weight: 600;
+```css
+html[data-theme='light'] {
+  --ls-page-checkbox-color: #718096;
+  --ls-page-checkbox-border-color: #cbd5e0;
 }
 ```
+
+For the status chip itself, target the positioned-property surfaces described under [Component Styling](#component-styling) — `.ls-properties-area`, `.property-pair`, `.property-value-content` — rather than inventing marker selectors.
 
 ---
 
@@ -350,45 +456,64 @@ a.tag[data-ref='DONE'] {
 
 ### Font System
 
-**Step 1: Import Fonts**
+**Step 1: Know which typography variables Logseq actually reads**
+
+Only these exist in the app's CSS. Verify any `--ls-*` name you are about to use with `git grep -n -- '--ls-' -- '**/*.css'` before relying on it:
+
+| Variable                                              | What it controls                                             |
+| ----------------------------------------------------- | ------------------------------------------------------------ |
+| `--ls-font-family`                                     | Global app font (`src/main/frontend/common.css:17-21`)        |
+| `--ls-page-text-size`                                  | Base page text size                                           |
+| `--ls-page-title-size`, `--ls-page-title-line-height`  | Page title                                                    |
+| `--ls-main-content-max-width`, `--ls-main-content-max-width-wide` | Content column width                              |
+| `--ls-mobile-font-size`, `--ls-mobile-font-scale`      | Mobile text sizing                                            |
+| `--ls-page-inline-code-color`, `--ls-page-inline-code-bg-color` | Inline code                                        |
+
+> **There is no Logseq-provided type scale.** Names of the shape `--ls-font-size-*`, `--ls-font-weight-*`, `--ls-line-height-*` and `--ls-code-font-family` do **not** exist anywhere in the app's stylesheets — the full set of `--ls-*` variables at `be800f1711` is 114 names, and none of those are among them. Defining them under an `--ls-` prefix is harmless but misleading: nothing in Logseq consumes them, and the prefix implies otherwise. Use your own namespace for private tokens — this tutorial uses `--mt-*` ("modern theme") below.
+
+**Step 2: Import Fonts and Declare Private Tokens**
 
 ```css
-/* Import Google Fonts */
+/* Import Google Fonts.
+   Remote @import blocks first paint and fails offline; prefer bundling
+   the .woff2 files with the theme and using @font-face. */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-/* Font Variables */
-:root {
-  /* Font Families */
+html[data-theme='light'],
+html[data-theme='dark'] {
+  /* --- Logseq variables (the app reads these) --- */
   --ls-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Helvetica Neue', Arial, sans-serif;
-  --ls-code-font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco,
+  --ls-page-text-size: 0.9375rem; /* 15px */
+
+  /* --- Private theme tokens (only this stylesheet reads these) --- */
+  --mt-code-font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco,
     'Courier New', monospace;
 
-  /* Font Sizes */
-  --ls-font-size-xs: 0.75rem; /* 12px */
-  --ls-font-size-sm: 0.875rem; /* 14px */
-  --ls-font-size-base: 0.9375rem; /* 15px */
-  --ls-font-size-md: 1rem; /* 16px */
-  --ls-font-size-lg: 1.125rem; /* 18px */
-  --ls-font-size-xl: 1.25rem; /* 20px */
-  --ls-font-size-2xl: 1.5rem; /* 24px */
-  --ls-font-size-3xl: 1.875rem; /* 30px */
-  --ls-font-size-4xl: 2.25rem; /* 36px */
+  --mt-font-size-xs: 0.75rem; /* 12px */
+  --mt-font-size-sm: 0.875rem; /* 14px */
+  --mt-font-size-base: 0.9375rem; /* 15px */
+  --mt-font-size-md: 1rem; /* 16px */
+  --mt-font-size-lg: 1.125rem; /* 18px */
+  --mt-font-size-xl: 1.25rem; /* 20px */
+  --mt-font-size-2xl: 1.5rem; /* 24px */
+  --mt-font-size-3xl: 1.875rem; /* 30px */
+  --mt-font-size-4xl: 2.25rem; /* 36px */
 
-  /* Line Heights */
-  --ls-line-height-tight: 1.4;
-  --ls-line-height-base: 1.6;
-  --ls-line-height-relaxed: 1.8;
+  --mt-line-height-tight: 1.4;
+  --mt-line-height-base: 1.6;
+  --mt-line-height-relaxed: 1.8;
 
-  /* Font Weights */
-  --ls-font-weight-light: 300;
-  --ls-font-weight-normal: 400;
-  --ls-font-weight-medium: 500;
-  --ls-font-weight-semibold: 600;
-  --ls-font-weight-bold: 700;
+  --mt-font-weight-light: 300;
+  --mt-font-weight-normal: 400;
+  --mt-font-weight-medium: 500;
+  --mt-font-weight-semibold: 600;
+  --mt-font-weight-bold: 700;
 }
 ```
+
+> The app also exposes `html[data-font='serif'|'mono']` and `html[data-font-global='true']` from the user's own font preference. Avoid fighting those unless your theme deliberately owns typography.
 
 **Step 2: Apply Typography**
 
@@ -396,9 +521,9 @@ a.tag[data-ref='DONE'] {
 /* Base Typography */
 body {
   font-family: var(--ls-font-family);
-  font-size: var(--ls-font-size-base);
-  line-height: var(--ls-line-height-base);
-  font-weight: var(--ls-font-weight-normal);
+  font-size: var(--mt-font-size-base);
+  line-height: var(--mt-line-height-base);
+  font-weight: var(--mt-font-weight-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -407,44 +532,44 @@ body {
 h1.title,
 h1,
 .text-xl {
-  font-size: var(--ls-font-size-4xl);
-  font-weight: var(--ls-font-weight-bold);
-  line-height: var(--ls-line-height-tight);
+  font-size: var(--mt-font-size-4xl);
+  font-weight: var(--mt-font-weight-bold);
+  line-height: var(--mt-line-height-tight);
   margin-top: 2rem;
   margin-bottom: 1rem;
 }
 
 h2,
 .text-lg {
-  font-size: var(--ls-font-size-3xl);
-  font-weight: var(--ls-font-weight-bold);
-  line-height: var(--ls-line-height-tight);
+  font-size: var(--mt-font-size-3xl);
+  font-weight: var(--mt-font-weight-bold);
+  line-height: var(--mt-line-height-tight);
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
 }
 
 h3 {
-  font-size: var(--ls-font-size-2xl);
-  font-weight: var(--ls-font-weight-semibold);
-  line-height: var(--ls-line-height-tight);
+  font-size: var(--mt-font-size-2xl);
+  font-weight: var(--mt-font-weight-semibold);
+  line-height: var(--mt-line-height-tight);
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
 }
 
 h4 {
-  font-size: var(--ls-font-size-xl);
-  font-weight: var(--ls-font-weight-semibold);
-  line-height: var(--ls-line-height-base);
+  font-size: var(--mt-font-size-xl);
+  font-weight: var(--mt-font-weight-semibold);
+  line-height: var(--mt-line-height-base);
 }
 
 h5 {
-  font-size: var(--ls-font-size-lg);
-  font-weight: var(--ls-font-weight-medium);
+  font-size: var(--mt-font-size-lg);
+  font-weight: var(--mt-font-weight-medium);
 }
 
 h6 {
-  font-size: var(--ls-font-size-md);
-  font-weight: var(--ls-font-weight-medium);
+  font-size: var(--mt-font-size-md);
+  font-weight: var(--mt-font-weight-medium);
 }
 ```
 
@@ -454,7 +579,7 @@ h6 {
 /* Paragraphs */
 .block-content p {
   margin-bottom: 0.75rem;
-  line-height: var(--ls-line-height-relaxed);
+  line-height: var(--mt-line-height-relaxed);
 }
 
 /* Links */
@@ -471,10 +596,10 @@ a:hover {
 
 /* Code */
 code {
-  font-family: var(--ls-code-font-family);
+  font-family: var(--mt-code-font-family);
   font-size: 0.9em;
   padding: 0.2em 0.4em;
-  background-color: var(--ls-codeblock-background-color);
+  background-color: var(--ls-page-inline-code-bg-color);
   border-radius: 4px;
 }
 
@@ -485,14 +610,14 @@ pre code {
 
 /* Block References */
 .block-ref {
-  font-weight: var(--ls-font-weight-medium);
+  font-weight: var(--mt-font-weight-medium);
   border-bottom: 1px dotted var(--ls-border-color);
 }
 
 /* Tags */
 a.tag {
-  font-size: var(--ls-font-size-sm);
-  font-weight: var(--ls-font-weight-medium);
+  font-size: var(--mt-font-size-sm);
+  font-weight: var(--mt-font-weight-medium);
   padding: 2px 8px;
   border-radius: 6px;
   background-color: var(--ls-tertiary-background-color);
@@ -502,6 +627,8 @@ a.tag {
 ---
 
 ## Component Styling
+
+> **Verify every selector before you rely on it.** Themes rot mostly by accumulating rules for elements that no longer exist. `git grep -nF '.your-selector' -- '*.css' '*.cljs'` at the revision you are targeting is a two-second check, and DevTools on a live block is the other half. Every selector below was checked against `be800f1711`; the ones that do **not** exist are called out explicitly so you can recognise the pattern.
 
 ### Blocks
 
@@ -569,82 +696,82 @@ a.tag {
   background-color: var(--ls-tertiary-background-color);
   border-bottom-color: var(--ls-link-text-color);
 }
-
-/* Block Reference Counter */
-.block-ref-count {
-  font-size: 0.75em;
-  color: var(--ls-secondary-text-color);
-  margin-left: 4px;
-}
 ```
+
+`.block-ref` is real (`src/main/frontend/components/block.css:826`), as is `.block-ref-no-title` and `.open-block-ref-link`.
+
+> **There is no `.block-ref-count` class.** The reference-count badge is a shui ghost button carrying Tailwind utility classes, built in `block-refs-count` (`src/main/frontend/components/block.cljs:3502-3518`). `:block-ref-count` appears in the source only as a resource key for `db-hooks/use-resource` (`src/main/frontend/components/page.cljs:560`), never as a CSS class. Style it via the button tokens (`--primary`, `--accent`) instead, and keep the hit area intact.
 
 **Step 3: Block Properties**
 
+The property panel is `.ls-properties-area`, with `.ls-block-properties` added for block-level (rather than page-level) panels (`src/main/frontend/components/property.cljs:975`; styled at `src/main/frontend/components/property.css:36`, `:95`, `:110`). Rows are `.property-pair`, split into `.property-key-panel` and `.property-value-panel`, and rows carry `[data-property-type=...]`:
+
 ```css
-/* Block Properties Container */
-.block-properties {
+/* Block-level property panel */
+.ls-block .ls-properties-area.ls-block-properties {
   margin-top: 8px;
   padding: 8px 12px;
-  background-color: var(--ls-secondary-background-color);
   border-left: 3px solid var(--ls-active-primary-color);
   border-radius: 6px;
-  font-size: var(--ls-font-size-sm);
+  font-size: var(--mt-font-size-sm);
 }
 
-/* Property Row */
-.block-property {
-  display: flex;
+/* Property row */
+.ls-properties-area .property-pair {
   align-items: center;
-  margin: 4px 0;
 }
 
-/* Property Key */
-.block-property-key {
-  font-weight: var(--ls-font-weight-semibold);
+/* Property key */
+.ls-properties-area .property-key-panel .property-k {
+  font-weight: var(--mt-font-weight-semibold);
   color: var(--ls-primary-text-color);
-  margin-right: 8px;
 }
 
-/* Property Value */
-.block-property-value {
+/* Property value */
+.ls-properties-area .property-value-content {
   color: var(--ls-secondary-text-color);
 }
+
+/* Node-typed values get their own layout */
+.ls-properties-area .property-pair[data-property-type='node'] .property-value-panel {
+  /* ... */
+}
 ```
+
+Prefer the variables first: the panel background is `--ls-block-properties-background-color` for blocks and `--ls-page-properties-background-color` for pages (`src/main/frontend/components/block.css:939-942`).
+
+> **`.block-property`, `.block-property-key` and `.block-property-value` do not exist** in the app's CSS or ClojureScript. `.block-properties` does exist (`block.css:939`) but is the outer container only.
 
 ### Sidebar
 
 **Sidebar Layout:**
 
 ```css
-/* Left Sidebar */
+/* Left Sidebar. Prefer the variables:
+   --ls-left-sidebar-width, --ls-left-sidebar-sm-width,
+   --ls-left-sidebar-text-color, --ls-left-sidebar-nav-btn-size,
+   and --left-sidebar-bg-color (set on main.theme-container-inner). */
 #left-sidebar {
-  background-color: var(--ls-secondary-background-color);
   border-right: 1px solid var(--ls-border-color);
 }
 
-/* Sidebar Header */
-.left-sidebar-inner .nav-header {
+.left-sidebar-inner {
+  color: var(--ls-left-sidebar-text-color);
+}
+
+/* Sidebar header row */
+.left-sidebar-inner .sidebar-header-container {
   padding: 16px 20px;
   border-bottom: 1px solid var(--ls-border-color);
 }
 
-/* Sidebar Item */
-.nav-content-item {
-  padding: 8px 20px;
+/* Grouped content (Favorites, Recent, …) */
+.left-sidebar-inner .sidebar-content-group .sidebar-content-group-inner > .hd {
   border-radius: 8px;
-  margin: 2px 12px;
-  transition: all 0.15s ease;
 }
 
-.nav-content-item:hover {
-  background-color: var(--ls-tertiary-background-color);
-  transform: translateX(4px);
-}
-
-.nav-content-item.active {
-  background-color: var(--ls-active-primary-color);
-  color: white;
-  font-weight: var(--ls-font-weight-semibold);
+.left-sidebar-inner .sidebar-content-group-inner > .bd ul li > a:first-of-type:hover {
+  background-color: var(--ls-menu-hover-color);
 }
 
 /* Right Sidebar */
@@ -660,11 +787,15 @@ a.tag {
 }
 
 .sidebar-item-header {
-  font-weight: var(--ls-font-weight-semibold);
-  font-size: var(--ls-font-size-lg);
+  font-weight: var(--mt-font-weight-semibold);
+  font-size: var(--mt-font-size-lg);
   margin-bottom: 12px;
 }
 ```
+
+Verified against `src/main/frontend/components/container.css`: `#left-sidebar` (`:340`), `.left-sidebar-inner` (`:71`), `.sidebar-header-container` (`:137`), `.sidebar-contents-container` (`:141`), `.sidebar-content-group` (`:150`), `.sidebar-item` (`:620`), `.sidebar-item-header` (`:623`). `.nav-header` is a real hook, but only as a mobile-navigation click target (`src/main/frontend/components/left_sidebar_util.cljs:10`), with no styling attached.
+
+> **`.nav-content-item` is not a left-sidebar class.** It exists only inside the onboarding tour stylesheet (`src/main/frontend/components/onboarding/index.css:468-474`). Styling it will not touch the sidebar.
 
 ### Editor
 
@@ -683,8 +814,8 @@ a.tag {
 /* Editor Textarea */
 .editor-inner textarea {
   font-family: var(--ls-font-family);
-  font-size: var(--ls-font-size-base);
-  line-height: var(--ls-line-height-relaxed);
+  font-size: var(--mt-font-size-base);
+  line-height: var(--mt-line-height-relaxed);
   color: var(--ls-primary-text-color);
 }
 
@@ -694,172 +825,77 @@ a.tag {
   opacity: 0.6;
 }
 
-/* Editor Toolbar */
-.editor-toolbar {
-  display: flex;
-  gap: 8px;
-  padding: 8px 0;
-  border-top: 1px solid var(--ls-border-color);
-  margin-top: 8px;
-}
-
-.editor-toolbar-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  background-color: var(--ls-secondary-background-color);
-  border: 1px solid var(--ls-border-color);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.editor-toolbar-btn:hover {
-  background-color: var(--ls-tertiary-background-color);
-  border-color: var(--ls-active-primary-color);
+/* Autocomplete / slash popup that appears while editing */
+#ui__ac-inner .menu-link:hover,
+.cp__commands-slash .menu-link:hover {
+  background-color: var(--ls-menu-hover-color);
 }
 ```
+
+> **There is no `.editor-toolbar` in the desktop UI.** The only editor toolbar is the mobile one, built in `src/main/mobile/components/editor_toolbar.cljs` and rendered through a Capacitor native plugin (`mobile-util/native-editor-toolbar`, `:209`), not as themeable DOM. `.editor-toolbar-btn` does not exist anywhere.
+
+Real editor-adjacent hooks: `.editor-inner textarea`, `.edit-input`, `.non-block-editor textarea`, `#ui__ac-inner`, `.menu-link`, `.absolute-modal[data-modal-name]`, `.cp__commands-slash`.
 
 ### Search
 
-**Search Component:**
+Search in Logseq DB is the **command palette / cmdk** surface, not a standalone search box.
 
 ```css
-/* Search Input */
-#search-field {
-  padding: 12px 16px;
-  border-radius: 8px;
-  background-color: var(--ls-secondary-background-color);
-  border: 2px solid var(--ls-border-color);
-  font-size: var(--ls-font-size-base);
-  transition: all 0.2s ease;
+/* Command palette shell */
+.cp__cmdk {
+  border-color: var(--ls-border-color);
 }
 
-#search-field:focus {
+/* Search input */
+.cp__cmdk-search-input,
+.cp__cmdk-search-input:focus,
+.cp__cmdk-search-input:focus-visible {
+  font-size: var(--mt-font-size-base);
   outline: none;
+}
+
+.cp__cmdk-input-row:focus-within {
   border-color: var(--ls-active-primary-color);
-  box-shadow: 0 0 0 3px rgba(43, 108, 176, 0.1);
-}
-
-/* Search Results */
-.search-results {
-  background-color: var(--ls-primary-background-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  margin-top: 8px;
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-/* Search Result Item */
-.search-result-item {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--ls-border-color);
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-}
-
-.search-result-item:hover {
-  background-color: var(--ls-tertiary-background-color);
-}
-
-.search-result-item.selected {
-  background-color: var(--ls-block-highlight-color);
-  border-left: 3px solid var(--ls-active-primary-color);
-}
-
-/* Search Highlight */
-.search-result-item .highlight {
-  background-color: #fef3c7;
-  color: #92400e;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-weight: var(--ls-font-weight-semibold);
-}
-
-.dark-theme .search-result-item .highlight {
-  background-color: #78350f;
-  color: #fef3c7;
 }
 ```
 
+The classes live in `src/main/frontend/components/cmdk/cmdk.css:1-21`, with additional rules in `resources/css/shui.css:91` and `:193`. Highlighted rows are driven by `--accent` and `--lx-gray-*`, so set those rather than writing row-level rules.
+
+> **`#search-field`, `.search-results` and `.search-result-item` do not exist** in the app's CSS. `add-search-result-item-listener!` in `src/main/mobile/bottom_tabs.cljs:93` is a ClojureScript function name, not a class. Rules keyed on those selectors are dead.
+
 ### Modals
 
-**Modal Styling:**
+Dialogs are shui/Base UI components. The real selectors are `.ui__dialog-overlay` and `.ui__dialog-content`, and both take a `[label=...]` attribute naming the specific dialog:
 
 ```css
-/* Modal Overlay */
-.ui__modal-overlay {
+/* Overlay */
+.ui__dialog-overlay {
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
 }
 
-/* Modal Panel */
-.ui__modal-panel {
-  background-color: var(--ls-primary-background-color);
+/* Panel */
+.ui__dialog-content {
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  padding: 24px;
-  max-width: 600px;
-  width: 90%;
 }
 
-/* Modal Header */
-.ui__modal-panel-header {
-  font-size: var(--ls-font-size-2xl);
-  font-weight: var(--ls-font-weight-bold);
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid var(--ls-border-color);
+/* Target one dialog by its label */
+.ui__dialog-content[label='app-settings'] {
+  max-width: 900px;
 }
 
-/* Modal Content */
-.ui__modal-panel-content {
-  margin: 16px 0;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-/* Modal Footer */
-.ui__modal-panel-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--ls-border-color);
-}
-
-/* Modal Buttons */
-.ui__modal-panel-footer .button {
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: var(--ls-font-weight-semibold);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.ui__modal-panel-footer .button-primary {
-  background-color: var(--ls-active-primary-color);
-  color: white;
-  border: none;
-}
-
-.ui__modal-panel-footer .button-primary:hover {
-  background-color: var(--ls-link-text-hover-color);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.ui__modal-panel-footer .button-secondary {
-  background-color: transparent;
-  color: var(--ls-primary-text-color);
-  border: 2px solid var(--ls-border-color);
-}
-
-.ui__modal-panel-footer .button-secondary:hover {
-  background-color: var(--ls-secondary-background-color);
-  border-color: var(--ls-active-primary-color);
+/* Buttons inside dialogs are shui buttons driven by tokens */
+.ui__button {
+  font-weight: var(--mt-font-weight-semibold);
 }
 ```
+
+Declared in `resources/css/shui.css:224-260`, `resources/css/ui.css:332`, and `src/main/frontend/ui.css:53`. Labelled examples in the tree include `app-settings` (`src/main/frontend/components/container.css:494`), `plugin-settings-modal`, `plugins-dashboard`, `plugin-readme` (`src/main/frontend/components/plugins.css:967-979`), `customize-appearance` (`src/main/frontend/components/settings.css:476-480`) and `user-login` (`src/main/frontend/components/user/login.css:30`).
+
+Button colours come from the shui tokens you set in the Color System section — `--primary`, `--primary-foreground`, `--secondary`, `--accent`, `--ring` — not from per-button rules.
+
+> **`.ui__modal-overlay`, `.ui__modal-panel-header`, `.ui__modal-panel-content`, `.ui__modal-panel-footer`, `.button-primary` and `.button-secondary` do not exist** in the app's CSS. `.ui__modal-panel` does exist, but only inside one nested block at `resources/css/shui.css:138`.
 
 ---
 
@@ -896,13 +932,6 @@ a.tag {
   width: 100%;
 }
 
-/* Wide Layout (for large screens) */
-@media (min-width: 1400px) {
-  #main-content {
-    max-width: 1100px;
-  }
-}
-
 /* Narrow Layout (for small screens) */
 @media (max-width: 768px) {
   #main-content {
@@ -911,43 +940,45 @@ a.tag {
 }
 ```
 
+`#app-container` (`src/main/frontend/components/container.css:12`), `#main-content` (`:52`) and `#main-content-container` (`:57`) are all real; `#main-content-container` is also referenced from `src/main/frontend/components/block.css:1039`.
+
+**Prefer the width variables over a hard-coded `max-width`.** The content column width is applied to `.cp__sidebar-main-content`, which uses `--ls-main-content-max-width` normally (`container.css:503`) and `--ls-main-content-max-width-wide` in wide mode (`:490`). Defaults are `960px` and `1440px` (`src/main/frontend/shui/vars-classic.css:6-7`). Setting a `max-width` on `#main-content` instead fights that switch:
+
+```css
+html[data-theme='light'],
+html[data-theme='dark'] {
+  --ls-main-content-max-width: 900px;
+  --ls-main-content-max-width-wide: 1100px;
+}
+```
+
 ### Page Header
 
 **Header Styling:**
 
+Title sizing is a variable, not a font-size rule. `--ls-page-title-size` (default `32px`) and `--ls-page-title-line-height` drive `h1.title` and `.ls-page-title-container` (`src/main/frontend/common.css:334-341`); mobile overrides `--ls-page-title-size` on its own (`src/main/frontend/components/block.css:717`), so setting the variable keeps both platforms consistent.
+
 ```css
-/* Page Header */
-.page-header {
-  padding: 24px 0;
-  border-bottom: 2px solid var(--ls-border-color);
-  margin-bottom: 32px;
+html[data-theme='light'],
+html[data-theme='dark'] {
+  --ls-page-title-size: 2.25rem;
+  --ls-page-title-line-height: 1.2;
 }
 
-/* Page Title */
-.page-title {
-  font-size: var(--ls-font-size-4xl);
-  font-weight: var(--ls-font-weight-bold);
+/* The clickable page title link */
+a.page-title {
   color: var(--ls-title-text-color);
-  margin-bottom: 12px;
 }
 
-/* Page Properties */
-.page-properties-area {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.page-property-item {
-  display: flex;
-  align-items: center;
-  padding: 6px 12px;
-  background-color: var(--ls-secondary-background-color);
+/* Page-level property panel (page? branch of the same component as block props) */
+.ls-page-properties > .ls-properties-area > .property-block {
   border-radius: 8px;
-  font-size: var(--ls-font-size-sm);
 }
 ```
+
+Real selectors here: `h1.title` and `.ls-page-title-container` (`common.css:334`), `.ls-page-title` (`block.css:661`), `a.page-title` and `.page-title-sizer-wrapper` (`src/main/frontend/components/page.css:80, 88`), `.ls-page-properties` (`src/main/frontend/components/property.cljs:974`, styled at `property.css:28` and `:483`), `.journal-title`, `.breadcrumb`.
+
+> **`.page-header`, `.page-properties-area` and `.page-property-item` do not exist as CSS classes.** `page-header` in `src/main/frontend/components/shortcut.cljs:242` is a local binding for `page-el.querySelector(":scope > header")`, and `page-properties-area?` in `src/main/frontend/components/property.cljs:934` is a boolean, not a class name. A bare `.page-title` rule *does* match, but only via `a.page-title`; the app has no standalone `.page-title` block element.
 
 ### Spacing System
 
@@ -1002,39 +1033,22 @@ a.tag {
 
 **Mobile Optimizations:**
 
+Logseq already exposes platform hooks on `html` — `is-mobile`, `is-electron`, `is-native-iphone`, `is-native-android` and friends — set by `frontend.ui/inject-document-devices-envs!` (`src/main/frontend/ui.cljs:344-358`). Prefer those over guessing at viewport widths, and prefer the mobile text variables over a font-size override; mobile body text is `calc(var(--ls-mobile-font-size) * var(--ls-mobile-font-scale, 1))` (`src/main/mobile/components/app.css:9-15`):
+
 ```css
+/* Platform hook, not a width guess */
+html.is-mobile {
+  --ls-mobile-font-size: 16px;
+  --ls-page-title-size: 1.75rem;
+  --mt-font-size-base: 0.875rem;
+}
+
 /* Mobile: < 768px */
 @media (max-width: 767px) {
-  /* Reduce font sizes */
-  :root {
-    --ls-font-size-base: 0.875rem;
-    --ls-font-size-4xl: 1.75rem;
-    --ls-font-size-3xl: 1.5rem;
-  }
-
-  /* Adjust spacing */
   #main-content {
     padding: 16px;
   }
 
-  /* Single column layout */
-  .flex-row {
-    flex-direction: column;
-  }
-
-  /* Hide sidebar by default */
-  #left-sidebar {
-    position: fixed;
-    left: -280px;
-    transition: left 0.3s ease;
-  }
-
-  #left-sidebar.is-open {
-    left: 0;
-    z-index: 999;
-  }
-
-  /* Simplify block layout */
   .block-content-wrapper {
     padding-left: 20px;
   }
@@ -1074,10 +1088,13 @@ a.tag {
 
 - [ ] Light mode: all backgrounds visible
 - [ ] Dark mode: all backgrounds visible
-- [ ] Light/dark mode switching works
+- [ ] Light/dark mode switching works, and each mode keeps its own theme selection
 - [ ] Link colors have sufficient contrast
-- [ ] Markers (TODO, DOING, DONE) colored correctly
+- [ ] Task status chips (Backlog / Todo / Doing / In Review / Done / Canceled) legible
 - [ ] Tags styled appropriately
+- [ ] shui tokens set: menus, popovers, dropdowns, command palette, dialogs
+- [ ] `--lx-gray-*` / `--lx-accent-*` mapped, or stock neutrals verified as acceptable
+- [ ] Default accent plus at least one non-default `html[data-color=...]`
 
 ### Typography
 
@@ -1090,12 +1107,13 @@ a.tag {
 ### Components
 
 - [ ] Blocks: hover, selected states
-- [ ] Bullet: hover animation
-- [ ] Block references styled
-- [ ] Properties display correctly
+- [ ] Bullet: hover animation, hit area not shrunk
+- [ ] Block references and page references styled
+- [ ] Properties display correctly (`.ls-properties-area`, block and page variants)
 - [ ] Tags render properly
-- [ ] Code blocks formatted
-- [ ] Search results readable
+- [ ] Code blocks / CodeMirror (`.cm-s-lsradix`), inline code, marks, blockquotes, tables
+- [ ] Command palette (`.cp__cmdk`) readable, including the highlighted row
+- [ ] Slash menu and autocomplete (`#ui__ac-inner`, `.cp__commands-slash`)
 
 ### Layout
 
@@ -1157,28 +1175,45 @@ a.tag {
 ```markdown
 1. **Open DevTools** (F12 or Cmd+Option+I)
 
-2. **Check CSS Variables:**
+2. **Confirm your stylesheet is actually loaded:**
 
-   - Inspect root element
-   - Look at computed styles
-   - Verify variable values
+   - Look for your `<link rel="stylesheet">` at the end of `document.head`
+   - If it is missing, the theme was not selected — check `logseq.themes` and the `mode` values
 
-3. **Test Responsive:**
+3. **Read the runtime attributes on `document.documentElement`:**
+
+   - `data-theme` — `light` or `dark`; this is the selector your rules must match
+   - `data-color` — the active accent (`logseq` by default)
+   - `data-font`, `data-font-global` — the user's font preference
+   - platform classes — `is-mobile`, `is-electron`, `is-native-iphone`, …
+
+4. **Check CSS Variables:**
+
+   - Inspect `html`, `body`, `.theme-container`, and the specific element you are styling
+   - Read computed values, not just your declarations
+   - If a variable has no effect, the component is probably reading a `--lx-*` scale or a shui HSL token instead of `--ls-*`
+
+5. **Confirm the selector exists before writing a rule for it:**
+
+   - Right-click the element → Inspect, and read its real classes
+   - Cross-check with `git grep -nF '.the-class' -- '*.css' '*.cljs'`
+
+6. **Test Responsive:**
 
    - Toggle device toolbar
    - Test various screen sizes
    - Check mobile breakpoints
 
-4. **Check Contrast:**
+7. **Check Contrast:**
 
    - Use Lighthouse accessibility audit
    - Verify WCAG AA compliance (4.5:1 text)
-   - Check focus indicators visible
+   - Check focus indicators visible (`--ls-focus-ring-color`, `--ring`)
 
-5. **Performance:**
+8. **Performance:**
    - Check CSS file size
    - Look for unused selectors
-   - Optimize if needed
+   - Avoid global resets such as `* { transition: all 200ms }` — they slow editing and break CodeMirror/PDF.js interaction states
 ```
 
 ### User Feedback
@@ -1290,20 +1325,22 @@ A clean, modern theme for Logseq with carefully designed colors, typography, and
 
 To customize colors:
 
-1. Go to Settings → Edit custom.css
-2. Override CSS variables:
+1. Open your graph's `custom.css`
+2. Override CSS variables, scoped to a mode:
 
 ```css
-:root {
+html[data-theme='dark'] {
   --ls-primary-background-color: #YOUR-COLOR;
   --ls-link-text-color: #YOUR-COLOR;
+  /* shui tokens take HSL channels, not a color */
+  --primary: 199 89% 48%;
 }
 ```
 ````
 
 ## Compatibility
 
-- Logseq version: 0.10.0+
+- Logseq: DB version (shui/radix token era). Themes written only against `--ls-*` will look unfinished on shui-heavy surfaces.
 - Platforms: Desktop (Windows, macOS, Linux), Mobile (iOS, Android)
 
 ## Support
@@ -1386,24 +1423,26 @@ git push -u origin main
 **Step 3: Submit to Marketplace**
 
 ````markdown
-1. Fork Logseq marketplace repository
-2. Add your theme to plugins.json:
-
-```json
-{
-  "id": "logseq-theme-modern",
-  "name": "Modern Theme",
-  "author": "Your Name",
-  "description": "A modern, clean theme for Logseq",
-  "repo": "yourusername/logseq-theme-modern",
-  "icon": "🎨",
-  "theme": true
-}
-```
-````
-
+1. Fork the Logseq marketplace repository
+2. Add your theme entry
 3. Create pull request
 4. Wait for review and approval
+````
+
+Logseq reads the marketplace from a fixed raw-GitHub base (`src/main/frontend/handler/plugin.cljs:56-58`):
+
+```clojure
+(defonce central-endpoint "https://raw.githubusercontent.com/logseq/marketplace/master/")
+(defonce plugins-url (str central-endpoint "plugins.json"))
+```
+
+`plugins.json` is an object whose **`packages`** key holds the entries (`load-marketplace-plugins` reads `(:packages res)`, `plugin.cljs:197-215`), and per-plugin assets such as the icon resolve under `packages/<id>/` (`pkg-asset`, `plugin.cljs:192-196`).
+
+The keys the client actually reads are `id name title version url description author icon iir repo sponsors webPkg` (`src/main/frontend/components/plugins.cljs:358-359`), plus `effect`, `web` (`plugin.cljs:206`) and `supportsDB` (`components/plugins.cljs:409-414`).
+
+> **Unverified:** The required shape of a marketplace submission — inline entry versus a per-package `manifest.json` — is a property of the `logseq/marketplace` repository and cannot be established from the Logseq source tree. Follow that repository's contribution instructions.
+>
+> Note that **`theme` is not among the keys the marketplace client reads.** Theme-ness is decided from the installed package's own `logseq.themes` / `logseq.theme` (`libs/src/LSPlugin.core.ts:740`), so a `"theme": true` in a marketplace entry has no effect on how the app classifies your package.
 
 ````
 
@@ -1533,6 +1572,18 @@ git push origin main --tags
    - Deprecations
 ```
 
+**Re-verify against source, not against your memory.** Two commands catch most theme rot:
+
+```bash
+# Every --ls-* variable the app defines or consumes
+git grep -h -oE -- '--ls-[a-z0-9-]+' -- '*.css' | sort -u
+
+# Does this selector still exist?
+git grep -nF '.your-selector' -- '*.css' '*.cljs'
+```
+
+At `be800f1711` the first command returns 114 names. Anything you use that is not in that list is your own private token — namespace it accordingly.
+
 **Keep Dependencies Updated:**
 
 ```markdown
@@ -1576,6 +1627,16 @@ You've created a complete custom theme! 🎉
 - [CSS Variables Reference](../../reference/styling/css-variables.md)
 - [Logseq Discord #themes Channel](https://discord.gg/logseq)
 - [Theme Development Guide](../../developer/theme-development.md)
+
+**In-repo sources of truth** (read these at the revision you are targeting):
+
+- `libs/guides/custom_theme_guide.md` — the in-repo theme guide, including the selector map
+- `src/main/frontend/shui/vars-classic.css` — `--ls-*` defaults and layout variables
+- `src/main/frontend/shui/colors.css` — accent palettes keyed by `html[data-color=...]`, mapping `--lx-*` and many `--ls-*`
+- `src/main/frontend/shui/radix.css`, `radix-hsl.css` — the `--rx-*` raw palettes
+- `resources/css/shui.css` — shared shui/Base UI component CSS
+- `resources/css/codemirror.lsradix.css` — the CodeMirror theme bridge
+- `src/main/frontend/components/theme.cljs` — where `data-theme`, `data-color` and the body compat classes are set
 
 **Tips for Success:**
 
