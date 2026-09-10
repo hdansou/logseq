@@ -1,7 +1,10 @@
 ---
 title: 'Task Management Workflows'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
 related-docs:
@@ -27,6 +30,14 @@ This guide shows you how to manage tasks effectively in Logseq. Learn different 
 
 **Time Required:** 30-60 minutes to set up
 
+> **This guide is for DB graphs.** Tasks work fundamentally differently here than
+> in a file graph: there are no `TODO`/`DOING`/`DONE` markers, no `[#A]`
+> priorities, no `SCHEDULED:`/`DEADLINE:` timestamps, and no `#+BEGIN_QUERY`
+> blocks. Everything below uses the DB-graph equivalents, with the source
+> citation for each. The `key: value` lines inside the outline examples are
+> shorthand for "this node carries this property" — add them with `/Add property`
+> rather than typing `key:: value` text, which a DB graph does not parse.
+
 ---
 
 ## Table of Contents
@@ -44,56 +55,91 @@ This guide shows you how to manage tasks effectively in Logseq. Learn different 
 
 ## Task Basics
 
+### What a task *is* in a DB graph
+
+A task is a block tagged **`#Task`** (`:logseq.class/Task`) that carries the
+built-in **Status** property. There are no `TODO`/`DOING`/`DONE` markers — those
+were file-graph text. Typing `TODO` at the start of a block leaves you with a
+block whose text happens to begin with the word "TODO".
+
+The `Task` tag's schema is exactly four properties
+(`deps/db/src/logseq/db/frontend/class.cljs:42`):
+
+| Property | Ident | Type |
+| --- | --- | --- |
+| Status | `:logseq.property/status` | closed values (a **ref**) |
+| Priority | `:logseq.property/priority` | closed values (a **ref**) |
+| Deadline | `:logseq.property/deadline` | `:datetime` (epoch ms) |
+| Scheduled | `:logseq.property/scheduled` | `:datetime` (epoch ms) |
+
 ### Creating Tasks
 
-**Basic Task:**
+Type the block text, then run one of the status slash commands. Setting any of
+the four Task properties tags the block `#Task` for you
+(`deps/outliner/src/logseq/outliner/property.cljs:205-206`) — you never have to
+add the tag by hand.
 
 ```markdown
-- TODO Task description
-
-Shortcut: /todo or /t
-Result: Creates TODO marker
+- Task description        ← then press / and choose Todo
 ```
 
-**Task States:**
+**Task States**
+
+There are exactly six, and they are closed values of `:logseq.property/status`
+(`deps/db/src/logseq/db/frontend/property.cljs:313-318`). The slash menu is
+generated from that list (`src/main/frontend/commands.cljs:150-165`), so the
+command name is the status name:
+
+| Status | Slash command | Meaning |
+| --- | --- | --- |
+| Backlog | `/Backlog` | Captured, not committed to |
+| Todo | `/Todo` | Not started (the default, `property.cljs:320`) |
+| Doing | `/Doing` | In progress |
+| In Review | `/In Review` | Waiting on review |
+| Done | `/Done` | Completed |
+| Canceled | `/Canceled` | Abandoned |
+
+`WAITING`, `LATER` and `NOW` do not exist. If you need those states, model them
+as a tag or a property of your own — do not expect a status called `Waiting`.
+
+**Changing States**
 
 ```markdown
-TODO → Not started
-DOING → In progress
-DONE → Completed
-WAITING → Blocked/waiting on someone
-LATER → Backlog
-NOW → High priority/urgent
-CANCELLED → Abandoned
+Method 1: Click the status chip on the block and pick a value.
+
+Method 2: Slash commands — /Doing, /Done, /Canceled, ...
+
+Method 3: Keyboard — Cmd/Ctrl+Enter cycles the current block
+          Todo → Doing → Done → (no status)
+          (src/main/frontend/modules/shortcut/config.cljs:167,
+           src/main/frontend/handler/editor.cljs:819-831)
 ```
 
-**Changing States:**
-
-```markdown
-Method 1: Click checkbox
-TODO → DOING → DONE
-
-Method 2: Slash commands
-/doing → Changes to DOING
-/done → Changes to DONE
-
-Method 3: Keyboard
-Cmd+Enter → Toggle TODO/DONE
-```
+> **Note:** the cycle only walks Todo → Doing → Done → (no status). A block
+> sitting on Backlog, In Review or Canceled is not part of the loop: those fall
+> to the `case`'s trailing default and jump straight to Todo
+> (`src/main/frontend/handler/editor.cljs:819-831`). Use the status picker if
+> you want to move between the other three.
 
 ### Task Hierarchy
 
 **Parent-Child Tasks:**
 
 ```markdown
-- TODO Complete project deliverable
-  - TODO Research requirements
-    - DONE Review documentation
-    - TODO Talk to stakeholders
-  - TODO Create design
-  - TODO Implementation
-  - TODO Testing
+- Complete project deliverable   #Task  Status: Todo
+  - Research requirements        #Task  Status: Todo
+    - Review documentation       #Task  Status: Done
+    - Talk to stakeholders       #Task  Status: Todo
+  - Create design                #Task  Status: Todo
+  - Implementation               #Task  Status: Todo
+  - Testing                      #Task  Status: Todo
 ```
+
+Nesting is ordinary block nesting (`:block/parent`). Each block carries its own
+Status independently.
+
+> **Unverified:** whether a parent task's status is ever derived from its
+> children was not confirmed either way from source. Do not rely on rollup.
 
 **Benefits:**
 
@@ -109,15 +155,19 @@ Cmd+Enter → Toggle TODO/DONE
 **Essential Properties:**
 
 ```markdown
-- TODO Task description
-  DEADLINE: <2026-01-30 Wed>
-  SCHEDULED: <2026-01-22 Wed>
-  priority:: [#A]
-  project:: [[Project Alpha]]
-  context:: [[Work]]
-  energy:: high
-  time:: 30min
+- Task description   #Task
+  Status:    Todo               (built-in)
+  Priority:  High               (built-in)
+  Deadline:  2026-01-30         (built-in, datetime)
+  Scheduled: 2026-01-22         (built-in, datetime)
+  project:   [[Project Alpha]]  (yours)
+  context:   [[Work]]           (yours)
+  energy:    high               (yours)
+  time:      30min              (yours)
 ```
+
+Set the built-ins from the slash menu; add the rest with `/Add property`
+(`src/main/frontend/commands.cljs:354-358`).
 
 ---
 
@@ -128,32 +178,72 @@ Cmd+Enter → Toggle TODO/DONE
 **Add Deadline:**
 
 ```markdown
-Method 1: Slash command
-/deadline → Date picker
-
-Method 2: Manual
-DEADLINE: <2026-01-30 Wed>
-
-Method 3: Relative
-DEADLINE: <+7d> → 7 days from today
+/Deadline → opens the date picker
+           (src/main/frontend/commands.cljs:265-270)
 ```
+
+(Or set the Deadline property directly from the block's property panel.)
+`DEADLINE: <2026-01-30 Wed>` is org-mode text a DB graph does not parse, and
+there is no `<+7d>` relative form in the editor.
+
+`:logseq.property/deadline` is a **`:datetime`** property — the stored value is
+**epoch milliseconds** (`deps/db/src/logseq/db/frontend/property.cljs:340-346`).
+This matters for queries.
 
 **Deadline Queries:**
 
+The single most common mistake is comparing a deadline against `:today`.
+`:today` resolves to a **YYYYMMDD integer** (`date->int`,
+`deps/db/src/logseq/db/frontend/inputs.cljs:99-100`), while a deadline is epoch
+milliseconds. The comparison never throws — it just silently matches nothing.
+Use the millisecond inputs instead:
+
+| Input | Resolves to |
+| --- | --- |
+| `:start-of-today-ms` / `:end-of-today-ms` | epoch ms (`inputs.cljs:111-118`) |
+| `:+7d-end`, `:-30d-start`, `:+1m-ms` | epoch ms (`inputs.cljs:126-132`) |
+| `:right-now-ms` | epoch ms (`inputs.cljs:108-109`) |
+| `:today`, `:yesterday`, `:tomorrow`, `:+7d`, `:-1w` | YYYYMMDD int — for `:block/journal-day` only |
+
+`:7d-after` and friends (`^\d+d(-before|-after|…)?$`) are **deprecated**
+(`inputs.cljs:80`); `:7d-ago`, `:monday` and `:sunday` match no dispatch branch
+at all and are passed through as raw keywords (`inputs.cljs:69-81`,
+`inputs.cljs:143-165`) — a query using them compares against a keyword and
+returns nothing.
+
+Second gotcha: `:logseq.property/status` has a **default value** of Todo
+(`property.cljs:320`), and defaults are not materialised as datoms. So
+`[?b :logseq.property/status ?s]` misses every task whose status was never set
+explicitly. Use the built-in `task` rule, which goes through
+`ref-property-with-default` and therefore does see the default
+(`deps/db/src/logseq/db/frontend/rules.cljc:297-300` and its dependency
+declaration at `:315`). Logseq detects
+built-in rule names in your `:where` and wires the rules into the query for you
+(`src/main/frontend/worker/handler/query.cljs:185-204`) — you do not need a
+`:rules` key or a `%` in `:in`.
+
 ```clojure
-#+BEGIN_QUERY
-{:title "⚠️ Due This Week"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?start ?end
          :where
-         [?b :block/deadline ?d]
+         [?b :logseq.property/deadline ?d]
          [(>= ?d ?start)]
          [(<= ?d ?end)]
-         [?b :block/marker ?m]
-         [(not= ?m "DONE")]]
- :inputs [:today :7d-after]
- :collapsed? false}
-#+END_QUERY
+         (task ?b #{"Backlog" "Todo" "Doing" "In Review"})]
+ :inputs [:start-of-today-ms :+7d-end]}
+```
+
+The `task` rule matches on the status's **title**, not its ident
+(`rules.cljc:297-300` → `ref->val`, `rules.cljc:103-107`), which is why the set
+holds `"In Review"` and not `:logseq.property/status.in-review`.
+
+If you would rather match idents directly, dereference the ref — the status
+value is an entity, so `[?b :logseq.property/status "Todo"]` and
+`[(= :logseq.property/status.todo (:db/ident ?s))]` both never match:
+
+```clojure
+[?b :logseq.property/status ?s]
+[?s :db/ident :logseq.property/status.todo]
 ```
 
 ### Scheduled Dates
@@ -161,72 +251,108 @@ DEADLINE: <+7d> → 7 days from today
 **Schedule Task:**
 
 ```markdown
-SCHEDULED: <2026-01-22 Wed>
+/Scheduled → opens the date picker
+            (src/main/frontend/commands.cljs:271-276)
 
 Meaning: Plan to start on this date
 
-Difference:
+Difference (from the properties' own descriptions,
+deps/db/src/logseq/db/frontend/property.cljs:345,353):
 
-- SCHEDULED: When you'll work on it
-- DEADLINE: When it must be done
+- Scheduled: "Use it to plan something to start at a specific date(time)."
+- Deadline:  "Use it to finish something at a specific date(time)."
 ```
 
 **Repeating Tasks:**
 
-```markdown
-- TODO Weekly review
-  SCHEDULED: <2026-01-22 Wed +1w>
-  ↑ Repeats every week
+`+1w` / `+1m` suffixes inside a timestamp are file-graph syntax and do nothing.
+Repetition is configured in the Deadline or Scheduled date picker, which has a
+**Repeat task** toggle, an **Every _n_ _unit_** control, a **Next date** choice
+and a **When _property_ is: _value_** completion trigger
+(`src/main/frontend/components/property/value.cljs:347-440`;
+labels at `src/resources/dicts/en.edn:1552-1558`).
 
-- TODO Pay rent
-  SCHEDULED: <2026-02-01 Sat +1m>
-  ↑ Repeats monthly
+It writes these properties (`property.cljs:354-397`):
+
+| Property | Values |
+| --- | --- |
+| `:logseq.property.repeat/repeated?` | checkbox |
+| `:logseq.property.repeat/recur-frequency` | number (default 1) |
+| `:logseq.property.repeat/recur-unit` | Minute, Hour, Day, Week, Month, Year (default Day) |
+| `:logseq.property.repeat/repeat-type` | "Advance from completion", "Advance from scheduled", "Advance from scheduled, skip to future" (default the last) |
+| `:logseq.property.repeat/checked-property` | which property's value completes the occurrence (defaults to Status) |
+
+```markdown
+- Weekly review  #Task
+  Scheduled: 2026-01-22, Repeat task ✓, Every 1 Week
+
+- Pay rent  #Task
+  Scheduled: 2026-02-01, Repeat task ✓, Every 1 Month
 ```
 
 ### Priority Levels
 
 **Set Priority:**
 
+Priorities are closed values of `:logseq.property/priority` and there are
+**four**, named — not lettered
+(`deps/db/src/logseq/db/frontend/property.cljs:333-337`). The slash commands are
+generated from that list as `Priority <name>`, plus a `No priority` entry
+(`src/main/frontend/commands.cljs:171-188`; label templates at
+`src/resources/dicts/en.edn:548,558`):
+
 ```markdown
-/priority-a → [#A] Highest
-/priority-b → [#B] Medium
-/priority-c → [#C] Low
-
-Or manual:
-
-- TODO [#A] Critical task
-- TODO [#B] Important task
-- TODO [#C] Nice to have
+/Priority Urgent
+/Priority High
+/Priority Medium
+/Priority Low
+/No priority
 ```
+
+`[#A]`, `[#B]`, `[#C]` and the `/priority-a` commands do not exist in a DB graph.
 
 **Priority Query:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "🔥 High Priority Tasks"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/marker "TODO"]
-         [?b :block/priority "A"]]
- :collapsed? false}
-#+END_QUERY
+{{query (and (task todo doing) (priority high urgent))}}
 ```
+
+Both `(task …)` and `(priority …)` are simple-query operators that go through
+the default-aware rules (`src/main/frontend/worker/query_dsl.cljs:411-429`), and
+their arguments are case-insensitive: `task` capitalises every word
+(`capitalize-all`, `deps/common/src/logseq/common/util.cljs:145-149`) and
+`priority` capitalises the single word (`query_dsl.cljs:421-429`). Multi-word
+values must therefore be quoted: `(task "in review")`.
 
 ### Custom Properties
 
 **Add Context:**
 
+Add each of these with `/Add property`
+(`src/main/frontend/commands.cljs:354-358`). Keep the titles single-token if you
+want to name them in a simple query — the DSL reads property names as symbols
+(`src/main/frontend/worker/query_dsl.cljs:343-356`).
+
 ```markdown
-- TODO Task description
-  project:: [[Project Alpha]]
-  context:: [[Work]], [[Client/Acme]]
-  energy:: high
-  time-estimate:: 2h
-  depends-on:: ((other-task-ref))
-  owner:: [[Person/Sarah]]
-  status:: blocked
-  waiting-for:: [[Person/John]] approval
+- Task description  #Task
+  Status:   Todo                 (built-in)
+  Assignee: [[Sarah]]            (built-in — :logseq.property/assignee,
+                                  a :node property, cardinality many;
+                                  property.cljs:401-407)
+  project:      [[Project Alpha]]
+  context:      [[Work]], [[Client/Acme]]
+  energy:       high
+  time-estimate: 2h
+  depends-on:   ((7b2e0c14-…-…))   ← a block-ref UUID
+  waiting-for:  [[John]]
 ```
+
+Do not create a property called `Status` of your own — it collides by title with
+the built-in one (Logseq permits the duplicate,
+`deps/outliner/src/logseq/outliner/validate.cljs:125-129`, but a simple query
+naming `status` then resolves to whichever the index returns first,
+`src/main/frontend/worker/query_dsl.cljs:346-356`). There is no
+`:logseq.property/assigned-to`; the built-in is `:logseq.property/assignee`.
 
 ---
 
@@ -253,23 +379,33 @@ Create: [[Inbox]]
 
 Quick capture:
 
-- TODO [Anything that comes to mind]
-  captured:: [[2026-01-22]]
-  tags:: #inbox
+- [Anything that comes to mind]  #Task #inbox
+  Status:    Todo
+  captured:  [[2026-01-22]]
 
 No organizing yet, just capture
 ```
 
 **Capture Template:**
 
-```markdown
-template:: quick-capture
+Make a template by adding the built-in **Template** tag to the top block of the
+tree — use the block's tag control, **not** an inline `#Template`. `Template` is
+one of the "block kind" tags, and inline tags in that set are stripped when the
+block is saved (`deps/db/src/logseq/db/frontend/class.cljs:130-140`;
+`deps/outliner/src/logseq/outliner/core.cljs:275-291`). Insert a saved template
+later with `/Template` (`src/main/frontend/commands.cljs:339-343`).
 
-- TODO <% cursor %>
-  captured:: [[<% today %>]]
-  source:: <% current page %>
-  tags:: #inbox
+```markdown
+- (type here)  #Task #inbox   ← plus the Template tag
+  Status:   Todo
+  captured: [[<% today %>]]
+  source:   <% current page %>
 ```
+
+`<% cursor %>` is not a template variable — only `today`, `yesterday`,
+`tomorrow`, `time` and `current page` are substituted, and anything else is
+left as literal text
+(`deps/outliner/src/logseq/outliner/template.cljs:104-112,127-128`).
 
 ### Clarify Phase
 
@@ -294,21 +430,20 @@ For each inbox item, ask:
    No → Single task
 
 5. When to do it?
-   → Add SCHEDULED date
+   → Set the built-in Scheduled property (/Scheduled)
 ```
 
 **Clarify Template:**
 
 ```markdown
-template:: clarify-task
-
-- TODO [[Task description]]
-  next-action:: [Specific next step]
-  project:: [[Project Name]] or none
-  context:: [[Context]]
-  time-estimate:: [minutes]
-  energy:: high/medium/low
-  SCHEDULED: <date>
+- Task description  #Task     ← plus the Template tag
+  Status:       Todo
+  Scheduled:    <pick a date>
+  next-action:  [Specific next step]
+  project:      [[Project Name]]
+  context:      [[Context]]
+  time-estimate: [minutes]
+  energy:       high/medium/low
 ```
 
 ### Organize Phase
@@ -345,13 +480,18 @@ template:: clarify-task
 **Organization Structure:**
 
 ```markdown
-- TODO Task description
-  gtd-category:: [[GTD/Next Actions]]
-  context:: [[Work]]
-  project:: [[Project Alpha]]
+- Task description  #Task
+  Status:       Todo
+  gtd-category: [[Next Actions]]
+  context:      [[Work]]
+  project:      [[Project Alpha]]
 
 Query shows all in category
 ```
+
+Note that `[[GTD/Next Actions]]` creates two pages — `GTD` and
+`Next Actions` — and the reference points at the leaf, whose title is
+`Next Actions` (`deps/outliner/src/logseq/outliner/page.cljs:385-388`).
 
 ### Context-Based Organization
 
@@ -370,17 +510,21 @@ Query shows all in category
 **Context Query:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "📍 Tasks by Context"
- :query [:find (pull ?b [*])
+{{query (and [[Office]] (task todo))}}
+```
+
+Or, as an advanced query with the page name passed in — `:block/name` is the
+lowercased, sanitised title, and because `A/B` titles are split into separate
+pages the name to pass is the leaf:
+
+```clojure
+{:query [:find (pull ?b [*])
          :in $ ?context
          :where
-         [?b :block/marker "TODO"]
          [?b :block/refs ?p]
-         [?p :block/name ?context]]
- :inputs ["context/office"]
- :collapsed? false}
-#+END_QUERY
+         [?p :block/name ?context]
+         (task ?b #{"Todo"})]
+ :inputs ["office"]}
 ```
 
 ### Reflect Phase
@@ -388,7 +532,7 @@ Query shows all in category
 **Weekly Review Template:**
 
 ```markdown
-template:: gtd-weekly-review
+- GTD weekly review           ← tagged Template
 
 # GTD Weekly Review - [[<% today %>]]
 
@@ -413,7 +557,7 @@ template:: gtd-weekly-review
 
 ## 4. Stats
 
-- Completed this week: {{query (and [[<% week %>]] (task DONE))}}
+- Completed this week: see the "Completed This Week" query below
 - Active projects: [count]
 - Waiting items: [count]
 
@@ -435,22 +579,32 @@ Decision criteria:
 2. Time: How much do I have?
 3. Energy: What's my level?
 4. Priority: What's most important?
-
-Query for context + time:
-#+BEGIN_QUERY
-{:title "✅ Doable Now"
-:query [:find (pull ?b [*])
-:in $ ?context
-:where
-[?b :block/marker "TODO"]
-[?b :block/refs ?p]
-[?p :block/name ?context]
-[?b :block/properties ?props]
-[(get ?props :time-estimate) ?time]
-[(<= ?time "30min")]]
-:inputs ["context/office"]}
-#+END_QUERY
 ```
+
+Query for context + time. Make `time-estimate` a **number** property (minutes)
+so it can be compared; resolve it by title so you do not have to know its
+generated ident:
+
+```clojure
+{:query [:find (pull ?b [*])
+         :in $ ?context ?estimate-title ?max-minutes
+         :where
+         [?b :block/refs ?p]
+         [?p :block/name ?context]
+         (task ?b #{"Todo" "Doing"})
+         [?prop :block/tags :logseq.class/Property]
+         [?prop :block/title ?estimate-title]
+         [?prop :db/ident ?estimate]
+         [?b ?estimate ?v]
+         [?v :logseq.property/value ?minutes]
+         [(<= ?minutes ?max-minutes)]]
+ :inputs ["office" "time-estimate" 30]}
+```
+
+A number property's value is stored as a **ref to a value entity**, not as a
+bare number, so it has to be dereferenced through `:logseq.property/value`
+before you can compare it (`deps/db/src/logseq/db/frontend/rules.cljc:103-107`
+does the same thing inside `ref->val`).
 
 ---
 
@@ -490,13 +644,10 @@ Examples:
 **Project Template:**
 
 ```markdown
-template:: para-project
-
-# [[Projects/<Project Name>]]
-
-created:: [[<% today %>]]
-deadline:: <date>
-status:: active
+- <Project Name>  #Project    ← plus the Template tag
+  created:  [[<% today %>]]
+  Deadline: <pick a date>
+  para-status: active
 
 ## Outcome
 
@@ -504,8 +655,8 @@ status:: active
 
 ## Next Actions
 
-- TODO
-- TODO
+- (next action)  #Task  Status: Todo
+- (next action)  #Task  Status: Todo
 
 ## Resources
 
@@ -522,17 +673,29 @@ status:: active
 
 **Projects Dashboard:**
 
+There is no `namespace` rule and no `:block/namespace` attribute. Model PARA
+categories as **tags** (`#Project`, `#Area`, `#Resource`, `#Archive`) rather
+than as a page-name prefix — `(tags …)` is a first-class query operator and it
+also picks up tags that extend the one you name
+(`deps/db/src/logseq/db/frontend/rules.cljc:266-295`):
+
 ```clojure
-#+BEGIN_QUERY
-{:title "📊 Active Projects"
- :query [:find (pull ?b [*])
+{{query (and (tags Project) (property para-status "active"))}}
+```
+
+If you prefer the page hierarchy, walk `:block/parent` instead, which is what
+`A/B` titles actually build
+(`deps/outliner/src/logseq/outliner/page.cljs:385-388`). The recursive `parent`
+rule takes the **ancestor first**
+(`deps/db/src/logseq/db/frontend/rules.cljc:8-12`):
+
+```clojure
+{:query [:find (pull ?b [*])
+         :in $ ?category
          :where
-         [?b :block/namespace ?ns]
-         [?ns :block/name "projects"]
-         [?b :block/properties ?props]
-         [(get ?props :status) "active"]]
- :collapsed? false}
-#+END_QUERY
+         [?p :block/name ?category]
+         (parent ?p ?b)]
+ :inputs ["projects"]}
 ```
 
 ### Areas
@@ -558,11 +721,8 @@ Examples:
 **Area Template:**
 
 ```markdown
-template:: para-area
-
-# [[Areas/<Area Name>]]
-
-created:: [[<% today %>]]
+- <Area Name>  #Area          ← plus the Template tag
+  created: [[<% today %>]]
 
 ## Responsibilities
 
@@ -578,8 +738,9 @@ created:: [[<% today %>]]
 
 ## Routine Tasks
 
-- TODO Weekly review
-  SCHEDULED: <date +1w>
+- Weekly review  #Task
+  Status: Todo
+  Scheduled: <pick a date>, Repeat task ✓, Every 1 Week
 
 ## Resources
 
@@ -658,20 +819,23 @@ Examples:
 **Archive Process:**
 
 ```markdown
-1. Move page to Archive namespace
-   [[Projects/Old]] → [[Archives/Projects/Old]]
+1. Retag the page: remove #Project, add #Archive
 
 2. Update properties
-   status:: completed
-   archived:: [[2026-01-22]]
+   para-status: completed
+   archived:    [[2026-01-22]]
 
-3. Remove from active queries
-   (Namespace-based queries auto-exclude)
+3. Active queries filter on (tags Project), so it drops out
 
 4. Keep for reference
    Still searchable
    Still linked
 ```
+
+Retagging is the reliable move. Renaming `Projects/Old` to
+`Archives/Projects/Old` reparents the leaf page, but the page's own title stays
+`Old` either way, so nothing that queries by title changes
+(`deps/outliner/src/logseq/outliner/page.cljs:385-388`).
 
 ### PARA Task Flow
 
@@ -680,7 +844,7 @@ Examples:
 ```markdown
 1. New task captured:
 
-   - TODO Write blog post about PARA
+   - Write blog post about PARA  #Task  Status: Todo
 
 2. Ask: Is this a project or task?
    → Multi-step? → Project
@@ -688,15 +852,16 @@ Examples:
 
 3. Assign category:
 
-   - TODO Write blog post
-     project:: [[Projects/Content Marketing]]
-     area:: [[Areas/Professional Development]]
-     resources:: [[Resources/Writing]]
+   - Write blog post  #Task
+     Status:    Todo
+     project:   [[Content Marketing]]
+     area:      [[Professional Development]]
+     resources: [[Writing]]
 
 4. Add metadata:
-   - deadline::
-   - context::
-   - next-action::
+   - Deadline (built-in, /Deadline)
+   - context
+   - next-action
 ```
 
 ---
@@ -773,26 +938,26 @@ Evening (3 min):
 **Move tasks through stages:**
 
 ```markdown
-- TODO Task description
-  status:: backlog
+- Task description  #Task
+  Status: Backlog
 
-Move: Update property
-status:: ready → doing → done
+Move: change the Status property
+Backlog → Todo → Doing → In Review → Done
 ```
+
+The six built-in statuses already give you Kanban columns, so you do not need a
+`status` property of your own.
 
 **Visual Query:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "🎯 Kanban Board"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/marker ?m]
-         [(contains? #{"TODO" "DOING" "DONE"} ?m)]]
- :group-by-page? true
- :collapsed? false}
-#+END_QUERY
+{{query (task backlog todo doing "in review" done)}}
 ```
+
+`:group-by-page?` will not give you columns: it returns `false` immediately for
+every DB graph (`src/main/frontend/components/query/result.cljs:10-11`). To
+render one query as a board, use the view builder on the query block, or write a
+`:view` function.
 
 ---
 
@@ -803,84 +968,58 @@ status:: ready → doing → done
 **Today's Tasks:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "📅 Today's Agenda"
- :query [:find (pull ?b [*])
-         :in $ ?today
+{:query [:find (pull ?b [*])
+         :in $ ?start ?end
          :where
          (or
-           [?b :block/scheduled ?d]
-           [?b :block/deadline ?d])
-         [(= ?d ?today)]
-         [?b :block/marker ?m]
-         [(not= ?m "DONE")]]
- :inputs [:today]
- :collapsed? false}
-#+END_QUERY
+          [?b :logseq.property/scheduled ?d]
+          [?b :logseq.property/deadline ?d])
+         [(>= ?d ?start)]
+         [(<= ?d ?end)]
+         (task ?b #{"Backlog" "Todo" "Doing" "In Review"})]
+ :inputs [:start-of-today-ms :end-of-today-ms]}
 ```
 
 **Overdue Tasks:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "⚠️ Overdue"
- :query [:find (pull ?b [*])
-         :in $ ?today
+{:query [:find (pull ?b [*])
+         :in $ ?now
          :where
-         [?b :block/deadline ?d]
-         [(< ?d ?today)]
-         [?b :block/marker "TODO"]]
- :inputs [:today]
- :collapsed? false}
-#+END_QUERY
+         [?b :logseq.property/deadline ?d]
+         [(< ?d ?now)]
+         (task ?b #{"Backlog" "Todo" "Doing" "In Review"})]
+ :inputs [:start-of-today-ms]}
 ```
 
 **By Priority:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "🔥 Priority A Tasks"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/marker "TODO"]
-         [?b :block/priority "A"]]
- :collapsed? false}
-#+END_QUERY
+{{query (and (task todo) (priority urgent high))}}
 ```
 
 **By Project:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "📋 Project Tasks"
- :query [:find (pull ?b [*])
-         :in $ ?project
-         :where
-         [?b :block/marker ?m]
-         [(contains? #{"TODO" "DOING"} ?m)]
-         [?b :block/refs ?p]
-         [?p :block/name ?project]]
- :inputs ["projects/alpha"]
- :collapsed? false}
-#+END_QUERY
+{{query (and [[Alpha]] (task todo doing))}}
 ```
 
 **Quick Wins (< 15 min):**
 
+With `time-estimate` as a **number** property holding minutes:
+
 ```clojure
-#+BEGIN_QUERY
-{:title "⚡ Quick Wins"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
+         :in $ ?estimate-title ?max-minutes
          :where
-         [?b :block/marker "TODO"]
-         [?b :block/properties ?props]
-         [(get ?props :time-estimate) ?time]
-         [(or
-           (= ?time "5min")
-           (= ?time "10min")
-           (= ?time "15min"))]]
- :collapsed? false}
-#+END_QUERY
+         (task ?b #{"Todo"})
+         [?prop :block/tags :logseq.class/Property]
+         [?prop :block/title ?estimate-title]
+         [?prop :db/ident ?estimate]
+         [?b ?estimate ?v]
+         [?v :logseq.property/value ?minutes]
+         [(<= ?minutes ?max-minutes)]]
+ :inputs ["time-estimate" 15]}
 ```
 
 ### Advanced Queries
@@ -888,49 +1027,48 @@ status:: ready → doing → done
 **Energy-Based:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "⚡ High Energy Tasks"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/marker "TODO"]
-         [?b :block/properties ?props]
-         [(get ?props :energy) "high"]]
- :collapsed? false}
-#+END_QUERY
+{{query (and (task todo) (property energy "high"))}}
 ```
 
 **Waiting Items:**
 
+There is no `Waiting` status. The closest built-in is **In Review**; if that does
+not fit, add your own `waiting-for` property and query on its presence — the
+one-argument `(property …)` form matches "has this property at all"
+(`src/main/frontend/worker/query_dsl.cljs:394-401`):
+
 ```clojure
-#+BEGIN_QUERY
-{:title "⏳ Waiting For"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/marker "WAITING"]
-         [?b :block/properties ?props]
-         [(get ?props :waiting-for)]]
- :collapsed? false}
-#+END_QUERY
+{{query (and (task todo doing) (property waiting-for))}}
 ```
 
 **Completed This Week:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "✅ Completed This Week"
- :query [:find (pull ?b [*])
+{{query (and (task done) (between -7d today))}}
+```
+
+The `between` rule filters on the **journal page** the block sits on: it
+requires `[?p :block/tags :logseq.class/Journal]` and compares
+`:block/journal-day`, which is a YYYYMMDD integer
+(`deps/db/src/logseq/db/frontend/rules.cljc:94-100`). Its first argument is the
+**block**, not a date. Note also that there is no `:block/journal?` attribute —
+journal-ness is the `:logseq.class/Journal` tag.
+
+As an advanced query:
+
+```clojure
+{:query [:find (pull ?b [*])
          :in $ ?start ?end
          :where
-         [?b :block/marker "DONE"]
-         [?b :block/page ?p]
-         [?p :block/journal? true]
-         [?p :block/journal-day ?d]
-         [(>= ?d ?start)]
-         [(<= ?d ?end)]]
- :inputs [:7d-before :today]
- :collapsed? false}
-#+END_QUERY
+         (task ?b #{"Done"})
+         (between ?b ?start ?end)]
+ :inputs [:-7d :today]}
 ```
+
+`:-7d` and `:today` are the right inputs here — both resolve to YYYYMMDD
+integers, which is what `:block/journal-day` holds
+(`deps/db/src/logseq/db/frontend/inputs.cljs:73,99-100,121-126`). `:7d-before`
+is the deprecated spelling (`inputs.cljs:80`).
 
 ---
 
@@ -941,14 +1079,14 @@ status:: ready → doing → done
 **Morning Review (5 min):**
 
 ```markdown
-template:: daily-morning-review
+- Daily morning review        ← tagged Template
 
 ## Morning Review - [[<% today %>]]
 
 ### Yesterday
 
-- Completed: {{query [[<% yesterday %>]] (task DONE)}}
-- Pending: {{query [[<% yesterday %>]] (task TODO)}}
+- Completed: {{query (and [[<% yesterday %>]] (task done))}}
+- Pending:   {{query (and [[<% yesterday %>]] (task todo))}}
 
 ### Today's Plan
 
@@ -958,25 +1096,29 @@ template:: daily-morning-review
 
 ### Top 3 Today
 
-1. TODO [#A]
-2. TODO [#A]
-3. TODO [#A]
+1. (task)  #Task  Status: Todo, Priority: Urgent
+2. (task)  #Task  Status: Todo, Priority: Urgent
+3. (task)  #Task  Status: Todo, Priority: High
 ```
+
+Two simple-query filters have to be joined by an explicit boolean operator —
+`{{query [[Page]] (task done)}}` is not an implicit AND. `and`, `or` and `not`
+are the only combinators (`src/main/frontend/worker/query_dsl.cljs:548-549`).
 
 **Evening Review (10 min):**
 
 ```markdown
-template:: daily-evening-review
+- Daily evening review        ← tagged Template
 
 ## Evening Review - [[<% today %>]]
 
 ### Completed
 
-{{query [[<% today %>]] (task DONE)}}
+{{query (and [[<% today %>]] (task done))}}
 
 ### Incomplete
 
-{{query [[<% today %>]] (task TODO DOING)}}
+{{query (and [[<% today %>]] (task todo doing))}}
 
 ### Rollover Decisions
 
@@ -996,11 +1138,11 @@ improve-tomorrow::
 **Weekly Review Process (30 min):**
 
 ```markdown
-template:: weekly-review
+- Weekly review               ← tagged Template
 
-# Weekly Review - Week [[<% week %>]]
+# Weekly Review
 
-date:: [[<% today %>]]
+date: [[<% today %>]]
 
 ## 1. Gather & Process (10 min)
 
@@ -1013,12 +1155,12 @@ date:: [[<% today %>]]
 
 ### Completed This Week
 
-{{query (and (between <% week-start %> <% week-end %>) (task DONE))}}
+{{query (and (between -7d today) (task done))}}
 Count:
 
 ### Incomplete Tasks
 
-{{query (task TODO DOING WAITING)}}
+{{query (task todo doing "in review")}}
 Action: Reschedule, cancel, or keep
 
 ### Projects Review
@@ -1059,11 +1201,11 @@ time-blocks::
 **Monthly Review (60 min):**
 
 ```markdown
-template:: monthly-review
+- Monthly review              ← tagged Template
 
-# Monthly Review - [[<% month %>]]
+# Monthly Review
 
-date:: [[<% today %>]]
+date: [[<% today %>]]
 
 ## 1. Projects (20 min)
 
@@ -1074,7 +1216,7 @@ date:: [[<% today %>]]
 
 ### Project Health
 
-{{query (property :project)}}
+{{query (property project)}}
 
 ### Decisions
 
@@ -1123,25 +1265,21 @@ date:: [[<% today %>]]
 **Link Dependent Tasks:**
 
 ```markdown
-- TODO Complete design
-  id:: design-task
-- TODO Start implementation
-  depends-on:: ((design-task))
-  SCHEDULED: <after design done>
+- Complete design      #Task  Status: Todo   ← Copy block ref
+- Start implementation #Task  Status: Todo
+  depends-on: ((7b2e0c14-…-…))
 ```
+
+`id:: design-task` does not exist in a DB graph. A block reference is always a
+UUID (`deps/common/src/logseq/common/util/block_ref.cljs:9`); get one with
+**Copy block ref**. Logseq does not compute a scheduled date from a dependency —
+`depends-on` here is just a `:node`-typed property you created, and the
+`Scheduled` date is still yours to set.
 
 **Query for Blocked Tasks:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "🚫 Blocked Tasks"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/marker "TODO"]
-         [?b :block/properties ?props]
-         [(get ?props :depends-on)]]
- :collapsed? false}
-#+END_QUERY
+{{query (and (task todo doing) (property depends-on))}}
 ```
 
 ### Time Tracking
@@ -1149,39 +1287,45 @@ date:: [[<% today %>]]
 **Track Time Spent:**
 
 ```markdown
-- TODO Task description
-  time-estimate:: 2h
-  time-spent:: 1.5h
-  time-remaining:: 0.5h
+- Task description  #Task
+  Status:         Todo
+  time-estimate:  120   (number property, minutes)
+  time-spent:     90
+  time-remaining: 30
 
 Update as you work
 ```
+
+Make these **number** properties if you want to compare them in queries; their
+values are stored as ref entities, so a query has to read
+`:logseq.property/value` off the ref.
+
+Logseq does track one kind of time by itself: `task-spent-time` sums the periods
+a task spent in the **Doing** status, using the status history recorded by
+`:logseq.property/enable-history?` on the Status property
+(`src/main/frontend/worker/handler/query.cljs:49-100`;
+`deps/db/src/logseq/db/frontend/property.cljs:319-321`).
 
 ### Habit Tracking
 
 **Recurring Habits:**
 
 ```markdown
-- TODO Morning workout
-  SCHEDULED: <2026-01-22 Wed +1d>
-  habit:: true
-  streak:: 7 days
-
-Repeats daily (+1d)
-Track streak manually or query
+- Morning workout  #Task
+  Status:    Todo
+  Scheduled: 2026-01-22, Repeat task ✓, Every 1 Day
+  habit:     true    (a checkbox property you add)
+  streak:    7       (a number property you maintain)
 ```
 
-**Habit Streak Query:**
+Set the repeat in the Scheduled date picker (see "Repeating Tasks" above); the
+`<2026-01-22 Wed +1d>` timestamp form is file-graph syntax. Logseq does not
+compute a streak — `streak` is yours to update.
+
+**Habit Query:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "🔥 Habit Streaks"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/properties ?props]
-         [(get ?props :habit) true]]
- :collapsed? false}
-#+END_QUERY
+{{query (property habit true)}}
 ```
 
 ### Batch Processing
@@ -1193,9 +1337,9 @@ Track streak manually or query
   context:: [[Context/Computer]]
   batch:: true
 
-  - TODO Reply to Sarah
-  - TODO Reply to John
-  - TODO Reply to client
+  - Reply to Sarah  #Task  Status: Todo
+  - Reply to John   #Task  Status: Todo
+  - Reply to client #Task  Status: Todo
 
 Do all at once (time-efficient)
 ```
@@ -1211,15 +1355,15 @@ Do all at once (time-efficient)
 ```markdown
 ✅ Action-oriented:
 
-- TODO Call Sarah about project timeline
-- TODO Review and merge PR #123
-- TODO Schedule dentist appointment
+- Call Sarah about project timeline
+- Review and merge PR #123
+- Schedule dentist appointment
 
 ❌ Vague:
 
-- TODO Sarah
-- TODO Code review
-- TODO Dentist
+- Sarah
+- Code review
+- Dentist
 ```
 
 ### Reasonable Limits
@@ -1246,7 +1390,7 @@ If more:
 - [ ] Archive completed tasks
 - [ ] Review stale tasks (>2 weeks)
 - [ ] Update deadlines
-- [ ] Clean up WAITING items
+- [ ] Clean up In Review / blocked items
 - [ ] Process inbox to zero
 ```
 

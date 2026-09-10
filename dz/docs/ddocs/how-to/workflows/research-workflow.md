@@ -1,13 +1,16 @@
 ---
 title: 'Research Workflow'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
+lastVerified: '2026-09-09'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
 related-docs:
   - '[Zettelkasten Method](./zettelkasten-method.md)'
   - '[Query Patterns](../../reference/advanced/query-patterns.md)'
-  - '[PDF Annotations](../../how-to/features/pdf-annotations.md)'
+  - '[PDF Annotations](../../reference/features/pdf-annotations.md)'
 tags: ['research', 'workflow', 'academic', 'literature-review']
 ---
 
@@ -25,6 +28,32 @@ Learn how to conduct academic and professional research in Logseq. This workflow
 - Collaboration workflows
 
 **Time to Setup:** 30-60 minutes
+
+---
+
+## Before You Start: how this maps onto a DB graph
+
+The examples below are written as outlines so you can read them quickly. Three
+things to know about how the same structure is actually built in a DB graph:
+
+- **Properties are structured data, not text.** `author:: Smith` typed into a
+  block is plain text in a DB graph — it does not create a property. Add
+  properties with the `/Add property` slash command
+  (`src/main/frontend/commands.cljs:354-358`), which mints a property entity and
+  attaches a typed value. The `key:: value` lines in the outlines below are
+  shorthand for "this node carries this property", not literal syntax to type.
+- **Property idents are generated, not guessable.** A property you create called
+  "Author" is stored as `:user.property/Author-<8 random chars>`
+  (`deps/db/src/logseq/db/frontend/property.cljs:854-859` →
+  `deps/db/src/logseq/db/frontend/db_ident.cljc:66-89`). Never hard-code a user
+  property ident in a query — resolve it by title.
+- **`A/B/C` page names are split into a page hierarchy.** Creating
+  `[[Research/Papers/Smith-2025]]` creates three pages — `Research`, `Papers`,
+  `Smith-2025` — linked by `:block/parent`, with the top page filed under the
+  built-in **Library** page. The leaf page's title is `Smith-2025`, not the full
+  path (`deps/outliner/src/logseq/outliner/page.cljs:385-388`;
+  `deps/outliner/test/logseq/outliner/page_test.cljs:32-49`). The old
+  `:block/namespace` attribute no longer exists.
 
 ---
 
@@ -100,7 +129,15 @@ Learn how to conduct academic and professional research in Logseq. This workflow
   - [[Research/Writing]]
 ```
 
-### Namespace Organization
+### Page Hierarchy
+
+Creating a page whose title contains `/` splits it into one page per segment,
+linked by `:block/parent`, with the topmost segment filed under the built-in
+**Library** page (`deps/outliner/src/logseq/outliner/page.cljs:385-388`). So the
+tree below is what you get in the sidebar; the individual page titles are the
+leaf names (`Papers`, `Algorithmic-Bias`, …), and two leaves may share a name if
+they sit under different parents
+(`deps/outliner/test/logseq/outliner/page_test.cljs:64-72`).
 
 **Research Structure:**
 
@@ -140,12 +177,26 @@ Research/
 
 ### Project Templates
 
+Create a template by writing the block tree you want, then adding the built-in
+**Template** tag (`:logseq.class/Template`,
+`deps/db/src/logseq/db/frontend/class.cljs:100-102`) to its top block. Use the
+block's tag control — an inline `#Template` will not stick, because `Template`
+is one of the "block kind" tags and inline tags in that set are stripped on save
+(`class.cljs:130-140`; `deps/outliner/src/logseq/outliner/core.cljs:275-291`).
+Insert a saved template later with `/Template`
+(`src/main/frontend/commands.cljs:339-343`).
+
+Only five dynamic variables are substituted when a template is applied:
+`<% today %>`, `<% yesterday %>`, `<% tomorrow %>`, `<% time %>` and
+`<% current page %>` (`deps/outliner/src/logseq/outliner/template.cljs:104-112`).
+Anything else inside `<% … %>` is left as literal text
+(`template.cljs:127-128`). There is no `{{title}}`-style prompt for template
+arguments — fill the blanks in after inserting.
+
 **Research Project Template:**
 
 ```markdown
-template:: research-project
-
-- [[Research/Projects/{{title}}]]
+- Research project        ← tagged Template
   project-type:: [[Research Project]]
   status:: planning
   started:: [[<% today %>]]
@@ -192,18 +243,7 @@ template:: research-project
 
   ## Literature Review
 
-  #+BEGIN_QUERY
-  {:title "Related literature"
-  :query [:find (pull ?b [*])
-  :in $ ?project
-  :where
-  [?b :block/refs ?p]
-  [?p :block/name ?project]
-  [?b :block/properties ?props]
-  [(get ?props :source-type)]]
-  :inputs [:current-page]
-  :collapsed? false}
-  #+END_QUERY
+  (an /Advanced Query block — see "Bibliography Query" below for the body)
 
   ## Key Findings
 
@@ -369,26 +409,37 @@ template:: source-quick-capture
 
 **Status Workflow:**
 
+Name this property something other than `Status`. `Status` is already the title
+of the built-in task property `:logseq.property/status`, whose closed values are
+fixed at Backlog / Todo / Doing / In Review / Done / Canceled
+(`deps/db/src/logseq/db/frontend/property.cljs:300-321`) — it cannot hold
+`to-read`. Logseq *does* let you create a second, user property also called
+"Status" (`deps/outliner/src/logseq/outliner/validate.cljs:125-129`), but then a
+simple query that names `status` will pick whichever of the two the index
+returns first (`src/main/frontend/worker/query_dsl.cljs:346-356`). Use
+`reading-status` and avoid the ambiguity.
+
 ```markdown
-Statuses:
+Reading statuses (values of a `reading-status` property you create):
 
 1. to-read → Paper saved, not started
 2. reading → Currently reading
 3. read → Finished reading
 4. annotated → Notes taken
 5. synthesized → Integrated into research
-
-Query by status:
-#+BEGIN_QUERY
-{:title "Papers to read"
-:query [:find (pull ?b [*])
-:where
-[?b :block/properties ?props]
-[(get ?props :status) "to-read"]
-[(get ?props :source-type) "Paper"]]
-:collapsed? false}
-#+END_QUERY
 ```
+
+Query by status. The simple-query form is enough here — `(property …)` resolves
+the property by its title, so you never have to know the generated ident
+(`src/main/frontend/worker/query_dsl.cljs:343-356`):
+
+```clojure
+{{query (and (property reading-status "to-read") (property source-type "Paper"))}}
+```
+
+Simple-query property names are read as symbols, so a property whose title
+contains a space cannot be named this way — keep research property titles to a
+single token.
 
 ---
 
@@ -399,30 +450,41 @@ Query by status:
 **In Logseq:**
 
 ```markdown
-1. Add PDF to assets folder
-   /assets/papers/smith-2025.pdf
+1. Add the PDF with the /Upload an asset slash command
+   (src/main/frontend/commands.cljs:335-338). The file is copied into the
+   graph's assets/ directory (deps/common/src/logseq/common/config.cljs:56)
+   and a node tagged #Asset is created for it.
 
-2. Link from literature page
-   pdf:: [[../assets/papers/smith-2025.pdf]]
+2. Open the PDF by clicking that asset node.
 
-3. Open PDF in Logseq
-
-   - Right sidebar shows PDF
-   - Left sidebar for notes
-
-4. Annotate while reading
-
+3. Annotate while reading
    - Highlight important text
-   - Add comments
-   - Create block references
+   - Draw an area highlight
 
-5. Highlights appear as blocks
-   - Automatic page numbers
-   - Linkable with block refs
-   - Searchable
+4. Each highlight becomes a block, created as a child of the PDF asset
+   block and tagged #"PDF Annotation" (:logseq.class/Pdf-annotation,
+   src/main/frontend/extensions/pdf/assets.cljs:93-102). It carries:
+   - Annotation page  (:logseq.property.pdf/hl-page)
+   - Annotation color (:logseq.property.pdf/hl-color)
+   - Annotation data  (:logseq.property.pdf/hl-value)
+   - Asset            (:logseq.property/asset — back-link to the PDF)
+   Area highlights additionally get :logseq.property.pdf/hl-type :area and
+   :logseq.property.pdf/hl-image.
+
+5. Reference a highlight from anywhere with a block reference.
 ```
 
+> **Unverified:** the exact placement of the PDF viewer (right sidebar vs. main
+> pane) was not checked against source; treat the layout description as
+> indicative only.
+
 **Example Annotations:**
+
+Block references in a DB graph are always UUIDs — `((0b3c6e9a-…-…))`
+(`deps/common/src/logseq/common/util/block_ref.cljs:9`). There is no `id::`
+property for naming a block, and the readable names used in the examples below
+(`((bias-testing-stat))` and friends) are placeholders for the UUID you get from
+**Copy block ref**, not literal text you can type.
 
 ```markdown
 - [[Literature/Papers/Smith-2025-Ethics-AI]]
@@ -433,7 +495,7 @@ Query by status:
 
   > "Transparency in ML systems is not merely a
   > technical challenge but a fundamental ethical
-  > requirement" id:: transparency-quote
+  > requirement"          ← copy this block's ref
 
   Note: Key argument for regulatory focus
   Related: [[Concepts/Transparency-Requirement]]
@@ -441,7 +503,7 @@ Query by status:
   ### Page 7 - Methodology
 
   > "We analyzed 50 healthcare ML deployments
-  > across 10 hospitals" id:: methodology-scope
+  > across 10 hospitals"  ← copy this block's ref
 
   Note: Similar scope to our research
   Could compare findings
@@ -449,7 +511,7 @@ Query by status:
   ### Page 15 - Key Finding
 
   > "78% of systems lacked adequate bias testing"
-  > id:: bias-testing-stat
+  >                       ← copy this block's ref
 
   Note: IMPORTANT - supports hypothesis 2
   Add to literature review section
@@ -510,11 +572,11 @@ Before reading, prepare questions:
   ## Key Arguments
 
   1. Transparency is ethical requirement, not just
-     technical feature id:: arg-transparency
+     technical feature                    ← copy block ref
   2. Bias testing inadequate in most systems
-     id:: arg-bias-testing
+                                          ← copy block ref
   3. Regulatory frameworks lag behind technology
-     id:: arg-regulation-lag
+                                          ← copy block ref
 
   ## Evidence
 
@@ -824,22 +886,16 @@ Result: Rich, well-supported concept note
 
 **Step 1: Gather Relevant Notes**
 
+Tag concept notes `#Concept` rather than giving them a `note-type` property —
+`(tags …)` is a first-class simple-query operator and it also matches
+sub-tags that extend `Concept` (`deps/db/src/logseq/db/frontend/rules.cljc:266-295`).
+
 ```markdown
 - [[Writing/Lit-Review-Section]]
 
   ## Related Concept Notes
 
-  #+BEGIN_QUERY
-  {:title "Concepts for lit review"
-  :query [:find (pull ?b [*])
-  :where
-  [?b :block/properties ?props]
-  [(get ?props :note-type) "concept"]
-  [?b :block/refs ?p]
-  [?p :block/name ?project]]
-  :inputs ["research/thesis-ml-ethics"]
-  :collapsed? false}
-  #+END_QUERY
+  {{query (and [[Thesis-ML-Ethics]] (tags Concept))}}
 
   Selected concepts:
 
@@ -965,11 +1021,23 @@ Result: Rich, well-supported concept note
 
   ## Advisor Feedback
 
-  - DONE Expand section 2.3 on fairness metrics
-  - DONE Add more EU examples in section 4.1
-  - TODO Clarify methodology discussion
-  - TODO Add table comparing frameworks
+  - Expand section 2.3 on fairness metrics  #Task  Status: Done
+  - Add more EU examples in section 4.1     #Task  Status: Done
+  - Clarify methodology discussion          #Task  Status: Todo
+  - Add table comparing frameworks          #Task  Status: Todo
 ```
+
+`TODO` / `DONE` written into the text of a block does nothing in a DB graph —
+markers were a file-graph construct. A task is a block tagged `#Task`
+(`:logseq.class/Task`) carrying `:logseq.property/status`, whose only values are
+the six closed values **Backlog, Todo, Doing, In Review, Done, Canceled**
+(`deps/db/src/logseq/db/frontend/property.cljs:313-318`). Set one with the
+matching slash command (`/Todo`, `/Doing`, `/Done`, …,
+`src/main/frontend/commands.cljs:150-165`); setting any Task property tags the
+block `#Task` for you
+(`deps/outliner/src/logseq/outliner/property.cljs:205-206`).
+`Cmd/Ctrl+Enter` cycles the status of the block you are editing
+(`src/main/frontend/modules/shortcut/config.cljs:167`).
 
 ---
 
@@ -1012,50 +1080,78 @@ Result: Rich, well-supported concept note
   ```
 ````
 
-````
-
 ### Reference Management
 
 **Bibliography Query:**
 
+Write advanced queries with the `/Advanced Query` slash command. It tags the
+block `#Query` (`:logseq.class/Query`) and puts the query map in the
+`:logseq.property/query` property as a Clojure code block
+(`src/main/frontend/commands.cljs:125-132`). There is no `#+BEGIN_QUERY` /
+`#+END_QUERY` wrapper in a DB graph — that is file-graph syntax and the graph
+cannot parse it.
+
+Because a user property's `:db/ident` carries a random suffix, resolve the
+property **by title** inside the query and then use the bound ident as the
+attribute:
+
 ```clojure
-#+BEGIN_QUERY
-{:title "All cited sources"
- :query [:find (pull ?b [*])
-         :in $ ?project
+{:query [:find (pull ?b [*])
+         :in $ ?project-name ?source-type-title
          :where
+         [?p :block/name ?project-name]
          [?b :block/refs ?p]
-         [?p :block/name ?project]
-         [?b :block/properties ?props]
-         [(get ?props :source-type)]]
- :inputs ["research/thesis-ml-ethics"]
- :result-transform (fn [result]
-                     (sort-by
-                       (fn [b]
-                         (str (get-in b [:block/properties :author])
-                              (get-in b [:block/properties :year])))
-                       result))
- :collapsed? false}
-#+END_QUERY
-````
+         [?prop :block/tags :logseq.class/Property]
+         [?prop :block/title ?source-type-title]
+         [?prop :db/ident ?source-type]
+         [?b ?source-type _]]
+ :inputs ["thesis-ml-ethics" "source-type"]
+ :result-transform (fn [result] (sort-by :block/title result))}
+```
+
+Three things worth knowing about this query:
+
+- `:inputs` for a page takes the **lowercased, sanitised** page name, which
+  matches `:block/name` (`deps/db/src/logseq/db/frontend/schema.cljs:88`).
+  Because `A/B/C` titles are split into separate pages, the name to pass is the
+  leaf — `"thesis-ml-ethics"`, not `"research/thesis-ml-ethics"`.
+- `:title` is **not** a supported query-map key. It is only rendered for
+  Logseq's own built-in queries (`src/main/frontend/components/query.cljs:167-175`),
+  so on a user query it is silently ignored. Put the heading in the parent block
+  instead. `:breadcrumb-show?` and `:group-by-page?` are likewise inert —
+  `group-by-page?` returns `false` immediately for any DB graph
+  (`src/main/frontend/components/query/result.cljs:10-11`).
+- `:result-transform` works, and receives block **entities** before they are
+  normalised (`src/main/frontend/worker/handler/render_resource/query.cljs:181-201`),
+  so `(sort-by :block/title …)` is fine. Sorting by a user property is not: the
+  key in `(:block/properties b)` is the generated ident
+  (`:user.property/Author-a1b2c3d4`), not `:author`.
 
 ### Citation Tracking
 
 **Usage Query:**
 
+A block's text lives in `:block/title`, not `:block/content`.
+`:block/content` is not a DB-graph attribute at all — it survives only as a
+back-compat shim in the plugin SDK (`src/main/logseq/sdk/utils.cljs:56`) and is
+not queryable.
+
 ```clojure
-#+BEGIN_QUERY
-{:title "Where did I cite this paper?"
- :query [:find (pull ?b [*])
-         :in $ ?paper
+{:query [:find (pull ?b [*])
+         :in $ ?paper-name
          :where
-         [?paper-page :block/name ?paper]
+         [?paper-page :block/name ?paper-name]
          [?b :block/refs ?paper-page]
-         [?b :block/content ?content]
-         [(clojure.string/includes? ?content "embed")]]
- :inputs ["literature/papers/smith-2025-ethics-ai"]
- :collapsed? false}
-#+END_QUERY
+         [?b :block/title ?title]
+         [(clojure.string/includes? ?title "embed")]]
+ :inputs ["smith-2025-ethics-ai"]}
+```
+
+Or, as a simple query, since a bare string is a full-text `block-content` filter
+(`deps/db/src/logseq/db/frontend/rules.cljc:84-87`):
+
+```clojure
+{{query (and [[Smith-2025-Ethics-AI]] "embed")}}
 ```
 
 ---
@@ -1089,7 +1185,10 @@ Result: Rich, well-supported concept note
   - Weekly sync meetings
   - Status updates in daily notes
   - Tag teammates with [[Person/Name]]
-  - Use TODO with owner:: for tasks
+  - Tag work items #Task and set the built-in Assignee property
+    (:logseq.property/assignee — a :node property, cardinality many,
+    deps/db/src/logseq/db/frontend/property.cljs:401-407). There is no
+    :logseq.property/assigned-to.
 ```
 
 ### Review Workflow
@@ -1103,20 +1202,30 @@ Result: Rich, well-supported concept note
 
   ### From Advisor
 
-  - TODO Review literature synthesis
-    reviewer:: [[Person/Dr-Smith]]
-    requested:: [[2026-01-22]]
-    due:: [[2026-01-29]]
-    focus:: Conceptual framework
+  - Review literature synthesis  #Task
+    Status:   Todo
+    Assignee: [[Dr-Smith]]
+    Deadline: 2026-01-29
+    requested: [[2026-01-22]]
+    focus:     Conceptual framework
 
   ### From Peer
 
-  - TODO Check methodology section
-    reviewer:: [[Person/Sarah]]
-    requested:: [[2026-01-22]]
-    due:: [[2026-01-25]]
-    focus:: Methods clarity
+  - Check methodology section  #Task
+    Status:   Todo
+    Assignee: [[Sarah]]
+    Deadline: 2026-01-25
+    requested: [[2026-01-22]]
+    focus:     Methods clarity
 ```
+
+`Status`, `Assignee` and `Deadline` above are built-in properties; `requested`
+and `focus` are properties you create. Use the built-in **Deadline**
+(`/Deadline`) rather than a `due` property of your own — it is the one the Task
+tag's schema knows about
+(`deps/db/src/logseq/db/frontend/class.cljs:42`), and it stores a **datetime**
+(epoch milliseconds), not a journal page reference
+(`deps/db/src/logseq/db/frontend/property.cljs:340-346`).
 
 **Provide Feedback:**
 
@@ -1161,7 +1270,7 @@ Result: Rich, well-supported concept note
 ```markdown
 1. Review yesterday's notes (10 min)
 2. Plan today's reading (5 min)
-3. Check research TODOs (5 min)
+3. Check open research tasks (5 min)
 4. Update project dashboard (10 min)
 ```
 
@@ -1399,7 +1508,7 @@ Solution: Gradual composition
 **Related:**
 
 - [Zettelkasten Method](./zettelkasten-method.md)
-- [PDF Annotations](../../how-to/features/pdf-annotations.md)
+- [PDF Annotations](../../reference/features/pdf-annotations.md)
 - [Query Patterns](../../reference/advanced/query-patterns.md)
 
 ---
