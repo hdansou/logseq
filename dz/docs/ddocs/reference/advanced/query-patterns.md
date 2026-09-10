@@ -492,8 +492,16 @@ integer (`schema.cljs:96`; the built-in `between` rule uses exactly this shape,
 
 ## Property Queries
 
-In a DB graph a property is a real DataScript attribute on the block — there is no
-`:block/properties` map.
+In a DB graph a property is a real DataScript attribute on the block, so you match it directly
+rather than digging into a map.
+
+`:block/properties` is **not** a DataScript attribute, so `[?b :block/properties ?p]` in a
+`:where` clause matches nothing. It does still exist as a *computed entity lookup*:
+`lookup-kv-then-entity` intercepts the key and `get-properties` builds a `{property-ident value}`
+map from the entity's own property attributes
+(`deps/db/src/logseq/db/common/entity_plus.cljc:138-146`, dispatched at `:162-163`). So
+`(:block/properties e)` works on an entity — inside `:result-transform`, which receives entities —
+but never as a query clause.
 
 **User property idents are not guessable.** When you create a property named "Status", Logseq mints
 an ident in the `user.property` namespace **with a random 8-character suffix** — one non-digit

@@ -37,6 +37,11 @@ This reference documents Logseq's advanced query system—Datalog queries for re
 > graph never parses, and `:block/marker`, `:block/content`, `:block/properties`, `:block/journal?`,
 > `:block/scheduled`, `:block/deadline` and `:block/namespace` are not attributes of the DB-graph
 > schema (`deps/db/src/logseq/db/frontend/schema.cljs:56-108`).
+>
+> One nuance on that list: `:block/properties` is not a DataScript attribute either, so it never
+> matches in a `:where` clause — but it survives as a *computed entity lookup* returning
+> `{property-ident value}` (`deps/db/src/logseq/db/common/entity_plus.cljc:138-146`, dispatched at
+> `:162-163`). It therefore works on an entity, such as inside `:result-transform`, and only there.
 
 ---
 
