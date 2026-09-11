@@ -2,9 +2,9 @@
 title: 'Block-Based Editing Philosophy'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
-reviewStatus: wip-unverified
+reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
 related-docs:
@@ -79,7 +79,7 @@ This document explains why Logseq uses block-based editing (outliner approach) i
 ```
 
 Every one of those attributes is declared in the DB graph schema
-([`schema.cljs:56-108`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)):
+([`schema.cljs`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs), line numbers at `be800f1711`):
 `:block/uuid` at `:61`, `:block/parent` at `:62`, `:block/order` at `:64`,
 `:block/page` at `:68`, `:block/refs` at `:71`, `:block/tags` at `:73`,
 `:block/title` at `:93`.
@@ -102,10 +102,10 @@ Every one of those attributes is declared in the DB graph schema
 ```
 
 Properties are not typed as `key:: value` text in a DB graph — that is
-file-graph Markdown syntax. You attach a property through the UI, e.g. the
+file-graph Markdown syntax. You attach a property through the UI. One way is the
 `/Add property` slash command
-([`commands.cljs:354-358`](../../../../../src/main/frontend/commands.cljs)),
-and it is stored as its own DataScript attribute keyed by the property's
+([`commands.cljs:354-358`](../../../../../src/main/frontend/commands.cljs), label at
+`en.edn:306`). The value is stored as its own DataScript attribute, keyed by the property's
 `:db/ident`.
 
 **Technical Structure:**
@@ -120,11 +120,18 @@ and it is stored as its own DataScript attribute keyed by the property's
  :block/refs [{:db/id 123}]
  :block/tags [{:db/id 42}]
  :block/created-at 1737504000000
- :user.property/severity {:db/id 999}}
+ :user.property/severity-Xk3pQ9aB {:db/id 999}}
 ```
 
 Note the last line: a user property is a **top-level attribute** on the block,
-namespaced by its `:db/ident`. There is no `:block/properties` attribute in the
+keyed by its `:db/ident`. User property idents live in the `user.property`
+namespace ([`property.cljs:852`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)).
+They also carry a random suffix: a hyphen, one non-digit character and a 7-character nano-id.
+Only `plugin.class.*` idents are exempt
+([`db_ident.cljc:66-90`](../../../../../deps/db/src/logseq/db/frontend/db_ident.cljc)).
+So the ident is not simply `:user.property/severity`.
+
+There is no `:block/properties` attribute in the
 schema, so a `[?b :block/properties ?p]` clause in a `:where` matches nothing.
 The key is intercepted at *entity* lookup time, where it synthesises a
 `{property-ident value}` map from the entity's own datoms
@@ -159,19 +166,41 @@ Classic outliner apps:
 Not just text:
 
 - Text blocks: "This is a thought"
-- Code blocks: tagged `Code` (/Code block)
-- Quote blocks: tagged `Quote` (/Quote)
-- Math blocks: tagged `Math` (/Math block)
+- Code blocks: display type `:code` + tag `Code` (/Code block)
+- Quote blocks: display type `:quote` + tag `Quote` (/Quote)
+- Math blocks: display type `:math` + tag `Math` (/Math block)
 - Query blocks: tagged `Query` (/Query, /Advanced Query)
 - Asset blocks: tagged `Asset` (images and other uploads)
 ````
 
-These are not different data structures — each is an ordinary block carrying a
-built-in class on `:block/tags`. `Query` (`:54`), `Asset` (`:68`), `Code-block`
-(`:76`), `Quote-block` (`:81`) and `Math-block` (`:86`) are all declared in the
-same `built-in-classes` map as `Task` and `Template`
+None of these is a different data structure. Each is an ordinary block with a
+built-in class on `:block/tags`, and in some cases a display type:
+
+- **Code, quote and math blocks.** The slash commands set
+  `:logseq.property.node/display-type`. `/Quote` and `/Math block` set it directly
+  ([`commands.cljs:140-148`](../../../../../src/main/frontend/commands.cljs)).
+  `/Code block` fires the `:editor/upsert-type-block` event, which sets `:code`,
+  plus a code language when one is known
+  ([`handler/events.cljs:400-406`](../../../../../src/main/frontend/handler/events.cljs)).
+  The worker pipeline then keeps display type and tag in step, in both directions
+  ([`worker/pipeline.cljs:312-336`](../../../../../src/main/frontend/worker/pipeline.cljs), called at `:512`):
+  - Setting a display type adds the matching class tag (`:316-318`).
+  - Adding the tag sets the display type (`:325-336`).
+  - Removing the tag retracts the display type (`:320-323`).
+
+  The pairs are `:code` ↔ `Code-block` (`class.cljs:76`, title "Code"),
+  `:quote` ↔ `Quote-block` (`:81`, "Quote") and `:math` ↔ `Math-block` (`:86`, "Math")
+  ([`db.cljs:113-130`](../../../../../deps/db/src/logseq/db/frontend/db.cljs)).
+  The pipeline skips RTC and graph-download transactions (`pipeline.cljs:312`).
+- **Query blocks** are tagged `Query` (`class.cljs:54`). `/Advanced Query` sets the tag
+  in its steps (`commands.cljs:125-132`). `/Query` sets it in `run-query-command!`
+  ([`handler/editor.cljs:4377-4396`](../../../../../src/main/frontend/handler/editor.cljs)).
+- **Asset blocks** are tagged `Asset` (`class.cljs:68`) when a file is uploaded
+  ([`handler/editor.cljs:1802`](../../../../../src/main/frontend/handler/editor.cljs)).
+
+All of these classes sit in the same `built-in-classes` map as `Task` and `Template`
 ([`class.cljs:17-105`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
-The slash commands that create them live in
+The slash-command entries are at
 [`commands.cljs:246-257`](../../../../../src/main/frontend/commands.cljs)
 (code, quote, math) and `:325-326` (query, advanced query).
 
@@ -186,10 +215,10 @@ The slash commands that create them live in
           - Level 6...
 ```
 
-Nesting is just a chain of `:block/parent` refs, so the outliner imposes no
-depth limit of its own — there is no maximum-depth check anywhere in
-[`deps/outliner/`](../../../../../deps/outliner/src/logseq/outliner/). Practical
-limits come from rendering and from your own ability to read the result.
+Nesting is just a chain of `:block/parent` refs. A search of
+[`deps/outliner/src`](../../../../../deps/outliner/src/logseq/outliner/) for
+`max-depth`, `max-level`, `depth-limit` and `max-nest` finds no depth limit.
+Practical limits come from rendering and from your own ability to read the result.
 
 **3. Each Block is Addressable**
 
@@ -204,16 +233,20 @@ Every block can be:
 ```
 
 > **References to a block and references to a page are the same construct.**
-> A DB graph stores every reference in `:block/title` as `[[<uuid>]]` — even a
-> `#Tag`, which `replace-tags-with-id-refs` rewrites to the same `[[<uuid>]]`
-> form
-> ([`content.cljs:162-179`](../../../../../deps/db/src/logseq/db/frontend/content.cljs)).
-> The renderer resolves that UUID to whatever it names, and the `block-reference`
+> A DB graph stores a reference in `:block/title` as `[[<uuid>]]`. When a saved
+> ref is resolved to a different entity, the outliner rewrites the `[[<old-uuid>]]`
+> text to the new UUID
+> ([`outliner/core.cljs:240`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
+> An inline tag is stored as `#[[<uuid>]]`, which is the string `inline-tag?` looks for
+> ([`db.cljs:108-111`](../../../../../deps/db/src/logseq/db/frontend/db.cljs)).
+> The renderer resolves the UUID to whatever it names, and the `block-reference`
 > component simply delegates to `page-reference`
 > ([`components/block.cljs:1320-1338`, `:1369-1375`](../../../../../src/main/frontend/components/block.cljs)).
-> The file-graph `((uuid))` form is *not* rendered as a reference here: the
+> The file-graph `((uuid))` form is *not* rendered as a reference: the
 > `["Block_ref" id]` branch of `link-cp` returns the literal string
 > ([`components/block.cljs:1553-1557`](../../../../../src/main/frontend/components/block.cljs)).
+> Typing `((` in the editor shows the warning "To reference a node, please use `[[]]`."
+> ([`handler/editor.cljs:1949-1952`](../../../../../src/main/frontend/handler/editor.cljs), `en.edn:503`).
 
 **4. Structure Emerges**
 
@@ -357,9 +390,10 @@ Composed view:
 > ([`components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs),
 > string at [`en.edn:157`](../../../../../src/resources/dicts/en.edn)).
 > `/Node embed` ([`commands.cljs:105-108`, `:233-236`](../../../../../src/main/frontend/commands.cljs))
-> opens a block search, and picking a result inserts a new sibling block whose
-> `:block/link` points at the chosen block
-> ([`components/editor.cljs:290-306`](../../../../../src/main/frontend/components/editor.cljs));
+> opens a block search. Picking a result inserts a new sibling block whose
+> `:block/link` points at the chosen block. If the current block is empty, the
+> new block replaces it
+> ([`components/editor.cljs:289-307`](../../../../../src/main/frontend/components/editor.cljs)).
 > `:block/link` is the schema attribute described as "which block this block
 > links to, used for tag, embeds"
 > ([`schema.cljs:76-78`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)).
@@ -650,7 +684,7 @@ Sarah proposed we use microservices"
 **By Time:**
 
 ```markdown
-- [[2026-01-22]]
+- [[Jan 22nd, 2026]]            ← journal page, default title format "MMM do, yyyy"
   - Project Alpha discussion
     - Technical approach
     - Budget concerns
@@ -674,12 +708,17 @@ Sarah proposed we use microservices"
     - Project Alpha approach (2026-01-22)
 ```
 
-> **A `/` in a page title is not part of the title.** Creating `Person/Sarah`
-> creates *two* pages — `Person`, and a page whose `:block/title` is just
-> `Sarah` filed under it, via `split-namespace-pages`
+> **A `/` in a page title is not part of the title.** Creating the page `Person/Sarah`
+> from the UI creates *two* pages: `Person`, and a page whose `:block/title` is just
+> `Sarah`, filed under it by `split-namespace-pages`
 > ([`page.cljs:385-390`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
-> Two different parents can therefore each hold a leaf called `Sarah`
-> ([`page_test.cljs:65-72`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs)).
+> The UI page-creation handler turns `:split-namespace?` on unless a caller sets it
+> ([`handler/common/page.cljs:147-149`](../../../../../src/main/frontend/handler/common/page.cljs)).
+> Today's journal page is created with it off (`handler/page.cljs:334-335`).
+> The top segment sits under the built-in Library page
+> ([`page_test.cljs:43`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs)).
+> Two different parents can each hold a leaf with the same title
+> ([`page_test.cljs:65-72`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs), `vim/keys` and `emacs/keys`).
 > There is no `:block/namespace` attribute in the DB schema.
 
 **This is the power of blocks:** Same content, multiple organizational views through references.
@@ -870,6 +909,13 @@ Use Docs/Notion for:
 - Version control (built-in)
 ```
 
+> Comments are no longer a reason on their own. DB graphs have built-in `Comments` and
+> `Comment` classes
+> ([`class.cljs:44-51`](../../../../../deps/db/src/logseq/db/frontend/class.cljs))
+> and an `/Add comment` slash command
+> ([`commands.cljs:319-324`](../../../../../src/main/frontend/commands.cljs), label at `en.edn:147`).
+> How they compare with a document editor's comment threads was not assessed.
+
 ### Hybrid Approach
 
 **Best of Both:**
@@ -900,6 +946,8 @@ Use Docs/Notion for:
 ## Historical Context
 
 ### Evolution of Outliners
+
+> **Unverified:** The product names, release years and feature summaries in this section, and in "Historical Outliners" above, are general background. They cannot be checked against the Logseq source and were not verified.
 
 **1980s: Early Outliners**
 
@@ -965,15 +1013,17 @@ Philosophy: Own your data, build your tools
 
 ### The Move to a Database Graph
 
-Logseq's own history has a second chapter. It began as an outliner over
-Markdown files, where the block tree was reconstructed by parsing indentation.
-Today's DB graph stores the tree directly: `:block/parent` is a DataScript ref
-and sibling order is a fractional-index string on `:block/order`
-([`order.cljs`](../../../../../deps/db/src/logseq/db/common/order.cljs), backed
-by the `clj-fractional-indexing` dependency at
-[`deps/db/deps.edn:14`](../../../../../deps/db/deps.edn)). Fractional indexing is
-what lets a drag-and-drop reorder write a single datom instead of renumbering
-every sibling.
+Logseq's own history has a second chapter. File graphs kept pages as Markdown
+files. Importing one into a DB graph goes through
+[`deps/graph-parser/src/logseq/graph_parser/exporter.cljs`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs).
+A DB graph stores the tree directly: `:block/parent` is a DataScript ref,
+and sibling order is a fractional-index key on `:block/order`
+([`order.cljs:17`](../../../../../deps/db/src/logseq/db/common/order.cljs) `gen-key`,
+backed by the `clj-fractional-indexing` dependency at
+[`deps/db/deps.edn:14`](../../../../../deps/db/deps.edn)). When a block is moved,
+the outliner generates one new key between the target and its neighbour
+([`outliner/core.cljs:1078-1082`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
+The siblings keep their keys and are not renumbered.
 
 Graphs live under `~/logseq/graphs`
 ([`config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)),
