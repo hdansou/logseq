@@ -1,64 +1,65 @@
 ---
-title: 'Handbooks System: Interactive In-App Tutorials'
+title: 'Handbooks System: In-App Help Panel'
 status: '🟢 Stable'
-version: 'Since v0.8.0'
+version: 'Since 0.9.20'
 quadrant: 'Explanation'
-platform: 'Desktop (macOS/Windows/Linux), Web'
-lastVerified: '2026-09-09'
+platform: 'Desktop (macOS/Windows/Linux), Web; not native mobile or published sites'
+graphType: [db]
+lastVerified: '2026-09-11'
 verifiedAgainst: 'be800f1711'
-reviewStatus: merged-not-fully-audited
+reviewStatus: audited
 related-docs:
   - '../../how-to/multimedia/video-embed.md'
   - '../../tutorials/getting-started/01-installation.md'
-  - '../../reference/features/keyboard-shortcuts.md'
+  - '../../reference/configuration/keyboard-shortcuts.md'
 ---
 
-# Handbooks System: Interactive In-App Tutorials
+# Handbooks System: In-App Help Panel
 
-> **Last revised:** 2026-09-09
+> **Last revised:** 2026-09-11 (verified against `be800f1711`)
 
 ## Overview
 
-Logseq's Handbooks system provides interactive, in-app tutorials and help documentation accessible from within the editor. Unlike external documentation, handbooks are tightly integrated with the app, offering contextual help, demos, and keyboard shortcut references without leaving your workflow.
+The Handbooks system is an in-app help panel that you can open from inside the editor. The app itself contains only the panel. At runtime it downloads the help content (categories, topics, chapters, images and videos) from `https://handbooks.pages.dev` and renders it in a draggable popup. The panel also leads into the keyboard shortcuts reference.
+
+The feature was introduced by commit `1389836119` ("Feat: the new handbooks (#8524)"). The earliest release tag containing it is `0.9.20`.
 
 **Key Features**:
 
-- 📚 Interactive tutorials with videos and images
+- 📚 Topics authored as HTML, with demo images and videos
 - ⌨️ Entry point into the keyboard shortcuts reference
 - 🎨 Category-based organization (categories, topics, chapters)
-- 🔍 Fuzzy search within handbook content
+- 🔍 Fuzzy search over topic titles
 - 🖼️ Image lightbox for screenshots
-- 📹 Embedded video demonstrations (YouTube integration)
-- 🌐 Hosted on CDN for fast loading (handbooks.pages.dev)
+- 📹 Embedded video demos (YouTube and local video files)
+- 🌐 Content fetched at runtime from `handbooks.pages.dev`
 
 ## Accessing Handbooks
 
 ### Open Handbooks Panel
 
-**Method 1: Menu**
+**Method 1: Help menu**
 
-1. Click **Help** menu (top bar)
+1. Click the **?** help button
 2. Select **Handbook**
 
-The menu item is defined in `help-menu-items` and calls `handbooks/toggle-handbooks`, which toggles `:ui/handbooks-open?`.
+The **?** button is rendered only when the app is not native mobile and not a published site ([`container.cljs:600-602`](../../../../../src/main/frontend/components/container.cljs#L600-L602)). Its menu entry, defined in `help-menu-items`, calls `handbooks/toggle-handbooks`, which toggles `:ui/handbooks-open?`. Opening the help menu also closes an open handbook panel ([`container.cljs:258-262`](../../../../../src/main/frontend/components/container.cljs#L258-L262)).
 
-**Code Reference**: [`container.cljs:244-246`](../../../../../src/main/frontend/components/container.cljs#L244-L246), [`handbooks.cljs:27-29`](../../../../../src/main/frontend/components/handbooks.cljs#L27-L29)
+**Code Reference**: [`container.cljs:244-246`](../../../../../src/main/frontend/components/container.cljs#L244-L246), [`container.cljs:298-320`](../../../../../src/main/frontend/components/container.cljs#L298-L320), [`handbooks.cljs:27-29`](../../../../../src/main/frontend/components/handbooks.cljs#L27-L29)
 
 **Method 2: Deep link (desktop)**
 
 `logseq://handbook/<topic-key>` opens the panel and routes directly to a topic. See [Deep Linking](#deep-linking-and-developer-tooling).
 
-> **Removed:** Command palette access to handbooks is not implemented in current source; opening is wired via the Help menu toggle and handbook deep links.
+> **Note**: No command palette entry or keyboard shortcut opens handbooks; `src/main/frontend/modules/shortcut/` has no handbook entry. **Esc** closes the panel only while the handbook search input is focused and empty ([`handbooks/core.cljs:373-378`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L373-L378)).
 
-> **Note**: There is no dedicated keyboard shortcut for opening handbooks. No handbook entry exists in `src/main/frontend/modules/shortcut/`. Pressing **Esc** closes the panel only while the handbook search input is focused and empty ([`handbooks/core.cljs:373-378`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L373-L378)).
-
-**Result**: Draggable popup panel with handbook categories. The popup is a `.cp__handbooks-popup` container made draggable by `layout/setup-draggable-container!` ([`handbooks.cljs:11-25`](../../../../../src/main/frontend/components/handbooks.cljs#L11-L25)).
+**Result**: a draggable popup panel. The popup is a `.cp__handbooks-popup` container made draggable by `layout/setup-draggable-container!` ([`handbooks.cljs:11-25`](../../../../../src/main/frontend/components/handbooks.cljs#L11-L25)). It is rendered only while `:ui/handbooks-open?` is true ([`container.cljs:319-320`](../../../../../src/main/frontend/components/container.cljs#L319-L320)).
 
 ---
 
 ## Interface Overview
 
-The diagrams below are illustrative. Actual titles, categories and topic counts come from the CDN-hosted content tree, not from the app. The panel header itself is labelled **Help** (`:help.handbook/title`).
+The diagrams below are illustrative: the actual categories, topics and counts come from the downloaded content tree, not from the app. The strings quoted are the English UI labels from `src/resources/dicts/en.edn`.
 
 ### Dashboard View
 
@@ -69,84 +70,82 @@ The diagrams below are illustrative. Actual titles, categories and topic counts 
 │  [ 🔍 Search                                     ]     │
 │                                                         │
 │  Popular topics                                        │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐    │
-│  │ Quick Start │ │ Queries     │ │ PDF Tools   │    │
-│  └─────────────┘ └─────────────┘ └─────────────┘    │
+│  ┌─────────────────────────┐ ┌─────────────────────────┐│
+│  │ [cover] Topic title     │ │ [cover] Topic title     ││
+│  │         description     │ │         description     ││
+│  └─────────────────────────┘ └─────────────────────────┘│
 │                                                         │
 │  Help categories                                       │
 │  ┌─────────────────────────────────────────┐          │
-│  │ 📖 Getting started              3 Topics│          │
-│  │ Essential tutorials for new users       │          │
+│  │ [icon] Getting started                  │          │
+│  │        3 topics                         │          │
 │  └─────────────────────────────────────────┘          │
 │  ┌─────────────────────────────────────────┐          │
-│  │ ⚙️  Features & Tools           24 Topics│          │
-│  │ Queries, PDF, Whiteboards, Plugins      │          │
-│  └─────────────────────────────────────────┘          │
-│  ┌─────────────────────────────────────────┐          │
-│  │ ⌨️  Keyboard shortcuts    <N> shortcuts  │          │
-│  │ Opens the shortcuts view in the sidebar │          │
+│  │ [icon] Keyboard shortcuts               │          │
+│  │        <N> shortcuts                    │          │
 │  └─────────────────────────────────────────┘          │
 │                                                         │
 │  [ Discord card ]            [ Forum card ]            │
 └────────────────────────────────────────────────────────┘
 ```
 
-The `Keyboard shortcuts` card is appended to the category list by the app itself; every other card comes from the content tree. `<N>` is computed at runtime. The footer link cards (Discord, forum) render only on the dashboard pane ([`handbooks/core.cljs:438-481`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L438-L481), [`652-656`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L652-L656)).
+The header reads **Help** (`:help.handbook/title`). A category card shows the category's icon, its title, and "N topics", where N counts its children. The card's left border takes the category's `:color` ([`handbooks/core.cljs:290-310`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L290-L310)).
+
+The `Keyboard shortcuts` card is appended to the category list by the app; every other card comes from the content tree. Its `<N>` is computed at runtime.
+
+The footer link cards (Discord and forum) render only on the dashboard pane ([`handbooks/core.cljs:438-481`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L438-L481), [`652-656`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L652-L656)). The Discord card fetches its online count from `https://plugins.logseq.io/ds` and re-fetches after 10 minutes (`:436`, `:443-453`). The forum card's "800+" is hard-coded (`:480`).
 
 ### Category View
 
 ```txt
 ┌────────────────────────────────────────────────────────┐
-│  ⬅ Features & Tools                             [✕]  │
+│  ⬅ Category title                               [✕]  │
 ├────────────────────────────────────────────────────────┤
 │  [ 🔍 Search                                     ]     │
 │                                                         │
 │  ┌──────────────────────────────────────────┐         │
-│  │ 🔍 Advanced Queries                       │         │
-│  │ Master datalog queries and logic         │         │
+│  │ [cover] Topic title                       │         │
+│  │         Topic description                 │         │
 │  └──────────────────────────────────────────┘         │
 │  ┌──────────────────────────────────────────┐         │
-│  │ 📄 PDF Annotations                        │         │
-│  │ Highlight and annotate PDFs               │         │
-│  └──────────────────────────────────────────┘         │
-│  ┌──────────────────────────────────────────┐         │
-│  │ 🎨 Whiteboards                            │         │
-│  │ Visual thinking and diagramming           │         │
+│  │ [cover] Topic title                       │         │
+│  │         Topic description                 │         │
 │  └──────────────────────────────────────────┘         │
 │                                                         │
 └────────────────────────────────────────────────────────┘
 ```
 
+Topic cards show the optional `:cover` image, the `:title` and the `:description` ([`handbooks/core.cljs:88-99`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L88-L99)).
+
 ### Topic Detail View
 
 ```txt
 ┌────────────────────────────────────────────────────────┐
-│  ⬅ Features & Tools                    [⧉] [⚙] [✕]  │
+│  ⬅ Category title                 [⌂] [⧉] [⚙] [✕]  │
 ├────────────────────────────────────────────────────────┤
 │  Current chapter  [ Chapter 1: Basics          ▾ ]    │
 │                                                         │
 │  [=============== Demo gallery ===========]           │
 │  │                                           │          │
-│  │      ▶️  Play tutorial video              │          │
+│  │      ▶️  Demo video or image              │          │
 │  │                                           │          │
 │  [=========================================]          │
 │                                                         │
-│  Queries in Logseq use Datalog, a powerful           │
-│  logic programming language. Here's what you         │
-│  can do:                                              │
-│                                                         │
-│  • Find all tasks due this week                       │
-│  • Search by properties                               │
-│  • Create dynamic views                               │
-│                                                         │
-│  [Screenshot of query example]                        │
+│  Topic HTML content ...                                │
 │                                                         │
 │  [⬅ Prev chapter]           [Next chapter ➡]         │
 │                                                         │
 └────────────────────────────────────────────────────────┘
 ```
 
-Note that the search bar renders only on the dashboard and category panes, not on topic detail ([`handbooks/core.cljs:636-639`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L636-L639)). The copy icon (⧉) appears only on topic detail; the settings gear (⚙) only in developer mode.
+The search bar renders only on the dashboard and category panes, not on topic detail ([`handbooks/core.cljs:636-639`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L636-L639)). The header icons ([`handbooks/core.cljs:607-626`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L607-L626)) are:
+
+- **Home (⌂)**: shown when the navigation history has more than one entry.
+- **Copy (⧉)**: shown only on topic detail.
+- **Settings gear (⚙)**: shown only in developer mode.
+- **Close (✕)**: always shown.
+
+A topic without chapters shows its title as a heading instead of the chapter selector (`:196-208`).
 
 ---
 
@@ -156,25 +155,9 @@ Note that the search bar renders only on the dashboard and category panes, not o
 
 **Location**: [https://handbooks.pages.dev](https://handbooks.pages.dev)
 
-**Structure**:
+All content comes from one EDN file, `handbooks.edn`, at the endpoint root ([`handbooks/core.cljs:509`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L509)). It holds a single tree with all categories, topics, metadata and inline HTML content. Asset paths inside it (`:cover`, `:demos`, and `src="..."` in `:content`) may be relative. They are resolved against the same endpoint at render time.
 
-All handbook content is served from a single EDN file at the root:
-
-```
-handbooks.pages.dev/
-  ├── handbooks.edn              # Single file: all categories, topics, content
-  └── assets/
-      ├── demo-query.mp4
-      ├── screenshot-1.png
-      └── ...
-```
-
-**Content Format**:
-
-- **`handbooks.edn`**: A single EDN tree containing all categories, topics, metadata, and inline HTML content
-- **Assets**: Images, videos, demos (referenced by relative paths, resolved to CDN URLs at render time)
-
-> **Note**: Earlier documentation described separate `.edn` manifests and `.html` files per category/topic. The actual implementation loads everything from one `handbooks.edn` file and parses it into a node tree client-side.
+> **Unverified:** how assets are laid out on `handbooks.pages.dev`. The app only resolves whatever relative paths the EDN contains, so the source does not show the layout.
 
 **Code Reference**: [`handbooks/core.cljs:24-37`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L24-L37)
 
@@ -197,7 +180,7 @@ handbooks.pages.dev/
 
 ### Asset URL Rewriting
 
-Topic content is authored as HTML with relative asset paths. Before the HTML is injected into the DOM, every `src="..."` attribute is rewritten through `resolve-asset-url`, so relative paths become absolute CDN (or local dev-watch) URLs.
+Topic content is authored as HTML with relative asset paths. Before the HTML is injected into the DOM, every `src="..."` value is rewritten through `resolve-asset-url`. Relative paths therefore become absolute URLs on the content endpoint, or on the local dev-watch endpoint.
 
 **Code Reference**: [`handbooks/core.cljs:39-48`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L39-L48)
 
@@ -218,68 +201,63 @@ Paths already starting with `http` are left untouched, so external images and vi
 
 ### Data Loading
 
-**On Open**:
+**When the panel opens** (the `content` component mounts):
 
-1. Fetch `handbooks.edn` from CDN (single request)
-2. Parse entire EDN tree using `edn/read-string`
-3. Flatten tree into a keyed node map using `tree-seq` (stored in component state)
-4. Render dashboard with categories and popular topics
+1. Fetch `handbooks.edn` from the endpoint (single request)
+2. Parse the whole tree with `edn/read-string`
+3. Flatten the tree into a keyed node map with `tree-seq`, stored in component state
+4. Render the dashboard with popular topics and categories
 
 **On Category Click**:
 
-1. Look up category node from the in-memory node map
-2. Render category view (no additional network request)
+1. Look up the category node in the in-memory node map
+2. Render the category view (no additional network request)
 
 **On Topic Click**:
 
-1. Look up topic node from the in-memory node map
-2. Parse chapters if multi-chapter (children in the tree)
-3. Render topic detail view (no additional network request)
+1. Look up the topic node in the in-memory node map
+2. If the topic has chapters (children in the tree), show its first chapter
+3. Render the topic detail view (no additional network request)
 
-**Code Reference**: `load-handbooks!` at [`handbooks/core.cljs:505-513`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L505-L513) and the `tree-seq` node flattening at [`handbooks/core.cljs:578-585`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L578-L585).
+**Code Reference**: `load-handbooks!` at [`handbooks/core.cljs:505-513`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L505-L513), called on mount at [`544-546`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L544-L546); the `tree-seq` node flattening is at [`578-585`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L578-L585).
 
-**Caching**: All content is loaded in a single fetch and held in component state for the session. Navigation between categories and topics requires no further network requests.
+**Caching**: while the panel stays open, all content comes from that single fetch, and moving between categories and topics needs no further requests. The data lives in component-local hook state ([`handbooks/core.cljs:485-501`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L485-L501)). The popup is unmounted when the panel closes, so reopening it fetches `handbooks.edn` again. The app adds no caching of its own.
 
-While the fetch is in flight the panel shows a loading state; on failure the error string is rendered in a `<code>` block instead ([`handbooks/core.cljs:628-632`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L628-L632)).
+While the fetch is in flight, the panel shows a loading state. On failure it renders the error string in a `<code>` block instead ([`handbooks/core.cljs:628-632`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L628-L632)).
 
 ### Content Structure (EDN Format)
 
-The entire handbook content lives in a single `handbooks.edn` file as a nested tree. The root has `:popular-topics` and `:children` (categories). Each category has `:children` (topics), and each topic may have `:children` (chapters).
+All handbook content lives in `handbooks.edn` as a nested tree. The root has `:popular-topics` and `:children` (categories). Each category has `:children` (topics), and each topic may have `:children` (chapters). The node keys the app reads are `:key`, `:title`, `:description`, `:cover`, `:demos`, `:content`, `:color`, `:icon` and `:children`.
 
-**Full Tree Structure** (simplified):
+**Tree shape** (illustrative keys and values):
 
 ```clojure
-{:popular-topics ["getting-started/quick-start" "features/queries"]
+{:popular-topics ["1.getting_started/quick_start"]
  :children
- [{:key "getting-started"
+ [{:key "1.getting_started"
    :title "Getting Started"
-   :description "Essential tutorials for new users"
-   :color "#10B981"
-   :icon "book"
+   :color "#10B981"              ; category card border
+   :icon "book"                  ; tabler icon name, default "chart-bubble"
    :children
-   [{:key "getting-started/quick-start"
+   [{:key "1.getting_started/quick_start"
      :title "Quick Start Guide"
-     :description "Get up and running in 5 minutes"
+     :description "Get up and running"
      :cover "./assets/quickstart-cover.png"
      :demos ["./assets/quickstart-demo.mp4"]
-     :content "<h2>Welcome to Logseq</h2><p>This guide will...</p>"
-     :children ; Multi-chapter topics (optional)
-     [{:key "getting-started/quick-start/chapter-1"
-       :title "Chapter 1: Installation"
-       :content "<h3>Installing Logseq</h3>..."}
-      {:key "getting-started/quick-start/chapter-2"
-       :title "Chapter 2: First Graph"
-       :content "<h3>Creating your first graph</h3>..."}]}
-    {:key "getting-started/installation"
-     :title "Installation"
-     :description "Install Logseq on your platform"}]}]}
+     :content "<h2>Welcome to Logseq</h2><p>...</p>"
+     :children ; optional chapters
+     [{:key "1.getting_started/quick_start/chapter_1"
+       :title "Chapter 1"
+       :content "<h3>...</h3>"}]}]}]}
 ```
 
-At load time, this tree is flattened into a keyed map via `tree-seq`, with the root stored under the `"__root"` key. Parent keys are computed from the `/`-delimited key paths (see `bind-parent-key` and `parse-parent-key`). The flattened map is also exposed on `window.handbook-nodes` for debugging.
+At load time the tree is flattened into a map keyed by `:key`, with the root stored under `"__root"`. Parent keys are computed from the `/`-delimited key paths (`bind-parent-key`, `parse-parent-key`). The map is also exposed as `window.handbook-nodes` for debugging.
+
+Keys in the map are used verbatim. Popular-topic keys and internal content links, however, are lowercased and passed through `csk/->snake_case_string` before lookup ([`handbooks/core.cljs:58-59`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L58-L59), [`272-275`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L272-L275)). Node keys therefore need to be lowercase snake_case already for those lookups to match.
 
 **Code Reference**: [`handbooks/core.cljs:61-72`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L61-L72) (key parsing), tree flattening at [`578-585`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L578-L585).
 
-Two category keys are special-cased for translation: `1.getting_started` renders as `:help/start` and `2.sync` as `:help.handbook/sync`; all other categories use their `:title` verbatim ([`handbooks/core.cljs:74-79`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L74-L79)).
+Two category keys get translated titles: `1.getting_started` renders as `:help/start` ("Getting started") and `2.sync` as `:help.handbook/sync` ("Sync"). All other categories use their `:title` verbatim ([`handbooks/core.cljs:74-79`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L74-L79)).
 
 ---
 
@@ -293,7 +271,7 @@ Two category keys are special-cased for translation: `1.getting_started` renders
 <img src="./assets/screenshot.png" />
 ```
 
-**Result**: Clickable image → Opens lightbox for full-size view. Clicks inside rendered topic content are delegated: a click that lands on an `img` opens the PhotoSwipe lightbox with the image's natural dimensions ([`handbooks/core.cljs:239-244`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L239-L244), [`lightbox.cljs`](../../../../../src/main/frontend/extensions/lightbox.cljs)).
+**Result**: clicking an image opens a full-size lightbox. Clicks inside rendered topic content are delegated: a click on an `img` opens the PhotoSwipe lightbox at the image's natural dimensions ([`handbooks/core.cljs:239-244`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L239-L244), [`lightbox.cljs`](../../../../../src/main/frontend/extensions/lightbox.cljs)).
 
 **Code**: [`handbooks/core.cljs:112-125`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L112-L125)
 
@@ -314,7 +292,7 @@ Two category keys are special-cased for translation: `1.getting_started` renders
       :else [:img {:src src}])))
 ```
 
-`media-render` is applied to `:demos` entries only. Media inside `:content` is plain HTML injected via `dangerouslySetInnerHTML` and is not routed through `media-render`.
+`media-render` handles `:demos` entries only. Media inside `:content` is plain HTML injected with `dangerouslySetInnerHTML` and does not go through `media-render` (`:222`, `:232`, `:238`).
 
 **YouTube Videos**:
 
@@ -322,7 +300,7 @@ Two category keys are special-cased for translation: `1.getting_started` renders
 {:demos ["https://www.youtube.com/watch?v=ABC123"]}
 ```
 
-**Result**: Embedded YouTube player (using [`youtube.cljs`](../../../../../src/main/frontend/extensions/video/youtube.cljs)) at 100% width and 235px height.
+**Result**: an embedded YouTube player (from [`youtube.cljs`](../../../../../src/main/frontend/extensions/video/youtube.cljs)) at 100% width and 235px height. Only `youtube.com/watch?v=` URLs are detected.
 
 **Local Videos**:
 
@@ -330,7 +308,7 @@ Two category keys are special-cased for translation: `1.getting_started` renders
 {:demos ["./assets/demo.mp4"]}
 ```
 
-**Result**: Native HTML5 video player with controls, for any extension in `config/video-formats`.
+**Result**: a native HTML5 video player with controls, for any extension in `config/video-formats`.
 
 ### Demo Gallery (Carousel)
 
@@ -342,7 +320,7 @@ Two category keys are special-cased for translation: `1.getting_started` renders
          "./assets/demo3.png"]}
 ```
 
-**Result**: Carousel with navigation bullets (powered by Glide.js). A single demo renders directly with no carousel; the Glide instance is only mounted when more than one demo is present ([`handbooks/core.cljs:211-232`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L211-L232)).
+**Result**: a Glide.js carousel with numbered bullet buttons (1, 2, 3…). A single demo, or a string instead of a vector, renders directly with no carousel. The Glide instance is mounted only when its carousel element exists, which requires more than one demo ([`handbooks/core.cljs:165-173`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L165-L173), [`211-232`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L211-L232)).
 
 **Code Reference**: [`handbooks/core.cljs:81-86`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L81-L86)
 
@@ -357,17 +335,11 @@ Two category keys are special-cased for translation: `1.getting_started` renders
 
 **Dependencies**:
 
-- **Glide.js**: Lightweight carousel library
+- **Glide.js**: the `@glidejs/glide` npm package (`package.json:145`), whose dist files are copied into `js/glide` at build time (`gulpfile.js:122-125`)
 - **CSS**: `glide.core.min.css`, `glide.theme.min.css`
-- **JS**: `glide.min.js` (loaded on-demand, and only once — guarded on `window.Glide`)
+- **JS**: `glide.min.js`, loaded on demand whenever a topic detail pane mounts, and only if `window.Glide` is not already defined
 
-**Features**:
-
-- Swipe on mobile
-- Bullet navigation (1, 2, 3...)
-- Auto-resize to container
-
-> **Removed:** Explicit carousel keyboard navigation guarantees are not declared in current handbook code.
+> **Removed:** "Swipe on mobile" and "Auto-resize" feature claims. They describe Glide.js library behaviour; Logseq's handbook code does not configure or declare them. Carousel keyboard navigation is likewise not declared.
 
 ### Chapter Navigation
 
@@ -375,9 +347,9 @@ Two category keys are special-cased for translation: `1.getting_started` renders
 
 ```clojure
 {:children
- [{:key "topic/chapter-1" :title "Chapter 1: Basics"}
-  {:key "topic/chapter-2" :title "Chapter 2: Advanced"}
-  {:key "topic/chapter-3" :title "Chapter 3: Pro Tips"}]}
+ [{:key "topic/chapter_1" :title "Chapter 1: Basics"}
+  {:key "topic/chapter_2" :title "Chapter 2: Advanced"}
+  {:key "topic/chapter_3" :title "Chapter 3: Pro Tips"}]}
 ```
 
 **UI**:
@@ -390,19 +362,26 @@ Current chapter  [ Chapter 1: Basics ▾ ]
 [⬅ Prev chapter]           [Next chapter ➡]
 ```
 
-The chapter dropdown lists sibling chapters excluding the current one and closes on any click outside `.chapters-select`. Prev/Next buttons are rendered only when the topic has more than one chapter, and each end of the range hides its respective button.
+The chapter dropdown lists the sibling chapters except the current one. It closes on any click inside the handbook popup that lands outside `.chapters-select`. Prev/Next buttons render only when there is more than one chapter, and each is hidden at its end of the range.
 
 **Code Reference**: [`handbooks/core.cljs:127-156`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L127-L156) (dropdown), [`253-261`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L253-L261) (prev/next controls)
 
 ### Internal Content Links
 
-Anchors inside topic HTML that do not start with `http` are intercepted and resolved to a handbook node key rather than navigating the browser. `parse-key-from-href` strips a trailing `.edn`, treats a leading `@` as an absolute key, otherwise joins the href against the current parent key, then lowercases and snake-cases the result. If no node matches, an error is logged to the console.
+Anchors inside topic HTML whose `href` does not start with `http` are intercepted and resolved to a handbook node key; the browser does not navigate. `parse-key-from-href` resolves the key in four steps:
+
+1. Strip a trailing `.edn`.
+2. Treat a leading `@` as an absolute key; otherwise join the href to the current parent key.
+3. Lowercase the result.
+4. Snake-case it.
+
+If no node matches, an error is logged to the console.
 
 **Code Reference**: [`handbooks/core.cljs:50-59`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L50-L59), [`245-251`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L245-L251)
 
 ### Search
 
-The search bar renders on the dashboard and category panes. It runs `search/fuzzy-search` over topic titles with a limit of 30 results. Scope depends on the pane: on a category pane the search is restricted to that category's topics and their chapters; on the dashboard it searches every node except the root.
+The search bar renders on the dashboard and category panes. It runs `search/fuzzy-search` over node `:title`s only, with a limit of 30 results. Topic content is not searched. On a category pane the search covers that category's topics and their chapters; on the dashboard it covers every node except the root.
 
 **Code Reference**: [`handbooks/core.cljs:321-413`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L321-L413)
 
@@ -414,7 +393,7 @@ The search bar renders on the dashboard and category panes. It runs `search/fuzz
 | **↑ / ↓** | Move the selection through results (wraps at both ends)           |
 | **Enter** | Open the selected topic                                           |
 
-> **Removed:** Claims of Tab/Enter card traversal and ←/→ chapter shortcuts outside the search input. No such bindings exist in current source; prev/next chapter are mouse-activated buttons.
+> **Removed:** claims of Tab/Enter card traversal and ←/→ chapter shortcuts outside the search input. No such bindings exist in the current source; prev/next chapter are mouse-activated buttons.
 
 ---
 
@@ -424,20 +403,20 @@ The search bar renders on the dashboard and category panes. It runs `search/fuzz
 
 **From Handbooks Dashboard**:
 
-1. Open handbooks via Help menu.
-2. Click **"Keyboard shortcuts"** in the categories pane.
-3. Handbooks closes and the shortcuts view opens in the right sidebar (`shortcut-settings`).
+1. Open handbooks from the help menu.
+2. Click **Keyboard shortcuts** in the categories list.
+3. Handbooks closes, the right sidebar opens, and the shortcuts view (`shortcut-settings`) is added to it.
 
 **Direct Access**:
 
-1. Open Help menu.
-2. Click **"Keyboard shortcuts"**.
+1. Open the help menu.
+2. Click **Keyboard shortcuts**.
 
-The card is synthesised by the dashboard rather than coming from `handbooks.edn`: it is appended to the category list with `:key :ls-shortcuts`, and its subtitle is the total shortcut count summed over `shortcut-config/*config` at render time.
+The card is created by the dashboard rather than coming from `handbooks.edn`. It is appended to the category list with `:key :ls-shortcuts`, and its subtitle is the total shortcut count summed over `shortcut-config/*config` at render time.
 
-**Code Reference**: [`handbooks/core.cljs:281-300`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L281-L300), [`container.cljs:244-246`](../../../../../src/main/frontend/components/container.cljs#L244-L246)
+**Code Reference**: [`handbooks/core.cljs:280-300`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L280-L300), [`container.cljs:244-246`](../../../../../src/main/frontend/components/container.cljs#L244-L246)
 
-> **Removed:** Static shortcut examples/counts in this doc. The shown count is computed at runtime from `shortcut-config/*config`.
+> **Removed:** static shortcut examples and counts. The count shown is computed at runtime from `shortcut-config/*config`.
 
 ---
 
@@ -445,18 +424,19 @@ The card is synthesised by the dashboard rather than coming from `handbooks.edn`
 
 Validated against current source in `src/`:
 
-1. **Deep-link routing to handbook topics** (desktop):
-  - `logseq://handbook/<topic-key>` is parsed in Electron and sent to the renderer, along with any query-string args.
-  - The renderer opens the handbooks panel and routes to the topic key via `:handbook/route-chan`; a `go-loop` in the panel consumes the channel and navigates.
+1. **Deep-link routing to handbook topics** (desktop only; the mobile deep-link handler has no `handbook` host):
+   - Electron parses `logseq://handbook/<topic-key>` and sends the renderer a `:key` (the path without leading slashes) plus the query string as `:args`. The renderer uses only `:key`.
+   - `state/open-handbook-pane!` opens the panel if it is closed and puts the key on `:handbook/route-chan`, a sliding buffer of 1. A `go-loop` in the panel takes keys from the channel once nodes are loaded and navigates to the matching node.
+   - The key is looked up **verbatim**, with no lowercasing or snake-casing. An unknown key is ignored silently.
 
 2. **Copyable handbook deep links from topic view**:
-  - The topic header copy action writes `logseq://handbook/<key>` to the clipboard and shows a success notification.
+   - The copy icon in the topic header writes `logseq://handbook/<key>` to the clipboard and shows a success notification.
 
 3. **Developer watch mode for handbook content**:
-  - The settings gear is visible only when `state/developer-mode?` is true; it opens a pane with a "Writing mode" toggle backed by the `:handbooks-dev-watch?` storage key.
-  - When enabled, the endpoint switches to `http://localhost:1337` and the app polls `HEAD /handbooks.edn` every 2 seconds, reloading content whenever `content-length` changes.
+   - The settings gear is visible only when `state/developer-mode?` is true. It opens a pane with a "Writing mode" toggle backed by the `:handbooks-dev-watch?` storage key.
+   - When enabled, the endpoint switches to `http://localhost:1337`. The app sends `HEAD /handbooks.edn` every 2 seconds and reloads the content whenever `content-length` changes.
 
-**Code Reference**: [`url.cljs:111-113`](../../../../../src/electron/electron/url.cljs#L111-L113), [`listener.cljs:135-138`](../../../../../src/main/electron/listener.cljs#L135-L138), [`state.cljs:2082-2087`](../../../../../src/main/frontend/state.cljs#L2082-L2087), [`handbooks/core.cljs:610-619`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L610-L619) (copy link), [`562-575`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L562-L575) (dev watch poll), [`312-319`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L312-L319) (settings pane), [`548-560`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L548-L560) (route channel)
+**Code Reference**: [`url.cljs:111-114`](../../../../../src/electron/electron/url.cljs#L111-L114), [`listener.cljs:135-138`](../../../../../src/main/electron/listener.cljs#L135-L138), [`state.cljs:356`](../../../../../src/main/frontend/state.cljs#L356), [`state.cljs:2082-2087`](../../../../../src/main/frontend/state.cljs#L2082-L2087), [`handbooks/core.cljs:548-560`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L548-L560) (route channel), [`610-619`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L610-L619) (copy link), [`562-576`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L562-L576) (dev watch poll), [`312-319`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L312-L319) (settings pane)
 
 ---
 
@@ -464,40 +444,40 @@ Validated against current source in `src/`:
 
 ### Handbooks Opens But Topic Link Does Not Route
 
-**Symptoms**: `logseq://handbook/<key>` opens app but not the expected topic.
+**Symptoms**: `logseq://handbook/<key>` opens the panel but not the expected topic.
 
 **Checks**:
 
-1. Confirm key exists in loaded `handbooks.edn` tree (inspect `window.handbook-nodes`).
-2. Confirm key normalization rules (lowercase + snake_case) for internal links.
-3. Inspect console for `ERROR: handbook link resource not found`.
+1. Confirm the key exists **exactly** in the loaded tree: inspect `window.handbook-nodes`. Deep-link keys are not normalized.
+2. Remember that an unknown deep-link key fails silently; nothing is logged.
+3. For links *inside* topic content, which are lowercased and snake-cased, check the console for `ERROR: handbook link resource not found`.
 
 ### Content Not Loading
 
-**Symptoms**: loading state persists or error text appears in panel.
+**Symptoms**: the loading state persists, or error text appears in the panel.
 
 **Checks**:
 
 1. Verify network access to `https://handbooks.pages.dev/handbooks.edn`.
-2. If dev watch is enabled, verify local watch endpoint if used (`http://localhost:1337`).
+2. If developer watch mode is enabled, the app reads from `http://localhost:1337` instead. Start the local server, or turn off "Writing mode" in the settings pane.
 
 ### Screenshot Detail Is Too Small
 
 **Symptom**: a screenshot in a topic is unreadable at the panel's width.
 
-**Fix**: Click the image. Clicks on `img` elements inside topic content open a PhotoSwipe lightbox at the image's natural size ([`handbooks/core.cljs:239-244`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L239-L244)).
+**Fix**: click the image. Clicks on `img` elements inside topic content open a PhotoSwipe lightbox at the image's natural size ([`handbooks/core.cljs:239-244`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L239-L244)).
 
 ---
 
 ## Removed or Out-of-Scope Items
 
-> **Removed:** "Future Enhancements" roadmap. These items are not backed by implementation in `src/`, `deps/`, or `packages/` as of 2026-05-30.
+> **Removed:** "Future Enhancements" roadmap. These items are not backed by implementation in `src/`, `deps/` or `packages/`.
 
-> **Removed:** Internal handbook authoring/deploy process details and asset optimization quotas. Current repository source validates runtime consumption behavior, not publishing workflow policy.
+> **Removed:** internal handbook authoring and deploy process details, and asset optimization quotas. The repository source shows how the app consumes the content, not how it is published.
 
-> **Removed:** `internal-docs/handbooks-authoring.md` pointer. That path is not present in this repository.
+> **Removed:** the `internal-docs/handbooks-authoring.md` pointer. That path is not present in this repository.
 
-> **Removed:** "Handbooks vs external docs" comparison table. Its access/versioning claims are editorial positioning, not verifiable against source.
+> **Removed:** the "Handbooks vs external docs" comparison table. Its access and versioning claims are editorial positioning, not verifiable against source.
 
 ---
 
@@ -517,7 +497,8 @@ Validated against current source in `src/`:
 
 | Component              | Lines   | Role                                              |
 | ---------------------- | ------- | ------------------------------------------------- |
-| `resolve-asset-url`    | 32-37   | Relative asset path → CDN/dev URL                 |
+| `get-handbooks-endpoint` | 24-30 | Content endpoint (production or dev watch)        |
+| `resolve-asset-url`    | 32-37   | Relative asset path → endpoint URL                |
 | `inflate-content-assets-urls` | 39-48 | Rewrites `src="..."` in topic HTML           |
 | `parse-key-from-href`  | 50-59   | Internal content link → node key                  |
 | `topic-card`           | 88-99   | Topic card component                              |
@@ -533,7 +514,7 @@ Validated against current source in `src/`:
 
 **Entrypoints**:
 
-- Help menu toggle: [`src/main/frontend/components/container.cljs`](../../../../../src/main/frontend/components/container.cljs)
+- Help menu and **?** button: [`src/main/frontend/components/container.cljs`](../../../../../src/main/frontend/components/container.cljs)
 - Popup wrapper and draggable container: [`src/main/frontend/components/handbooks.cljs`](../../../../../src/main/frontend/components/handbooks.cljs)
 - Desktop URL routing bridge: [`src/electron/electron/url.cljs`](../../../../../src/electron/electron/url.cljs), [`src/main/electron/listener.cljs`](../../../../../src/main/electron/listener.cljs)
 
@@ -542,15 +523,15 @@ Validated against current source in `src/`:
 - YouTube player integration: [`src/main/frontend/extensions/video/youtube.cljs`](../../../../../src/main/frontend/extensions/video/youtube.cljs)
 - Lightbox integration (PhotoSwipe): [`src/main/frontend/extensions/lightbox.cljs`](../../../../../src/main/frontend/extensions/lightbox.cljs)
 - Shortcut config source: [`src/main/frontend/modules/shortcut/config.cljs`](../../../../../src/main/frontend/modules/shortcut/config.cljs)
-- Fuzzy search: [`src/main/frontend/search.cljs`](../../../../../src/main/frontend/search.cljs)
+- Fuzzy search: [`src/main/frontend/search.cljs:13`](../../../../../src/main/frontend/search.cljs#L13)
 - Strings: `:help.handbook/*` in [`src/resources/dicts/en.edn`](../../../../../src/resources/dicts/en.edn)
 
 **External Libraries**:
 
-- Glide.js: carousel for demo galleries (loaded on demand)
-- hsx / Rum-style components (ClojureScript)
+- Glide.js (`@glidejs/glide`): carousel for demo galleries, loaded on demand
+- HSX components (`io.factorhouse.hsx.core`), which replaced Rum (commit `d185ea58ee`)
 
 ---
 
 **Status**: 🟢 Stable
-**Feedback**: Report handbooks issues on [GitHub](https://github.com/logseq/logseq/issues) with `handbooks` label
+**Feedback**: Report handbooks issues on [GitHub](https://github.com/logseq/logseq/issues)
