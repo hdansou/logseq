@@ -9,7 +9,7 @@ verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 related-docs:
   - '[Backup Strategies](./backup-strategies.md)'
-  - '[File vs Database Graphs](../../explanation/concepts/file-vs-database.md)'
+  - '[File vs Database Graphs](../../explanation/concepts/file-vs-db.md)'
 tags: ['import', 'export', 'migration', 'data-portability', 'backup']
 ---
 

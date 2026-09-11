@@ -8,7 +8,7 @@ reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
 related-docs:
-  - '[File-Based vs Database Graphs](./file-vs-database.md)'
+  - '[File-Based vs Database Graphs](./file-vs-db.md)'
   - '[Graph Structure](./graph-visualization.md)'
   - '[Backup Strategies](../../how-to/organization/backup-strategies.md)'
 tags: ['organization', 'namespaces', 'structure', 'file-system']
@@ -643,7 +643,7 @@ at the top).
 **Related:**
 
 - [Graph Visualization](./graph-visualization.md)
-- [File vs Database Comparison](./file-vs-database.md)
+- [File vs Database Comparison](./file-vs-db.md)
 - [Backup Strategies](../../how-to/organization/backup-strategies.md)
 
 ---

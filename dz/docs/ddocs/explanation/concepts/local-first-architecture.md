@@ -8,7 +8,7 @@ reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Web + Mobile'
 related-docs:
-  - '[File vs Database Graphs](./file-vs-database.md)'
+  - '[File vs Database Graphs](./file-vs-db.md)'
   - '[E2EE Encryption](../security/e2ee-encryption.md)'
   - '[Database Integrity](../architecture/database-integrity.md)'
   - '[RTC vs File Sync](../comparisons/rtc-vs-file-sync.md)'
@@ -587,7 +587,7 @@ as WASM (@sqlite.org/sqlite-wasm) on OPFS.
 
 **Related:**
 
-- [File vs Database Graphs](./file-vs-database.md)
+- [File vs Database Graphs](./file-vs-db.md)
 - [E2EE Encryption](../security/e2ee-encryption.md)
 - [RTC vs File Sync](../comparisons/rtc-vs-file-sync.md)
 - [Backup Strategies](../../how-to/organization/backup-strategies.md)

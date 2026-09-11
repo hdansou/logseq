@@ -216,7 +216,6 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 - 🟢 [Block-Based Editing Philosophy](explanation/concepts/block-editing-philosophy.md)
 - [:block/tags vs :logseq.property/page-tags](explanation/concepts/block-tags-vs-page-tags.md)
 - 🟢 [File Organization and Namespaces](explanation/concepts/file-organization.md)
-- 🟢 [File-Based vs Database Graphs](explanation/concepts/file-vs-database.md)
 - [File vs Database Graphs](explanation/concepts/file-vs-db.md)
 - 🟢 [Graph Visualization and Navigation](explanation/concepts/graph-visualization.md)
 - 🟢 [Linked References and Backlinks](explanation/concepts/linked-references.md)

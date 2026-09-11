@@ -164,10 +164,16 @@ review candidate — verify against source, then add if still true.
 - [x] Retire root `ddocs/`
 - [x] Rewrite inbound references (60 links across 8 files)
 - [x] Link check: 614 resolved, 0 broken by the merge
-- [ ] Resolve duplicate pages: `reference/configuration/keyboard-shortcuts.md` and
+- [x] Resolve duplicate pages: `reference/configuration/keyboard-shortcuts.md` and
       `reference/interface/keyboard-shortcuts.md` share the title
-      'Keyboard Shortcuts Reference' — decide which survives
-- [ ] Triage the **257 pre-existing broken links** found by `check_links.py` (none caused by the merge)
+      'Keyboard Shortcuts Reference'. The `configuration/` copy survives, and the
+      `interface/` path is a moved stub (`7f89821fdf`).
+- [x] Resolve duplicate pages: `explanation/concepts/file-vs-database.md` (1328 lines, never
+      verified) duplicated the audited `file-vs-db.md`. It was validated against `be800f1711`,
+      and the claims that held up were merged into `file-vs-db.md`, which was re-audited in full.
+      The duplicate was deleted and its five inbound links retargeted. No stub (2026-09-11).
+- [x] Triage the **257 pre-existing broken links** found by `check_links.py` (none caused by the
+      merge). The write-up is `LINK_TRIAGE.md` (`d0b5f33e6d`); the count was 66 on 2026-09-11.
 - [x] Regenerate `TASK_LIST.md` (106 docs: 38 verified this pass, 68 not)
 
 ---
