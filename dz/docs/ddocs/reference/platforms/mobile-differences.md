@@ -1,32 +1,32 @@
 ---
 title: 'Mobile Platform Differences'
 status: 🟢 Stable
-version: 'Since v0.5.0+'
+version: 'DB graph schema 65.33'
 quadrant: 'Reference'
 platform: 'Mobile (iOS & Android)'
+lastVerified: '2026-09-11'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 related-docs:
-  - '[Desktop vs Mobile Features](../../explanation/architecture/platform-architecture.md)'
+  - '[URI Schemes](./uri-schemes.md)'
+  - '[Default Paths](./default-paths.md)'
+  - '[Keyboard Shortcuts](../configuration/keyboard-shortcuts.md)'
+  - '[Slash Commands](../interface/slash-commands.md)'
   - '[PDF Annotations](../features/pdf-annotations.md)'
-  - '[Plugin Development](../../tutorials/plugins/first-plugin.md)'
 tags: ['mobile', 'ios', 'android', 'capacitor', 'platform', 'limitations']
 ---
 
 # Mobile Platform Differences
 
-This reference documents key differences between Logseq's desktop and mobile platforms. Understanding these differences is essential for plugin developers, contributors, and power users who work across multiple platforms.
+This reference covers the differences between Logseq's native mobile app (iOS and Android) and the desktop (Electron) and web builds. Each difference below was checked against the source at `be800f1711`, mostly against the platform checks in shared code (`mobile-util/native-platform?`, `util/electron?`, `util/web-platform?`).
 
-**Target Audience:**
+**Platforms covered:**
 
-- Plugin developers adapting desktop plugins for mobile
-- App contributors working on mobile features
-- Power users understanding feature parity
-- Documentation writers covering platform-specific behavior
+- 📱 **iOS** and 🤖 **Android** — the Capacitor app
+- 🖥️ **Desktop** — Electron
+- 🌐 **Web** — the browser build (it differs from desktop in several rows below)
 
-**Platforms Covered:**
-
-- 📱 **iOS** (iPhone & iPad)
-- 🤖 **Android** (phones & tablets)
-- 🖥️ **Desktop** (Windows, macOS, Linux via Electron)
+> **Scope:** everything here concerns DB graphs. File graphs cannot be opened on any platform: the graph list keeps only DB graphs (`src/main/frontend/components/repo.cljs:321-323`).
 
 ---
 
@@ -35,12 +35,12 @@ This reference documents key differences between Logseq's desktop and mobile pla
 1. [Architecture Overview](#1-architecture-overview)
 2. [Feature Support Matrix](#2-feature-support-matrix)
 3. [UI & UX Differences](#3-ui--ux-differences)
-4. [File System & Storage](#4-file-system--storage)
-5. [Plugin System](#5-plugin-system)
+4. [Storage](#4-storage)
+5. [Plugin System, custom.js and custom.css](#5-plugin-system-customjs-and-customcss)
 6. [Performance Considerations](#6-performance-considerations)
 7. [Platform Detection](#7-platform-detection)
 8. [Known Limitations](#8-known-limitations)
-9. [Best Practices](#9-best-practices)
+9. [For App Contributors](#9-for-app-contributors)
 
 ---
 
@@ -48,77 +48,55 @@ This reference documents key differences between Logseq's desktop and mobile pla
 
 ### Technology Stack
 
-| Component         | Desktop                          | Mobile                             |
-| ----------------- | -------------------------------- | ---------------------------------- |
-| **Runtime**       | Electron (Chromium + Node.js)    | Capacitor (WebView)                |
-| **WebView**       | Chromium 120+                    | iOS: WKWebView<br>Android: WebView |
-| **File Access**   | Direct filesystem (Node.js `fs`) | Capacitor Filesystem API           |
-| **Native APIs**   | Electron IPC                     | Capacitor Plugins                  |
-| **Plugin System** | ✅ Full support                  | ❌ Not supported                   |
-| **HTTP Server**   | ✅ Built-in (port 12315)         | ❌ Not available                   |
-| **CLI Tools**     | ✅ Available                     | ❌ N/A                             |
-
-### Runtime Environment
-
-**Desktop (Electron):**
-
-```javascript
-// Full Node.js access
-const fs = require('fs')
-const path = require('path')
-
-// Electron APIs
-const { ipcRenderer } = require('electron')
-```
-
-**Mobile (Capacitor):**
-
-```javascript
-// Capacitor plugins only
-import { Filesystem } from '@capacitor/filesystem'
-import { Device } from '@capacitor/device'
-
-// No direct Node.js or Electron APIs
-```
+| Component | Desktop | Mobile | Source |
+| --- | --- | --- | --- |
+| **Runtime** | Electron | Capacitor app `com.logseq.app`, serving the `static/mobile` web bundle | `capacitor.config.ts:8-10` |
+| **ClojureScript build** | `:app` (renderer) + `:electron` (main process) | `:mobile` | `shadow-cljs.edn:17`, `:132`, `:95` |
+| **App shell** | `frontend.components.container` | `mobile.core` → `mobile.components.app`; startup still goes through the shared `frontend.handler/start!` | `src/main/mobile/core.cljs:89-99` |
+| **Database worker** | Electron flavour of the db-worker | The browser db-worker, started with `capacitor=true` | `src/main/frontend/persist_db/browser.cljs:201-206`, `src/main/frontend/worker/platform/browser.cljs:192-197` |
+| **Native APIs** | Electron IPC (`window.apis`, `ipc/ipc`) | Capacitor plugins (`App`, `Keyboard`, `Network`, `Haptics`, camera, `@capacitor/filesystem`, plus custom native plugins such as `UILocal`) | `src/main/mobile/init.cljs:73-106`, `src/main/frontend/mobile/util.cljs:27-30` |
+| **Plugin system** | ✅ | ❌ | [§5](#5-plugin-system-customjs-and-customcss) |
+| **HTTP API / MCP server** | ✅ | ❌ | [§2](#extended-features) |
 
 ---
 
 ## 2. Feature Support Matrix
 
+The "Mobile" column only states what the code shows; a ✅ means no platform check excludes the feature.
+
 ### Core Features
 
-| Feature               | Desktop | iOS        | Android    | Notes                         |
-| --------------------- | ------- | ---------- | ---------- | ----------------------------- |
-| **Database Graphs**   | ✅ Full | ✅ Full    | ✅ Full    | SQLite-based                  |
-| **File-Based Graphs** | ✅ Full | ⚠️ Limited | ⚠️ Limited | No git integration            |
-| **Real-Time Sync**    | ✅ Full | ✅ Full    | ✅ Full    | E2EE encryption               |
-| **Journals**          | ✅ Full | ✅ Full    | ✅ Full    | All features                  |
-| **Whiteboards**       | ✅ Full | ✅ Full    | ✅ Full    | tldraw-based                  |
-| **Flashcards**        | ✅ Full | ✅ Full    | ✅ Full    | Spaced repetition             |
-| **Query System**      | ✅ Full | ✅ Full    | ✅ Full    | Datalog & advanced            |
-| **Block References**  | ✅ Full | ✅ Full    | ✅ Full    | Embed blocks                  |
-| **Page References**   | ✅ Full | ✅ Full    | ✅ Full    | `[[links]]`                   |
-| **Templates**         | ✅ Full | ✅ Full    | ✅ Full    | All features                  |
-| **Custom CSS**        | ✅ Full | ✅ Full    | ✅ Full    | Via custom.css                |
-| **Themes**            | ✅ Full | ✅ Full    | ✅ Full    | Plugin themes only on desktop |
+| Feature | Desktop | iOS / Android | Evidence |
+| --- | --- | --- | --- |
+| **DB graphs** | ✅ | ✅ | All platforms share the graph list filter (`repo.cljs:321-323`) |
+| **File-based graphs** | ❌ | ❌ | Not openable on any platform (`repo.cljs:321-323`) |
+| **Sync (Logseq Sync / RTC)** | ✅ | ✅ | The mobile app lists and downloads remote graphs for users in the sync group (`src/main/mobile/components/app.cljs:205-224`). On mobile the E2EE password is saved through native secure storage (`src/main/frontend/worker/sync/crypt.cljs:43-46`, `:118-126`; `src/main/frontend/mobile/secure_storage.cljs`) |
+| **Flashcards** | ✅ | ✅ | Mobile has a **Cards** tab when flashcards are enabled (`src/main/mobile/tabs.cljs:17-20`, `:36-40`) showing `fsrs/cards-view` (`app.cljs:257-260`) |
+| **Whiteboards** | ❌ | ❌ | Removed on every platform: `bcc478b5f7` (2025-12-29) dropped the `tldraw:build` script from `package.json`, and `src/main/frontend/components/export.cljs:329` refers to "whiteboard removal". `:logseq.class/Whiteboard` survives only in migration and graph-view code (`src/main/frontend/worker/db/migrate.cljs:268`, `src/main/frontend/worker/graph_view.cljs:62`) |
+| **Custom CSS (`logseq/custom.css`)** | ✅ | ✅ loaded | Loaded during startup on every platform, with no platform check (`src/main/frontend/handler.cljs:62`, `src/main/frontend/handler/ui.cljs:112-119`). Mobile settings have no editor for it ([§3](#settings)) |
+| **Themes** | Light/dark/system + plugin themes | Light/dark/system only | Mobile theme picker: `src/main/mobile/components/settings.cljs:55-65`. Plugin themes need the plugin system, which is off on native mobile ([§5](#5-plugin-system-customjs-and-customcss)) |
+| **Slash commands** | ✅ | ✅ (no plugin commands) | Same `commands-map`; see [Slash Commands](../interface/slash-commands.md#mobile) |
 
 ### Extended Features
 
-| Feature                | Desktop      | iOS         | Android     | Notes                                                                   |
-| ---------------------- | ------------ | ----------- | ----------- | ----------------------------------------------------------------------- |
-| **PDF Annotations**    | ✅ Full      | ❌ No       | ❌ No       | See [Known Issue #11046](https://github.com/logseq/logseq/issues/11046) |
-| **PDF Viewer**         | ✅ PDF.js    | ❌ External | ❌ External | Opens in system viewer                                                  |
-| **Video Embed**        | ✅ Full      | ⚠️ Limited  | ⚠️ Limited  | Local videos unsupported                                                |
-| **YouTube Embed**      | ✅ IFrame    | ✅ Wrapper  | ✅ Wrapper  | Different rendering                                                     |
-| **Asset Management**   | ✅ Full      | ✅ Full     | ✅ Full     | 100MB file limit                                                        |
-| **Zotero Integration** | ✅ Plugin    | ❌ No       | ❌ No       | Desktop plugin only                                                     |
-| **Git Sync**           | ✅ Full      | ❌ No       | ❌ No       | File-based graphs only                                                  |
-| **HTTP API Server**    | ✅ Yes       | ❌ No       | ❌ No       | Port 12315                                                              |
-| **MCP Server**         | ✅ Yes       | ❌ No       | ❌ No       | CLI or API mode                                                         |
-| **Plugin System**      | ✅ Full      | ❌ No       | ❌ No       | Electron-based                                                          |
-| **CLI Tools**          | ✅ Yes       | ❌ No       | ❌ No       | @logseq/cli                                                             |
-| **Developer Mode**     | ✅ Full      | ❌ No       | ❌ No       | DevTools access                                                         |
-| **Custom Shortcuts**   | ✅ Extensive | ⚠️ Limited  | ⚠️ Limited  | Hardware keyboard only                                                  |
+| Feature | Desktop | iOS / Android | Evidence |
+| --- | --- | --- | --- |
+| **Plugin system** | ✅ | ❌ | `plugin-platform?` is true only on Electron or on non-native, non-publishing web (`src/main/frontend/util.cljc:127-131`); `config/lsp-enabled?` requires it (`src/main/frontend/config.cljs:149-152`) |
+| **custom.js** | ✅ | ❌ | See [§5](#customjs) |
+| **HTTP API server** | ✅ (default port `12315`) | ❌ | Settings row shown only on Electron (`src/main/frontend/components/settings.cljs:1156-1157`); default port at `src/electron/electron/server.cljs:21` |
+| **MCP server** | ✅ | ❌ | Electron-only settings row (`settings.cljs:1445-1446`); served by the desktop API server (`src/electron/electron/mcp_server.cljs:2`) |
+| **Markdown mirror** | ✅ | ❌ | Electron-only settings row (`settings.cljs:1158-1159`) |
+| **Developer mode** | ✅ | ❌ | Row hidden on native platforms (`settings.cljs:926`) |
+| **YouTube embeds** | IFrame player | Wrapper player | `use-youtube-wrapper?` is `native-platform?` (`src/main/frontend/extensions/video/youtube.cljs:31-32`) |
+| **YouTube timestamps** (`/Embed YouTube timestamp`) | ✅ | ❌ | With the wrapper, `gen-youtube-ts-macro` shows "timestamp unavailable" and inserts nothing (`youtube.cljs:163-167`) |
+| **PDF viewer** | ✅ | ⚠️ see [§8](#1-pdf-viewer) | |
+| **Open graph in new window** | New Electron window | `window.open` (web tab behaviour) | `src/main/frontend/handler/ui.cljs:249-263` |
+| **Git auto-commit** | ❌ | ❌ | No git versioning code exists at `be800f1711`. The only `git` reference in `src/electron/` is the `:shell/run` allow-list (`src/electron/electron/shell.cljs:11`) |
+| **Share to Logseq** | — | ✅ | Android accepts `SEND` intents for `text/plain`, `image/*`, `application/*` and `video/*` (`android/app/src/main/AndroidManifest.xml:40-46`); iOS has a share extension that opens `logseq://shared?…` (`ios/App/ShareViewController/ShareViewController.swift:40`) |
+| **Home-screen widget / Control Center controls** | — | iOS | A widget linking to `logseq://mobile`, `…/go/audio` and `…/go/quick-add` (`ios/App/shortcuts/shortcuts.swift`), plus `QuickAddButton` and `RecordAudioButton` controls (`ios/App/shortcuts/shortcutsControl.swift`) |
+| **Audio recording** | — | ✅ | Toolbar **Audio** action (`src/main/mobile/components/editor_toolbar.cljs:151-160`). A recording is saved as an asset, with optional transcription through the native `UILocal` plugin (`src/main/mobile/components/recorder.cljs:50-95`) |
+| **Camera** | — | ✅ | Toolbar **Photo** action (`editor_toolbar.cljs:141-149`, `src/main/frontend/mobile/camera.cljs:32`, `:61`) |
+| **Sync asset size limit** | 100 MB | 100 MB | Server-side and the same for every client (`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9`, `:105`) — not a mobile limit |
 
 ---
 
@@ -126,428 +104,220 @@ import { Device } from '@capacitor/device'
 
 ### Navigation
 
-**Desktop:**
+The mobile app has its own shell with a native bottom tab bar instead of the desktop sidebars:
 
-- Multi-window support
-- Keyboard-first navigation
-- Mouse hover interactions
-- Right-click context menus
-- Drag-and-drop everywhere
+| Tab id | Label (en) | Notes | Source |
+| --- | --- | --- | --- |
+| `home` | Home | Required tab | `src/main/mobile/tabs.cljs:5-8`, `:29` |
+| `graphs` | Graphs | | `tabs.cljs:9-12` |
+| `capture` | Capture | Also opened by `logseq://mobile/go/quick-add` | `tabs.cljs:13-16`, `src/main/mobile/deeplink.cljs:80-81` |
+| `flashcards` | Cards | Only when flashcards are enabled | `tabs.cljs:17-20`, `:36-40` |
+| `go to` | Go To | | `tabs.cljs:21-24` |
+| `search` | Search | **Android only** — added as a search-role tab | `src/main/mobile/bottom_tabs.cljs:285-292` |
 
-**Mobile:**
-
-- Single-screen focus
-- Touch-first gestures
-- Long-press for context menus
-- Swipe navigation
-- Limited drag-and-drop
+- At most 4 main tabs are shown, and the set can be chosen in mobile settings (`tabs.cljs:31-34`; `src/main/mobile/components/settings.cljs:141-199`).
+- English labels: `en.edn:1047-1050`, `:1078`.
+- Mobile routes are only `/` (home), `/page/:name`, `/import` and `/export` (`src/main/mobile/routes.cljs:8-22`).
 
 ### Keyboard Shortcuts
 
-**Desktop:**
+- Shortcut handlers are installed at startup by `shortcut/refresh!` on every platform, with no mobile check (`src/main/frontend/handler.cljs:73`, `src/main/frontend/modules/shortcut/core.cljs:251-263`).
+- These bindings are marked `:inactive` outside Electron, so they don't work on mobile (or web): `:go/electron-find-in-page`, `:go/electron-jump-to-the-next`, `:go/electron-jump-to-the-previous`, `:graph/db-save`, `:shell/run`, `:editor/copy-page-url` and `:window/close` (`src/main/frontend/modules/shortcut/config.cljs:317`, `:321`, `:325`, `:377`, `:385`, `:451`, `:455`). `:ui/install-plugin-from-github` additionally needs the plugin system (`:473`).
+- For the full list see the audited [Keyboard Shortcuts](../configuration/keyboard-shortcuts.md) reference.
 
-```
-Cmd/Ctrl + K      → Command palette
-Cmd/Ctrl + O      → Quick open
-Cmd/Ctrl + Shift + K → Go to page
-/                 → Slash commands
-[[                → Page link autocomplete
-```
-
-**Mobile:**
-
-- ⚠️ **Requires external hardware keyboard**
-- Most shortcuts work with Bluetooth keyboard
-- On-screen keyboard lacks modifier keys
-- Slash commands work via `/` key
-- `[[` autocomplete works
+> **Unverified:** whether a hardware keyboard attached to a phone or tablet triggers the installed handlers was not tested.
 
 ### Touch Gestures
 
-**Mobile-Specific:**
+| Gesture | Result | Source |
+| --- | --- | --- |
+| **Horizontal swipe on a block** (more than 10 px and more horizontal than vertical) | Toggles the block's selection, fires a haptic tap, and shows the selection action bar while any block is selected | `src/main/frontend/handler/block.cljs:308-342` |
+| **Touch-move tracking** | Registered only when `util/mobile?` or `native-platform?` is true | `src/main/frontend/components/block.cljs:4278-4282` |
+| **Tap the status bar** (iOS) | Scrolls to top | `src/main/mobile/init.cljs:101-102` |
+| **Android back gesture** | Routed through `MainActivity` to JS (`window.LogseqNative.onNativePop`); `@capacitor/app`'s back handler is disabled | `capacitor.config.ts:20-26` |
 
-```
-Long press block   → Context menu (edit, delete, move)
-Swipe left        → Collapse/expand block
-Swipe right       → Navigate back
-Pinch zoom        → Zoom in/out (limited support)
-Two-finger scroll → Scroll page
-```
+The page previously described swipe-to-collapse, swipe-right-to-go-back, long-press context menus and pinch zoom. None of these has a handler in the mobile code at `be800f1711`, so those rows were removed.
 
-**Desktop Equivalent:**
+### Selection Action Bar
 
-- Right-click → Context menu
-- Click arrow → Collapse/expand
-- Browser back button → Navigate back
-- Ctrl/Cmd + Mouse wheel → Zoom
+The bar is shown after a swipe selects blocks (`src/main/mobile/components/selection_toolbar.cljs:1-2`). Its actions, in order (`selection_toolbar.cljs:30-100`):
 
-### Selection Toolbar
+- copy, outdent, indent
+- **Comment** — only when the selected blocks can take comments
+- **Reaction** — only when a selection target exists
+- **Delete**, **Copy ref**, **Copy url**, **Unselect**
 
-**Mobile:**
+### Editor Toolbar
 
-- Floating toolbar appears on text selection
-- Limited to: Bold, Italic, Link, Highlight
-- Positioned above selected text
+The native editor toolbar is shown only on native platforms where the native toolbar plugin is present (`src/main/mobile/components/editor_toolbar.cljs:209-210`).
 
-**Desktop:**
+- **Main actions** (`editor_toolbar.cljs:180-191`): Undo, Todo, Outdent, Indent, Tag, Photo, Upload an asset, Reference, Audio, Slash, Redo. The trailing action is **Hide**, which dismisses the keyboard.
+- **In a comment editor:** Reference, Photo, Upload an asset, Audio.
 
-- Inline formatting buttons
-- Full formatting toolbar
-- Quick access to all markdown syntax
+### Settings
 
----
+Mobile has its own settings screen (`src/main/mobile/components/settings.cljs:243-307`):
 
-## 4. File System & Storage
+- Theme, Language, Version, Tabs, Revision
+- Report bug, Check log
+- Log out, Discord, Forum
 
-### Graph Storage Locations
+The desktop-only rows listed in §2 (plugins, API server, MCP, markdown mirror, developer mode, custom.css editing) do not appear there.
 
-**Desktop:**
+### Deep Links
 
-```
-macOS:    ~/Documents/Logseq/
-Windows:  C:\Users\<user>\Documents\Logseq\
-Linux:    ~/Documents/Logseq/
-```
+The native app handles `logseq://` URLs (`AndroidManifest.xml:50-55`; `init.cljs:73-89`). Hosts handled in `src/main/mobile/deeplink.cljs`:
 
-**iOS:**
+| URL | Action | Line |
+| --- | --- | --- |
+| `logseq://mobile/go/audio` | Start audio recording | `:77` |
+| `logseq://mobile/go/quick-add` | Open the Capture tab | `:80` |
+| `logseq://graph/<name>?page=…&block-id=…` | Open a graph, page or block | `:83` |
+| `logseq://shared?title=&url=&type=&payload=` | Import shared content | `:124-135` |
 
-```
-App Container: /var/mobile/Containers/Data/Application/<UUID>/Documents/
-Access: Files app → "On My iPhone/iPad" → Logseq
-```
-
-**Android:**
-
-```
-Internal: /data/data/com.logseq.app/files/
-External: /storage/emulated/0/Documents/Logseq/
-Access: Via file picker or "Share to Logseq"
-```
-
-### File Access APIs
-
-**Desktop (Node.js):**
-
-```clojure
-;; Direct filesystem access
-(ns frontend.fs
-  (:require ["fs" :as fs]
-            ["path" :as path]))
-
-(defn read-file [path]
-  (.readFileSync fs path "utf8"))
-
-(defn write-file [path content]
-  (.writeFileSync fs path content))
-```
-
-**Mobile (Capacitor):**
-
-```clojure
-;; Via Capacitor Filesystem plugin
-(ns frontend.mobile.fs
-  (:require ["@capacitor/filesystem" :refer [Filesystem]]))
-
-(defn read-file [path]
-  (.readFile Filesystem #js {:path path
-                             :directory "DOCUMENTS"}))
-
-(defn write-file [path content]
-  (.writeFile Filesystem #js {:path path
-                              :data content
-                              :directory "DOCUMENTS"}))
-```
-
-### Graph Sync
-
-| Sync Method          | Desktop   | iOS       | Android   |
-| -------------------- | --------- | --------- | --------- |
-| **Logseq Sync**      | ✅ Full   | ✅ Full   | ✅ Full   |
-| **Git (file-based)** | ✅ Full   | ❌ No     | ❌ No     |
-| **iCloud**           | ⚠️ Manual | ⚠️ Manual | ❌ N/A    |
-| **Google Drive**     | ⚠️ Manual | ❌ No     | ⚠️ Manual |
-| **Dropbox**          | ⚠️ Manual | ❌ No     | ⚠️ Manual |
-
-**⚠️ Warning:** Manual cloud sync (iCloud, Google Drive, Dropbox) can cause conflicts and data loss. Use **Logseq Sync** for reliable cross-platform syncing.
+See [URI Schemes](./uri-schemes.md).
 
 ---
 
-## 5. Plugin System
+## 4. Storage
 
-### Plugin Support
+| | Desktop | iOS / Android |
+| --- | --- | --- |
+| **Graph format** | Each DB graph is a single `db.sqlite` (`deps/db/src/logseq/db/common/sqlite.cljs:29-33`) | Same DB graph format |
+| **Location** | Under `~/logseq/graphs` by default (`deps/common/src/logseq/common/config.cljs:55`); automatic backups go to `<graph>/backup/` (`src/main/logseq/db_worker/graph_backup.cljs:10`) | Inside the app, managed by the browser db-worker. Its storage layer is OPFS (`src/main/frontend/worker/platform/browser.cljs:74`), and the worker runs with owner source `:capacitor` (`:192-197`) |
+| **Getting data in/out** | Filesystem, import/export | `/import` and `/export` routes (`src/main/mobile/routes.cljs:15-22`), the share sheet, and sync |
 
-**Desktop:**
+> **Unverified:** the earlier on-device paths (`/var/mobile/Containers/…`, `/data/data/com.logseq.app/files/`, Files-app visibility) and the iCloud/Google Drive/Dropbox table can't be derived from the source, so they were removed.
 
-- ✅ Full plugin system (`@logseq/libs`)
-- ✅ Load unpacked plugins (developer mode)
-- ✅ Plugin marketplace
-- ✅ Custom themes as plugins
-- ✅ Slash commands, shortcuts, UI injection
-- ✅ Inter-plugin communication
+The earlier `frontend.mobile.fs` example namespace does not exist. `@capacitor/filesystem` is used only by the share-intent handler (`src/main/frontend/mobile/intent.cljs:4`).
 
-**Mobile:**
+---
 
-- ❌ No plugin support
-- ⚠️ Plugin-provided themes work (if uploaded to marketplace)
-- ❌ No custom plugins
-- ❌ No developer mode
-- ❌ No plugin API access
+## 5. Plugin System, custom.js and custom.css
 
-### Why No Mobile Plugins?
+### Plugins
 
-**Technical Constraints:**
+Plugins are not available in the native app:
 
-1. **Security sandbox:** Mobile WebView restricts arbitrary code execution
-2. **Performance:** Limited memory and CPU compared to desktop
-3. **UI complexity:** Touch interface incompatible with many plugin UIs
-4. **App review:** Apple/Google restrict dynamic code loading
+- `config/lsp-enabled?` is `(and util/plugin-platform? (not (false? feature-plugin-system-on?)) (state/lsp-enabled?-or-theme))` (`src/main/frontend/config.cljs:149-152`).
+- `plugin-platform?` is `(or (and web-platform? (not PUBLISHING)) (electron?))`, where `web-platform?` means "not Electron and not a native Capacitor platform" (`src/main/frontend/util.cljc:127-131`).
+- So on iOS and Android the plugin system, plugin themes, plugin slash commands and plugin UI are all off.
+- In the **web** build, the plugin system can be switched on in settings (`settings.cljs:1154-1155`).
 
-**Workaround:**
+There is no plugin sandbox on any platform, and plugins are not "Electron-based". The web build can run them too.
 
-- Use **MCP integration** (CLI mode) for AI-powered workflows
-- Request features via [GitHub Discussions](https://github.com/logseq/logseq/discussions)
-- Use **Logseq Sync** to leverage desktop plugins, then view on mobile
+The earlier "Why no mobile plugins?" rationale (security sandbox, app review, performance) is not recorded in the source.
+
+> **Unverified:** those reasons may be true, but nothing at `be800f1711` documents them.
+
+### custom.js
+
+`custom.js` is executed by `custom-js-installer`, which runs `exec-js-if-exists-&-allowed!` only when `(not util/nfs?)` (`src/main/frontend/components/plugins.cljs:1785-1795`). The installer is mounted in `frontend.components.container` (`src/main/frontend/components/container.cljs:582`). The mobile shell does not use that container; `src/main/mobile/components/app.cljs` requires neither it nor `frontend.components.plugins`. The result:
+
+- **Desktop:** runs, after the user confirms.
+- **Web:** `nfs?` is true, so it doesn't run.
+- **Native mobile:** not mounted, so it doesn't run.
+
+### custom.css
+
+`logseq/custom.css` is read from the graph and applied during `restore-and-setup!` (`src/main/frontend/handler.cljs:52-62`, `src/main/frontend/handler/ui.cljs:112-119`). That path runs from the shared `start!` (`handler.cljs:191`), which the mobile app calls (`src/main/mobile/core.cljs:99`), so custom CSS applies on mobile too. It can only be edited from desktop settings (`settings.cljs:217`).
 
 ---
 
 ## 6. Performance Considerations
 
-### Memory Limits
+> **Unverified:** the memory limits (2–8 GB desktop, 512 MB–4 GB mobile), block-count recommendations (100k / 50k), "SQLite with WAL mode", and asset loading speeds that used to be listed here can't be proven from source and were removed.
 
-| Platform    | Typical Limit | Large Graph Handling                   |
-| ----------- | ------------- | -------------------------------------- |
-| **Desktop** | 2-8 GB        | ✅ Excellent (can handle 100k+ blocks) |
-| **iOS**     | 512 MB - 2 GB | ⚠️ Good (50k blocks recommended)       |
-| **Android** | 512 MB - 4 GB | ⚠️ Good (50k blocks recommended)       |
+What the code does show:
 
-### Database Performance
-
-**Desktop:**
-
-- SQLite with WAL mode
-- Concurrent read access
-- Fast indexing
-- Efficient search
-
-**Mobile:**
-
-- Same SQLite engine
-- Limited memory affects cache
-- Slower indexing on large graphs
-- Search may take longer
-
-### Asset Loading
-
-**Desktop:**
-
-```
-Images: Instant (local filesystem)
-PDFs: Fast (PDF.js in-process)
-Videos: Streamed (local files)
-```
-
-**Mobile:**
-
-```
-Images: Fast (cached)
-PDFs: External viewer (system-dependent)
-Videos: Streamed (network-dependent for YouTube)
-```
+- Both platforms run the same db-worker code over SQLite. Mobile uses the browser flavour; desktop uses the Electron flavour (`src/main/frontend/persist_db/browser.cljs:201-206`).
+- The mobile app watches network status through `@capacitor/network` (`src/main/mobile/init.cljs:105-106`).
 
 ---
 
 ## 7. Platform Detection
 
-### ClojureScript Detection
+### ClojureScript
+
+| Predicate | Meaning | Source |
+| --- | --- | --- |
+| `frontend.mobile.util/native-platform?` | `Capacitor.isNativePlatform()` | `src/main/frontend/mobile/util.cljs:11-12` |
+| `frontend.mobile.util/native-ios?` | Native **and** `Capacitor.getPlatform()` is `"ios"` | `mobile/util.cljs:14-16` |
+| `frontend.mobile.util/native-android?` | Native **and** the platform is `"android"` | `mobile/util.cljs:18-20` |
+| `frontend.mobile.util/native-iphone?` / `native-ipad?` | Device-model checks | `mobile/util.cljs:136`, `:142` |
+| `frontend.util/electron?` | The user agent contains " electron" | `src/main/frontend/util.cljc:113` |
+| `frontend.util/web-platform?` (= `nfs?`) | Not Electron and not native mobile | `util.cljc:127-130` |
+| `frontend.util/plugin-platform?` | Electron, or non-publishing web | `util.cljc:131` |
+| `frontend.util/capacitor?` | `window.isCapacitorNew` is set | `util.cljc:71` |
+| `frontend.util/mobile?` | The user agent contains `Mobi`. **For UX logic only**; iPads and Android tablets don't match | `util.cljc:60-70` |
+
+Real usage, from the YouTube extension:
 
 ```clojure
-;; Check if running on mobile
-(ns frontend.util
+(ns frontend.extensions.video.youtube
   (:require [frontend.mobile.util :as mobile-util]))
 
-(defn mobile? []
+(defn- use-youtube-wrapper? []
   (mobile-util/native-platform?))
-
-(defn ios? []
-  (mobile-util/native-ios?))
-
-(defn android? []
-  (mobile-util/native-android?))
-
-(defn desktop? []
-  (not (mobile?)))
 ```
 
-### JavaScript Detection
+The earlier examples `mobile-util/open-external-file`, `pdf-viewer/open` and a `(defn mobile? …)` wrapper in `frontend.util` do not exist. `mobile-util/alert` does exist, but it is an iOS drop-alert that takes `{:title … :message … :type …}` (`mobile/util.cljs:156-161`).
+
+### JavaScript
+
+The same Capacitor calls the ClojureScript predicates wrap:
 
 ```javascript
-// Via Capacitor
 import { Capacitor } from '@capacitor/core'
 
-const isMobile = Capacitor.isNativePlatform()
-const isIOS = Capacitor.getPlatform() === 'ios'
-const isAndroid = Capacitor.getPlatform() === 'android'
-const isWeb = Capacitor.getPlatform() === 'web'
-```
-
-### Conditional Features
-
-```clojure
-;; Example: Platform-specific behavior
-(defn open-pdf [pdf-path]
-  (if (mobile-util/native-platform?)
-    ;; Mobile: Open in external viewer
-    (mobile-util/open-external-file pdf-path)
-    ;; Desktop: Open in PDF.js viewer
-    (pdf-viewer/open pdf-path)))
-
-(defn show-notification [message]
-  (if (mobile-util/native-platform?)
-    ;; Mobile: Native alert
-    (mobile-util/alert {:title "Notification"
-                        :message message})
-    ;; Desktop: Toast notification
-    (notification/show! message :success)))
+const isNative = Capacitor.isNativePlatform()
+const platform = Capacitor.getPlatform() // 'ios' | 'android' | 'web'
 ```
 
 ---
 
 ## 8. Known Limitations
 
-### Critical Limitations
+### 1. PDF viewer
 
-#### 1. PDF Annotations (iOS & Android)
+- `open-pdf-file` has an explicit native-platform branch: on native (and Electron) it uses the asset href directly, then sets the current PDF (`src/main/frontend/components/block.cljs:513-529`).
+- The viewer component, `pdf/default-embed-playground`, is mounted in `frontend.components.theme` (`src/main/frontend/components/theme.cljs:159`).
+- The mobile app's component namespace (`src/main/mobile/components/app.cljs`) does not require that namespace.
 
-**Status:** ❌ **Not Supported**  
-**Issue:** [#11046](https://github.com/logseq/logseq/issues/11046)
+> **Unverified:** whether PDFs open in-app on iOS/Android. The code neither blocks it nor visibly mounts the viewer in the mobile shell. The earlier citation `pdf/core.cljs:1090` and the issue link `#11046` could not be tied to this behaviour.
 
-**Problem:**
+### 2. YouTube timestamps
 
-- PDFs cannot be opened within Logseq mobile app
-- No in-app PDF viewer available
-- Cannot create PDF annotations
-- Cannot view existing PDF annotations
+Native mobile uses the YouTube wrapper player, and `gen-youtube-ts-macro` refuses to generate a timestamp under the wrapper (`src/main/frontend/extensions/video/youtube.cljs:163-167`). So `/Embed YouTube timestamp` does nothing on mobile.
 
-**Workaround:**
+### 3. Local video playback
 
-1. Open PDFs in external viewer (system default)
-2. Create annotations on desktop, view on mobile
-3. Use PDF links to jump to external viewer
+> **Unverified:** the earlier claim that local MP4/WebM/MOV assets cannot play on mobile. `src/main/frontend/components/block/video.cljs` has no platform check, and the earlier citation `youtube.cljs:212` does not relate to local video.
 
-**Code Reference:** [src/main/frontend/extensions/pdf/core.cljs:1090](../../../../../src/main/frontend/extensions/pdf/core.cljs#L1090)
+### 4. Plugin system
 
----
+Off on native mobile (see [§5](#plugins)). Everything a plugin provides is therefore unavailable there: slash commands, commands and shortcuts, UI slots, macro renderers and themes.
 
-#### 2. Local Video Playback
+### Minor limitations
 
-**Status:** ⚠️ **Limited Support**
+| Limitation | Desktop | Mobile | Source |
+| --- | --- | --- | --- |
+| **HTTP API / MCP server** | ✅ | ❌ | `settings.cljs:1156-1157`, `:1445-1446` |
+| **Developer mode** | ✅ | ❌ | `settings.cljs:926` |
+| **Markdown mirror** | ✅ | ❌ | `settings.cljs:1158-1159` |
+| **Multi-window** | ✅ Electron windows | Uses `window.open` | `src/main/frontend/handler/ui.cljs:249-263` |
+| **External URLs** | Opened through `window.apis.openExternal` | Assigned to `window.location.href` (the non-Electron branch) | `src/main/frontend/util.cljc:1160-1167` |
+| **Electron-only shortcuts** | ✅ | ❌ | `shortcut/config.cljs:317-473` (see [§3](#keyboard-shortcuts)) |
 
-**Problem:**
+> **Unverified:** how the native WebView treats a `window.open` or `location.href` navigation (system browser or in-app) was not tested.
 
-- Local video files (MP4, WebM, MOV) cannot be played
-- Only YouTube/Vimeo embeds work reliably
-- Asset videos have playback issues
-
-**Workaround:**
-
-1. Use YouTube/Vimeo for video embeds
-2. Upload videos to video hosting service
-3. Use timestamps in text instead of video blocks
-
-**Code Reference:** [src/main/frontend/extensions/video/youtube.cljs:212](../../../../../src/main/frontend/extensions/video/youtube.cljs#L212)
+The earlier rows for "Handbooks ✅ mobile" and "DevTools" were removed. Handbooks are opened from the desktop help menu (`src/main/frontend/components/container.cljs:245`), and the mobile shell has no reference to them.
 
 ---
 
-#### 3. Plugin System
+## 9. For App Contributors
 
-**Status:** ❌ **Not Available**
-
-**Reason:** Architectural limitation (Electron vs Capacitor)
-
-**Affected Features:**
-
-- Custom slash commands
-- Keyboard shortcuts
-- UI injection
-- Block renderers
-- Custom queries
-- External API integrations
-
-**Workaround:**
-
-- Use MCP integration for AI workflows
-- Request features as core functionality
-- Use desktop for plugin-dependent workflows
-
----
-
-### Minor Limitations
-
-| Limitation               | Desktop       | Mobile      | Impact                      |
-| ------------------------ | ------------- | ----------- | --------------------------- |
-| **Git Sync**             | ✅ Full       | ❌ No       | Use Logseq Sync instead     |
-| **HTTP API**             | ✅ Port 12315 | ❌ No       | CLI integration unavailable |
-| **DevTools**             | ✅ Full       | ❌ No       | Cannot debug on mobile      |
-| **Multi-window**         | ✅ Yes        | ❌ No       | Single-screen only          |
-| **Drag-drop files**      | ✅ Full       | ⚠️ Limited  | Use share/import            |
-| **External URLs**        | ✅ In-app     | ⚠️ External | Opens system browser        |
-| **Custom CSS variables** | ✅ Full       | ✅ Full     | Same CSS support            |
-| **Handbooks**            | ✅ Full       | ✅ Full     | Interactive tutorials work  |
-
----
-
-## 9. Best Practices
-
-### For Plugin Developers
-
-**1. Check Platform Before Using Desktop-Only APIs:**
-
-```javascript
-// ❌ Bad: Assumes desktop
-logseq.App.openExternalLink('https://example.com')
-
-// ✅ Good: Check platform first
-const info = await logseq.App.getInfo()
-if (info.platform === 'desktop') {
-  logseq.App.openExternalLink('https://example.com')
-} else {
-  // Mobile users won't see this plugin anyway
-  console.log('Plugin not supported on mobile')
-}
-```
-
-**2. Graceful Degradation:**
-
-```clojure
-;; Check capabilities before using
-(defn insert-pdf-annotation [pdf-path]
-  (if (and (not (mobile-util/native-platform?))
-           (pdf-utils/supported?))
-    (pdf-viewer/annotate pdf-path)
-    (notification/show! "PDF annotations require desktop app" :warning)))
-```
-
-**3. Document Platform Support:**
-
-```markdown
-# My Awesome Plugin
-
-**Platform Support:**
-
-- ✅ Desktop (Windows, macOS, Linux)
-- ❌ Mobile (iOS, Android) - Not supported due to PDF API requirements
-
-## Features
-
-- PDF highlighting (Desktop only)
-- ...
-```
-
----
-
-### For App Contributors
-
-**1. Use Platform-Specific Utilities:**
+### Gate platform-specific code
 
 ```clojure
 (ns my-feature
@@ -555,91 +325,40 @@ if (info.platform === 'desktop') {
             [frontend.util :as util]))
 
 (defn my-feature []
-  (if (mobile-util/native-platform?)
-    (mobile-implementation)
-    (desktop-implementation)))
+  (cond
+    (mobile-util/native-platform?) (mobile-implementation)
+    (util/electron?)               (desktop-implementation)
+    :else                          (web-implementation)))
 ```
 
-**2. Test on Both Platforms:**
+Use `mobile-util/native-platform?` for anything that depends on native capabilities. `util/mobile?` is a user-agent check meant for layout only (`src/main/frontend/util.cljc:62-70`).
 
-```bash
-# Desktop
-yarn watch
+### Run each platform
 
-# iOS
-bb dev:ios-app
+| Target | Command | Source |
+| --- | --- | --- |
+| Desktop / web dev watch | `pnpm watch` | `package.json:55` |
+| Mobile bundle watch | `pnpm mobile-watch` | `package.json:58` |
+| iOS dev environment | `bb dev:ios-app` (runs `dev:app-watch` plus `dev:cap-run-ios`) | `bb.edn:122-127` |
+| Android dev environment | `bb dev:android-app` (runs `dev:app-watch` plus `dev:cap-run-android`) | `bb.edn:135-140` |
 
-# Android
-bb dev:android-app
-```
-
-**3. Follow Mobile UI Guidelines:**
-
-- Use touch-friendly tap targets (44x44pt minimum)
-- Avoid hover-dependent interactions
-- Test with on-screen keyboard open
-- Handle screen rotation
-- Test on small screens (iPhone SE)
-
----
-
-### For Power Users
-
-**1. Choose Right Platform for Task:**
-
-| Task                       | Recommended Platform         |
-| -------------------------- | ---------------------------- |
-| **Heavy editing**          | Desktop (keyboard shortcuts) |
-| **Quick capture**          | Mobile (voice input, camera) |
-| **PDF annotations**        | Desktop (full viewer)        |
-| **Plugin workflows**       | Desktop (plugins available)  |
-| **On-the-go review**       | Mobile (mobile-optimized UI) |
-| **Large graph management** | Desktop (better performance) |
-
-**2. Sync Strategy:**
-
-```
-Desktop ←──Logseq Sync──→ Mobile
-   ↓                        ↓
-Plugins                  Quick notes
-PDF work                 Voice capture
-Heavy editing            On-the-go review
-```
-
-**3. Workarounds for Limitations:**
-
-- **PDFs:** Annotate on desktop, link to external viewer on mobile
-- **Videos:** Use YouTube embeds instead of local files
-- **Plugins:** Use MCP + Claude on desktop, view results on mobile
-- **Large graphs:** Archive old journals to improve mobile performance
+The earlier "Mobile UI guidelines" (44×44 pt tap targets and similar), the "Power users" task table and the plugin-developer checklist were removed. The first two are not derived from the codebase, and the checklist does not apply because plugins do not run on mobile.
 
 ---
 
 ## Summary
 
-**Key Takeaways:**
-
-1. ✅ **Core features work great** on both platforms (journals, queries, sync)
-2. ⚠️ **PDF annotations** unavailable on mobile ([#11046](https://github.com/logseq/logseq/issues/11046))
-3. ❌ **No plugin system** on mobile (architectural limitation)
-4. 🔄 **Use Logseq Sync** for reliable cross-platform workflows
-5. 📱 **Mobile optimized** for quick capture, desktop for heavy editing
-
----
-
-## Next Steps
-
-**For Developers:**
-
-- [Mobile Development Setup](../../docs/develop-logseq-on-mobile.md)
-- [Capacitor Documentation](https://capacitorjs.com/docs)
-- [Contributing Guide](../../CONTRIBUTING.md)
-
-**For Users:**
-
-- [Getting Started on Mobile](../../tutorials/getting-started/mobile-app.md)
-- [Logseq Sync Setup](../../tutorials/collaboration/real-time-sync.md)
-- [Feature Requests](https://github.com/logseq/logseq/discussions)
+1. ✅ **DB graphs, sync, flashcards and custom.css** work on mobile; file graphs and whiteboards are gone everywhere.
+2. ❌ **No plugin system and no custom.js** on native mobile (`util.cljc:127-131`, `config.cljs:149-152`).
+3. ❌ **The HTTP API server, MCP server, markdown mirror and developer mode** are desktop-only.
+4. 📱 **Mobile-only:**
+   - native tabs and the editor toolbar;
+   - swipe-to-select with an action bar;
+   - camera and audio capture with transcription;
+   - share targets;
+   - `logseq://mobile/...` deep links;
+   - iOS widget and controls.
+5. ⚠️ **Unconfirmed:** the in-app PDF viewer and local video playback on mobile.
 
 ---
 
