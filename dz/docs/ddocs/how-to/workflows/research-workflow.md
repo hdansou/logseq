@@ -2,9 +2,9 @@
 title: 'Research Workflow'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
+lastVerified: '2026-09-11'
 verifiedAgainst: 'be800f1711'
-verifiedScope: 'Full audit 2026-09-09 (ccc03ab0aa). The 2026-09-10 date covers only the simple-query examples, the <% %> template variables (4a37d8997b) and the :result-transform note (bfcaeb03e7).'
+verifiedScope: 'Full audit 2026-09-09 (ccc03ab0aa). Later point fixes only: simple-query examples and <% %> variables (4a37d8997b) and the :result-transform note (bfcaeb03e7) on 2026-09-10; block-reference and embed syntax on 2026-09-11.'
 reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
@@ -491,11 +491,16 @@ single token.
 
 **Example Annotations:**
 
-Block references in a DB graph are always UUIDs — `((0b3c6e9a-…-…))`
-(`deps/common/src/logseq/common/util/block_ref.cljs:9`). There is no `id::`
-property for naming a block, and the readable names used in the examples below
-(`((bias-testing-stat))` and friends) are placeholders for the UUID you get from
-**Copy block ref**, not literal text you can type.
+Block references in a DB graph are UUIDs written as page references —
+`[[0b3c6e9a-…-…]]` — which is what **Copy block ref** produces
+(`src/main/frontend/util/ref.cljs:5-7`, `deps/common/src/logseq/common/util/block_ref.cljs:9`).
+`((uuid))` renders as literal text (`src/main/frontend/components/block.cljs:1556-1557`).
+There is no `id::` property for naming a block, and the readable names used in the examples
+below (`[[bias-testing-stat]]` and friends) are placeholders for the UUID you get from
+**Copy block ref**, not literal text you can type. The drafts cite evidence inline with a block
+reference: `{{embed …}}` renders only a deprecation warning (`block.cljs:1917-1918`), and
+`/Node embed` inserts the whole block as a separate sibling block instead
+(`src/main/frontend/components/editor.cljs:289-306`).
 
 ```markdown
 - [[Literature/Papers/Smith-2025-Ethics-AI]]
@@ -552,14 +557,14 @@ Before reading, prepare questions:
   - Uses principlist approach (autonomy,
     beneficence, non-maleficence, justice)
   - Also references care ethics
-  - ((framework-section-ref))
+  - [[framework-section-ref]]
 
   Q2: Transparency measurement
 
   - Model interpretability metrics
   - User comprehension testing
   - Regulatory compliance checklist
-  - ((transparency-metrics-ref))
+  - [[transparency-metrics-ref]]
 ```
 
 ---
@@ -628,7 +633,7 @@ Before reading, prepare questions:
 
   ## Sources in Literature
 
-  - Smith (2025): 78% lack bias testing ((bias-stat))
+  - Smith (2025): 78% lack bias testing [[bias-stat]]
   - Jones (2024): Racial disparities in diagnosis
   - Lee (2023): Gender bias in treatment recommendations
 
@@ -680,7 +685,7 @@ Before reading, prepare questions:
 
   ### EU Approach
 
-  - Smith (2025): ((eu-regulation-quote))
+  - Smith (2025): [[eu-regulation-quote]]
   - Weber (2024): GDPR impact on ML development
   - Müller (2023): Medical Device Regulation updates
 
@@ -849,11 +854,11 @@ Result: Rich, well-supported concept note
   ### Direct Evidence
 
   - Lee (2024): 40% cost increase with fairness testing
-    ((lee-cost-stat))
+    [[lee-cost-stat]]
   - Kumar (2023): 6 months added to timeline
-    ((kumar-timeline))
+    [[kumar-timeline]]
   - Park (2025): 2x data collection costs
-    ((park-data-cost))
+    [[park-data-cost]]
 
   ### Indirect Evidence
 
@@ -933,30 +938,30 @@ sub-tags that extend `Concept` (`deps/db/src/logseq/db/frontend/rules.cljc:266-2
 
   - 2.1 Definition and Types
 
-    - Use: ((bias-definition))
+    - Use: [[bias-definition]]
     - Sources: Smith (2025), Jones (2024)
 
   - 2.2 Evidence in Healthcare
 
-    - Use: ((bias-healthcare-examples))
+    - Use: [[bias-healthcare-examples]]
     - Sources: Lee (2024), Park (2025)
 
   - 2.3 Measurement Approaches
-    - Use: ((fairness-metrics))
+    - Use: [[fairness-metrics]]
     - Sources: Kumar (2023), Chen (2024)
 
   ### 3. Transparency Requirements (1200 words)
 
   - 3.1 Technical Transparency
 
-    - Use: ((technical-transparency))
+    - Use: [[technical-transparency]]
 
   - 3.2 Regulatory Requirements
 
-    - Use: ((regulatory-transparency))
+    - Use: [[regulatory-transparency]]
 
   - 3.3 User-Centered Approaches
-    - Use: ((user-transparency))
+    - Use: [[user-transparency]]
 
   ### 4. Regulatory Frameworks (1000 words)
 
@@ -980,7 +985,7 @@ sub-tags that extend `Concept` (`deps/db/src/logseq/db/frontend/rules.cljc:266-2
   Algorithmic bias refers to systematic and
   repeatable errors in machine learning systems
   that create unfair outcomes for certain groups
-  (Smith, 2025; Jones, 2024). {{embed ((bias-definition))}}
+  (Smith, 2025; Jones, 2024). [[bias-definition]]
 
   In healthcare contexts, bias manifests in three
   primary forms. First, data bias emerges when
@@ -988,22 +993,22 @@ sub-tags that extend `Concept` (`deps/db/src/logseq/db/frontend/rules.cljc:266-2
   the target population. For example, Lee (2024)
   found that diagnostic AI systems trained primarily
   on white patients showed significantly lower
-  accuracy for patients of color. {{embed ((lee-example))}}
+  accuracy for patients of color. [[lee-example]]
 
   Second, algorithmic bias can arise from model
   design choices. Kumar (2023) demonstrated that
   optimization for overall accuracy can mask severe
   disparities in performance across demographic groups.
-  {{embed ((kumar-finding))}}
+  [[kumar-finding]]
 
   [Continue draft...]
 
   ## Citations in This Section
 
-  - Smith (2025): ((smith-ref))
-  - Jones (2024): ((jones-ref))
-  - Lee (2024): ((lee-ref))
-  - Kumar (2023): ((kumar-ref))
+  - Smith (2025): [[smith-ref]]
+  - Jones (2024): [[jones-ref]]
+  - Lee (2024): [[lee-ref]]
+  - Kumar (2023): [[kumar-ref]]
 ```
 
 ### Draft Management
@@ -1260,19 +1265,19 @@ tag's schema knows about
   ### Section 3.1 - Excellent
 
   Clear argument, well-supported
-  ((section-3-1))
+  [[section-3-1]]
 
   ### Section 3.2 - Needs Work
 
   Claim about regulatory impact needs evidence
-  ((section-3-2))
+  [[section-3-2]]
 
   Suggestion: Add Weber (2024) study on EU regulations
 
   ### Section 3.3 - Minor Issues
 
   Typo: "algorithim" → "algorithm"
-  ((typo-location))
+  [[typo-location]]
 ```
 
 ---
