@@ -2,9 +2,9 @@
 title: 'Meeting Notes Workflow'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
-reviewStatus: wip-unverified
+reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
 related-docs:
@@ -45,7 +45,7 @@ graph:
 - **Property idents are generated, not guessable.** A property you create called
   "Attendees" is stored as `:user.property/Attendees-<8 random chars>`
   (`deps/db/src/logseq/db/frontend/property.cljs:852-859` →
-  `deps/db/src/logseq/db/frontend/db_ident.cljc:66-88`). Resolve user properties
+  `deps/db/src/logseq/db/frontend/db_ident.cljc:66-90`). Resolve user properties
   by title in queries; never hard-code the ident.
 - **Tasks are properties, not `TODO` markers.** `TODO`, `DOING`, `DEADLINE:` and
   `[#A]` are file-graph text markers. A DB-graph task is a node tagged `#Task`
@@ -56,8 +56,10 @@ graph:
   `[[Meetings/2026-01-22-Kickoff]]` creates two pages — `Meetings` and
   `2026-01-22-Kickoff` — linked by `:block/parent`, with the top page filed under
   the built-in **Library** page. The leaf page's title is `2026-01-22-Kickoff`,
-  not the full path (`deps/outliner/src/logseq/outliner/page.cljs:385-388`;
-  `deps/outliner/test/logseq/outliner/page_test.cljs:33-49`).
+  not the full path (`deps/outliner/src/logseq/outliner/page.cljs:227-235, 385-388`;
+  `deps/outliner/test/logseq/outliner/page_test.cljs:33-49`). Pages created from
+  the editor are split this way by default
+  (`src/main/frontend/handler/common/page.cljs:147-149`).
 
 ---
 
@@ -81,8 +83,10 @@ graph:
 Before you create your first meeting page, create the tag that every meeting
 will carry, and give it the properties every meeting needs. Do this once:
 
-1. Create a page called `Meeting` and turn it into a tag, or type `#Meeting` in
-   a block and let Logseq create it.
+1. Create a page called `Meeting` and turn it into a tag
+   (`src/main/frontend/handler/db_based/page.cljs:37-48`), or type `#Meeting` in
+   a block and let Logseq create it — a new `#` name on a block is created as a
+   tag (`deps/outliner/src/logseq/outliner/core.cljs:197-220`).
 2. On the tag page, add the properties meetings should have. User property types
    you can choose from are `:default` (text), `:number`, `:date`, `:datetime`,
    `:checkbox`, `:url`, `:node` and `:asset`
@@ -98,8 +102,14 @@ A workable property set for meetings:
 | Attendees  | `:node`    | Set cardinality to multiple to list many people  |
 | Meeting URL| `:url`     | Video link                                       |
 
-Once the tag carries these properties, tagging any page or block `#Meeting`
-offers them for filling in.
+A `:date` value must be a journal page
+(`deps/db/src/logseq/db/frontend/property/type.cljs:157-161`), and cardinality
+can be switched to multiple for `:default`, `:number`, `:url`, `:date`, `:node`
+and `:asset` (`:34-36`).
+
+Once the tag carries these properties, any page or block tagged `#Meeting` has
+them in its property list, along with the properties of any tag `Meeting`
+extends (`deps/outliner/src/logseq/outliner/property.cljs:1020-1044`).
 
 ### Create Meeting Page
 
@@ -178,10 +188,11 @@ Two notes on the above:
 ```
 
 There is no scheduling engine behind `Frequency` — it is a property you read,
-not one Logseq acts on. Recurrence that Logseq actually acts on is a task
-feature (`:logseq.property.repeat/*`,
-`deps/db/src/logseq/db/frontend/property.cljs:354-393`), and it repeats a task's
-`Scheduled`/`Deadline`, not a meeting page.
+not one Logseq acts on. The recurrence Logseq does act on is the
+`:logseq.property.repeat/*` family
+(`deps/db/src/logseq/db/frontend/property.cljs:354-399`), and what it moves
+forward is a node's `Scheduled` or `Deadline` date
+(`src/main/frontend/worker/commands.cljs:224-249`), not a meeting page.
 
 ---
 
@@ -212,12 +223,16 @@ To create one:
 | `<% today %>`       | Page ref to today's journal             |
 | `<% yesterday %>`   | Page ref to yesterday's journal         |
 | `<% tomorrow %>`    | Page ref to tomorrow's journal          |
-| `<% time %>`        | Current time, `HH:MM`                   |
+| `<% time %>`        | Current time, 24-hour hour and minute   |
 | `<% current page %>`| Page ref to the page you insert it on   |
 
-Anything else between `<%` and `%>` is left in place literally
-(`deps/outliner/src/logseq/outliner/template.cljs:127-128`). In particular
-`<% title %>`, `<% date %>` and `{{title}}` do nothing.
+`<% time %>` is formatted for your locale with a 24-hour clock (`:10-16`).
+Names match case-insensitively. Any other name loses its `<% %>` wrapper and is
+inserted as the bare word: `<% title %>` becomes `title`, `<% date %>` becomes
+`date`, and an empty `<% %>` becomes nothing
+(`deps/outliner/src/logseq/outliner/template.cljs:8, 114-128`). No test covers
+unknown names; this follows from the code. `{{title}}` is not a template
+variable at all.
 
 ### Basic Template
 
@@ -350,11 +365,12 @@ and cons for 20 minutes.
     - Rationale: Best of both worlds
 ```
 
-To point at a decision block later, copy its block reference from the block's
-context menu. A block ref is the block's **UUID** in double parentheses —
-`((0195b1cb-6b1f-7d70-94b8-6f1b2e4dbb31))` — and the parser accepts nothing else
-(`deps/common/src/logseq/common/util/block_ref.cljs:9`). Made-up names like
-`((decision-framework))` are inert text.
+To point at a decision block later, use "Copy block ref" from the block's context menu. In a
+DB graph that copies the block's UUID wrapped as a node reference —
+`[[0195b1cb-6b1f-7d70-94b8-6f1b2e4dbb31]]` (`src/main/frontend/components/content.cljs:289-291`,
+via `src/main/frontend/util/ref.cljs:5-7`). Typing `((` does not start a block search; it only
+shows "To reference a node, please use `[[]]`."
+(`src/main/frontend/handler/editor.cljs:1949-1952`).
 
 ### Real-Time Techniques
 
@@ -384,10 +400,13 @@ While typing:
 
 `Cmd/Ctrl+Enter` is bound to `:editor/cycle-todo`
 (`src/main/frontend/modules/shortcut/config.cljs:167-168`); the cycle it walks is
-Todo → Doing → Done → cleared
-(`src/main/frontend/handler/editor.cljs:819-832`). The status slash commands are
-generated from the `Status` property's closed values
-(`src/main/frontend/commands.cljs:100-102, 151-166`), and `/Deadline` and
+Todo → Doing → Done → cleared, and any other status (Backlog, In Review,
+Canceled) or no status goes to Todo
+(`src/main/frontend/handler/editor.cljs:819-832, 847-856`). `Tab` and
+`Shift+Tab` are `:editor/indent` and `:editor/outdent`
+(`src/main/frontend/modules/shortcut/config.cljs:220, 223`). The status slash
+commands are generated from the `Status` property's closed values
+(`src/main/frontend/commands.cljs:101-103, 150-165`), and `/Deadline` and
 `/Scheduled` set `:logseq.property/deadline` and `:logseq.property/scheduled`
 (`src/main/frontend/commands.cljs:265-276, 664-668`).
 
@@ -499,7 +518,7 @@ injected automatically when their name appears in `:where`
 `:rules` or bind `%` yourself.
 
 `:current-page` resolves to the lowercased page title, which is what
-`:block/name` holds (`deps/db/src/logseq/db/frontend/inputs.cljs:69, 84-86`;
+`:block/name` holds (`deps/db/src/logseq/db/frontend/inputs.cljs:71, 84-86`;
 `deps/db/src/logseq/db/frontend/schema.cljs:90`).
 
 ---
@@ -564,8 +583,8 @@ Thanks,
 [Your name]
 ```
 
-Copy the decision text out of the graph; a `((uuid))` block ref pasted into an
-email is meaningless outside Logseq.
+Copy the decision text out of the graph; a copied block ref (`[[<uuid>]]`) pasted
+into an email is meaningless outside Logseq.
 
 ### Link to Related Pages
 
@@ -592,7 +611,11 @@ From the meeting page, link to:
 ```
 
 Each of these links shows up on the other side under **Linked References** — you
-do not need to add a back-link by hand.
+do not need to add a back-link by hand. That includes pages named only in a
+`:node` property such as `Project` or `Assignee`: property values are counted as
+references (`deps/outliner/src/logseq/outliner/pipeline.cljs:131-139`), and
+linked references are built from those
+(`deps/db/src/logseq/db/common/reference.cljs:71-79`).
 
 ---
 
@@ -631,11 +654,9 @@ do not need to add a back-link by hand.
   ## Private Notes
 ```
 
-> **Unverified:** "Private Notes" is a convention, not a feature. Nothing in the
-> graph restricts who can read a block; the only publish-related property found
-> at this revision is `:logseq.property/publishing-public?`
-> (`deps/db/src/logseq/db/frontend/property.cljs:414-419`), which controls
-> publishing, not in-app visibility.
+"Private Notes" is only a heading. Nothing in the source at this revision gives
+that heading a special meaning, so the blocks under it are stored and shown like
+any other block, and anyone who can open the graph can read them.
 
 ### Project Meetings
 
@@ -687,7 +708,7 @@ do not need to add a back-link by hand.
 If you make "Sprint velocity", "Open issues" and similar into `:number`
 properties so you can chart them later, remember that a number property's value
 is a **ref to a value entity** — read it through `:logseq.property/value`, not
-directly (`deps/db/src/logseq/db/frontend/property/type.cljs:52-57`).
+directly (`deps/db/src/logseq/db/frontend/property/type.cljs:52-56`).
 
 ### Brainstorming Sessions
 
@@ -792,9 +813,9 @@ directly (`deps/db/src/logseq/db/frontend/property/type.cljs:52-57`).
 Two ways to query, both authored from the editor:
 
 - **`/Query`** takes a *simple query* in the DSL — `(and (tags Meeting) (task
-  Todo Doing))` (`src/main/frontend/commands.cljs:111-116`).
+  Todo Doing))` (`src/main/frontend/commands.cljs:110-117, 325`).
 - **`/Advanced Query`** takes a Datalog query map
-  (`src/main/frontend/commands.cljs:125-132`).
+  (`src/main/frontend/commands.cljs:125-132, 326`).
 
 Logseq decides which one you wrote by reading the block: a map is treated as an
 advanced query, anything else as a DSL query
@@ -806,9 +827,9 @@ instead of results (`src/main/frontend/components/block.cljs:1870-1871`;
 
 The DSL filters that exist at this revision are `and`, `or`, `not`, `between`,
 `property`, `private-property`, `task` (alias `todo`), `priority`, `page`,
-`sample`, `tags`, a `[[page ref]]`, and a bare `"string"` for full-text search
-(`src/main/frontend/worker/query_dsl.cljs:548-576`). There is no `sort-by`,
-`page-property` or `namespace` filter.
+`sample`, `tags`, a `[[page ref]]`, a bare `"string"` for full-text search, and
+a raw Datalog clause (`src/main/frontend/worker/query_dsl.cljs:529-577`). There
+is no `sort-by`, `page-property` or `namespace` filter.
 
 ### All Meetings
 
@@ -818,7 +839,7 @@ Simple query (`/Query`):
 (tags Meeting)
 ```
 
-Advanced equivalent, which also picks up any tag that extends `Meeting`:
+Advanced equivalent:
 
 ```clojure
 {:query [:find (pull ?b [*])
@@ -828,7 +849,9 @@ Advanced equivalent, which also picks up any tag that extends `Meeting`:
 
 The `tags` rule matches a tag by title, `:db/ident` or entity id and follows
 `class-extends` down the tag tree
-(`deps/db/src/logseq/db/frontend/rules.cljc:265-288`).
+(`deps/db/src/logseq/db/frontend/rules.cljc:266-295`). Both forms pick up tags
+that extend `Meeting`: the simple query also expands the tag to its children
+before calling the rule (`src/main/frontend/worker/query_dsl.cljs:431-450`).
 
 ### Meetings This Week
 
@@ -847,17 +870,17 @@ journal day of the block's page
 
 `:-7d` and `:today` both resolve to `YYYYMMDD` integers, which is what
 `:block/journal-day` stores
-(`deps/db/src/logseq/db/frontend/inputs.cljs:72, 100-102`).
+(`deps/db/src/logseq/db/frontend/inputs.cljs:71, 73, 100-101, 121-125`).
 
 > **Watch the units.** `:today` is `YYYYMMDD`; `Deadline` and `Scheduled` are
 > epoch **milliseconds**. Comparing one against the other matches nothing and
 > reports no error. For a millisecond bound use the `-ms` / `-start` / `-end`
 > forms, e.g. `:+7d-end` or `:end-of-today-ms`
-> (`deps/db/src/logseq/db/frontend/inputs.cljs:73, 75-76`).
+> (`deps/db/src/logseq/db/frontend/inputs.cljs:74, 76-77, 113-118, 128-133`).
 >
 > `:monday`, `:sunday` and `:7d-ago` are **not** query inputs — they match no
 > dispatch branch and are handed to the query unresolved
-> (`deps/db/src/logseq/db/frontend/inputs.cljs:69-81, 143-160`).
+> (`deps/db/src/logseq/db/frontend/inputs.cljs:69-80, 140-155`).
 
 ### Action Items by Person
 
@@ -888,12 +911,12 @@ page entity — match it on `:block/title`, not on a string
 ```
 
 `:right-now-ms` is the current time in milliseconds
-(`deps/db/src/logseq/db/frontend/inputs.cljs:69, 108-109`), which is the same
+(`deps/db/src/logseq/db/frontend/inputs.cljs:71, 109-110`), which is the same
 unit `Deadline` uses. Note that tasks with no deadline are excluded — there is no
 datom to match.
 
-To narrow this to actions that came out of meetings, add the meeting tag to the
-task's ancestry:
+To narrow this to actions that sit under a meeting — a page tagged `Meeting`, or
+a `Meeting` block on a journal page — require a `Meeting`-tagged ancestor:
 
 ```clojure
 {:query [:find (pull ?b [*])
@@ -902,10 +925,16 @@ task's ancestry:
          (task ?b #{"Todo" "Doing"})
          [?b :logseq.property/deadline ?d]
          [(< ?d ?now)]
-         [?b :block/page ?p]
-         (tags ?p #{"Meeting"})]
+         (tags ?m #{"Meeting"})
+         (parent ?m ?b)]
  :inputs [:right-now-ms]}
 ```
+
+`(parent ?m ?b)` takes the ancestor first and walks `:block/parent` any number
+of levels (`deps/db/src/logseq/db/frontend/rules.cljc:7-12`); a page is the
+parent of its top-level blocks (`deps/db/src/logseq/db/sqlite/build.cljs:249`).
+It is injected like the other built-in rules (`rules.cljc:75-78`). Matching on
+`:block/page` instead would miss a meeting captured as a block on a journal.
 
 ### Meetings by Project
 
@@ -919,36 +948,55 @@ task's ancestry:
  :inputs ["alpha"]}
 ```
 
-Page inputs are lowercased page names. Because `A/B/C` titles are split into
-separate pages, pass the **leaf** — `"alpha"`, not `"projects/alpha"`.
+`:block/name` holds the lowercased title
+(`deps/db/src/logseq/db/frontend/schema.cljs:89-90`), so pass a plain string in
+lower case, or pass `"[[Alpha]]"`, which is lowercased for you
+(`deps/db/src/logseq/db/frontend/inputs.cljs:157-159`). Because `A/B/C` titles
+are split into separate pages, name the **leaf**: `"alpha"`, not
+`"projects/alpha"`. A page named only in a `:node` property such as `Project`
+still counts as a reference, so this finds those meetings too
+(`deps/outliner/src/logseq/outliner/pipeline.cljs:131-139`).
 
 ### Sorting and Titles
 
 Three things people reach for that do not work on a user query:
 
 - **`:title`** is only rendered for Logseq's own built-in queries
-  (`src/main/frontend/components/query.cljs:167-175`), so it is silently ignored
+  (`src/main/frontend/components/query.cljs:166-174`), so it is silently ignored
   here. Put the heading in the parent block.
 - **`:group-by-page?`** returns `false` immediately for every DB graph
   (`src/main/frontend/components/query/result.cljs:10-11`), and
-  `:breadcrumb-show?` never reaches the branch that reads it.
-- **`:limit`** and **`:order-by`** are not query-map keys at all. Bound the
-  result in `:where`, or sort in `:result-transform`.
+  `:breadcrumb-show?` is read only on the built-in-query branch; a user query's
+  block results take the branch above it
+  (`src/main/frontend/components/query.cljs:52-71`).
+- **`:limit`** and **`:order-by`** are not query-map keys at all: they are not
+  among the keys passed to the query worker
+  (`src/main/frontend/worker/handler/render_resource/query.cljs:48-61`). Bound
+  the result in `:where`, or sort in `:result-transform`.
 
-`:result-transform` does work, and it receives block **entities**, before rows
-are normalised (`src/main/frontend/worker/handler/render_resource/query.cljs:181-202`):
+`:result-transform` does work. It is sent to the query worker as text
+(`src/main/frontend/components/query/result.cljs:46-47`), evaluated there, and
+called on the rows the query returned — for `(pull ?b [*])`, one block map per
+row — before rows are reduced to UUIDs
+(`src/main/frontend/worker/handler/render_resource/query.cljs:181-202`;
+`src/main/frontend/worker/handler/query.cljs:243-261`). It must return a
+sequence (`render_resource/query.cljs:188-191`):
 
 ```clojure
 {:query [:find (pull ?b [*])
          :where (tags ?b #{"Meeting"})]
  :result-transform (fn [result]
-                     (take 20 (sort-by :block/created-at > result)))}
+                     (take 20 (sort-by (fn [r] (get r :block/created-at)) > result)))}
 ```
 
 `:view` is different: by the time a `:view` function runs, each row is a bare
-UUID, not an entity (`…/render_resource/query.cljs:15-20, 195-202`), so
-`(:block/title r)` inside a `:view` returns nil. Errors thrown inside a `:view`
-are swallowed and render as nothing (`src/main/frontend/extensions/sci.cljs`).
+UUID, not an entity (`…/render_resource/query.cljs:15-20, 40-46, 195-202`), so
+`(:block/title r)` inside a `:view` returns nil. A `:view` that fails to
+evaluate is logged and dropped, and the results render as if there were no
+`:view` (`src/main/frontend/extensions/sci.cljs:50-58`;
+`src/main/frontend/components/query.cljs:43, 149`). An error thrown while it
+runs shows `Custom view error: …` in place of the results
+(`src/main/frontend/components/query.cljs:44-49`).
 
 ### Meeting Statistics
 
@@ -965,9 +1013,10 @@ Counting meetings created in the last 30 days:
 ```
 
 `:block/created-at` is epoch milliseconds
-(`deps/db/src/logseq/db/frontend/schema.cljs:86`), and `:-30d-start` resolves to
-the millisecond timestamp at the start of that day
-(`deps/db/src/logseq/db/frontend/inputs.cljs:73, 126-133`).
+(`deps/db/src/logseq/db/frontend/schema.cljs:85`, set from
+`common-util/time-ms` at `deps/outliner/src/logseq/outliner/core.cljs:122-123`),
+and `:-30d-start` resolves to the millisecond timestamp at the start of that day
+(`deps/db/src/logseq/db/frontend/inputs.cljs:74, 128-133`).
 
 ---
 

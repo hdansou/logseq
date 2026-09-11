@@ -1,7 +1,10 @@
 ---
 title: 'Zettelkasten Method in Logseq'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
+lastVerified: '2026-09-10'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
 related-docs:
@@ -24,6 +27,58 @@ Learn how to implement the Zettelkasten ("slip box") knowledge management method
 - Query patterns for discovering connections
 
 **Time to Implement:** 30-60 minutes initial setup, ongoing practice
+
+---
+
+## Before You Start: how this maps onto a DB graph
+
+The outlines below are plain text so you can read them at a glance. Here is how
+the same structure is built in a DB graph:
+
+- **Properties are structured data, not text.** Typing `confidence:: 7` into a
+  block leaves a block whose text is `confidence:: 7`. Add properties with the
+  `/Add property` slash command (`src/main/frontend/commands.cljs:354-358`).
+  Lines such as `Confidence: 8` below are shorthand for "this note carries this
+  property", not syntax to type.
+- **Property idents are generated, not guessable.** A property you create called
+  "Confidence" is stored as `:user.property/Confidence-<8 random chars>`
+  (`deps/db/src/logseq/db/frontend/db_ident.cljc:66-90`). The queries below find
+  user properties by title.
+- **Note types are tags.** This guide tags every note page with one of four
+  tags: `Fleeting`, `Literature`, `Permanent` or `Hub`. A page takes tags through
+  its **Tags** property (`deps/db/src/logseq/db/frontend/property.cljs:75`), tags
+  are matched by the built-in `tags` rule
+  (`deps/db/src/logseq/db/frontend/rules.cljc:266-295`), and a tag's properties
+  appear on every node that carries it
+  (`deps/outliner/src/logseq/outliner/property.cljs:1020-1044`).
+- **`A/B/C` page names are split into a page hierarchy.**
+  `[[Zettelkasten/Permanent/Concept-Name]]` creates the pages `Zettelkasten`,
+  `Permanent` and `Concept-Name`, chained by `:block/parent`; the note's title is
+  `Concept-Name` (`deps/outliner/src/logseq/outliner/page.cljs:385-388`;
+  `deps/outliner/test/logseq/outliner/page_test.cljs:33-49`).
+- **Block refs are `[[<uuid>]]`.** "Copy block ref" in a block's context menu copies the
+  block's UUID wrapped as a node reference, e.g. `[[0195b1cb-6b1f-7d70-94b8-6f1b2e4dbb31]]`
+  (`src/main/frontend/components/content.cljs:289-291`, via
+  `src/main/frontend/util/ref.cljs:5-7`). Typing `((` does not start a block search; it only
+  shows "To reference a node, please use `[[]]`."
+  (`src/main/frontend/handler/editor.cljs:1949-1952`). Named ids like `id:: key-point-1` do
+  not exist in a DB graph. Below, `[[…]]` stands for a copied block ref.
+- **Checkboxes are tasks.** `- [ ]` items below have become tasks: `/Todo` sets a
+  block's status, which also tags it `#Task`
+  (`deps/outliner/src/logseq/outliner/property.cljs:108-116, 205-206`).
+- **Queries are blocks, not wrappers.** `#+BEGIN_QUERY` renders a deprecation
+  warning (`src/main/frontend/components/block.cljs:5057-5058`), and so does
+  `{{query …}}` (`block.cljs:1870-1871`; `src/resources/dicts/en.edn:159`). Use
+  `/Query` for a simple query or `/Advanced Query` for a query map
+  (`src/main/frontend/commands.cljs:110-117, 125-132, 325-326`). `/Query` turns
+  the **whole block text** into the query (`src/main/frontend/handler/editor.cljs:4377-4395`),
+  so put any label in a parent block and the query in a child block.
+- **Embeds are a slash command.** `{{embed …}}` renders a deprecation warning
+  (`block.cljs:1917-1918`; `en.edn:157`); use `/Node embed`
+  (`commands.cljs:233-236`; `en.edn:549`).
+- **Journal pages are titled like `Jan 22nd, 2026`** by default
+  (`deps/db/src/logseq/db/frontend/class.cljs:30-33`), so a link to a day is
+  `[[Jan 22nd, 2026]]`.
 
 ---
 
@@ -145,20 +200,35 @@ After linking:
 
 ### Properties Schema
 
-**Define Zettelkasten Properties:**
+**Define the note tags and their properties once.** There is no Settings →
+Properties screen. Create each tag — type `#Permanent` in a block and a new `#`
+name is created as a tag (`deps/outliner/src/logseq/outliner/core.cljs:197-220`),
+or turn a page into a tag (`src/main/frontend/handler/db_based/page.cljs:37-48`)
+— then on the tag's page add the properties
+its notes should have with `/Add property`. User property types are `:default`
+(text), `:number`, `:date`, `:datetime`, `:checkbox`, `:url`, `:node` and
+`:asset` (`deps/db/src/logseq/db/frontend/property/type.cljs:19-21`).
 
-```markdown
-Go to Settings → Properties
+| Tag          | Property       | Type       | Notes                                                    |
+| ------------ | -------------- | ---------- | -------------------------------------------------------- |
+| `Fleeting`   | —              |            | Quick captures                                           |
+| `Literature` | Source type    | `:node`    | Points at a page such as `[[Book]]` or `[[Article]]`     |
+| `Literature` | Author         | `:node`    | Points at the author's page                              |
+| `Literature` | URL            | `:url`     |                                                          |
+| `Permanent`  | Confidence     | `:number`  | 1-10                                                     |
+| `Permanent`  | Related topics | `:node`    | Set cardinality to multiple                              |
+| `Permanent`  | Reviewed       | `:date`    | Must point at a journal page                             |
+| `Hub`        | —              |            | Maps of Content                                          |
 
-Add properties:
+A `:date` value must be a journal page (`type.cljs:157-161`), and `:node` is one
+of the types whose cardinality can be switched to multiple (`type.cljs:34-36`).
 
-- note-type:: (fleeting, literature, permanent, hub)
-- source:: (book, article, video, conversation, etc.)
-- confidence:: (1-10)
-- related-topics:: (page links)
-- created:: (date)
-- reviewed:: (date)
-```
+**No `created` property is needed.** Every page and block records
+`:block/created-at` in epoch milliseconds when it is created
+(`deps/graph-parser/src/logseq/graph_parser/block.cljs:380-383`;
+`deps/outliner/src/logseq/outliner/core.cljs:122-123`), and blocks inserted from a
+template get fresh timestamps rather than the template's
+(`core.cljs:818, 859-862`; `deps/outliner/src/logseq/outliner/op.cljs:283-287`).
 
 ### Namespace Structure
 
@@ -180,158 +250,188 @@ Example pages:
 - [[Zettelkasten/Hubs/Machine-Learning]]
 ```
 
+Each of these is split into a chain of pages, and the note's own title is the
+last segment — `2026-01-22-idea`, `Book-Title`, `Concept-Name`,
+`Machine-Learning` (`page.cljs:385-388`). The namespace is for browsing; the tag
+is what the queries below use to tell note types apart.
+
 ### Templates
+
+**How templates work in a DB graph.** A template is a **block tagged
+`Template`** (`deps/db/src/logseq/db/frontend/class.cljs:100-102`). There is no
+`template::` property and no `{{title}}` placeholder.
+
+1. Write the block tree you want to reuse under one top block.
+2. Tag the top block `Template` from its tag control. An inline `#Template`
+   typed into the text is stripped (`class.cljs:130-140`).
+3. To use it: create the note page, tag the page (`Permanent`, say), and type
+   `/Template` on the page (`src/main/frontend/commands.cljs:339-343`). Only the
+   blocks **under** the template block are inserted
+   (`deps/outliner/src/logseq/outliner/op.cljs:239-251`).
+
+**Template variables.** Exactly five are substituted
+(`deps/outliner/src/logseq/outliner/template.cljs:104-112`): `<% today %>`,
+`<% yesterday %>`, `<% tomorrow %>`, `<% time %>` and `<% current page %>`.
+
+- `today`, `yesterday`, `tomorrow` and `current page` **already insert a page
+  ref** — `[[…]]` around the page's UUID (`template.cljs:74-79`;
+  `deps/common/src/logseq/common/util/page_ref.cljs:30-33`). Write them bare:
+  `<% today %>`, never `[[<% today %>]]`. The journal pages they point at are
+  created before insertion if missing (`op.cljs:259-263, 270`).
+- Any other name loses its `<% %>` wrapper and is inserted as the bare word, so
+  `<% title %>` becomes `title` (`template.cljs:8, 114-128`). No test covers
+  unknown names; this follows from the code.
 
 **Fleeting Note Template:**
 
 ```markdown
-template:: fleeting-note
+- Fleeting note   #Template
+  - Captured <% today %>
 
-- [[Zettelkasten/Fleeting/{{title}}]]
-  note-type:: fleeting
-  created:: [[<% today %>]]
-  tags:: #fleeting
+    ## Quick Capture
 
-  ## Quick Capture
+    ## Context
 
-  ## Context
+    Where did this come from?
 
-  Where did this come from?
+    ## Next Actions
 
-  ## Next Actions
-
-  - [ ] Process into permanent note
-  - [ ] Connect to existing notes
+    - Process into permanent note   #Task  (Status: Todo)
+    - Connect to existing notes   #Task  (Status: Todo)
 ```
+
+Use it on a page you have tagged `Fleeting`, for example
+`[[Zettelkasten/Fleeting/api-caching-idea]]`.
 
 **Literature Note Template:**
 
 ```markdown
-template:: literature-note
+- Literature note   #Template
+  - Captured <% today %>
 
-- [[Zettelkasten/Literature/{{title}}]]
-  note-type:: literature
-  source-type:: [[Book]] (or Article, Video, etc.)
-  author:: [[Person/]]
-  created:: [[<% today %>]]
-  url::
-  tags:: #literature
+    ## Summary
 
-  ## Summary
+    Brief overview of source
 
-  Brief overview of source
+    ## Key Points
 
-  ## Key Points
+    - Point 1
+    - Point 2
+    - Point 3
 
-  - Point 1 id:: key-point-1
-  - Point 2 id:: key-point-2
-  - Point 3 id:: key-point-3
+    ## Quotes
 
-  ## Quotes
+    > "Important quote here"
 
-  > "Important quote here"
+    ## My Thoughts
 
-  ## My Thoughts
+    What do I think about this?
 
-  What do I think about this?
+    ## Connected Ideas
 
-  ## Connected Ideas
+    - [[Related Note 1]]
+    - [[Related Note 2]]
 
-  - [[Related Note 1]]
-  - [[Related Note 2]]
+    ## Permanent Notes to Create
 
-  ## Permanent Notes to Create
-
-  - [ ] Concept A
-  - [ ] Concept B
+    - Concept A   #Task  (Status: Todo)
+    - Concept B   #Task  (Status: Todo)
 ```
+
+Fill in **Source type**, **Author** and **URL** on the page itself; they are
+offered because the page is tagged `Literature`. To cite a key point later, copy
+its block ref.
 
 **Permanent Note Template:**
 
 ```markdown
-template:: permanent-note
+- Permanent note   #Template
+  - Captured <% today %>
 
-- [[Zettelkasten/Permanent/{{title}}]]
-  note-type:: permanent
-  created:: [[<% today %>]]
-  confidence:: 7/10
-  tags:: #permanent
+    ## Core Idea
 
-  ## Core Idea
+    One clear concept in my own words
 
-  One clear concept in my own words
+    ## Explanation
 
-  ## Explanation
+    Detailed explanation with examples
 
-  Detailed explanation with examples
+    ## Why This Matters
 
-  ## Why This Matters
+    Significance and applications
 
-  Significance and applications
+    ## Sources
 
-  ## Sources
+    - Literature: [[…]]
+    - Literature: [[…]]
 
-  - Literature: ((literature-note-ref))
-  - Literature: ((another-note-ref))
+    ## Connections
 
-  ## Connections
+    - Builds on: [[Foundation Concept]]
+    - Related to: [[Similar Concept]]
+    - Leads to: [[Advanced Concept]]
+    - Contrasts with: [[Alternative View]]
 
-  - Builds on: [[Foundation Concept]]
-  - Related to: [[Similar Concept]]
-  - Leads to: [[Advanced Concept]]
-  - Contrasts with: [[Alternative View]]
+    ## Questions & Uncertainties
 
-  ## Questions & Uncertainties
-
-  - What about edge case X?
-  - How does this relate to Y?
+    - What about edge case X?
+    - How does this relate to Y?
 ```
+
+Set **Confidence** (a number such as `7`) on the page, not `7/10` text.
 
 **Hub Page Template:**
 
 ```markdown
-template:: hub-note
+- Hub note   #Template
+  - ## Overview
 
-- [[Zettelkasten/Hubs/{{title}}]]
-  note-type:: hub
-  created:: [[<% today %>]]
-  tags:: #hub
+    Brief description of this topic area
 
-  ## Overview
+  - ## Core Concepts
 
-  Brief description of this topic area
+    - [[Permanent Note 1]]
+    - [[Permanent Note 2]]
+    - [[Permanent Note 3]]
 
-  ## Core Concepts
+  - ## Related Hubs
 
-  - [[Permanent Note 1]]
-  - [[Permanent Note 2]]
-  - [[Permanent Note 3]]
+    - [[Related Hub 1]]
+    - [[Related Hub 2]]
 
-  ## Related Hubs
+  - ## Recent Notes
+    - (an /Advanced Query block with the query below)
 
-  - [[Related Hub 1]]
-  - [[Related Hub 2]]
+  - ## Unanswered Questions
 
-  ## Recent Notes
-
-  #+BEGIN_QUERY
-  {:title "Recent notes in this area"
-  :query [:find (pull ?b [*])
-  :in $ ?current-page
-  :where
-  [?b :block/refs ?p]
-  [?p :block/name ?current-page]
-  [?b :block/properties ?props]
-  [(get ?props :note-type) "permanent"]]
-  :inputs [:current-page]
-  :collapsed? false}
-  #+END_QUERY
-
-  ## Unanswered Questions
-
-  - Question 1
-  - Question 2
+    - Question 1
+    - Question 2
 ```
+
+The query for **Recent Notes** — `Permanent` notes with a block that links to
+this hub:
+
+```clojure
+{:query [:find (pull ?note [*])
+         :in $ ?current-page
+         :where
+         [?hub :block/name ?current-page]
+         [?b :block/refs ?hub]
+         [?b :block/page ?note]
+         (tags ?note #{"Permanent"})]
+ :inputs [:current-page]}
+```
+
+`:current-page` resolves, when the query runs, to the lowercased title of the
+page the query sits on, which is what `:block/name` holds
+(`deps/db/src/logseq/db/frontend/inputs.cljs:71, 84-86`;
+`deps/db/src/logseq/db/frontend/schema.cljs:89-90`). The query block travels with
+the template because property blocks are copied (`op.cljs:242-243`). Built-in
+rules such as `tags` are added automatically when named in `:where`
+(`src/main/frontend/worker/handler/query.cljs:185-204`). The old `:title` key is
+not rendered for your own queries
+(`src/main/frontend/components/query.cljs:166-174`); the **Recent Notes** parent
+block is the heading.
 
 ---
 
@@ -351,11 +451,9 @@ When:
 
 Lifespan: Temporary (process within 1-2 days)
 
-Example:
+Example (page Zettelkasten/Fleeting/api-caching-idea, tagged Fleeting):
 
-- [[Zettelkasten/Fleeting/api-caching-idea]]
-  note-type:: fleeting
-  created:: [[2026-01-22]]
+- Captured [[Jan 22nd, 2026]]
 
   Maybe we could cache API responses in Redis?
   Would reduce database load.
@@ -364,6 +462,10 @@ Example:
 
   Next: Research Redis caching patterns
 ```
+
+Processing a fleeting note means turning it into a literature or permanent note
+and then deleting it or removing its `Fleeting` tag, so it leaves the queries
+below.
 
 ### Literature Notes
 
@@ -380,17 +482,16 @@ When:
 Content:
 
 - Summary in your words
-- Key points with block refs
+- Key points you can cite by block ref
 - Direct quotes (with page #)
 - Your initial reactions
 
-Example:
+Example (page Zettelkasten/Literature/Thinking-Fast-and-Slow, tagged Literature):
 
-- [[Zettelkasten/Literature/Thinking-Fast-and-Slow]]
-  note-type:: literature
-  source-type:: [[Book]]
-  author:: [[Person/Daniel-Kahneman]]
-  created:: [[2026-01-15]]
+  Source type: [[Book]]
+  Author: [[Person/Daniel-Kahneman]]
+
+- Captured [[Jan 15th, 2026]]
 
   ## Summary
 
@@ -401,11 +502,8 @@ Example:
   ## Key Points
 
   - System 1: Automatic, quick, emotional
-    id:: system-1-definition
   - System 2: Deliberate, slow, logical
-    id:: system-2-definition
   - Most decisions use System 1
-    id:: system-1-dominant
 
   ## Quote
 
@@ -420,9 +518,9 @@ Example:
 
   ## Permanent Notes to Create
 
-  - [ ] [[System 1 vs System 2]]
-  - [ ] [[Cognitive Biases from System 1]]
-  - [ ] [[Decision Fatigue]]
+  - [[System 1 vs System 2]]   #Task  (Status: Todo)
+  - [[Cognitive Biases from System 1]]   #Task  (Status: Todo)
+  - [[Decision Fatigue]]   #Task  (Status: Todo)
 ```
 
 ### Permanent Notes
@@ -440,12 +538,11 @@ Characteristics:
 
 Lifespan: Forever
 
-Example:
+Example (page Zettelkasten/Permanent/Cognitive-Load-in-Code-Review, tagged Permanent):
 
-- [[Zettelkasten/Permanent/Cognitive-Load-in-Code-Review]]
-  note-type:: permanent
-  created:: [[2026-01-16]]
-  confidence:: 8/10
+  Confidence: 8
+
+- Captured [[Jan 16th, 2026]]
 
   ## Core Idea
 
@@ -484,9 +581,9 @@ Example:
 
   ## Sources
 
-  - ((system-1-definition))
-  - ((system-2-definition))
-  - Personal experience: {{embed ((incident-ref))}}
+  - [[…]]   ← block ref to "System 1: Automatic, quick, emotional"
+  - [[…]]   ← block ref to "System 2: Deliberate, slow, logical"
+  - Personal experience: a /Node embed of the incident block
 
   ## Connections
 
@@ -513,47 +610,44 @@ When:
 - Starting new project
 - Want to see connections
 
-Example:
+Example (page Zettelkasten/Hubs/Machine-Learning, tagged Hub):
 
-- [[Zettelkasten/Hubs/Machine-Learning]]
-  note-type:: hub
-
-  ## Overview
+- ## Overview
 
   Collection of notes on machine learning concepts,
   algorithms, and applications.
 
-  ## Foundations
+- ## Foundations
 
   - [[What is Machine Learning]]
   - [[Supervised vs Unsupervised Learning]]
   - [[Training Data Requirements]]
 
-  ## Algorithms
+- ## Algorithms
 
   - [[Linear Regression]]
   - [[Decision Trees]]
   - [[Neural Networks]]
   - [[Support Vector Machines]]
 
-  ## Advanced Topics
+- ## Advanced Topics
 
   - [[Deep Learning]]
   - [[Transfer Learning]]
   - [[Ensemble Methods]]
 
-  ## Applications
+- ## Applications
 
   - [[Image Recognition]]
   - [[Natural Language Processing]]
   - [[Recommendation Systems]]
 
-  ## Related Hubs
+- ## Related Hubs
 
   - [[Zettelkasten/Hubs/Statistics]]
   - [[Zettelkasten/Hubs/Python-Libraries]]
 
-  ## Current Questions
+- ## Current Questions
 
   - How to choose algorithm for specific problem?
   - When is deep learning overkill?
@@ -574,20 +668,31 @@ Example:
 2. Process or delete each one
 3. Create literature notes for sources
 4. Identify permanent notes to create
-
-Query for unprocessed fleeting notes:
-#+BEGIN_QUERY
-{:title "Fleeting notes to process"
-:query [:find (pull ?b [*])
-:where
-[?b :block/properties ?props]
-[(get ?props :note-type) "fleeting"]
-[?b :block/created-at ?created]
-[(- (js/Date.now) ?created) ?age]
-[(< ?age 172800000)]] ; 2 days in ms
-:collapsed? false}
-#+END_QUERY
 ```
+
+**Query for unprocessed fleeting notes.** Make a block such as "Fleeting notes
+to process" and, as its child, a `/Query` block containing:
+
+```clojure
+(tags Fleeting)
+```
+
+To see only the ones captured recently, use `/Advanced Query` instead:
+
+```clojure
+{:query [:find (pull ?b [*])
+         :in $ ?since
+         :where
+         (tags ?b #{"Fleeting"})
+         [?b :block/created-at ?created]
+         [(>= ?created ?since)]]
+ :inputs [:-2d-start]}
+```
+
+`:-2d-start` resolves to the epoch-millisecond start of the day two days ago
+(`deps/db/src/logseq/db/frontend/inputs.cljs:74, 128-133`), the same unit as
+`:block/created-at`. Pass the time as an input rather than computing it inside
+`:where`.
 
 ### Reading Workflow
 
@@ -604,7 +709,7 @@ After finishing section/chapter:
 
 1. Create literature note
 2. Summarize in your words
-3. Extract key points with block IDs
+3. Put each key point in its own block, so it can be cited by block ref
 4. Add direct quotes with citations
 5. Write initial thoughts
 
@@ -620,11 +725,9 @@ Within 24-48 hours:
 **Example Flow:**
 
 ```markdown
-Reading → Fleeting note:
+Reading → Fleeting note (page Zettelkasten/Fleeting/confirmation-bias-example, tagged Fleeting):
 
-- [[Zettelkasten/Fleeting/confirmation-bias-example]]
-  note-type:: fleeting
-  created:: [[2026-01-22]]
+- Captured [[Jan 22nd, 2026]]
 
   People seek information confirming existing beliefs
 
@@ -637,24 +740,21 @@ Reading → Fleeting note:
   ## Key Points
   - Confirmation bias: tendency to search for,
     interpret, and recall information confirming
-    pre-existing beliefs id:: confirmation-bias-point
+    pre-existing beliefs
 
-↓ Create permanent note:
+↓ Create permanent note (page Zettelkasten/Permanent/Confirmation-Bias, tagged Permanent):
 
-- [[Zettelkasten/Permanent/Confirmation-Bias]]
-  note-type:: permanent
-
-  ## Core Idea
+- ## Core Idea
 
   Confirmation bias is the tendency to favor
   information that confirms existing beliefs while
   dismissing contradictory evidence.
 
-  ## Sources
+- ## Sources
 
-  - ((confirmation-bias-point))
+  - [[…]]   ← block ref to the "Confirmation bias" key point
 
-  ## Connections
+- ## Connections
 
   - Example of: [[System 1 Thinking]]
   - Related to: [[Cognitive Biases]]
@@ -738,7 +838,7 @@ Link back to literature notes:
 
 ## Sources
 
-- ((literature-note-key-point))
+- [[…]]   ← block ref to the key point
 - Book: [[Thinking Fast and Slow]] p. 120
 - Article: [[Study on Anchoring]]
 
@@ -767,16 +867,20 @@ For related concepts:
 Creates bidirectional connections
 ```
 
+The link shows up on the other page under **Linked References** without a
+back-link typed by hand; linked references are built from each block's
+references (`deps/db/src/logseq/db/common/reference.cljs:71-79`).
+
 **2. Block References:**
 
 ```markdown
 For specific points:
 
-- Definition: ((uuid-of-definition))
-- Example: ((uuid-of-example))
+- Definition: [[…]]
+- Example: [[…]]
 
-Embeds original content
-Shows updates automatically
+Points at one block by its UUID
+Use /Node embed to show a block and its children inline
 ```
 
 **3. Relationship Links:**
@@ -858,7 +962,7 @@ Dense connections within topic
   Mitigate using [[Pre-mortem Analysis]] or
   [[Devil's Advocate]] techniques.
 
-8 links create rich network
+5 links create rich network
 ```
 
 **Use Different Link Types:**
@@ -867,15 +971,19 @@ Dense connections within topic
 Page links: [[Concept Name]]
 → Overview, definition, main page
 
-Block references: ((uuid))
+Block references: [[…]]
 → Specific point, quote, example
 
-Embeds: {{embed ((uuid))}}
+Embeds: /Node embed
 → Show content inline
 
-Properties: related-to:: [[Page]]
+Properties: Related topics (a :node property)
 → Structured relationships
 ```
+
+A page named in a `:node` property counts as a reference too, so it also appears
+in that page's Linked References
+(`deps/outliner/src/logseq/outliner/pipeline.cljs:131-139`).
 
 **Create Missing Links:**
 
@@ -891,109 +999,119 @@ Ensures completeness
 
 ## Queries & Discovery
 
+Every query below is an `/Advanced Query` block unless it says `/Query`. Put a
+label, if you want one, in the parent block.
+
 ### Find Related Notes
 
 **By Tag:**
 
+Simple query (`/Query`):
+
 ```clojure
-#+BEGIN_QUERY
-{:title "All permanent notes"
- :query [:find (pull ?b [*])
-         :where
-         [?b :block/properties ?props]
-         [(get ?props :note-type) "permanent"]]
- :collapsed? false}
-#+END_QUERY
+(tags Permanent)
 ```
+
+Advanced equivalent:
+
+```clojure
+{:query [:find (pull ?b [*])
+         :where
+         (tags ?b #{"Permanent"})]}
+```
+
+Both also match tags that extend `Permanent`: the rule follows
+`:logseq.property.class/extends` (`rules.cljc:266-295`), and the simple query
+expands the tag to its children first
+(`src/main/frontend/worker/query_dsl.cljs:431-450`).
 
 **By Topic:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Notes about Machine Learning"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?note [*])
          :in $ ?topic
          :where
-         [?b :block/refs ?p]
-         [?p :block/name ?topic]
-         [?b :block/properties ?props]
-         [(get ?props :note-type) "permanent"]]
- :inputs ["machine-learning"]
- :collapsed? false}
-#+END_QUERY
+         [?t :block/name ?topic]
+         [?b :block/refs ?t]
+         [?b :block/page ?note]
+         (tags ?note #{"Permanent"})]
+ :inputs ["[[Machine Learning]]"]}
 ```
+
+A `"[[Page]]"` string input is turned into the lowercased page name
+(`inputs.cljs:157-159`), which is what `:block/name` holds. This finds
+`Permanent` notes with at least one block linking to the topic.
 
 ### Discover Connections
 
 **Recently Created Notes:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Recent permanent notes (last 7 days)"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
+         :in $ ?since
          :where
-         [?b :block/properties ?props]
-         [(get ?props :note-type) "permanent"]
+         (tags ?b #{"Permanent"})
          [?b :block/created-at ?created]
-         [(- (js/Date.now) ?created) ?age]
-         [(< ?age 604800000)]]  ; 7 days
+         [(>= ?created ?since)]]
+ :inputs [:-7d-start]
  :result-transform (fn [result]
-                     (sort-by
-                       (fn [b]
-                         (get-in b [:block/created-at]))
-                       > result))
- :collapsed? false}
-#+END_QUERY
+                     (sort-by (fn [b] (get b :block/created-at)) > result))}
 ```
+
+`:-7d-start` is the epoch-millisecond start of the day seven days ago
+(`inputs.cljs:74, 128-133`). `:result-transform` is called on the pulled block
+maps before rows are reduced to UUIDs, and must return a sequence
+(`src/main/frontend/worker/handler/render_resource/query.cljs:181-202`).
 
 **Notes Needing Review:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Notes not reviewed recently"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :where
-         [?b :block/properties ?props]
-         [(get ?props :note-type) "permanent"]
-         (not [(get ?props :reviewed)])]
- :collapsed? false}
-#+END_QUERY
+         (tags ?b #{"Permanent"})
+         [?rp :block/title "Reviewed"]
+         [?rp :block/tags :logseq.class/Property]
+         [?rp :db/ident ?reviewed]
+         (not [?b ?reviewed _])]}
 ```
+
+The first three `?rp` clauses look the property up by title, the same way the
+query DSL does (`src/main/frontend/worker/query_dsl.cljs:343-356`), because its
+ident is generated.
 
 **Low Confidence Notes:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Notes with low confidence"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :where
-         [?b :block/properties ?props]
-         [(get ?props :confidence) ?conf]
-         [(js/parseInt ?conf) ?confNum]
-         [(< ?confNum 6)]]
- :collapsed? false}
-#+END_QUERY
+         (tags ?b #{"Permanent"})
+         [?cp :block/title "Confidence"]
+         [?cp :block/tags :logseq.class/Property]
+         [?cp :db/ident ?confidence]
+         [?b ?confidence ?v]
+         [?v :logseq.property/value ?n]
+         [(< ?n 6)]]}
 ```
+
+A `:number` property's value is a **ref to a value entity**; the number itself is
+in `:logseq.property/value` (`deps/db/src/logseq/db/frontend/property/type.cljs:52-56`;
+`rules.cljc:102-106`). There is no `parseInt` step.
 
 ### Find Orphan Notes
 
 **Isolated Notes:**
 
 ```clojure
-#+BEGIN_QUERY
-{:title "Permanent notes with few connections"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [* {:block/_refs [:db/id]}])
          :where
-         [?b :block/properties ?props]
-         [(get ?props :note-type) "permanent"]]
+         (tags ?b #{"Permanent"})]
  :result-transform (fn [result]
-                     (filter
-                       (fn [b]
-                         (< (count (get-in b [:block/refs])) 3))
-                       result))
- :collapsed? false}
-#+END_QUERY
+                     (filter (fn [b] (< (count (get b :block/_refs)) 3))
+                             result))}
 ```
+
+`:block/_refs` pulls the blocks that **link to** each note, so this lists
+`Permanent` notes with fewer than three incoming references.
 
 ---
 
@@ -1004,45 +1122,52 @@ Ensures completeness
 **Step 1: Create Project Page**
 
 ```markdown
-- [[Projects/Article-on-Decision-Making]]
-  project-type:: writing
-  status:: planning
-  deadline:: [[2026-02-28]]
+Page [[Projects/Article-on-Decision-Making]]
 
-  ## Goal
+  Project type: writing
+  Status: Backlog
+  Deadline: Feb 28th, 2026
+
+- ## Goal
 
   Write article about improving decision making
   using cognitive science insights.
 
-  ## Target Audience
+- ## Target Audience
 
   Software engineers and managers
 
-  ## Key Points
+- ## Key Points
 
-  - [ ] System 1 vs System 2
-  - [ ] Ego depletion
-  - [ ] Confirmation bias
-  - [ ] Practical strategies
+  - System 1 vs System 2   #Task  (Status: Todo)
+  - Ego depletion   #Task  (Status: Todo)
+  - Confirmation bias   #Task  (Status: Todo)
+  - Practical strategies   #Task  (Status: Todo)
 ```
+
+`Status` and `Deadline` are the built-in task properties. Status is one of
+Backlog, Todo, Doing, In Review, Done or Canceled — "planning" is not a value —
+and Deadline is a date-time, not a page link
+(`deps/db/src/logseq/db/frontend/property.cljs:313-318, 340-346`). Setting
+either on the page also tags it `#Task`
+(`deps/outliner/src/logseq/outliner/property.cljs:108-116`).
 
 **Step 2: Gather Relevant Notes**
 
+Under a "Relevant Zettelkasten Notes" block, add an `/Advanced Query` child:
+
+```clojure
+{:query [:find (pull ?note [*])
+         :in $ ?topic
+         :where
+         [?t :block/name ?topic]
+         [?b :block/refs ?t]
+         [?b :block/page ?note]
+         (tags ?note #{"Permanent"})]
+ :inputs ["[[Decision Making]]"]}
+```
+
 ```markdown
-## Relevant Zettelkasten Notes
-
-#+BEGIN_QUERY
-{:title "Notes for article"
-:query [:find (pull ?b [*])
-:where
-[?b :block/refs ?p]
-[?p :block/name ?topic]
-[?b :block/properties ?props]
-[(get ?props :note-type) "permanent"]]
-:inputs ["decision-making"]
-:collapsed? false}
-#+END_QUERY
-
 Review and select:
 
 - [[System 1 vs System 2]]
@@ -1061,9 +1186,9 @@ I. Introduction
 - Problem: Engineers make suboptimal decisions
 - Promise: Cognitive science offers solutions
 
-II. How We Think - ((system-1-definition)) - ((system-2-definition))
+II. How We Think - [[…]] - [[…]]
 
-III. Why We Fail - ((ego-depletion-explanation)) - ((confirmation-bias-explanation))
+III. Why We Fail - [[…]] - [[…]]
 
 IV. Practical Strategies - Schedule reviews during high-energy times - Use checklists to reduce System 2 load - Seek disconfirming evidence
 
@@ -1080,7 +1205,7 @@ Write in daily notes or project page:
 
 - [[Projects/Article-on-Decision-Making]]
 
-  ## Draft (2026-01-22)
+  ## Draft (Jan 22nd, 2026)
 
   ### Introduction
 
@@ -1095,8 +1220,8 @@ Write in daily notes or project page:
 
   ### How We Think
 
-  {{embed ((system-1-definition))}}
-  {{embed ((system-2-definition))}}
+  (/Node embed of the System 1 definition block)
+  (/Node embed of the System 2 definition block)
 
   [Continue draft...]
 ```
@@ -1125,7 +1250,7 @@ Easy to add citations
 ```markdown
 1. Process fleeting notes from yesterday
 2. Review one old permanent note
-3. Update confidence or add connections
+3. Update Confidence or add connections
 ```
 
 **During Reading (ongoing):**
@@ -1148,16 +1273,19 @@ Easy to add citations
 
 **Weekly Review (30 min):**
 
-```markdown
-#+BEGIN_QUERY
-{:title "This week's activity"
-:query [:find (pull ?b [*])
-:where
-[?b :block/created-at ?created]
-[(- (js/Date.now) ?created) ?age]
-[(< ?age 604800000)]]}
-#+END_QUERY
+Under a "This week's activity" block, add an `/Advanced Query` child:
 
+```clojure
+{:query [:find (pull ?b [*])
+         :in $ ?since
+         :where
+         (tags ?b #{"Fleeting" "Literature" "Permanent" "Hub"})
+         [?b :block/created-at ?created]
+         [(>= ?created ?since)]]
+ :inputs [:-7d-start]}
+```
+
+```markdown
 Review:
 
 - New permanent notes
@@ -1215,13 +1343,13 @@ Note in [[Redis Caching Pattern]] with results
    - Reorganize if structure emerged
    - Archive outdated notes
 
-2. Check orphan notes
+2. Check orphan notes (the "Isolated Notes" query)
 
    - Add missing connections
    - Merge duplicates
    - Delete truly irrelevant
 
-3. Update confidence ratings
+3. Update Confidence ratings
 
    - Notes you now understand better
    - Notes requiring revision
@@ -1339,15 +1467,15 @@ Monday: Read article about microservices
 
 2. After reading:
 
-   - Create [[Literature/Microservices-Article]]
-   - Key points with IDs
+   - Create [[Literature/Microservices-Article]], tagged Literature
+   - Key points in their own blocks, citable by block ref
    - Personal thoughts
 
 3. Next day (Tuesday):
 
    - Process fleeting notes
-   - Create [[Permanent/Service-Boundary-Principles]]
-   - Create [[Permanent/Microservices-Trade-offs]]
+   - Create [[Permanent/Service-Boundary-Principles]], tagged Permanent
+   - Create [[Permanent/Microservices-Trade-offs]], tagged Permanent
    - Link to [[System-Design]], [[Distributed-Systems]]
    - Update [[Hub/Software-Architecture]]
 
@@ -1366,7 +1494,7 @@ Result: Knowledge captured, processed, connected, used
 
 **Get Started:**
 
-1. Set up templates (30 min)
+1. Create the four note tags and their properties, then the templates (30 min)
 2. Create first literature note from recent reading (30 min)
 3. Extract one permanent note (15 min)
 4. Link to existing notes (10 min)
