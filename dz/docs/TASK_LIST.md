@@ -6,10 +6,10 @@ every field comes from each document's frontmatter.
 
 | | Count |
 |---|---|
-| Documents | 105 |
-| Audited line by line this pass | 62 |
+| Documents | 103 |
+| Audited line by line this pass | 87 |
 | Authored from source — trusted | 10 |
-| Merged this pass — base inherited, needs a line-by-line audit | 27 |
+| Merged this pass — base inherited, needs a line-by-line audit | 0 |
 | Generated, gated in CI | 1 |
 | Not reviewed | 5 |
 
@@ -53,7 +53,6 @@ Older date, or none. Highest priority.
 | `reference/plugin-apis/pr-12395/04-app-get-current-route.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/advanced/advanced-queries-tutorial.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/advanced/custom-theme-tutorial.md` | 2026-09-09 | `be800f1711` |
-| `tutorials/integrations/mcp-integration.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/plugins/first-plugin.md` | 2026-09-09 | `be800f1711` |
 | `explanation/architecture/plugin-security.md` | 2026-09-10 | `be800f1711` |
 | `explanation/concepts/block-editing-philosophy.md` | 2026-09-10 | `be800f1711` |
@@ -65,7 +64,6 @@ Older date, or none. Highest priority.
 | `how-to/organization/import-export.md` | 2026-09-10 | `be800f1711` |
 | `how-to/workflows/daily-workflows.md` | 2026-09-10 | `be800f1711` |
 | `how-to/workflows/meeting-notes-workflow.md` | 2026-09-10 | `be800f1711` |
-| `how-to/workflows/research-workflow.md` | 2026-09-10 | `be800f1711` |
 | `how-to/workflows/task-management-workflows.md` | 2026-09-10 | `be800f1711` |
 | `how-to/workflows/zettelkasten-method.md` | 2026-09-10 | `be800f1711` |
 | `reference/advanced/query-patterns.md` | 2026-09-10 | `be800f1711` |
@@ -83,51 +81,51 @@ Older date, or none. Highest priority.
 | `explanation/concepts/graph-visualization.md` | 2026-09-11 | `be800f1711` |
 | `explanation/concepts/linked-references.md` | 2026-09-11 | `be800f1711` |
 | `explanation/concepts/local-first-architecture.md` | 2026-09-11 | `be800f1711` |
+| `explanation/features/handbooks-system.md` | 2026-09-11 | `be800f1711` |
+| `how-to/content/create-flashcard-deck.md` | 2026-09-11 | `be800f1711` |
 | `how-to/content/favorites-recent.md` | 2026-09-11 | `be800f1711` |
 | `how-to/content/hide-tags-from-node.md` | 2026-09-11 | `be800f1711` |
+| `how-to/content/quick-capture.md` | 2026-09-11 | `be800f1711` |
+| `how-to/integrations/cli-basic.md` | 2026-09-11 | `be800f1711` |
+| `how-to/integrations/create-theme.md` | 2026-09-11 | `be800f1711` |
 | `how-to/integrations/custom-css.md` | 2026-09-11 | `be800f1711` |
 | `how-to/integrations/custom-js.md` | 2026-09-11 | `be800f1711` |
+| `how-to/integrations/publishing.md` | 2026-09-11 | `be800f1711` |
+| `how-to/integrations/x-callback-url.md` | 2026-09-11 | `be800f1711` |
+| `how-to/integrations/zotero.md` | 2026-09-11 | `be800f1711` |
+| `how-to/multimedia/asset-management.md` | 2026-09-11 | `be800f1711` |
 | `how-to/organization/backup-strategies.md` | 2026-09-11 | `be800f1711` |
 | `how-to/tasks/disable-task-time-tracking.md` | 2026-09-11 | `be800f1711` |
+| `how-to/tasks/repeating-tasks.md` | 2026-09-11 | `be800f1711` |
 | `how-to/troubleshooting/troubleshooting-guide.md` | 2026-09-11 | `be800f1711` |
+| `how-to/workflows/research-workflow.md` | 2026-09-11 | `be800f1711` |
+| `reference/api/http-api.md` | 2026-09-11 | `be800f1711` |
+| `reference/api/mcp-server.md` | 2026-09-11 | `be800f1711` |
+| `reference/api/plugin-api.md` | 2026-09-11 | `be800f1711` |
+| `reference/configuration/config-edn.md` | 2026-09-11 | `be800f1711` |
+| `reference/configuration/css-variables.md` | 2026-09-11 | `be800f1711` |
+| `reference/database/schema-overview.md` | 2026-09-11 | `be800f1711` |
+| `reference/features/flashcards.md` | 2026-09-11 | `be800f1711` |
+| `reference/features/pdf-annotations.md` | 2026-09-11 | `be800f1711` |
+| `reference/features/user-profiles.md` | 2026-09-11 | `be800f1711` |
 | `reference/interface/slash-commands.md` | 2026-09-11 | `be800f1711` |
 | `reference/platforms/mobile-differences.md` | 2026-09-11 | `be800f1711` |
+| `reference/syntax/code-blocks.md` | 2026-09-11 | `be800f1711` |
+| `reference/syntax/dynamic-variables.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/collaboration/real-time-sync.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/getting-started/01-installation.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/getting-started/02-first-graph.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/getting-started/03-basic-editing.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/getting-started/04-linking-pages.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/integrations/mcp-integration.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/knowledge-management/flashcards-basics.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/task-management/project-planning.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/task-management/todo-basics.md` | 2026-09-11 | `be800f1711` |
 
 ## Merged this pass — needs a line-by-line audit
 
 | Document | Date | Against | Scope |
 |---|---|---|---|
-| `explanation/features/handbooks-system.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/backup/backup-restore.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/content/create-flashcard-deck.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/content/quick-capture.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/integrations/cli-basic.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/integrations/create-theme.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/integrations/publishing.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/integrations/x-callback-url.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/integrations/zotero.md` | 2026-09-09 | `be800f1711` | full |
-| `how-to/multimedia/asset-management.md` | 2026-09-09 | `be800f1711` | Remote Graphs (RTC Sync) section only |
-| `how-to/tasks/repeating-tasks.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/api/http-api.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/api/mcp-server.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/configuration/config-edn-db.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/configuration/config-edn.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/configuration/css-variables.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/database/schema-overview.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/features/flashcards.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/features/pdf-annotations.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/features/user-profiles.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/syntax/code-blocks.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/syntax/dynamic-variables.md` | 2026-09-09 | `be800f1711` | full |
-| `tutorials/collaboration/real-time-sync.md` | 2026-09-09 | `be800f1711` | full |
-| `tutorials/knowledge-management/flashcards-basics.md` | 2026-09-09 | `be800f1711` | full |
-| `tutorials/task-management/project-planning.md` | 2026-09-09 | `be800f1711` | full |
-| `tutorials/task-management/todo-basics.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/api/plugin-api.md` | 2026-09-10 | `be800f1711` | Merged 2026-09-09; inherited base not re-read line by line. The 2026-09-10 date covers only the template methods caveat (bd51297f2b). |
 
 ## Authored from source
 

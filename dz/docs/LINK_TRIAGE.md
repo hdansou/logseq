@@ -26,6 +26,12 @@ links. Its agents also replaced links to pages that were never written (`sync-is
 `page-links.md`, `how-to/navigation/*`, `logseq-sync.md`, `git-sync.md`, `export-graph.md`)
 with links to existing pages.
 
+The 2026-09-11 recount after wave 7 is **21**. Wave 7 audited all 27 merged-not-fully-audited
+pages and merged two duplicate pairs: `config-edn-db.md` into `config-edn.md`, and
+`backup-restore.md` into `backup-strategies.md`, retargeting their inbound links. Its agents
+replaced or dropped dead related-doc links on almost every page they touched. What remains is
+mostly links to pages that were never written. The groups below have not been recounted.
+
 ## Where the count went
 
 | | Then | Now | What happened |

@@ -220,7 +220,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 #### [Features](explanation/features/)
 
-- 🟢 [Handbooks System: Interactive In-App Tutorials](explanation/features/handbooks-system.md)
+- 🟢 [Handbooks System: In-App Help Panel](explanation/features/handbooks-system.md)
 - [How Semantic Search Works](explanation/features/how-embeddings-work.md)
 - [How Publishing Works](explanation/features/how-publishing-works.md)
 
