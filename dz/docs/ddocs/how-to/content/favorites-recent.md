@@ -3,41 +3,46 @@ title: 'Managing Favorites & Recent Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'How-To'
-last-verified: '2026-05-30'
+last-verified: '2026-09-11'
+verified-against: 'be800f1711'
+review-status: audited
+graph-type: [db]
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/04-linking-pages.md'
   - 'how-to/content/quick-capture.md'
+  - 'explanation/concepts/graph-visualization.md'
 ---
 
 # Managing Favorites & Recent Pages
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-11
 
 Learn how to organize and quickly access your most important pages using Favorites and Recent Pages features.
+
+This page covers DB graphs only. Current Logseq does not open file graphs ([`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)).
 
 ## Overview
 
 Logseq provides two navigation features to access pages quickly:
 
-- **Favorites**: Pin important pages for permanent quick access
-- **Recent Pages**: A per-graph history of recently visited pages
+- **Favorites**: Pin important pages for permanent quick access. Favorites are stored in the graph.
+- **Recent Pages**: A per-graph history of recently visited pages, stored on this device.
 
-## Findings: New Capabilities
-
-- On mobile, the bottom **Go to** tab surfaces both Favorites and Recent Pages together.
-- The command palette still opens with a **Recently updated pages** group, which is separate from the sidebar Recent Pages history.
+Both appear in the left sidebar under **Favorites** and **Recent** ([`src/resources/dicts/en.edn:1796`](../../../../../src/resources/dicts/en.edn), [`:1798`](../../../../../src/resources/dicts/en.edn)). On mobile, both appear together on the **Go To** tab ([`src/main/mobile/components/app.cljs:275`](../../../../../src/main/mobile/components/app.cljs), [`src/main/mobile/components/favorites.cljs:6-12`](../../../../../src/main/mobile/components/favorites.cljs)).
 
 ## Favorites
 
 ### Adding to Favorites
 
-**Method 1: From Page Menu**
+**Method 1: From the Page Menu**
 
 1. Open the page you want to favorite
-2. Click the **⋯** (more options) menu in the page header
+2. Click the **⋯** (more options) menu in the top toolbar
 3. Select **"Add to Favorites"**
-4. The page appears in left sidebar under "Favorites"
+4. The page appears in the left sidebar under "Favorites"
+
+The menu item is labeled "Add to Favorites", or "Unfavorite page" when the page is already a favorite ([`src/main/frontend/components/page_menu.cljs:116-119`](../../../../../src/main/frontend/components/page_menu.cljs), [`src/main/frontend/components/header.cljs:184-195`](../../../../../src/main/frontend/components/header.cljs), [`src/resources/dicts/en.edn:1106`](../../../../../src/resources/dicts/en.edn), [`:1146`](../../../../../src/resources/dicts/en.edn)).
 
 **Method 2: Keyboard Shortcut**
 
@@ -45,13 +50,19 @@ When viewing a page:
 
 - Press `Ctrl/Cmd + Shift + F` (toggles favorite on/off)
 
+This is the `:page/toggle-favorite` command, bound to `mod+shift+f` ([`src/main/frontend/modules/shortcut/config.cljs:441-442`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). It acts only on the current page, so it does nothing on the Journals view, where there is no current page ([`src/main/frontend/handler/page.cljs:116-122`](../../../../../src/main/frontend/handler/page.cljs)).
+
 ### Removing from Favorites
 
-**From Page Menu:**
+**From the Page Menu:**
 
 1. Open the favorited page
 2. Click the **⋯** (more options) menu
 3. Select **"Unfavorite page"**
+
+**From the Left Sidebar:**
+
+Open the menu on a page in the Favorites list and choose **"Unfavorite page"** ([`src/main/frontend/components/left_sidebar.cljs:99-105`](../../../../../src/main/frontend/components/left_sidebar.cljs)).
 
 **Via Keyboard:**
 
@@ -62,7 +73,7 @@ When viewing a page:
 
 **Reorder Favorites:**
 
-Drag and drop pages in the sidebar to reorder:
+Drag and drop pages in the sidebar Favorites list to reorder them. The new order is saved to the graph ([`src/main/frontend/components/left_sidebar.cljs:362-371`](../../../../../src/main/frontend/components/left_sidebar.cljs), [`src/main/frontend/worker/handler/graph.cljs:100-117`](../../../../../src/main/frontend/worker/handler/graph.cljs)).
 
 ```markdown
 Favorites:
@@ -72,55 +83,49 @@ Favorites:
 └── 📚 Reading List
 ```
 
-**Create Hierarchy:**
-
-Use page namespaces for organized favorites:
-
-```markdown
-Favorites:
-├── Work/Projects
-├── Work/Meetings
-├── Personal/Health
-└── Personal/Learning
-```
+The Favorites list is flat. A page titled `Work/Projects` is listed as its own item. It is not nested under a `Work` group.
 
 **Using Properties:**
 
-Add properties to favorite pages for better organization:
+To group favorite pages yourself, add properties to them in the property UI. Typing `favorite-category:: important` in a DB graph block creates plain text, not a property.
 
-```markdown
-- # Dashboard
-  favorite-category:: important
-  access-frequency:: daily
-```
+### Where favorites are stored
 
-Note: Favorites are stored internally via a special `$$$favorites` page whose child blocks link to favorited pages. There is no `:block/favorite?` attribute on pages, so you cannot query favorites directly by a boolean property. Instead, organize favorites using your own custom properties and queries.
+Favorites are stored in the graph database, not in `config.edn`. Each graph has a hidden built-in page named `$$$favorites` ([`deps/common/src/logseq/common/config.cljs:59`](../../../../../deps/common/src/logseq/common/config.cljs), [`deps/db/src/logseq/db/sqlite/create_graph.cljs:198-203`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)). Adding a favorite inserts a child block on that page whose `:block/link` points to the favorited page ([`deps/db/src/logseq/db/frontend/db.cljs:36-40`](../../../../../deps/db/src/logseq/db/frontend/db.cljs), [`src/main/frontend/worker/handler/graph.cljs:81-90`](../../../../../src/main/frontend/worker/handler/graph.cljs)). The sidebar lists those links in block order and skips pages that are in the Recycle bin ([`src/main/frontend/worker/handler/graph.cljs:34-44`](../../../../../src/main/frontend/worker/handler/graph.cljs)).
+
+Pages have no favorite attribute, so no boolean property marks a favorite. Favorites are reachable only through the `$$$favorites` page's child blocks and their `:block/link`.
+
+> **Unverified:** whether a user query can read the hidden `$$$favorites` page.
+
+Plugins can read both lists with `getCurrentGraphFavorites()` and `getCurrentGraphRecent()` ([`libs/src/LSPlugin.ts:511-512`](../../../../../libs/src/LSPlugin.ts), host exports [`src/main/logseq/api.cljs:73-74`](../../../../../src/main/logseq/api.cljs), [`src/main/logseq/api/app.cljs:81-90`](../../../../../src/main/logseq/api/app.cljs)).
 
 ## Recent Pages
 
 ### Viewing Recent Pages
 
-**Open Recent Sidebar:**
+**In the left sidebar:**
 
-1. Click **"Recent"** in left sidebar
-2. See chronologically ordered pages you've visited
+1. Find the **Recent** section in the left sidebar. Click its header to expand or collapse it ([`src/main/frontend/components/left_sidebar.cljs:198-213`](../../../../../src/main/frontend/components/left_sidebar.cljs)).
+2. The list shows pages you visited recently.
 3. Click any page to navigate
 
 ### How Recent Pages Work
 
-> **Removed:** The old "recently updated pages" explanation is stale. Sidebar Recent Pages now track recently visited pages, not pages sorted by `block/updated-at`.
+When Logseq navigates to a page through its page-redirect handler, it records the page ([`src/main/frontend/handler/route.cljs:123`](../../../../../src/main/frontend/handler/route.cljs), [`:140`](../../../../../src/main/frontend/handler/route.cljs)). That handler is also used when you open a page from search ([`src/main/frontend/components/cmdk/core.cljs:599`](../../../../../src/main/frontend/components/cmdk/core.cljs)). Nothing is recorded while a graph is still restoring.
 
-Recent Pages are a per-graph history of recently visited pages. Logseq records the latest 15 unique pages you navigate to, and reopening a page that is already in the list does not move it to the top.
+A newly visited page goes to the top of the list. Reopening a page that is already in the list does not move it ([`src/main/frontend/handler/db_based/recent.cljs:5-12`](../../../../../src/main/frontend/handler/db_based/recent.cljs)).
+
+The list is kept per graph in app state and saved to the browser's `localStorage` ([`src/main/frontend/state.cljs:1742-1749`](../../../../../src/main/frontend/state.cljs)). It stays on the device and is not stored in the graph.
 
 ### Recent Pages Limit
 
-Logseq keeps the **last 15 unique recent pages** in the stored list.
+Logseq keeps the **last 15 unique recent pages** in the stored list ([`src/main/frontend/handler/db_based/recent.cljs:11`](../../../../../src/main/frontend/handler/db_based/recent.cljs)).
 
-The sidebar may show fewer items after filtering hidden or blank pages.
+The sidebar may show fewer. It skips entries that are not pages, hidden pages, hidden properties and pages with a blank title ([`src/main/frontend/worker/handler/render_resource/basic.cljs:65-82`](../../../../../src/main/frontend/worker/handler/render_resource/basic.cljs)).
 
 ### Clearing Recent Pages
 
-> **Removed:** The previous restart-based reset advice is stale. Recent Pages are persisted per graph, and the current UI does not provide a supported manual clear action.
+There is no UI action to clear Recent Pages. Pages you delete or move to the Recycle bin are removed from the list automatically ([`src/main/frontend/modules/outliner/pipeline.cljs:53-61`](../../../../../src/main/frontend/modules/outliner/pipeline.cljs)).
 
 ## Practical Workflows
 
@@ -130,7 +135,6 @@ The sidebar may show fewer items after filtering hidden or blank pages.
 
 ```markdown
 Favorites:
-├── 📅 Today's Journal (auto-updates)
 ├── 📋 Daily Dashboard
 ├── ✅ Task Inbox
 └── 📝 Quick Capture
@@ -138,8 +142,8 @@ Favorites:
 
 **Navigate quickly:**
 
-1. `g j` - Go to journals page (non-editing shortcut)
-2. `Ctrl/Cmd + Shift + J` (macOS) or `Alt + Shift + J` (Windows/Linux) - Open today's page in sidebar
+1. `g j` - Go to journals page ([`src/main/frontend/modules/shortcut/config.cljs:328`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
+2. `Ctrl/Cmd + Shift + J` (macOS) or `Alt + Shift + J` (Windows/Linux) - Open today's page in the right sidebar ([`:340`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
 3. Click "Dashboard" from favorites
 4. Review tasks and notes
 
@@ -156,11 +160,11 @@ Favorites:
 
 **Use recent for sub-pages:**
 
-- Recent automatically tracks project-related pages
+- Recent automatically tracks the pages you visit
 - No need to favorite every sub-page
 - Quick access to what you were working on
 
-> **Removed:** `recent-page:: true` is not a supported page property. Recent Pages are managed automatically from navigation history.
+Recent Pages are managed automatically from navigation. No page property adds a page to the list.
 
 ### Knowledge Base Navigation
 
@@ -170,7 +174,6 @@ Favorites:
 Favorites:
 ├── 📚 Knowledge Hub
 ├── 🏷️ Tag Index
-├── 🔗 Link Graph
 └── 🔍 Search Dashboard
 ```
 
@@ -178,114 +181,81 @@ Favorites:
 
 - Recent tracks your research path
 - Easily backtrack through connected notes
-- Discover navigation patterns
 
 ## Advanced Tips
 
 ### Favorites Dashboard
 
-Create a dashboard page with all favorites:
+Create a dashboard page that embeds your key pages. In a DB graph, use the **/Node embed** command. The old `{{embed [[...]]}}` macro only shows a deprecation warning ([`src/main/frontend/components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs), [`src/resources/dicts/en.edn:157`](../../../../../src/resources/dicts/en.edn), [`:549`](../../../../../src/resources/dicts/en.edn)).
 
-```markdown
-- # My Dashboard
-
-  - ## Quick Links
-
-    - {{embed [[Work/Projects]]}}
-    - {{embed [[Personal/Goals]]}}
-```
-
-Note: Since favorites are stored via an internal system page (`$$$favorites`) rather than a queryable attribute, you cannot query "all favorited pages" with a Datalog query. Instead, curate your dashboard manually or use your own custom properties.
+1. Create a page such as `My Dashboard`.
+2. In a block, type `/Node embed` and pick the page to embed.
+3. Repeat for each page.
 
 ### Finding Recently Updated Pages
 
-You can query for recently updated pages using the `block/updated-at` attribute:
+DB graphs do not render `#+BEGIN_QUERY` blocks. In current source that marker appears only in the file-graph importer ([`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1410`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)). Use the **/Query** command instead.
+
+> **Unverified:** that this advanced query runs as written when entered through `/Query` in a DB graph. It uses `:block/name`, `:block/title` and `:block/updated-at`, and it omits `:limit`.
 
 ```clojure
-#+BEGIN_QUERY
 {:query [:find (pull ?p [:block/title :block/updated-at])
          :where
-         [?p :block/title ?title]
+         [?p :block/name]
          [?p :block/updated-at ?t]
          [(> ?t 1700000000000)]]
- :result-transform (fn [result] (sort-by :block/updated-at > result))
- :limit 20}
-#+END_QUERY
+ :result-transform (fn [result] (sort-by :block/updated-at > result))}
 ```
 
-Note: Logseq does not track page visit frequency. The command palette's initial "Recently updated pages" surface is based on `block/updated-at` timestamps. That is separate from the sidebar Recent Pages history.
-
-### Combine with Quick Capture
-
-Link favorites with quick capture templates:
-
-```markdown
-- template:: meeting-notes
-  project:: [[Project Alpha]]
-  favorite:: [[Meeting Notes]]
-```
-
-When capturing:
-
-1. Use template
-2. Automatically links to favorite project
-3. Easy to find in recent pages
+Note: Logseq does not track page visit frequency.
 
 ## Mobile Considerations
 
 ### Mobile Favorites
 
-On mobile, favorites are even more valuable:
-
 **Access:**
 
-- Tap the bottom **Go to** tab
-- Favorites and Recent Pages share the same panel
-- Instant navigation
+- Tap the bottom **Go To** tab ([`src/resources/dicts/en.edn:1049`](../../../../../src/resources/dicts/en.edn))
+- Favorites and Recent Pages share the same panel, which reuses the desktop sidebar lists ([`src/main/mobile/components/favorites.cljs:6-12`](../../../../../src/main/mobile/components/favorites.cljs))
 
 **Adding:**
 
-1. Open page
-2. Tap the favorite/star action in the header or page menu
-3. Select **"Add to Favorites"**
+1. Open the page
+2. Tap the favorite action in the page's top bar. It toggles the page on or off ([`src/main/mobile/components/header.cljs:210-225`](../../../../../src/main/mobile/components/header.cljs)).
 
 ### Mobile Recent Pages
 
 **Access:**
 
-- Tap the bottom **Go to** tab
+- Tap the bottom **Go To** tab
 - Use the **Recent** list in the same panel as Favorites
 
-> **Removed:** The old hamburger-menu and left-edge swipe instructions do not match the current mobile UI.
-
-**Limited space:**
-
-- Mobile shows fewer recent pages
-- Prioritize favorites for important pages
+Mobile uses the same Recent list component as desktop, so it applies the same 15-page history and the same filtering.
 
 ## Keyboard Shortcuts Summary
 
-| Action                       | Windows/Linux        | macOS               |
-| ---------------------------- | -------------------- | ------------------- |
-| Toggle favorite              | `Ctrl + Shift + F`   | `Cmd + Shift + F`   |
-| Go to journals               | `g j`                | `g j`               |
-| Open today in sidebar        | `Alt + Shift + J`    | `Cmd + Shift + J`   |
-| Quick search                 | `Ctrl + K`           | `Cmd + K`           |
-| Highlight recent blocks      | `Ctrl + C, Ctrl + R` | `Cmd + C, Cmd + R`  |
-| Follow link under cursor     | `Ctrl + O`           | `Cmd + O`           |
+| Action                       | Windows/Linux        | macOS               | Source (`shortcut/config.cljs`) |
+| ---------------------------- | -------------------- | ------------------- | ------------------------------- |
+| Toggle favorite              | `Ctrl + Shift + F`   | `Cmd + Shift + F`   | `:page/toggle-favorite` (441)    |
+| Go to journals               | `g j`                | `g j`               | `:go/journals` (328)             |
+| Open today in sidebar        | `Alt + Shift + J`    | `Cmd + Shift + J`   | `:sidebar/open-today-page` (340) |
+| Quick search                 | `Ctrl + K`           | `Cmd + K`           | `:go/search` (304)               |
+| Highlight recent blocks      | `Ctrl + C, Ctrl + R` | `Cmd + C, Cmd + R`  | `:ui/highlight-recent-blocks` (420) |
+| Follow link under cursor     | `Ctrl + O`           | `Cmd + O`           | `:editor/follow-link` (113)      |
+
+These match the [Keyboard Shortcuts reference](../../reference/configuration/keyboard-shortcuts.md).
 
 ## Troubleshooting
 
 ### Favorites Not Saving
 
-**Problem:** Favorites disappear after restart
+**Problem:** Favorites disappear or do not appear
 
 **Solution:**
 
-- Check graph permissions (file/folder access)
-- Ensure Logseq has write access
+- Make sure you are in the graph where you added the favorite. Favorites are stored per graph, in that graph's database.
+- A favorite page that is in the Recycle bin is hidden from the list. Restore the page to show it again.
 - Try re-adding favorites
-- Check for sync conflicts (if using cloud sync)
 
 ### Recent Pages Empty
 
@@ -293,8 +263,8 @@ On mobile, favorites are even more valuable:
 
 **Solution:**
 
-- Recent pages track recently visited pages, not pages you merely open from search
-- Check you're in the correct graph
+- Check you're in the correct graph. The list is kept per graph.
+- Recent Pages are kept per device in `localStorage`, so a new device or cleared browser data starts with an empty list.
 - Navigate to a few pages to populate the list
 - Confirm the pages are not hidden or blank
 
@@ -305,9 +275,8 @@ On mobile, favorites are even more valuable:
 **Solution:**
 
 1. Review and remove unused favorites
-2. Use page namespaces for organization
-3. Create a "Favorites Hub" page instead
-4. Keep favorites to 5-10 most-used pages
+2. Create a "Favorites Hub" page that embeds your key pages with `/Node embed`
+3. Keep favorites to 5-10 most-used pages
 
 ### Can't Find Recent Page
 
@@ -315,11 +284,11 @@ On mobile, favorites are even more valuable:
 
 **Solution:**
 
-- Page may have aged out of the 15-item history
-- The sidebar list is based on page visits, so repeated opens do not move an already-listed page to the top
+- The page may have dropped out of the 15-page history
+- Reopening a page that is already listed does not move it to the top
 - Use search instead: `Ctrl/Cmd + K`
-- Check if page was renamed/deleted
-- Use in-page search: `Ctrl/Cmd + F` (Electron find-in-page)
+- Check whether the page was deleted or moved to the Recycle bin. Those pages are removed from the list.
+- Use in-page search: `Ctrl/Cmd + F`. It is available only in the desktop app ([`src/main/frontend/modules/shortcut/config.cljs:316-317`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 
 ## Best Practices
 
@@ -330,7 +299,6 @@ On mobile, favorites are even more valuable:
 
 - Dashboard
 - Task Inbox
-- Today's Journal
 - Active Project
 - Reading List
 
@@ -341,28 +309,9 @@ On mobile, favorites are even more valuable:
 - Random pages
 ```
 
-### 2. Use Hierarchical Organization
+### 2. Order by Importance
 
-```markdown
-✅ Good: Organized structure
-Favorites:
-├── Work/
-│ ├── Projects
-│ └── Meetings
-└── Personal/
-├── Goals
-└── Learning
-
-❌ Avoid: Flat list
-Favorites:
-
-- Projects
-- Meetings
-- Goals
-- Learning
-- Random Page 1
-- Random Page 2
-```
+The Favorites list is flat and keeps the order you drag it into. Put the pages you open most often at the top.
 
 ### 3. Leverage Recent for Deep Work
 
@@ -376,28 +325,25 @@ Favorites:
 Monthly review:
 
 1. Remove unused favorites
-2. Check favorite organization
+2. Check favorite order
 3. Update hub pages
-4. Reorganize if needed
 
 ## Integration with Other Features
 
 ### With Search
 
-Use `Ctrl/Cmd + K` to open the command palette / search. The initial view shows recently updated pages. Typing will fuzzy-search across all pages. Favorites are not given special priority in search results, but they remain easily accessible from the left sidebar.
-
-Note: this command-palette surface is separate from the sidebar Recent Pages history. The command palette shows recently updated pages, while the sidebar shows recently visited pages.
+Use `Ctrl/Cmd + K` to open search. Before you type, it shows a **Recently updated** group. Despite the label, that group lists your Recent Pages, the same visited-pages history as the sidebar, not pages sorted by update time ([`src/main/frontend/components/cmdk/core.cljs:234-239`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:300-311`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`src/resources/dicts/en.edn:259`](../../../../../src/resources/dicts/en.edn)). As you type, that group narrows to matching recent pages, and search also finds other pages and blocks. Favorites get no special priority in search results.
 
 ### With Command Palette
 
-> **Removed:** The command palette does not expose a dedicated favorites surface in the current source. Use the left sidebar Favorites list or search for the page name.
+Search has no dedicated Favorites group. Use the left sidebar Favorites list or search for the page name.
 
 ### With Graph View
 
-The graph view displays pages and their connections. Use graph search and filter controls to locate important nodes.
+The graph view displays pages and their connections. See [Graph Visualization](../../explanation/concepts/graph-visualization.md).
 
 ## See Also
 
 - [Linking Pages Tutorial](../../tutorials/getting-started/04-linking-pages.md)
 - [Quick Capture Guide](quick-capture.md)
-- [Using Graph View](graph-view.md)
+- [Graph Visualization](../../explanation/concepts/graph-visualization.md)
