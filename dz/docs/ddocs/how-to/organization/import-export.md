@@ -1,29 +1,28 @@
 ---
 title: 'Import and Export Guide'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
+lastVerified: '2026-09-10'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 related-docs:
   - '[Backup Strategies](./backup-strategies.md)'
   - '[File vs Database Graphs](../../explanation/concepts/file-vs-database.md)'
-  - '[Migration Between Formats](./migration-guide.md)'
 tags: ['import', 'export', 'migration', 'data-portability', 'backup']
 ---
 
 # Import and Export Guide
 
-This guide shows you how to import data into Logseq and export your content to various formats. Learn to migrate between note-taking apps, back up your data, and share your knowledge base.
+This guide shows you how to get data into a Logseq DB graph and export it back out. A DB graph is a single `db.sqlite` file plus an `assets/` folder, not a folder of Markdown files ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs)), so export and import work on that database.
 
 **What You'll Learn:**
 
-- Importing from other apps (Roam, Notion, Obsidian, etc.)
-- Exporting to different formats (JSON, EDN, Markdown, HTML)
-- Database graph migration
-- Batch operations and automation
-- Data validation and troubleshooting
-
-**Time Required:** 15-45 minutes depending on graph size
+- Exporting a whole graph (SQLite, SQLite + assets, EDN, Markdown, HTML, debug transit)
+- Exporting a page or a selection of blocks (text, OPML, HTML, PNG)
+- Importing into a new DB graph (SQLite, SQLite + assets, EDN, a Logseq file graph, debug transit)
+- Automatic backups and the command-line tool
 
 ---
 
@@ -43,15 +42,41 @@ This guide shows you how to import data into Logseq and export your content to v
 
 ### Export Options
 
-**Access:** Click **⋯ (More)** → **Export graph**
+**Access:** Click **⋯ (More)** → **Export graph**. The menu item opens the `export` dialog ([`components/header.cljs:227-230`](../../../../../src/main/frontend/components/header.cljs); dialog at [`components/export.cljs:119`](../../../../../src/main/frontend/components/export.cljs)).
 
-| Format       | Best For                     | File-Based | Database |
-| ------------ | ---------------------------- | ---------- | -------- |
-| **JSON**     | Data backup, API integration | ✅         | ✅       |
-| **EDN**      | Logseq-specific backup       | ✅         | ✅       |
-| **Markdown** | Portability, other tools     | ✅         | ✅       |
-| **HTML**     | Static website, sharing      | ✅         | ✅       |
-| **OPML**     | Outliner apps                | ✅         | ✅       |
+The dialog lists exactly these entries ([`components/export.cljs:125-153`](../../../../../src/main/frontend/components/export.cljs); labels at [`src/resources/dicts/en.edn:632-680`](../../../../../src/resources/dicts/en.edn)):
+
+| Entry                                              | Output                                  | Shown                  | Handler |
+| -------------------------------------------------- | --------------------------------------- | ---------------------- | ------- |
+| **Export SQLite DB**                               | one `.sqlite` file                      | always                 | [`handler/export.cljs:146-176`](../../../../../src/main/frontend/handler/export.cljs) |
+| **Export both SQLite DB and assets**               | `.zip` with `db.sqlite` and the assets  | always                 | [`handler/export.cljs:88-129`](../../../../../src/main/frontend/handler/export.cljs) |
+| **Export EDN file**                                | one `.edn` file                         | not on mobile          | [`handler/db_based/export.cljs:79-100`](../../../../../src/main/frontend/handler/db_based/export.cljs) |
+| **Export as standard Markdown (no block properties)** | `.zip` of `.md` files                | not in the native mobile app | [`handler/export/text.cljs:38-50`](../../../../../src/main/frontend/handler/export/text.cljs) |
+| **Export public pages**                            | `index.html` plus assets                | desktop app only       | [`handler/export.cljs:30-48`](../../../../../src/main/frontend/handler/export.cljs) |
+| **Export debug transit file**                      | one `.transit` file                     | always                 | [`handler/export.cljs:135-144`](../../../../../src/main/frontend/handler/export.cljs) |
+
+There is **no JSON export and no graph-level OPML export**. A Roam JSON exporter (`<roam-data`, `export-repo-as-roam-json!`) still exists in source but sits entirely inside a `(comment …)` form under an ";; Export to roam json ;;" banner, so it is never compiled into a callable function ([`handler/export.cljs:174-202`](../../../../../src/main/frontend/handler/export.cljs)).
+
+### Exporting a page or selected blocks
+
+A page's menu has **Export page** ([`components/page_menu.cljs:137-141`](../../../../../src/main/frontend/components/page_menu.cljs)); the block context menu and the multi-block selection menu have a copy/export item ([`components/content.cljs:316-321`, `:118-125`](../../../../../src/main/frontend/components/content.cljs)). All three open `export-blocks` ([`components/export.cljs:275`](../../../../../src/main/frontend/components/export.cljs)), which offers **Text**, **OPML**, **HTML** and **PNG** output ([`components/export.cljs:317-333`](../../../../../src/main/frontend/components/export.cljs)). For text, HTML and OPML it shows these options ([`components/export.cljs:382-433`](../../../../../src/main/frontend/components/export.cljs); labels at [`en.edn:648-659`](../../../../../src/resources/dicts/en.edn)):
+
+- `[[text]] -> text` (remove page-ref brackets)
+- remove emphasis
+- remove #tags
+- newline after block
+- remove properties
+
+### EDN data commands
+
+Four commands have no default key binding and are registered in the shortcut config ([`modules/shortcut/config.cljs:510-520`](../../../../../src/main/frontend/modules/shortcut/config.cljs); labels at [`en.edn:400-403`](../../../../../src/resources/dicts/en.edn)):
+
+| Command | What it does | Source |
+| ------- | ------------ | ------ |
+| Export block EDN data | Exports the current block as EDN | [`handler/db_based/export.cljs:25`](../../../../../src/main/frontend/handler/db_based/export.cljs) |
+| Export page EDN data | Copies the current page's EDN export to the clipboard | [`handler/db_based/export.cljs:49-58`](../../../../../src/main/frontend/handler/db_based/export.cljs) |
+| Export graph's tags and properties EDN data | Copies the graph's classes and properties (`:graph-ontology`) to the clipboard | [`handler/db_based/export.cljs:60-70`](../../../../../src/main/frontend/handler/db_based/export.cljs) |
+| Import EDN data | Opens a dialog to paste and import `sqlite.build` EDN data | [`handler/db_based/import.cljs:269-290`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
 
 ### When to Export
 
@@ -59,18 +84,12 @@ This guide shows you how to import data into Logseq and export your content to v
 
 - Before major changes
 - Before migrations
-- Weekly/monthly routine
+- Alongside the automatic backups (see [Backups](#backups))
 
 **Sharing:**
 
-- Publish knowledge base
-- Share with team
-- Portfolio/documentation
-
-**Migration:**
-
-- Switching to another tool
-- Changing graph types
+- Publish selected pages as HTML
+- Hand a page or block to someone as text or OPML
 
 ---
 
@@ -78,577 +97,228 @@ This guide shows you how to import data into Logseq and export your content to v
 
 ### Supported Import Sources
 
-| Source            | Format              | Notes                    |
-| ----------------- | ------------------- | ------------------------ |
-| **Roam Research** | JSON, EDN, Markdown | Best compatibility       |
-| **Notion**        | Markdown, HTML      | Export from Notion first |
-| **Obsidian**      | Markdown            | Direct folder import     |
-| **Evernote**      | ENEX → Markdown     | Use converter            |
-| **Bear**          | Markdown            | Export notes first       |
-| **Apple Notes**   | Markdown            | Use exporter             |
-| **OneNote**       | Markdown            | Use converter            |
-| **Google Keep**   | Markdown            | Use converter            |
-| **Plain Files**   | Markdown, Org       | Direct import            |
+**Access:** Click **⋯ (More)** → **Import** (shown only when editing is enabled, [`components/header.cljs:232-235`](../../../../../src/main/frontend/components/header.cljs)), or **Import existing notes** on the graphs screen ([`components/repo.cljs:433-438`](../../../../../src/main/frontend/components/repo.cljs)). Both open the `importer` page, which offers exactly five sources ([`components/imports.cljs:558-635`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:911-956`](../../../../../src/resources/dicts/en.edn)):
+
+| Entry                       | Input                                              | Source |
+| --------------------------- | -------------------------------------------------- | ------ |
+| **SQLite**                  | a SQLite DB export of a Logseq graph               | [`imports.cljs:572-582`](../../../../../src/main/frontend/components/imports.cljs) → [`handler/db_based/import.cljs:104`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+| **SQLite + assets (.zip)**  | a zip containing `db.sqlite` and an assets folder  | [`imports.cljs:584-595`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:123`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+| **File to DB graph**        | a file-based Logseq graph folder (not on mobile)   | [`imports.cljs:597-611`](../../../../../src/main/frontend/components/imports.cljs) → [`:477-510`](../../../../../src/main/frontend/components/imports.cljs) |
+| **Debug Transit**           | a debug transit file                               | [`imports.cljs:613-623`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:180`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+| **EDN to DB graph**         | a DB graph's EDN export                            | [`imports.cljs:625-635`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:192-231`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+
+**Every import creates a new DB graph.** Each entry first asks for a graph name and rejects an empty name or one that already exists ([`imports.cljs:74-145`](../../../../../src/main/frontend/components/imports.cljs), [`:500-510`](../../../../../src/main/frontend/components/imports.cljs)); there is no "import into the current graph" option on this page.
+
+> Removed claim: earlier revisions listed Roam Research, Notion, Obsidian, Evernote, Bear, Apple Notes, OneNote, Google Keep and "Plain Files" as import sources, with "File → Import → Choose format" and "Roam JSON" / "Notion Markdown" / "Obsidian Vault" choices. None of these exist: the `importer` page has only the five entries above, and there is no Roam, Notion, Obsidian or OPML importer under `src/main/` or `deps/*/src/`.
 
 ### Import Methods
 
-**Method 1: Direct Import**
+**Method 1: Import page** — the five entries above. Each produces a new DB graph.
 
-- File → Import → Choose format
-- Best for: Small-medium graphs
+**Method 2: Import EDN data command** — pastes `sqlite.build` EDN (see [EDN data commands](#edn-data-commands)).
 
-**Method 2: File System (File-Based)**
+**Method 3: Command line** — `graph import --type edn|sqlite` (see [Automation](#automation)).
 
-- Copy files to graph folder
-- Best for: Markdown/Org files
-
-**Method 3: Database Import**
-
-- Import EDN file
-- Best for: Database graphs
+> Removed claim: "Copy files to graph folder". A DB graph is a `db.sqlite` file, not a folder of Markdown pages, and file graphs cannot be opened: the graph list filters them out with the comment "use `config/db-based-graph?` to avoid loading old file graphs" ([`components/repo.cljs:320-323`](../../../../../src/main/frontend/components/repo.cljs)).
 
 ---
 
 ## Importing from Apps
 
-### From Roam Research
+**Logseq has no importer for other note-taking apps.** The only folder-based import is **File to DB graph**, and it accepts a *Logseq* file graph: it refuses any folder without `logseq/config.edn`, showing "Import failed as the file 'logseq/config.edn' was not found for a Logseq graph." ([`imports.cljs:495-498`](../../../../../src/main/frontend/components/imports.cljs); text at [`en.edn:938`](../../../../../src/resources/dicts/en.edn)). An Obsidian vault, a Notion export or an Evernote conversion is rejected as-is.
 
-**Step 1: Export from Roam**
+> **Unverified:** whether a folder of Markdown from another app converts usefully once it is laid out as a Logseq file graph with a `logseq/config.edn` was not tested.
 
-1. Click **⋯ (More)** in Roam
-2. Select **Export All**
-3. Choose format:
-   - **JSON** (recommended - preserves all data)
-   - **Markdown** (more portable)
-   - **EDN** (Logseq-specific)
-4. Download `.zip` file
+> Removed claim: earlier revisions gave step-by-step Roam, Notion, Obsidian and Evernote procedures, including `sed` scripts that rewrite Obsidian `![[Page]]` embeds to `{{embed [[Page]]}}`. Besides depending on importers that do not exist, `{{embed}}` is deprecated in DB graphs and renders a warning ([`components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
 
-**Step 2: Import to Logseq**
+### From a Logseq file graph (File to DB)
 
-```markdown
-Method A: Direct Import
+File graphs cannot be opened directly ([`components/repo.cljs:320-323`](../../../../../src/main/frontend/components/repo.cljs)), so this import is how an existing file graph gets into Logseq. The result is a new DB graph; the original folder is only read.
 
-1. Logseq → File → Import
-2. Select "Roam JSON"
-3. Choose downloaded .zip file
-4. Wait for processing
-5. Review imported content
+**Step 1: Start the import**
 
-Method B: EDN Import (Database graphs)
+1. **⋯ (More)** → **Import**
+2. Choose **File to DB graph** ("Import a file-based Logseq graph folder into a new DB graph", [`en.edn:926-927`](../../../../../src/resources/dicts/en.edn))
+3. Select the graph's root folder (the picker is a directory input, [`imports.cljs:605-611`](../../../../../src/main/frontend/components/imports.cljs))
 
-1. Extract .zip file
-2. Find .edn file
-3. Logseq → Import → EDN
-4. Select .edn file
-```
+**Step 2: Set options**
 
-**What's Preserved:**
+The `import-file-graph-dialog` ([`imports.cljs:171-267`](../../../../../src/main/frontend/components/imports.cljs)) has these fields; comma-separated lists are split and trimmed by `build-file-graph-worker-options` ([`imports.cljs:359-368`](../../../../../src/main/frontend/components/imports.cljs)) and read by the file-graph converter in `deps/graph-parser`:
 
-- ✅ Pages and hierarchies
-- ✅ Block references
-- ✅ Tags and links
-- ✅ TODO states
-- ✅ Timestamps
-- ⚠️ Custom CSS (needs manual migration)
-- ⚠️ Queries (may need adjustment)
+| Field (label) | Form key | Effect | Reader |
+| ------------- | -------- | ------ | ------ |
+| New graph name | `graph-name` | Name of the new DB graph; defaults to the folder name | [`imports.cljs:481-483`](../../../../../src/main/frontend/components/imports.cljs) |
+| Extract inline code snippets as child blocks | `extract-code-snippets?` | A block with code fences becomes a Code node; with this on, multiple fences are extracted into child blocks in order | [`graph_parser/exporter.cljs:2106-2113`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Import all tags | `convert-all-tags?` | Converts every tag to a tag class | [`exporter.cljs:257-261`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Import specific tags | `tag-classes` | Converts only the listed tags ("Tags are case insensitive"); `card` always converts | [`exporter.cljs:257-261`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Remove inline tags ("Default behavior for DB graphs") | `remove-inline-tags?` | Strips converted `#tags` from block titles instead of rewriting them as refs | [`exporter.cljs:408-425`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Import additional tags from property values | `property-classes` | Treats values of the listed properties as tags | [`exporter.cljs:1083-1093`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Import tag parents from property values | `property-parent-classes` | Uses values of the listed properties as tag parents | [`exporter.cljs:1129`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
 
----
+(Form fields at [`imports.cljs:197-265`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:911`, `:922`, `:924`, `:942`, `:945-947`, `:949`, `:955`](../../../../../src/resources/dicts/en.edn).)
 
-### From Notion
+**Step 3: Wait for the import**
 
-**Step 1: Export from Notion**
+`import-file-graph` creates the new graph with `repo-handler/new-db!` and hands the files to the worker ([`imports.cljs:444-476`](../../../../../src/main/frontend/components/imports.cljs)), where `:thread-api/import-file-graph` runs `gp-exporter/export-file-graph` ([`worker/db_core.cljs:1005-1007`, `:420`](../../../../../src/main/frontend/worker/db_core.cljs)).
 
-1. Settings → **Export all workspace content**
-2. Format: **Markdown & CSV**
-3. Include: **Everything**
-4. Download export
+**What gets read:**
 
-**Step 2: Prepare Files**
+- Only files ending in `.md`, `.markdown`, `.org`, `.js`, `.edn` or `.css`, plus everything under `assets/`; hidden files and folders, `logseq/bak`, `logseq/version-files` and `node_modules` are skipped ([`imports.cljs:34-59`](../../../../../src/main/frontend/components/imports.cljs), applied at [`:492-494`](../../../../../src/main/frontend/components/imports.cljs)).
+- Org files are imported as Markdown: "Imported {1} org file(s) as markdown. Support for org files will be added later." ([`en.edn:941`](../../../../../src/resources/dicts/en.edn)).
+- Assets over 100 MB are skipped ([`imports.cljs:336`](../../../../../src/main/frontend/components/imports.cljs); [`en.edn:912`](../../../../../src/resources/dicts/en.edn)).
 
-```bash
-# Extract export
-unzip Notion-Export.zip -d notion-export
-
-# Structure check
-cd notion-export
-ls -R  # Review folder structure
-```
-
-**Step 3: Import to Logseq**
-
-```markdown
-Method A: File-Based Graph
-
-1. Create new Logseq graph
-2. Copy Notion folders to: LogseqGraph/pages/
-3. Open Logseq → Re-index
-4. Fix links (see cleanup below)
-
-Method B: Import Feature
-
-1. Logseq → File → Import
-2. Select "Notion Markdown"
-3. Choose notion-export folder
-4. Let Logseq process
-```
-
-**Cleanup Required:**
-
-```markdown
-Notion links: [Page](Page.md)
-Logseq format: [[Page]]
-
-Find and replace:
-
-- Remove .md extensions from links
-- Convert [Link](file.md) → [[Link]]
-- Fix nested page paths
-```
-
-**Script to Fix Links:**
-
-```bash
-#!/bin/bash
-# fix-notion-links.sh
-
-for file in pages/*.md; do
-  # Remove .md from links
-  sed -i '' 's/\[([^]]*)\](\([^)]*\)\.md)/[[\1]]/g' "$file"
-
-  # Fix nested paths
-  sed -i '' 's/\[\[.*\/\([^]]*\)\]\]/[[\1]]/g' "$file"
-done
-```
-
----
-
-### From Obsidian
-
-**Step 1: Prepare Obsidian Vault**
-
-```bash
-# Obsidian vault structure
-ObsidianVault/
-├── Daily Notes/
-├── Projects/
-├── .obsidian/
-└── attachments/
-```
-
-**Step 2: Import to Logseq**
-
-```markdown
-Method A: File-Based Graph (Easiest)
-
-1. Copy entire vault folder
-2. Rename to LogseqGraph
-3. Open in Logseq
-4. Logseq will auto-detect markdown files
-
-Method B: Import Feature
-
-1. Logseq → File → Import
-2. Select "Obsidian Vault"
-3. Choose vault folder
-4. Logseq converts to Logseq format
-```
-
-**Compatibility:**
-
-| Feature     | Obsidian    | Logseq               | Notes                  |
-| ----------- | ----------- | -------------------- | ---------------------- |
-| Wiki links  | `[[Page]]`  | `[[Page]]`           | ✅ Compatible          |
-| Tags        | `#tag`      | `#tag`               | ✅ Compatible          |
-| Frontmatter | YAML        | Properties           | ⚠️ May need conversion |
-| Code blocks | ` ```lang ` | ` ```lang `          | ✅ Compatible          |
-| Embeds      | `![[Page]]` | `{{embed [[Page]]}}` | ❌ Needs conversion    |
-| Dataview    | Custom      | Queries              | ❌ Needs rewrite       |
-
-**Convert Obsidian Embeds:**
-
-```bash
-# Find embeds
-grep -r "!\[\[" ObsidianVault/
-
-# Replace with Logseq format
-sed -i '' 's/!\[\[\([^]]*\)\]\]/{{embed [[\1]]}}/g' pages/*.md
-```
-
----
-
-### From Evernote
-
-**Step 1: Export from Evernote**
-
-1. File → **Export Notes**
-2. Format: **ENEX** (Evernote Export)
-3. Save `.enex` file
-
-**Step 2: Convert ENEX to Markdown**
-
-**Option A: Use evernote2md (recommended)**
-
-```bash
-# Install converter
-npm install -g evernote2md
-
-# Convert
-evernote2md export.enex output-folder
-
-# Result structure
-output-folder/
-├── Note 1.md
-├── Note 2.md
-└── attachments/
-```
-
-**Option B: Use Yarle**
-
-```bash
-# Install
-npm install -g yarle
-
-# Convert
-yarle --enex-file export.enex --output-dir output-folder
-```
-
-**Step 3: Import to Logseq**
-
-```bash
-# Copy converted files
-cp -r output-folder/* ~/LogseqGraph/pages/
-
-# Open Logseq and re-index
-```
-
-**Cleanup:**
-
-```markdown
-- Convert Evernote tags to Logseq tags
-- Fix internal links
-- Move attachments to assets/
-- Update image paths
-```
+**When it finishes**, notifications report ignored files, ignored assets, ignored properties and invalid blocks ([`imports.cljs:269-290`](../../../../../src/main/frontend/components/imports.cljs); texts at [`en.edn:931-935`](../../../../../src/resources/dicts/en.edn)). For ignored properties the app's advice is "To fix a property type, change the property value to the correct type and reimport the graph."
 
 ---
 
 ## Export Formats
 
-### JSON Export
+### SQLite DB
 
-**Best For:** Complete backups, API integration
+**Best For:** Complete backups. The in-app description is "Primary way to backup graph's content to a single .sqlite file." ([`en.edn:678`](../../../../../src/resources/dicts/en.edn)).
 
-**Export:**
+**Export:** ⋯ → Export graph → **Export SQLite DB**. The desktop app writes the file through IPC and reports the saved path; in the browser it uses the file save picker where available ([`handler/export.cljs:146-176`](../../../../../src/main/frontend/handler/export.cljs)).
 
-```markdown
-1. ⋯ → Export graph
-2. Format: JSON
-3. Choose location
-4. Save: my-graph-2026-01-22.json
-```
+**Import:** Import page → **SQLite** (new graph).
 
-**Contents:**
+### SQLite DB and assets (.zip)
 
-```json
-{
-  "version": "0.10.9",
-  "pages": [
-    {
-      "name": "Page Title",
-      "original-name": "Page Title",
-      "blocks": [...]
-    }
-  ],
-  "blocks": [...],
-  "assets": [...]
-}
-```
+**Best For:** Backups that include images and other files ("Primary way to backup graph's content and assets to a .zip file.", [`en.edn:680`](../../../../../src/resources/dicts/en.edn)).
 
-**Use Cases:**
+The zip holds `db.sqlite` plus every asset returned by `assets-handler/<get-all-assets` ([`handler/export.cljs:88-100`](../../../../../src/main/frontend/handler/export.cljs)).
 
-- Backup before migrations
-- Data analysis (parse JSON)
-- API integration
-- Custom processing
+**Import:** Import page → **SQLite + assets (.zip)** (new graph).
 
----
+### EDN Export
 
-### EDN Export (Database Graphs)
+**Best For:** A readable, editable dump. The in-app description warns: "Exports to a readable and editable .edn file. Don't rely on this as a primary backup." ([`en.edn:635`](../../../../../src/resources/dicts/en.edn)).
 
-**Best For:** Database graph backups, version control
+**Export:** ⋯ → Export graph → **Export EDN file** (not on mobile). The graph is validated first and the export aborts with "Graph validation failed" if validation reports errors ([`handler/db_based/export.cljs:82-86`](../../../../../src/main/frontend/handler/db_based/export.cljs)). It then calls `build-export` with `:export-type :graph` ([`:87-90`](../../../../../src/main/frontend/handler/db_based/export.cljs)), which `build-export` maps to `build-graph-datoms-export` ([`deps/db/src/logseq/db/sqlite/export.cljs:1116-1117`](../../../../../deps/db/src/logseq/db/sqlite/export.cljs)).
 
-**Export:**
+**Import:** Import page → **EDN to DB graph**. The file must parse as EDN ("The given EDN file is not valid EDN. Please fix and try again.", [`en.edn:936`](../../../../../src/resources/dicts/en.edn)) and pass `sqlite-export/validate-export` before a new graph is created ([`handler/db_based/import.cljs:200-214`](../../../../../src/main/frontend/handler/db_based/import.cljs)).
 
-```markdown
-1. ⋯ → Export graph
-2. Format: EDN
-3. Save: my-graph-2026-01-22.edn
-```
-
-**Contents:**
-
-```clojure
-{:schema-version 65.16
- :pages [{:block/uuid #uuid "..."
-          :block/title "Page Title"
-          :block/properties {...}}]
- :blocks [...]
- :transactions [...]}
-```
-
-**Use Cases:**
-
-- Database graph backups
-- Restore specific version
-- RTC sync troubleshooting
-- Schema migration testing
-
-**Import EDN:**
-
-```markdown
-1. ⋯ → Import
-2. Format: EDN
-3. Select .edn file
-4. Choose: Create new graph OR Import to existing
-```
-
----
+> Removed claim: earlier revisions showed the file's contents as `{:schema-version 65.16 :pages [...] :blocks [...] :transactions [...]}` with `:block/properties`, and offered "Create new graph OR Import to existing". That shape was invented, and the Import page only creates a new graph.
 
 ### Markdown Export
 
-**Best For:** Portability, publishing, other tools
+**Best For:** Reading pages outside Logseq. The label itself says "(no block properties)".
 
-**Export:**
+**Export:** ⋯ → Export graph → **Export as standard Markdown (no block properties)** (not in the native mobile app).
 
-```markdown
-1. ⋯ → Export graph
-2. Format: Markdown
-3. Options:
-   - Include assets: Yes/No
-   - Include journals: Yes/No
-   - Include pages: Yes/No
-4. Export
-```
+**Output structure:** one flat zip named `<graph>_markdown_<unix seconds>`, containing one `<page title>.md` file per page ([`handler/export/text.cljs:41-46`](../../../../../src/main/frontend/handler/export/text.cljs); file paths built at [`handler/export/common.cljs:44-48`](../../../../../src/main/frontend/handler/export/common.cljs)). There are no `pages/`, `journals/` or `assets/` folders and no export options — the function's docstring is "TODO: indent-style and remove-options" ([`text.cljs:39`](../../../../../src/main/frontend/handler/export/text.cljs)).
 
-**Output Structure:**
-
-```
-export-2026-01-22/
-├── pages/
-│   ├── Page 1.md
-│   ├── Page 2.md
-│   └── Projects___Alpha.md
-├── journals/
-│   └── 2026-01-22.md
-└── assets/
-    └── images/
-```
-
-**Markdown Format:**
-
-```markdown
-# Page Title
-
-- Block content
-  - Nested block
-  - property:: value
-
-## Another Section
-
-- More content
-```
-
-**Use Cases:**
-
-- Switch to other markdown tools
-- Static site generation (Hugo, Jekyll)
-- Version control (Git)
-- Sharing with non-Logseq users
-
----
+> Removed claim: earlier revisions listed "Include assets / Include journals / Include pages" options and a `pages/`, `journals/`, `assets/images/` output tree with `property:: value` lines. None of that is in the exporter.
 
 ### HTML Export
 
-**Best For:** Publishing, sharing, static websites
+**Best For:** Publishing a read-only site from selected pages.
 
-**Export:**
+**Export:** ⋯ → Export graph → **Export public pages** (desktop app only). The worker builds the HTML with `:thread-api/build-publishing-html`, and the desktop app writes `index.html` and the used assets with `exportPublishAssets` ([`handler/export.cljs:30-48`](../../../../../src/main/frontend/handler/export.cljs)).
 
-```markdown
-1. ⋯ → Export graph
-2. Format: HTML
-3. Options:
-   - Theme: Light/Dark/Auto
-   - Include search: Yes/No
-   - Include graph view: Yes/No
-4. Export
-```
+**Which pages are included:** if the graph config sets `:publishing/all-pages-public?` (or the older `:all-pages-public?`), the whole graph is exported; otherwise only pages whose `:logseq.property/publishing-public?` is `true`, plus what they directly depend on ([`deps/publishing/src/logseq/publishing/html.cljs:141-147`](../../../../../deps/publishing/src/logseq/publishing/html.cljs); [`deps/publishing/src/logseq/publishing/db.cljs:9-17`](../../../../../deps/publishing/src/logseq/publishing/db.cljs)).
 
-**Output:**
+This is the `deps/publishing` library, which "handles exporting the `frontend.publishing` single page application" (its README). It is separate from `deps/publish`, the "Shared library for page publish features" used by server-side page publishing.
 
-```
-export-html/
-├── index.html
-├── pages/
-│   ├── page1.html
-│   └── page2.html
-├── assets/
-│   ├── css/
-│   ├── js/
-│   └── images/
-└── graph.json (if graph view enabled)
-```
+> Removed claim: earlier revisions listed "Theme / Include search / Include graph view" options, a `pages/*.html` + `graph.json` output tree, and a `logseq/custom.css` customization step. None of these is read by the HTML export path above.
 
-**Hosting:**
+### OPML and PNG
 
-```bash
-# Deploy to Netlify/Vercel
-cd export-html
-netlify deploy --prod
+OPML and PNG exist only in the page/block `export-blocks` dialog ([`components/export.cljs:323`, `:333`](../../../../../src/main/frontend/components/export.cljs)), not as whole-graph exports.
 
-# Or GitHub Pages
-git init
-git add .
-git commit -m "Initial commit"
-git push -u origin main
-```
+### Debug Transit
 
-**Customization:**
-
-```css
-/* Custom CSS for HTML export */
-/* Add to logseq/custom.css before exporting */
-
-.page-title {
-  color: #2563eb;
-  font-size: 2rem;
-}
-
-.block-content {
-  line-height: 1.8;
-}
-```
+"Exports to a .transit file to send to us for debugging. Any sensitive data will be removed in the exported file." ([`en.edn:633`](../../../../../src/resources/dicts/en.edn)). The Import page's **Debug Transit** entry loads one into a new graph.
 
 ---
 
 ## Database Graph Operations
 
+### Backups
+
+**Desktop app:** automatic backups run hourly and keep 12 versions (`backup-interval-ms` = one hour, `automatic-backup-keep-versions` = 12, [`src/electron/electron/db.cljs:15-18`](../../../../../src/electron/electron/db.cljs); `run-auto-backup!` at [`:117`](../../../../../src/electron/electron/db.cljs)). They are written under the graph's `backup/` directory ([`src/main/logseq/db_worker/graph_backup.cljs:10`, `:39-47`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)), i.e. `~/logseq/graphs/<graph>/backup/` ([`frontend/config.cljs:326-335`](../../../../../src/main/frontend/config.cljs)). The Export dialog shows "Hourly backups are enabled for this graph" with a link that opens that folder ([`components/export.cljs:155-164`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:672`, `:675`](../../../../../src/resources/dicts/en.edn)).
+
+**Browser (desktop web, not mobile):** the Export dialog shows an auto-backup section ([`components/export.cljs:165-169`](../../../../../src/main/frontend/components/export.cljs)). After you choose a backup folder, `auto-db-backup!` backs up every hour ([`handler/export.cljs:287-299`](../../../../../src/main/frontend/handler/export.cljs)): it writes `db.sqlite` into that folder, moves the previous copy into a `backups/` subfolder, and keeps the latest 12 versioned files ([`handler/export.cljs:229-275`](../../../../../src/main/frontend/handler/export.cljs), [`:204-212`](../../../../../src/main/frontend/handler/export.cljs)).
+
 ### Export Database Graph
 
-**Full Export (EDN):**
+**Full export:** ⋯ → Export graph → **Export SQLite DB** or **Export both SQLite DB and assets**. The EDN export is readable but the app itself says not to rely on it as a primary backup.
 
-```markdown
-1. ⋯ → Export graph
-2. Format: EDN (recommended)
-3. Save location
-4. Verify file size (should be MB+)
-```
-
-**Partial Export (Markdown):**
-
-```markdown
-1. ⋯ → Export graph
-2. Format: Markdown
-3. Use for: Sharing, publishing
-4. Note: Loses database-specific features
-```
+**Partial export (Markdown):** ⋯ → Export graph → **Export as standard Markdown (no block properties)**, for reading outside Logseq. Properties are not included.
 
 ### Import to Database Graph
 
-**From EDN:**
+**From SQLite / zip / EDN:** Import page → the matching entry → enter a new graph name. The import always creates that new graph.
 
-```markdown
-1. Create new database graph
-2. ⋯ → Import
-3. Select: EDN file
-4. Wait for import (may take minutes for large graphs)
-5. Verify: Check schema version
-```
+**From Markdown:** only as a Logseq file graph, through **File to DB graph** (see [above](#from-a-logseq-file-graph-file-to-db)).
 
-**From Markdown:**
-
-```markdown
-1. Create file-based graph first
-2. Add markdown files
-3. Convert to database graph:
-   - ⋯ → Convert to database graph
-   - Confirm conversion
-   - Wait for processing
-```
+> Removed claim: "Create file-based graph first → ⋯ → Convert to database graph". File graphs cannot be opened ([`components/repo.cljs:320-323`](../../../../../src/main/frontend/components/repo.cljs)), so there is no open file graph to convert; the conversion path is the File to DB import.
 
 ### Migrate File-Based → Database
 
 **Process:**
 
 ```markdown
-Step 1: Backup current graph
+Step 1: Back up the file graph folder (copy it)
 
-- Export as JSON + Markdown
-- Copy entire graph folder
+Step 2: ⋯ → Import → File to DB graph
 
-Step 2: Create database graph
+- Select the file graph's root folder (it must contain logseq/config.edn)
+- Enter a name for the new DB graph
+- Choose tag and code-snippet options
 
-- File → New graph
-- Type: Database
-- Name: [Same as file-based]
+Step 3: Wait for the import and read the notifications
 
-Step 3: Import content
+- Ignored files, assets and properties
+- Invalid blocks
 
-- ⋯ → Import
-- Select: File-based graph folder
-- Wait for conversion
+Step 4: Verify in the new graph
 
-Step 4: Verify
-
-- Check page count
-- Verify assets loaded
-- Test queries
-- Check properties
+- Page count
+- Assets load
+- Tags and properties
 ```
 
 **What Changes:**
 
-| Feature         | File-Based     | Database          |
-| --------------- | -------------- | ----------------- |
-| **Storage**     | `.md` files    | `.db` file        |
-| **Properties**  | `key:: value`  | Native properties |
-| **Performance** | Slower (large) | Faster            |
-| **Sync**        | Git/cloud      | Logseq Sync       |
-| **Queries**     | Simple         | Advanced          |
+| Feature        | File-Based    | Database                                   |
+| -------------- | ------------- | ------------------------------------------ |
+| **Storage**    | `.md` files   | one `db.sqlite` plus `assets/`             |
+| **Properties** | `key:: value` | typed properties, added with `/Add property` |
+| **Tasks**      | `TODO`/`DOING` markers | the Status property (`/Todo`, `/Doing`, …) |
+
+([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); [`src/main/frontend/commands.cljs:354-358`](../../../../../src/main/frontend/commands.cljs); status values at [`deps/db/src/logseq/db/frontend/property.cljs:313-318`](../../../../../deps/db/src/logseq/db/frontend/property.cljs).)
+
+> Removed claim: earlier rows compared performance ("Slower/Faster"), sync ("Git/cloud" vs "Logseq Sync") and queries ("Simple/Advanced") with no source behind them.
 
 ---
 
 ## Automation
 
-### Batch Export Script
+### Command-line export and import
+
+The `cli/` package (installed as `logseq-cli.js`, [`cli/bin/dune`](../../../../../cli/bin/dune)) has graph export, import and backup commands:
+
+| Command | Options | Source |
+| ------- | ------- | ------ |
+| `graph export` | `--type edn\|sqlite` (required), `--file`, `--edn-options`, `--pretty-print` | [`cli/lib/cli_parse.ml:188-189`, `:872-891`](../../../../../cli/lib/cli_parse.ml) |
+| `graph import` | `--type edn\|sqlite` (required), `--input` (required) | [`cli_parse.ml:190`, `:893-902`](../../../../../cli/lib/cli_parse.ml) |
+| `graph backup create` / `restore` / `remove` | `--name` / `--src --dst` / `--src` | [`cli_parse.ml:184-187`](../../../../../cli/lib/cli_parse.ml) |
+
+The accepted `--type` values are exactly `edn` and `sqlite` ([`cli/lib/graph.ml:85-93`](../../../../../cli/lib/graph.ml)); anything else fails with "graph export --type must be edn or sqlite". `--graph` is a global option ([`cli_parse.ml:137-140`](../../../../../cli/lib/cli_parse.ml)).
+
+> **Unverified:** the script below was assembled from the option parser and was not run. Check the CLI's help output for how the binary is invoked on your system and where `--graph` goes.
 
 ```bash
 #!/bin/bash
-# auto-export.sh - Export all formats
+# auto-export.sh - export a DB graph as SQLite and EDN
 
 GRAPH_NAME="my-graph"
 DATE=$(date +%Y-%m-%d)
-BACKUP_DIR="$HOME/Backups/Logseq"
+BACKUP_DIR="$HOME/Backups/Logseq/$DATE"
+mkdir -p "$BACKUP_DIR"
 
-# Create backup directory
-mkdir -p "$BACKUP_DIR/$DATE"
-
-# Export JSON
-logseq-cli export \
-  --graph "$GRAPH_NAME" \
-  --format json \
-  --output "$BACKUP_DIR/$DATE/$GRAPH_NAME.json"
-
-# Export Markdown
-logseq-cli export \
-  --graph "$GRAPH_NAME" \
-  --format markdown \
-  --output "$BACKUP_DIR/$DATE/$GRAPH_NAME-md/"
-
-# Export EDN (if database graph)
-logseq-cli export \
-  --graph "$GRAPH_NAME" \
-  --format edn \
-  --output "$BACKUP_DIR/$DATE/$GRAPH_NAME.edn"
+logseq-cli --graph "$GRAPH_NAME" graph export --type sqlite --file "$BACKUP_DIR/$GRAPH_NAME.sqlite"
+logseq-cli --graph "$GRAPH_NAME" graph export --type edn --file "$BACKUP_DIR/$GRAPH_NAME.edn"
 
 echo "Export completed: $DATE"
 ```
@@ -660,25 +330,11 @@ echo "Export completed: $DATE"
 0 2 * * * /path/to/auto-export.sh >> ~/logseq-export.log 2>&1
 ```
 
+> Removed claim: earlier revisions used `logseq-cli export --format json|markdown` and `--namespace`, `--from/--to` and `--exclude-journals` flags. The CLI's export takes only `--type edn|sqlite` plus the options in the table above.
+
 ### Programmatic Export (Plugin)
 
-```typescript
-// Export via plugin API
-async function exportGraph() {
-  const graph = await logseq.App.getCurrentGraph()
-
-  // Export as JSON
-  await logseq.api.export_graph({
-    format: 'json',
-    path: `/backups/${graph.name}-${Date.now()}.json`,
-  })
-
-  console.log('Export complete')
-}
-
-// Register command
-logseq.App.registerCommand('export-backup', exportGraph)
-```
+> Removed claim: earlier revisions showed `logseq.api.export_graph({format, path})`. No `export_graph` (or `exportGraph`) exists in `libs/` or `src/main/`; the plugin API has no graph export call.
 
 ---
 
@@ -686,118 +342,51 @@ logseq.App.registerCommand('export-backup', exportGraph)
 
 ### Import Issues
 
-**Problem: Import fails with error**
+**Problem: "Import failed as the file 'logseq/config.edn' was not found for a Logseq graph."**
 
-**Solutions:**
+File to DB graph only accepts a Logseq file graph's root folder ([`imports.cljs:495-498`](../../../../../src/main/frontend/components/imports.cljs)). Select the folder that contains `logseq/`, not `pages/` or a folder from another app.
 
-```markdown
-1. Check file format
+**Problem: "Please specify another name as another graph with this name already exists!"**
 
-   - Verify .json/.edn/.md format
-   - Validate JSON structure
-   - Check file encoding (UTF-8)
+Every import creates a new graph; pick an unused name ([`en.edn:929`](../../../../../src/resources/dicts/en.edn)).
 
-2. Check file size
+**Problem: "Import ignored N files"**
 
-   - Large files (>100MB) may timeout
-   - Split into smaller chunks
-   - Import pages incrementally
+Only `.md`, `.markdown`, `.org`, `.js`, `.edn` and `.css` files (plus `assets/`) are read ([`imports.cljs:34-59`](../../../../../src/main/frontend/components/imports.cljs)). The JavaScript console lists what was skipped.
 
-3. Validate content
-   - Check for special characters
-   - Fix malformed markdown
-   - Remove invalid properties
-```
+**Problem: "Import ignored N properties"**
 
-**Problem: Missing pages after import**
+"To fix a property type, change the property value to the correct type and reimport the graph" ([`en.edn:933-934`](../../../../../src/resources/dicts/en.edn)).
 
-```markdown
-1. Check import log
+**Problem: "Import detected N invalid block(s)"**
 
-   - Look for errors/warnings
-   - Identify failed pages
+"These blocks may be buggy when you interact with them. See the javascript console for more." ([`en.edn:935`](../../../../../src/resources/dicts/en.edn)).
 
-2. Verify file names
+**Problem: an asset is missing after import**
 
-   - Check special characters
-   - Ensure proper encoding
-   - Fix Windows path issues
+Assets over 100 MB are skipped with "Skipped copying asset … because it exceeds the 100 MB limit." ([`en.edn:912`](../../../../../src/resources/dicts/en.edn)).
 
-3. Re-import missing pages
-   - Export individual pages
-   - Import one by one
-   - Check each import
-```
+**Problem: "The given EDN file is not valid EDN."**
 
-**Problem: Links broken after import**
-
-```markdown
-1. Fix link format
-   Before: [Link](file.md)
-   After: [[Link]]
-
-2. Update internal refs
-
-   - Remove .md extensions
-   - Fix namespaces (/ separator)
-   - Update block references
-
-3. Run link checker
-   - Search for broken links
-   - Update systematically
-```
+The EDN import reads the whole file with `edn/read-string` and stops on a parse error, or on a `validate-export` error, before creating the graph ([`handler/db_based/import.cljs:200-214`](../../../../../src/main/frontend/handler/db_based/import.cljs)).
 
 ### Export Issues
 
-**Problem: Export file too large**
+**Problem: EDN export fails**
 
-```bash
-# Export subsets
-## Export specific namespace
-logseq-cli export --namespace "Projects/Work"
+The EDN export validates the graph first and throws "Graph validation failed" when validation reports errors ([`handler/db_based/export.cljs:82-86`](../../../../../src/main/frontend/handler/db_based/export.cljs)). Use **Export SQLite DB** for a backup in the meantime.
 
-## Export date range
-logseq-cli export --from 2026-01-01 --to 2026-01-22
+**Problem: HTML export is missing pages**
 
-## Exclude journals
-logseq-cli export --exclude-journals
-```
+Only pages with `publishing-public?` set to true are exported unless `:publishing/all-pages-public?` is set ([`deps/publishing/src/logseq/publishing/html.cljs:141-147`](../../../../../deps/publishing/src/logseq/publishing/html.cljs)).
 
-**Problem: HTML export missing assets**
+**Problem: the Markdown export ignores my export options**
 
-```markdown
-1. Check asset paths
+The graph-level Markdown export has no options wired in (docstring "TODO: indent-style and remove-options", [`handler/export/text.cljs:39`](../../../../../src/main/frontend/handler/export/text.cljs)). The text options apply only to the page/block export dialog.
 
-   - Ensure relative paths
-   - Fix broken image links
+**Problem: there is no "Export as JSON" / "Export to Roam"**
 
-2. Re-export with assets
-
-   - Enable "Include assets"
-   - Verify output folder
-
-3. Manual copy
-   - Copy assets/ folder
-   - Update HTML references
-```
-
-**Problem: EDN export fails (database graph)**
-
-```markdown
-1. Check database integrity
-
-   - Run integrity check
-   - Fix validation errors
-
-2. Export as JSON instead
-
-   - More forgiving format
-   - Can convert to EDN
-
-3. Export subsets
-   - Export pages individually
-   - Combine later
-```
+Correct — neither exists. The Roam JSON exporter is inside a `(comment …)` form ([`handler/export.cljs:180`](../../../../../src/main/frontend/handler/export.cljs)).
 
 ---
 
@@ -807,24 +396,21 @@ logseq-cli export --exclude-journals
 
 **Checklist:**
 
-- [ ] Backup current graph
-- [ ] Test on small sample first
-- [ ] Verify format compatibility
+- [ ] Back up the current graph (Export SQLite DB, or SQLite + assets)
+- [ ] Test on a small sample first
 - [ ] Check available disk space
-- [ ] Close other applications
-- [ ] Update Logseq to latest
+- [ ] Update Logseq to the latest release
 
 ### During Migration
 
 **Steps:**
 
-1. Export from source (JSON + Markdown)
-2. Test import on sample
-3. Full import to new graph
-4. Verify all content present
-5. Fix broken links/assets
-6. Test queries and features
-7. Keep old graph for 30 days
+1. Copy the file graph folder
+2. Run File to DB graph on a copy first
+3. Read the import notifications
+4. Verify all content is present
+5. Fix ignored properties and reimport if needed
+6. Keep the old folder until you are satisfied
 
 ### After Import
 
@@ -834,25 +420,18 @@ logseq-cli export --exclude-journals
 1. Check page count
 
    - Compare source vs. destination
-   - List missing pages
 
 2. Verify assets
 
-   - Check images load
-   - Test PDF attachments
-   - Verify videos play
+   - Images load
+   - PDF attachments open
+   - Nothing was skipped for size (100 MB limit)
 
 3. Test features
 
    - Block references work
-   - Queries execute
+   - Queries return results
    - Templates insert
-   - Plugins compatible
-
-4. Performance check
-   - Graph loads quickly
-   - Search responsive
-   - Sync works (if database)
 ```
 
 ---
@@ -861,18 +440,8 @@ logseq-cli export --exclude-journals
 
 **Complete Your Migration:**
 
-1. Choose import/export method
+1. Choose the import or export entry
 2. Test on sample data
-3. Execute full migration
+3. Run the full import or export
 4. Verify and fix issues
 5. Document your process
-
-**Related Guides:**
-
-- [Backup Strategies](./backup-strategies.md)
-- [File vs Database](../../explanation/concepts/file-vs-database.md)
-- [Graph Migration](./migration-guide.md)
-
----
-
-**Questions?** Join [Logseq Discord](https://discord.gg/KpN4eHY) or visit [discuss.logseq.com](https://discuss.logseq.com).
