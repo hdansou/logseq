@@ -3,7 +3,9 @@ title: 'Installation Guide'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-05-30'
+last-verified: '2026-09-11'
+verified-against: 'be800f1711'
+review-status: audited
 platform: 'All'
 related-docs:
   - 'tutorials/getting-started/02-first-graph.md'
@@ -11,7 +13,7 @@ related-docs:
 
 # Installation Guide
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-11
 
 Welcome to Logseq! This tutorial will guide you through installing Logseq on your device in under 10 minutes.
 
@@ -23,34 +25,41 @@ Logseq is a local-first, privacy-focused knowledge management and note-taking ap
 
 ### Desktop (Windows, macOS, Linux)
 
-#### Option 1: Download from Website (Recommended)
+#### Option 1: Download a Release Build
 
-1. Visit [https://logseq.com/downloads](https://logseq.com/downloads)
-2. Click the download button for your operating system
-3. Wait for the installer to download
+Desktop builds are published to **GitHub Releases** for the `logseq/logseq` repository ([`resources/electron-builder.yml:44-46`](../../../../../resources/electron-builder.yml)). The release workflow currently publishes the **beta** channel there; the `stable` option is commented out ([`.github/workflows/build-desktop-release.yml:13-14`](../../../../../.github/workflows/build-desktop-release.yml)).
+
+1. Visit [https://github.com/logseq/logseq/releases](https://github.com/logseq/logseq/releases)
+2. Download the file for your operating system and CPU (`x64` or `arm64` builds exist for all three platforms)
+3. Wait for the download to finish
+
+> **Unverified:** A download page at `https://logseq.com/downloads`. No build or workflow file publishes there.
 
 **Installation Steps:**
 
 **macOS:**
 
-- Open the downloaded `.dmg` file
+- Open the downloaded `.dmg` file (a `.zip` is also built) ([`resources/electron-builder.yml:55-60`](../../../../../resources/electron-builder.yml))
 - Drag Logseq to your Applications folder
-- Open Logseq from Applications (you may need to approve it in System Preferences → Security & Privacy)
+- Open Logseq from Applications
 
 **Windows:**
 
-- Run the downloaded `.exe` installer
-- Follow the installation wizard
+- Run the downloaded installer, `Logseq-win-<arch>-<version>-nsis.exe` (a `.zip` is also built)
+- The installer is not one-click: it walks you through the steps and lets you choose the install folder (`oneClick: false`, `allowToChangeInstallationDirectory: true`, [`resources/electron-builder.yml:74-77`](../../../../../resources/electron-builder.yml))
 - Launch Logseq from the Start Menu or Desktop shortcut
 
 **Linux:**
 
-- Download the `.AppImage` file
-- Make it executable: `chmod +x Logseq-linux-x64-*.AppImage`
-- Run it: `./Logseq-linux-x64-*.AppImage`
-- For system-wide installation, consider using your distribution's package manager if available
+- Download the `.AppImage` file (a `.zip` is also built) ([`resources/electron-builder.yml:81-87`](../../../../../resources/electron-builder.yml))
+- Make it executable: `chmod +x Logseq-linux-*.AppImage`
+- Run it: `./Logseq-linux-x64-*.AppImage` (on ARM: `./Logseq-linux-arm64-*.AppImage`, [`.github/workflows/build-desktop-release.yml:324`](../../../../../.github/workflows/build-desktop-release.yml))
 
 #### Option 2: Package Managers
+
+The release workflow has an optional job that publishes to the **Snap Store** (`publish-linux-snap`, [`.github/workflows/build-desktop-release.yml:880-927`](../../../../../.github/workflows/build-desktop-release.yml)). It runs only when a release is dispatched with `publish-linux-stores` set.
+
+> **Unverified:** The commands below. No build or workflow file publishes to Homebrew, Chocolatey, Scoop or Flathub, so these packages, if they exist, are maintained outside this repository.
 
 **macOS (Homebrew):**
 
@@ -81,74 +90,65 @@ flatpak install flathub com.logseq.Logseq
 
 #### iOS (iPhone & iPad)
 
-1. Open the **App Store**
-2. Search for **"Logseq"**
-3. Tap **Get** → **Install**
-4. Open Logseq from your home screen
+The iOS release workflow builds the app and uploads it to **TestFlight** ([`.github/workflows/build-ios-release.yml:1`](../../../../../.github/workflows/build-ios-release.yml)).
 
-**Requirements:** iOS 15.0 or later
+> **Unverified:** An App Store listing. Nothing in the repository shows App Store distribution.
 
-> **Removed:** iOS 14 support. The iOS project now targets iOS 15.0 (`ios/App/Podfile`).
+**Requirements:** iOS 16.6 or later. The `Logseq` app target sets `IPHONEOS_DEPLOYMENT_TARGET = 16.6` in both its Debug and Release configurations ([`ios/App/App.xcodeproj/project.pbxproj:674`](../../../../../ios/App/App.xcodeproj/project.pbxproj) and `:707`). The `platform :ios, '15.0'` in [`ios/App/Podfile:3`](../../../../../ios/App/Podfile) applies to the CocoaPods dependencies, not the app.
 
 #### Android
 
-1. Open the **Google Play Store**
-2. Search for **"Logseq"**
-3. Tap **Install**
-4. Open Logseq from your app drawer
+The Android workflow builds a signed APK named `Logseq-android-<version>.apk` ([`.github/workflows/build-android.yml:157-160`](../../../../../.github/workflows/build-android.yml)). The desktop release job can attach that APK to the GitHub release ([`.github/workflows/build-desktop-release.yml:790`](../../../../../.github/workflows/build-desktop-release.yml)).
 
-**Requirements:** Android 7.0 (API 24) or later
+> **Unverified:** A Google Play Store listing. Nothing in the repository shows Play Store distribution.
 
-> **Removed:** Android 6.0 support. Android now uses `minSdkVersion = 24` (`android/variables.gradle`).
+**Requirements:** Android 7.0 (API 24) or later (`minSdkVersion = 24`, [`android/variables.gradle:2`](../../../../../android/variables.gradle)).
 
 ### Web Version
 
 Logseq also offers a web version for quick access without installation:
 
-1. Visit [https://logseq.com/app](https://logseq.com/app)
-2. Your data stays in your browser's local storage
-3. **Note:** Limited features compared to desktop; best for quick access
+1. Visit [https://app.logseq.com/](https://app.logseq.com/) ([`README.md:76`](../../../../../README.md))
+2. Your graph is stored in the browser's Origin Private File System (OPFS), not in local storage. Logseq warns that the browser may clear OPFS storage when disk space runs low ([`src/main/frontend/persist_db/browser.cljs:119`](../../../../../src/main/frontend/persist_db/browser.cljs))
+
+> **Unverified:** "Limited features compared to desktop." No source defines which features differ.
 
 ## First Launch
 
-When you first open Logseq, you'll see a welcome screen with setup options:
+When you first open Logseq there is no setup screen and nothing to choose:
 
-1. **Choose Your Graph Storage:**
+1. **A graph is created for you.** If no graphs exist yet, Logseq creates a database graph named `Demo` and opens it ([`src/main/frontend/handler.cljs:189-190`](../../../../../src/main/frontend/handler.cljs); name from [`src/main/frontend/config.cljs:288`](../../../../../src/main/frontend/config.cljs)). It also creates today's journal page and opens the Journals view ([`src/main/frontend/handler/repo.cljs:169-176`](../../../../../src/main/frontend/handler/repo.cljs)). The `Demo` graph does not appear in the **All graphs** list ([`src/main/frontend/components/repo.cljs:319`](../../../../../src/main/frontend/components/repo.cljs)).
+2. **All graphs are database graphs.** You can't create or open a folder of Markdown files. The graph list only shows DB graphs ([`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)), and existing Markdown notes come in through **Import** (next tutorial).
+3. **Language:** First launch doesn't ask for a language. You can change it later under **Settings** → **Language** ([`src/main/frontend/components/settings.cljs:344`](../../../../../src/main/frontend/components/settings.cljs), [`:878`](../../../../../src/main/frontend/components/settings.cljs)).
 
-   - **Local Folder** (File-based): Store notes as markdown files in a folder
-   - **Database Mode** (Recommended for new users): Store notes in a local database
-
-2. **Select Language:** Choose your preferred interface language
-
-3. **Quick Tour:** Optionally take a guided tour of Logseq's interface
+> **Removed:** The "Choose Your Graph Storage" (Local Folder vs Database Mode) and "Quick Tour" first-launch steps. Startup creates the `Demo` DB graph without prompting, and neither the components nor `src/resources/dicts/en.edn` contain a tour.
 
 ## System Requirements
 
 ### Desktop
 
-- **OS:** Windows 10+, recent macOS, or modern Linux distribution
-- **RAM:** 4GB minimum, 8GB recommended
-- **Storage:** 500MB for app + storage for your graphs
-- **Display:** 1280x720 minimum resolution
-
-> **Removed:** The explicit macOS 10.15 floor. Current desktop build config (`resources/electron-builder.yml`) does not declare a minimum macOS version.
+> **Unverified:** OS versions, RAM, disk space and display resolution. The desktop build config ([`resources/electron-builder.yml`](../../../../../resources/electron-builder.yml)) declares no minimum OS, memory, storage or display requirement.
 
 ### Mobile
 
-- **iOS:** 15.0 or later
-- **Android:** 7.0 (API 24) or later
-- **Storage:** 200MB for app + storage for your graphs
+- **iOS:** 16.6 or later ([`ios/App/App.xcodeproj/project.pbxproj:674`](../../../../../ios/App/App.xcodeproj/project.pbxproj))
+- **Android:** 7.0 (API 24) or later ([`android/variables.gradle:2`](../../../../../android/variables.gradle))
+
+> **Unverified:** Storage needed for the app. No source declares it.
 
 ## Findings: New Capabilities
 
-- Mobile platform baselines moved forward in source config: iOS now targets 15.0 (`ios/App/Podfile`) and Android now targets API 24 (`android/variables.gradle`).
-- The project is on Capacitor 8 across mobile dependencies (`package.json`), aligning with current iOS/Android platform support.
+- Mobile minimums: the iOS app target requires iOS 16.6 ([`ios/App/App.xcodeproj/project.pbxproj:674`](../../../../../ios/App/App.xcodeproj/project.pbxproj)), and Android targets API 24 ([`android/variables.gradle:2`](../../../../../android/variables.gradle)).
+- The mobile apps use Capacitor 8 (`"@capacitor/core": "^8.3.1"`, [`package.json:130`](../../../../../package.json)).
+- Desktop builds exist for both `x64` and `arm64` on macOS, Windows and Linux ([`.github/workflows/build-desktop-release.yml:669`](../../../../../.github/workflows/build-desktop-release.yml) lists the six build jobs).
 
 ## Troubleshooting
 
+> **Unverified:** The steps in this section. They describe operating-system dialogs and packages, not Logseq code, so the Logseq source can't confirm them.
+
 ### macOS: "App can't be opened because it is from an unidentified developer"
 
-1. Go to **System Preferences → Security & Privacy**
+1. Go to **System Settings → Privacy & Security**
 2. Click **Open Anyway** next to the Logseq warning
 3. Confirm by clicking **Open**
 
@@ -178,5 +178,5 @@ Now that Logseq is installed, let's create your first graph:
 
 - [Logseq Official Website](https://logseq.com)
 - [Logseq GitHub Releases](https://github.com/logseq/logseq/releases)
-- [Community Discord](https://discord.gg/logseq)
-- [Community Forum](https://discuss.logseq.com)
+- [Community Discord](https://discord.gg/KpN4eHY) (invite link from [`README.md:32`](../../../../../README.md))
+- [Community Forum](https://discuss.logseq.com) ([`src/main/frontend/components/container.cljs:254`](../../../../../src/main/frontend/components/container.cljs))
