@@ -229,7 +229,7 @@ Tag links have the class `tag`. Their `data-ref` is the tag title in lower case,
 }
 ```
 
-DB graphs render properties in `div.ls-properties-area`, with the class `ls-page-properties` on pages and `ls-block-properties` on blocks ([`src/main/frontend/components/property.cljs:972-975`](../../../../../src/main/frontend/components/property.cljs)). The older `.block-properties` selector still has a stylesheet rule ([`src/main/frontend/components/block.css:939`](../../../../../src/main/frontend/components/block.css)), but no DB graph markup uses that class.
+DB graphs render properties in `div.ls-properties-area`, with the class `ls-page-properties` on pages and `ls-block-properties` on blocks ([`src/main/frontend/components/property.cljs:972-975`](../../../../../src/main/frontend/components/property.cljs)). The older `.block-properties` selector still has a stylesheet rule ([`src/main/frontend/components/block.css:939`](../../../../../src/main/frontend/components/block.css)), but the app's DB graph markup doesn't use that class. Published pages do: the publish renderer emits `div.block-properties` and `section.page-properties` ([`deps/publish/src/logseq/publish/render.cljs:1026`](../../../../../deps/publish/src/logseq/publish/render.cljs), [`:1250`](../../../../../deps/publish/src/logseq/publish/render.cljs)), so style those in `publish.css`, not `custom.css`.
 
 ---
 
