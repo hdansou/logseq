@@ -2,7 +2,7 @@
 title: 'File vs Database Graphs'
 description: 'Understanding the differences between file-based and database-backed graphs in Logseq'
 status: stable
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 category: concepts
@@ -102,7 +102,7 @@ Your knowledge is stored in a SQLite database. Graphs live under `~/logseq/graph
 ```
 ~/logseq/graphs/my-graph/     # note: the on-disk dir name has NO logseq_db_ prefix
 ├── db.sqlite                 # main database (PRAGMA journal_mode=WAL at open)
-├── backups/
+├── backup/                   # automatic desktop backups
 └── assets/
     └── image.png
 ```
@@ -111,8 +111,11 @@ The `logseq_db_` prefix belongs to the **repo name** the app uses internally, no
 directory. `repo->encoded-graph-dir-name` strips it before building the path
 ([`deps/common/src/logseq/common/graph_dir.cljs:40-74`](../../../../../deps/common/src/logseq/common/graph_dir.cljs)),
 and the full DB path is `<graphs-dir>/<encoded-dir-name>/db.sqlite`
-([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); backups
-directory at `:35-41`). WAL is set at
+([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs)).
+Automatic desktop backups go to `<graph>/backup/`
+([`src/main/logseq/db_worker/graph_backup.cljs:10`](../../../../../src/main/logseq/db_worker/graph_backup.cljs),
+[`src/main/frontend/config.cljs:334-336`](../../../../../src/main/frontend/config.cljs)). The
+`get-db-backups-path` helper at `sqlite.cljs:35-38` builds a `backups/` path, but only tests call it. WAL is set at
 [`src/main/frontend/worker/db_core.cljs:588`](../../../../../src/main/frontend/worker/db_core.cljs).
 
 Data is stored as entities with typed attributes:
