@@ -176,6 +176,10 @@ review candidate — verify against source, then add if still true.
       `config-edn.md` now that only DB graphs open. Both were validated against `be800f1711`
       and merged into `config-edn.md`, which is DB-only and audited in full. The duplicate was
       deleted and its links retargeted (2026-09-11).
+- [x] Resolve duplicate pages: `how-to/backup/backup-restore.md` duplicated the audited
+      `how-to/organization/backup-strategies.md`. It was validated against `be800f1711` and
+      its verified content merged into `backup-strategies.md`. The duplicate was deleted and its
+      links retargeted (2026-09-11).
 - [x] Triage the **257 pre-existing broken links** found by `check_links.py` (none caused by the
       merge). The write-up is `LINK_TRIAGE.md` (`d0b5f33e6d`); the count was 66 on 2026-09-11.
 - [x] Regenerate `TASK_LIST.md` (106 docs: 38 verified this pass, 68 not)

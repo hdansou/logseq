@@ -1,898 +1,320 @@
 ---
 title: 'Asset Management in Logseq'
 status: '🟢 Stable'
-version: 'Since v0.5.0'
+version: 'DB graph schema 65.33'
 quadrant: 'How-To Guide'
-lastVerified: '2026-09-09'
+platform: 'Desktop + Web + Mobile'
+lastVerified: '2026-09-11'
 verifiedAgainst: 'be800f1711'
-reviewStatus: merged-not-fully-audited
-verifiedScope: 'Remote Graphs (RTC Sync) section only'
-platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
+reviewStatus: audited
 related-docs:
   - '../../reference/features/asset-sync.md'
   - '../multimedia/video-embed.md'
   - '../../reference/database/schema-overview.md'
   - '../../tutorials/getting-started/03-basic-editing.md'
+  - '../organization/backup-strategies.md'
 ---
 
 # Asset Management in Logseq
 
-> **Last revised:** 2026-05-30
+This guide shows you how to add, view, resize, find, delete and back up assets in a Logseq DB graph. Assets are files you attach to a graph: images, PDFs, audio, video and any other file.
 
-## Overview
+In a DB graph every asset is a **block** tagged `Asset`, and its file is stored as `assets/<block uuid>.<extension>` in the graph folder. The block holds the title and metadata. The file holds the bytes.
 
-Assets are files embedded in a graph: images, PDFs, videos, audio, and other documents. The current implementation resolves asset links by file type and platform, and it supports both file-based graphs and DB graphs.
-
-**Common entry points**:
-
-- Drag and drop a file into a block.
-- Paste an image from the clipboard.
-- Use the asset upload command from the editor UI.
-
-## Findings: New Capabilities
-
-- Asset links now resolve inline images, inline audio/video, PDF viewer links, and generic clickable file links from the same rendering path.
-- Desktop asset aliases are supported through Settings > Assets, with `@alias` directories mapped to real folders.
-- Remote asset sync writes asset bytes through db-sync handlers and records `:logseq.property.asset/remote-metadata` after a successful upload; encryption only applies when E2EE is enabled.
-
-## Asset Rendering
-
-The current block renderer chooses the presentation from the resolved extension.
-
-- Images render inline.
-- PDFs open the PDF viewer.
-- Audio and video use inline media elements when the extension matches the configured media lists.
-- Other files render as clickable asset links.
-
-> **Removed:** the earlier blanket claim that every asset behaves like an inline preview. The renderer is extension-based, and non-media assets remain plain links.
-
-## Storage Model
-
-### File-Based Graphs
-
-Files live under the graph's `assets/` directory.
-
-**Typical layout**:
-
-```text
-/path/to/graph/
-  ├── pages/
-  ├── assets/
-  │   ├── image-1_1234567890.png
-  │   ├── document_abcdef.pdf
-  │   └── video-demo_ghijkl.mp4
-  └── logseq/
-```
-
-### DB Graphs
-
-DB graphs represent assets as `:logseq.class/Asset` blocks. The current class schema requires only these properties:
-
-```clojure
-{:block/uuid "12345678-1234-1234-1234-123456789abc"
- :block/tags [:logseq.class/Asset]
- :logseq.property.asset/type "png"
- :logseq.property.asset/size 524288
- :logseq.property.asset/checksum "sha256:abcd..."}
-```
-
-Additional asset-related properties exist in the built-in property registry and are used by rendering or sync flows:
-
-- `:logseq.property.asset/external-url`
-- `:logseq.property.asset/external-file-name`
-- `:logseq.property.asset/width`
-- `:logseq.property.asset/height`
-- `:logseq.property.asset/remote-metadata`
-- `:logseq.property.asset/last-visit-page`
-- `:logseq.property.asset/resize-metadata`
-
-> **Removed:** the older example that showed `:logseq.property.asset/path` and `:logseq.property.asset/created-at` is not aligned with the current asset class schema.
-
-## Upload and Sync
-
-### Size Limit
-
-Uploads are capped at 100 MB per asset in both the frontend and db-sync code paths.
-
-### Remote Graph Sync
-
-When db-sync is enabled, the current flow reads the local asset bytes, optionally encrypts them if the graph uses E2EE, and uploads them to the sync bucket with the graph id, asset UUID, and file type in the object path.
-
-After a successful upload, the asset block is updated with remote metadata so the graph knows the asset has a synced remote copy.
-
-> **Removed:** the earlier description of remote graphs as a single generic "encrypted cloud storage" feature was too broad. The implementation is specifically asset-op driven and only encrypts when E2EE is on.
-
-## Asset Aliases
-
-Asset aliases are a desktop-only feature.
-
-1. Open Settings > Assets.
-2. Enable Asset Aliases.
-3. Add a directory and assign it an alias name.
-
-The renderer can then resolve `@alias` paths to the configured directory.
-
-## Troubleshooting
-
-- If an asset breaks, first check the file still exists in `assets/` and the filename matches exactly.
-- If a remote asset does not load on another device, check whether the asset block has `:logseq.property.asset/remote-metadata` and whether the graph is syncing.
-- If a PDF does not open in the viewer, confirm the extension is actually `.pdf` and the file is not corrupted.
-
-## Best Practices
-
-- Prefer relative asset links over absolute filesystem paths.
-- Keep large media out of the graph when an external URL is acceptable.
-- Use aliases for shared desktop-only asset directories.
-- Keep filenames stable after publishing or sharing a graph.
-
-## Code References
-
-- [src/main/frontend/components/block.cljs](../../../../../src/main/frontend/components/block.cljs) - current asset rendering logic
-- [src/main/frontend/handler/assets.cljs](../../../../../src/main/frontend/handler/assets.cljs) - asset path resolution and size checks
-- [src/main/frontend/worker/sync/assets.cljs](../../../../../src/main/frontend/worker/sync/assets.cljs) - db-sync asset upload and remote metadata updates
-- [deps/db/src/logseq/db/frontend/class.cljs](../../../../../deps/db/src/logseq/db/frontend/class.cljs) - current `:logseq.class/Asset` schema
-- [deps/db/src/logseq/db/frontend/property.cljs](../../../../../deps/db/src/logseq/db/frontend/property.cljs) - built-in asset properties
-- [deps/db/src/logseq/db/frontend/asset.cljs](../../../../../deps/db/src/logseq/db/frontend/asset.cljs) - checksum and asset utility helpers
+For link syntax, the full format lists and what sync replicates, see [Assets: Link Syntax, File Types, and Sync](../../reference/features/asset-sync.md).
 
 ---
-title: 'Asset Management in Logseq'
-status: '🟢 Stable'
-version: 'Since v0.5.0'
-quadrant: 'How-To Guide'
-platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android)'
-related-docs:
-  - '../multimedia/video-embed.md'
-  - '../../reference/schema/built-in-classes.md#logseqclassasset'
-  - '../../tutorials/getting-started/basic-editing.md'
----
-
-# Asset Management in Logseq
-
-> **Last revised:** 2026-03-10
-
-## Overview
-
-Assets are files embedded in your Logseq graph — images, PDFs, videos, audio, and other documents. Logseq provides comprehensive asset management features including upload, storage, synchronization, and organization.
-
-**Asset Types**:
-
-- 🖼️ Images (PNG, JPG, GIF, SVG, WebP)
-- 📄 PDFs (with annotation support)
-- 🎥 Videos (MP4, WebM, MOV)
-- 🎵 Audio (MP3, WAV, OGG)
-- 📎 Files (any file type)
-
-**Storage**:
-
-- **File-based graphs**: `assets/` folder in graph directory
-- **Database graphs**: `:logseq.class/Asset` blocks with metadata
-- **Remote graphs**: Encrypted cloud storage with RTC sync
 
 ## Quick Start
 
-### Upload an Image
+### Add a file
 
-**Drag & Drop**:
+| Method | How | Source |
+| ------ | --- | ------ |
+| **Slash command** | Type `/Upload an asset` ("Upload file types like image, PDF, DOCX, etc.") and pick a file | [`en.edn:568-569`](../../../../../src/resources/dicts/en.edn); [`commands.cljs:335-338`](../../../../../src/main/frontend/commands.cljs); [`components/editor.cljs:495-504`](../../../../../src/main/frontend/components/editor.cljs) |
+| **Paste** | Paste a file or screenshot while editing a block | [`handler/paste.cljs:272-281`, `:298-300`](../../../../../src/main/frontend/handler/paste.cljs) |
+| **Drag and drop** | Drop files onto a block | [`components/block/drop.cljs:12-29`](../../../../../src/main/frontend/components/block/drop.cljs) |
+| **Asset tag page** | Open the **Asset** tag page, click its upload button, and pick files in the **Add assets** dialog | [`components/objects.cljs:79-92`](../../../../../src/main/frontend/components/objects.cljs); [`components/views.cljs:1964-1976`](../../../../../src/main/frontend/components/views.cljs); [`en.edn:69`](../../../../../src/resources/dicts/en.edn) |
+| **Mobile camera** | Tap **Photo** in the editor toolbar to take or choose a photo | [`src/main/mobile/components/editor_toolbar.cljs:141-149`](../../../../../src/main/mobile/components/editor_toolbar.cljs); [`frontend/mobile/camera.cljs:32-41`, `:61-72`](../../../../../src/main/frontend/mobile/camera.cljs); [`en.edn:1059`](../../../../../src/resources/dicts/en.edn) |
 
-1. Drag image file from file manager
-2. Drop onto any block
-3. Image automatically uploaded to `assets/`
-4. Markdown link inserted: `![](../assets/image.png)`
+The file picker has no type filter, so any file with an extension is accepted ([`components/editor.cljs:498-504`](../../../../../src/main/frontend/components/editor.cljs)).
 
-**Copy-Paste**:
+### What happens when you add a file
 
-1. Copy image from clipboard (screenshot, web, etc.)
-2. Click into a block
-3. Paste (Cmd+V / Ctrl+V)
-4. Image uploaded automatically
+Every method ends in `db-based-save-assets!` → `new-asset-block` ([`src/main/frontend/handler/editor.cljs:1760-1869`](../../../../../src/main/frontend/handler/editor.cljs)):
 
-**File Picker**:
+1. **Duplicate check.** Logseq computes the file's SHA-256 checksum ([`handler/assets.cljs:186-189`](../../../../../src/main/frontend/handler/assets.cljs); [`deps/db/src/logseq/db/frontend/asset.cljs:12-19`](../../../../../deps/db/src/logseq/db/frontend/asset.cljs)). If an asset with the same checksum exists, nothing is added and you see "Asset exists already, title: {1}, node reference: [[{2}]]" ([`editor.cljs:1770-1778`](../../../../../src/main/frontend/handler/editor.cljs); [`en.edn:81`](../../../../../src/resources/dicts/en.edn)). The file name does not matter.
+2. **Checks.** A file with no extension is rejected ("File doesn't have a valid ext."). A file over 100 MiB shows "Asset size shouldn't be larger than 100M" ([`editor.cljs:1781-1789`](../../../../../src/main/frontend/handler/editor.cljs); [`handler/assets.cljs:14-17`](../../../../../src/main/frontend/handler/assets.cljs); [`en.edn:109`](../../../../../src/resources/dicts/en.edn)).
+3. **File.** The bytes are written to `assets/<uuid>.<ext>` ([`editor.cljs:1790-1793`](../../../../../src/main/frontend/handler/editor.cljs)).
+4. **Block.** A block is created with the tag `Asset`, a title and the properties below ([`editor.cljs:1794-1802`](../../../../../src/main/frontend/handler/editor.cljs)). The title is the file name without its extension. A pasted file named `image` (a typical screenshot) gets the current date and time as its title instead ([`editor.cljs:1765-1769`](../../../../../src/main/frontend/handler/editor.cljs)).
+5. **Placement.** The new block goes next to the block you are editing (replacing it if it is empty), otherwise at the end of today's journal ([`editor.cljs:1819-1864`](../../../../../src/main/frontend/handler/editor.cljs)).
 
-1. Type `/Upload an image`
-2. Select file from dialog
-3. Image inserted
+> **Note:** The extension check throws inside the upload promise and is only logged to the console ([`editor.cljs:1883-1885`](../../../../../src/main/frontend/handler/editor.cljs)). If an extensionless file seems to do nothing, that is why. Rename it with an extension.
 
----
-
-## Adding Assets
-
-### Images
-
-**Markdown Syntax**:
-
-```markdown
-![Image description](../assets/my-image.png)
-```
-
-**With Properties**:
-
-```markdown
-![Diagram](../assets/diagram.png){:width 600 :height 400}
-```
-
-**External Image URL**:
-
-```markdown
-![Logo](https://example.com/logo.png)
-```
-
-**Result**: Rendered image inline in block
-
-### PDFs
-
-**PDF Link**:
-
-```markdown
-![Document](../assets/report.pdf)
-```
-
-**Result**: Opens PDF viewer with annotation tools (desktop only)
-
-**See**: [PDF Reference Documentation](../../reference/features/pdf-annotations.md)
-
-### Videos
-
-**Local Video**:
-
-```markdown
-![Demo](../assets/demo.mp4)
-```
-
-**YouTube**:
-
-```markdown
-{{video https://www.youtube.com/watch?v=VIDEO_ID}}
-```
-
-**See**: [Video Embedding Guide](../multimedia/video-embed.md)
-
-### Audio Files
-
-**Audio Link**:
-
-```markdown
-![Podcast Episode](../assets/podcast.mp3)
-```
-
-**Result**: Audio player with controls
-
-### Generic Files
-
-**Any File Type**:
-
-```markdown
-![Spreadsheet](../assets/data.xlsx)
-```
-
-**Result**: Download link (if browser can't display)
+> Removed claim: "Markdown link inserted: `![](../assets/image.png)`". Adding a file creates an asset block, not a Markdown link. Also removed: the `/Upload an image` command (the command is **Upload an asset**) and "Spaces replaced with hyphens / `my-image_<timestamp>.png`" naming, which was file-graph behaviour.
 
 ---
 
 ## Asset Storage
 
-### File-Based Graphs
+### Where files live
 
-**Storage Location**:
+| Platform | Location | Source |
+| -------- | -------- | ------ |
+| Desktop | `~/logseq/graphs/<graph folder>/assets/<uuid>.<ext>` | [`src/main/frontend/fs.cljs:118-126`](../../../../../src/main/frontend/fs.cljs); [`deps/common/src/logseq/common/config.cljs:55-56`](../../../../../deps/common/src/logseq/common/config.cljs) |
+| Browser | In-browser file storage under `memory:///<graph>/assets/` | [`src/main/frontend/worker/platform/browser.cljs:106-111`](../../../../../src/main/frontend/worker/platform/browser.cljs) |
 
-```
-/path/to/graph/
-  ├── pages/
-  ├── assets/
-  │   ├── image-1_1234567890.png
-  │   ├── document_abcdef.pdf
-  │   └── video-demo_ghijkl.mp4
-  └── logseq/
-```
+The file name comes from the block, so renaming the asset's title does not rename the file ([`src/main/frontend/components/block/asset.cljs:37-43`](../../../../../src/main/frontend/components/block/asset.cljs)).
 
-**File Naming**:
+### The asset block
 
-- Original name: `my-image.png`
-- Stored as: `my-image_<timestamp>.png`
-- Timestamp prevents name collisions
-- Spaces replaced with hyphens
-
-**Code Reference**: [`assets.cljs`](../../../../../src/main/frontend/handler/assets.cljs)
-
-### Database Graphs
-
-**Storage Structure**:
-
-Assets stored as `:logseq.class/Asset` blocks with properties:
-
-```clojure
-{:block/uuid "12345678-1234-1234-1234-123456789abc"
- :block/tags [:logseq.class/Asset]
- :logseq.property.asset/type "png"
- :logseq.property.asset/size 524288  ; bytes
- :logseq.property.asset/checksum "abcd1234..."  ; SHA-256 hex digest
- :logseq.property.asset/external-url nil}       ; set for web-linked assets
-;; File stored on disk as: assets/<block-uuid>.png
-```
-
-**Asset Class Definition**: [`class.cljs:58-64`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64)
+The `Asset` tag is defined in [`deps/db/src/logseq/db/frontend/class.cljs:68-74`](../../../../../deps/db/src/logseq/db/frontend/class.cljs):
 
 ```clojure
 :logseq.class/Asset
 {:title "Asset"
  :properties {:logseq.property.class/hide-from-node true
               :logseq.property.view/type :logseq.property.view/type.gallery}
- :schema {:properties [:logseq.property.asset/type
-                       :logseq.property.asset/size
-                       :logseq.property.asset/checksum]
-          :required-properties [:logseq.property.asset/type
-                                :logseq.property.asset/size
-                                :logseq.property.asset/checksum]}}
+ :schema {:properties [:logseq.property.asset/type :logseq.property.asset/size :logseq.property.asset/checksum]
+          :required-properties [:logseq.property.asset/type :logseq.property.asset/size :logseq.property.asset/checksum]}}
 ```
 
-**Properties**:
+`hide-from-node` hides the `Asset` tag chip on asset blocks ([`block.cljs:2883-2889`](../../../../../src/main/frontend/components/block.cljs)). The tag page shows its assets as a gallery by default.
 
-- `:logseq.property.asset/type` — File extension string (e.g., `"png"`, `"pdf"`, `"mp4"`)
-- `:logseq.property.asset/size` — File size in bytes
-- `:logseq.property.asset/checksum` — SHA-256 hex digest for integrity verification
-- `:logseq.property.asset/external-url` — Original URL for web-linked assets
-- `:logseq.property.asset/external-file-name` — Original filename for externally sourced assets
-- `:logseq.property.asset/width` — Image width in pixels (set automatically on load)
-- `:logseq.property.asset/height` — Image height in pixels (set automatically on load)
-- `:logseq.property.asset/remote-metadata` — Metadata for assets stored in remote/cloud storage
-- `:logseq.property.asset/last-visit-page` — Last visited page number (for PDFs)
-- `:logseq.property.asset/resize-metadata` — Resize dimensions metadata
+**Properties** ([`deps/db/src/logseq/db/frontend/property.cljs:554-609`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)):
 
-### Remote Graphs (RTC Sync)
+| Property | Holds | Set by |
+| -------- | ----- | ------ |
+| `:logseq.property.asset/type` | Lower-cased extension, e.g. `"png"` | Upload ([`asset.cljs:21-24`](../../../../../deps/db/src/logseq/db/frontend/asset.cljs)) |
+| `:logseq.property.asset/size` | Size in bytes | Upload |
+| `:logseq.property.asset/checksum` | SHA-256 hex digest | Upload |
+| `:logseq.property.asset/external-url` | URL or path for an asset whose file is not in `assets/` | The asset form ([`components/assets.cljs:225-278`](../../../../../src/main/frontend/components/assets.cljs)) |
+| `:logseq.property.asset/external-file-name` | File name, used for Zotero PDFs | [`block.cljs:513-519`](../../../../../src/main/frontend/components/block.cljs) |
+| `:logseq.property.asset/width`, `…/height` | Natural image size in pixels, recorded the first time the image renders | [`block.cljs:231-243`](../../../../../src/main/frontend/components/block.cljs) |
+| `:logseq.property.asset/resize-metadata` | The width you dragged the image to | [`editor.cljs:2219-2224`](../../../../../src/main/frontend/handler/editor.cljs) |
+| `:logseq.property.asset/align` | `:left`, `:center` or `:right` | [`block.cljs:327-332`](../../../../../src/main/frontend/components/block.cljs) |
+| `:logseq.property.asset/last-visit-page` | Last page viewed in a PDF (not synced) | [`property.cljs:589-593`](../../../../../deps/db/src/logseq/db/frontend/property.cljs) |
+| `:logseq.property.asset/remote-metadata` | `{:checksum … :type …}` after a successful sync upload | [`src/main/frontend/worker/sync/assets.cljs:257-266`](../../../../../src/main/frontend/worker/sync/assets.cljs) |
 
-> Sync replicates **every** file type — there is no extension allowlist. What it will
-> not do is pick up a file copied into `assets/` by hand: sync reads asset *entities*,
-> never the directory. See
-> [Assets: Link Syntax, File Types, and Sync](../../reference/features/asset-sync.md).
+All of these are hidden properties except `external-url` ([`property.cljs:554-609`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)).
 
-**Encrypted Upload**:
-
-1. Asset uploaded to local `assets/` folder
-2. File encrypted with AES-256-GCM (if E2EE enabled)
-3. Encrypted blob uploaded to cloud
-4. Other collaborators download and decrypt automatically
-
-**Upload Flow**:
-
-```txt
-Local File
-    ↓
-Read as ArrayBuffer
-    ↓
-Encrypt with AES-256 (if E2EE)
-    ↓
-Upload to Logseq Cloud (via PUT request)
-    ↓
-Server stores encrypted blob
-    ↓
-Broadcast asset metadata to collaborators
-    ↓
-Collaborators download on-demand
-    ↓
-Decrypt and save to local assets/
-```
-
-**Code Reference**: [`assets.cljs:301-334`](../../../../../src/main/frontend/handler/assets.cljs#L301-L334)
-
-```clojure
-(defn new-task--rtc-upload-asset
-  [repo aes-key asset-block-uuid-str asset-type checksum put-url & {:keys [extra-headers]}]
-  (assert (and asset-type checksum))
-  (m/sp
-    (let [asset-file (try (c.m/<? (<read-asset repo asset-block-uuid-str asset-type))
-                          (catch :default e
-                            (log/info :read-asset e)
-                            (throw (ex-info "read-asset failed" {:type :rtc.exception/read-asset-failed} e))))
-          asset-file (if aes-key (->uint8 asset-file) asset-file)
-          asset-file* (if (not aes-key)
-                        asset-file
-                        (ldb/write-transit-str
-                         (c.m/<? (crypt/<encrypt-uint8array aes-key asset-file))))
-          ;; ... progress tracking and HTTP PUT ...
-          ]
-      ;; Throws :rtc.exception/upload-asset-failed on non-2xx status
-      )))
-```
-
-**Download Flow**: Similar but reversed (GET request, decrypt, write to local assets).
-
-**Size Limit**: 100 MB per asset (see [`assets.cljs:22-25`](../../../../../src/main/frontend/handler/assets.cljs#L22-L25)):
-
-```clojure
-(defn exceed-limit-size?
-  "Asset size no more than 100M"
-  [^js file]
-  (> (.-size file) (* 100 1024 1024)))
-```
+> Removed section: "File-Based Graphs" storage layout (`pages/`, `logseq/`, timestamped asset names). File graphs can no longer be opened in the app ([`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)). Also removed: the claim that `checksum` is stored as `"sha256:abcd..."`. It is the plain hex digest.
 
 ---
 
-## Organizing Assets
+## Viewing Assets
 
-### Folder Structure (File-Based)
+### How each type renders
 
-**Manual Organization** (advanced):
+The asset's extension picks the renderer ([`block.cljs:581-637`](../../../../../src/main/frontend/components/block.cljs)):
 
-```
-assets/
-  ├── images/
-  │   ├── screenshots/
-  │   ├── diagrams/
-  │   └── photos/
-  ├── documents/
-  │   ├── pdfs/
-  │   └── spreadsheets/
-  └── media/
-      ├── videos/
-      └── audio/
-```
+| Extension | Renders as |
+| --------- | ---------- |
+| Audio: `mp3 ogg mpeg wav m4a flac wma aac` | Audio player |
+| Video: `mp4 webm mov flv avi mkv` | Video player |
+| Image: `gif svg jpeg ico png jpg bmp webp avif cr2` | Inline image |
+| `pdf` | A link that opens the built-in PDF viewer |
+| Anything else | Desktop: a link that opens the file in its default app. Browser: a download link. Native mobile: opens or shares the file |
 
-**Reference in Markdown**:
+(Format sets: [`src/main/frontend/config.cljs:174-186`](../../../../../src/main/frontend/config.cljs); image set: [`deps/common/src/logseq/common/config.cljs:96-98`](../../../../../deps/common/src/logseq/common/config.cljs).) A `.webm` whose title starts with `Audio-` plays as audio ([`block.cljs:582-584`](../../../../../src/main/frontend/components/block.cljs)).
 
-```markdown
-![Architecture](../assets/diagrams/architecture.png)
-```
+Asset blocks for images, audio and video show the media inside the block, together with the block's title ([`block.cljs:1213-1218`, `:3643-3650`](../../../../../src/main/frontend/components/block.cljs)). A PDF asset block shows its title as the viewer link ([`block.cljs:2574-2576`](../../../../../src/main/frontend/components/block.cljs)). `.heic` is not in the image set, so it shows as a file link.
 
-⚠️ **Warning**: Logseq doesn't automatically create subfolders. You must organize manually and update links accordingly.
+### Image actions
 
-### Asset Aliases (Desktop Only)
+- **Click an image** to open it in a lightbox with the other images on screen ([`block.cljs:150-168`, `:256-259`](../../../../../src/main/frontend/components/block.cljs)).
+- **The ⋮ button** on an image asset offers ([`block.cljs:333-392`](../../../../../src/main/frontend/components/block.cljs); strings in [`en.edn:77-80`, `:84`, `:88`, `:96`, `:108`](../../../../../src/resources/dicts/en.edn)):
+  - **Align** → Align left / Align center / Align right
+  - **Copy image**. In the desktop app only `png jpg jpeg gif webp bmp svg ico` can be copied. Other types show "Copy image is not supported for {1} files" ([`block.cljs:276-289`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:85`](../../../../../src/resources/dicts/en.edn)).
+  - **Show file in folder** (a local asset) or **Open image in browser** (a remote one), desktop app only.
+  - **Delete image** (see [Deleting Assets](#deleting-assets)). Not shown in published pages.
 
-**Setup**:
+### Resizing images
 
-1. Open Settings → Assets
-2. Enable "Asset Aliases"
-3. Add alias directory:
-   - Name: `@shared`
-   - Path: `/path/to/shared/assets`
+- Drag the image's edge to resize it. The width is saved to the asset's `resize-metadata` ([`editor.cljs:2219-2224`](../../../../../src/main/frontend/handler/editor.cljs)), so every reference to that asset uses it.
+- An image you have not resized displays **250 px** wide. The value is hard-coded, with no setting ([`block.cljs:1157-1168`](../../../../../src/main/frontend/components/block.cljs)).
+- Resizing is off in the native mobile app, in breadcrumbs, for images shown in a property position and in table views ([`block.cljs:410-422`](../../../../../src/main/frontend/components/block.cljs)).
 
-**Usage**:
+> Removed claim: `![Diagram](../assets/diagram.png){:width 600 :height 400}`. Not verified for DB graphs. Drag to resize instead.
 
-```markdown
-![Company Logo](assets/@shared/logo.png)
-```
+### Missing files and sync progress
 
-**Benefits**:
+- If an asset's file is not in `assets/` and the asset has no external URL and no sync record, the block shows "Can't find file {1}." with a **Reload file** button ([`block.cljs:1118-1129`, `:1199-1203`](../../../../../src/main/frontend/components/block.cljs); [`components/block/asset.cljs:45-53`](../../../../../src/main/frontend/components/block/asset.cljs); [`en.edn:95`, `:104`](../../../../../src/resources/dicts/en.edn)).
+- In a synced graph, an asset being transferred shows "Uploading" or "Downloading" with a percentage ([`block.cljs:1141-1154`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:89`, `:112-113`](../../../../../src/resources/dicts/en.edn)).
 
-- Share assets across multiple graphs
-- Keep assets outside graph folder
-- Useful for team templates, branding
+### Video embeds
 
-**Code Reference**: [`assets.cljs:27-58`](../../../../../src/main/frontend/handler/assets.cljs#L27-L58)
+`{{video URL}}`, `{{youtube …}}`, `{{vimeo …}}` and `{{bilibili …}}` embed remote video ([`src/main/frontend/components/block/video.cljs:6`](../../../../../src/main/frontend/components/block/video.cljs); [`block.cljs:1879-1904`](../../../../../src/main/frontend/components/block.cljs)). They do not create assets. See [Video Embedding](../multimedia/video-embed.md).
 
-```clojure
-(defn alias-enabled?
-  []
-  (and (util/electron?)
-       (:assets/alias-enabled? @state/state)))
+### PDFs
 
-(defn get-alias-by-name
-  [name]
-  (when-let [alias-dirs (and (alias-enabled?) (seq (get-alias-dirs)))]
-    (medley/find-first #(= name (:name (second %1)))
-                       (medley/indexed alias-dirs))))
-```
-
-### Tags for Asset Discovery
-
-**Tag Assets**:
-
-```markdown
-- [[Assets/Screenshots]]
-  - ![Screenshot 1](../assets/screen1.png) #ui #bug
-  - ![Screenshot 2](../assets/screen2.png) #ui #feature
-```
-
-**Query All Images with Tag**:
-
-```clojure
-{{query (and [[Assets]] #ui)}}
-```
-
-**Result**: All asset blocks tagged `#ui`
+The PDF link opens the built-in viewer ([`block.cljs:513-527`, `:592-601`](../../../../../src/main/frontend/components/block.cljs)). When you create an asset from a PDF that was opened by URL, the asset form warns: "Creating a local asset from an external one. PDF annotations require a local asset to work properly." ([`components/assets.cljs:280-299`](../../../../../src/main/frontend/components/assets.cljs); [`en.edn:86`](../../../../../src/resources/dicts/en.edn)). See [PDF Annotations](../../reference/features/pdf-annotations.md).
 
 ---
 
-## Asset Operations
+## Finding Assets
 
-### Viewing Assets
+**All assets:** open the **Asset** tag page. It lists every asset as a gallery ([`class.cljs:68-72`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
 
-**Images**: Rendered inline automatically
+**With a simple query:** `{{query …}}` does not run in a DB graph. It renders a deprecation warning ([`block.cljs:1870-1871`](../../../../../src/main/frontend/components/block.cljs)). Type `/Query` and enter the query bare:
 
-**Click to Zoom**: Click image → Opens lightbox with:
+```clojure
+(and (tags Asset) (private-property :logseq.property.asset/type "png"))
+```
 
-- Full-size view
-- Zoom controls (+ / -)
-- Close button (X or Esc)
+```clojure
+(and (tags Asset) (tags ui))
+```
 
-**PDFs**: Click → Opens PDF viewer (desktop only)
+The first lists PNG assets. The second lists assets you have tagged `#ui`. `asset/type` is a non-public property ([`property.cljs:554-558`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)), and `(property …)` only matches public properties, so use `private-property` ([`src/main/frontend/worker/query_dsl.cljs:554-558`](../../../../../src/main/frontend/worker/query_dsl.cljs); [`deps/db/src/logseq/db/frontend/rules.cljc:188-194`, `:221-225`](../../../../../deps/db/src/logseq/db/frontend/rules.cljc)). `(tags Asset)` also matches tags that extend `Asset` ([`query_dsl.cljs:431-450`](../../../../../src/main/frontend/worker/query_dsl.cljs)).
 
-**Videos**: Rendered as inline player
+> **Unverified:** both queries are traced from the query-DSL source and were not run.
 
-**Other Files**: Click → Downloads file
-
-### Copying Asset Links
-
-1. Hover over asset link
-2. Right-click
-3. Select "Copy image link" or "Copy asset link"
-4. Paste elsewhere: `![](../assets/file.png)`
-
-### Renaming Assets
-
-**File-Based**:
-
-1. Rename file in `assets/` folder manually
-2. Update references in graph:
-
-   ```markdown
-   <!-- Old -->
-
-   ![](../assets/old-name_1234.png)
-
-   <!-- New -->
-
-   ![](../assets/new-name_1234.png)
-   ```
-
-**Database**: Rename managed by Logseq automatically (asset UUID-based)
-
-### Deleting Assets
-
-**Remove Reference**:
-
-- Delete markdown link from block
-- Asset file remains in `assets/` folder
-
-**Delete File**:
-
-**File-Based**:
-
-1. Delete file from `assets/` folder manually
-2. Broken image icon appears in blocks referencing it
-
-**Database**:
-
-1. Delete asset block from database
-2. File removed from `assets/` folder automatically
-3. References show broken link
-
-**Cleanup Unused Assets** (🟡 Planned):
-
-- Future feature: Scan for unreferenced assets
-- Suggest deletion to free up space
-
-### Moving Assets Between Graphs
-
-**Method 1: Copy-Paste**
-
-1. Open asset in source graph
-2. Copy image (right-click → Copy image)
-3. Switch to target graph
-4. Paste into block
-
-**Method 2: Manual File Copy**
-
-1. Copy asset file from `source/assets/` to `target/assets/`
-2. Update file name if timestamp differs
-3. Create reference: `![](../assets/file.png)`
-
-**Method 3: Export/Import**
-
-- Export page with assets (Settings → Export)
-- Import into target graph
-- Assets included automatically
+> Removed: `{{query (and [[Assets]] #ui)}}` and `{{query (and [[logseq.class/Asset]] (property :logseq.property.asset/type "png"))}}`. The macro is deprecated, and `property` would not match the non-public `asset/type` property.
 
 ---
 
-## Advanced Features
+## Deleting Assets
 
-### External Asset URLs
+**⋮ → Delete image** asks "Are you sure you want to delete this image?" ([`block.cljs:300-326`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:83`](../../../../../src/resources/dicts/en.edn)). The result depends on where the image is shown ([`editor.cljs:1741-1753`](../../../../../src/main/frontend/handler/editor.cljs)):
 
-**Link to Web Images**:
+- **On the asset block itself:** the asset block is deleted.
+- **As a reference inside another block:** the reference is removed from that block's text. The dialog also shows a checkbox, **Remove the file too (notice it can't be restored)**, ticked by default ([`en.edn:97`](../../../../../src/resources/dicts/en.edn)). When it is ticked, the asset block is deleted as well.
 
-```markdown
-![GitHub Logo](https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png)
-```
+You can also select rows on the **Asset** tag page and delete them. That deletes the asset blocks ([`src/main/frontend/components/views.cljs:1208-1222`](../../../../../src/main/frontend/components/views.cljs)).
 
-**Pros**:
+**What happens next:**
 
-- No local storage used
-- Always up-to-date (if source updates)
-- Shareable links
+- **The block does not go to Recycle.** Deleted blocks are retracted outright ([`deps/outliner/src/logseq/outliner/core.cljs:440-442`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). Undo with `mod+z` straight away.
+- **The file stays in `assets/`**, despite the checkbox label. Deletion only removes the block. The worker's platform `asset-delete!` function is never called ([`src/main/frontend/worker/platform/node.cljs:554-560`, `:730-731`](../../../../../src/main/frontend/worker/platform/node.cljs); [`browser.cljs:158`, `:219`](../../../../../src/main/frontend/worker/platform/browser.cljs)).
+- **In a synced graph, the uploaded copy is not deleted from the server.** Only `:update-asset` sync operations are ever created ([`src/main/frontend/worker/sync/asset_db_listener.cljs:17-25`](../../../../../src/main/frontend/worker/sync/asset_db_listener.cljs); [`src/main/frontend/worker/sync/client_op.cljs:607-617`](../../../../../src/main/frontend/worker/sync/client_op.cljs)). A `:remove-asset` operation is handled, but nothing produces one ([`worker/sync/assets.cljs:284-295`](../../../../../src/main/frontend/worker/sync/assets.cljs)).
 
-**Cons**:
+**To free disk space**, delete the file from `assets/` yourself after deleting its block. The file name is `<uuid>.<ext>`, where the uuid is the deleted block's.
 
-- Requires internet connection
-- Broken if source URL changes
-- Not included in graph backups
-
-**Storage in Database**:
-
-```clojure
-{:logseq.property.asset/external-url "https://example.com/image.png"
- :logseq.property.asset/type "png"
- ;; checksum and size computed from initial download
- }
-```
-
-### Data URLs (Embedded Images)
-
-**Embed Small Images Directly**:
-
-```markdown
-![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA...)
-```
-
-**Use Cases**:
-
-- Tiny icons (< 1 KB)
-- SVG graphics
-- Generated QR codes
-
-**Limitation**: Large data URLs make markdown files huge (avoid for > 10 KB).
-
-### Asset Metadata
-
-**Query Asset Properties** (database graphs):
-
-```clojure
-{{query (and [[logseq.class/Asset]]
-             (property :logseq.property.asset/type "png"))}}
-```
-
-**Result**: All PNG images in graph
-
-### Batch Asset Operations (🟡 Planned)
-
-Future features:
-
-- Select multiple assets
-- Bulk delete/move/tag
-- Convert image formats
-- Compress images
+> Removed claims: "File removed from `assets/` folder automatically" and the "🟡 Planned" unused-asset cleanup and batch operations (bulk move, format conversion, compression). No such code exists.
 
 ---
 
-## Platform-Specific Notes
+## Moving Assets Between Graphs
 
-### Desktop (Electron)
+- **One file:** upload the original file again in the other graph (any method in [Quick Start](#quick-start)). Copying a file into another graph's `assets/` folder does not create an asset, because nothing scans that folder ([asset-sync: Copying a file into `assets/`](../../reference/features/asset-sync.md#sync-eligibility)).
+- **A whole graph with its assets:** **Export both SQLite DB and assets**, then **Import → SQLite + assets (.zip)** as a new graph ([Backup and Recovery Strategies](../organization/backup-strategies.md#scenario-2-corrupted-or-broken-graph)).
 
-**Features**:
+> **Unverified:** that ⋮ → **Copy image** followed by a paste in another graph creates an asset there. Copy puts an image blob on the clipboard ([`block.cljs:272-299`](../../../../../src/main/frontend/components/block.cljs)), and paste uploads clipboard files ([`paste.cljs:272-281`](../../../../../src/main/frontend/handler/paste.cljs)). The round trip was not tested.
 
-- ✅ Full asset management
-- ✅ Asset aliases supported
-- ✅ PDF annotations
-- ✅ Drag & drop from file manager
-- ✅ Paste from clipboard
-- ✅ External windows for PDFs
+> Removed: "Export page with assets (Settings → Export)". No such export exists.
 
-**Best Experience**: Desktop has all asset features.
+---
 
-### Mobile (iOS/Android)
+## Remote Graphs (Sync)
 
-**Features**:
+> Sync replicates **every** file type. There is no extension allowlist. What it will not do is pick up a file copied into `assets/` by hand: sync reads asset *entities*, never the folder. See [Assets: Link Syntax, File Types, and Sync](../../reference/features/asset-sync.md).
 
-- ✅ Image upload (camera or photo library)
-- ✅ Image viewing with zoom
-- ⚠️ PDF viewing limited (no annotations)
-- ⚠️ Video playback (codec-dependent)
-- ❌ Asset aliases not supported
-- ❌ External windows not available
+**Upload:** when an asset's checksum is written, the sync listener queues an `:update-asset` operation ([`asset_db_listener.cljs:17-25`](../../../../../src/main/frontend/worker/sync/asset_db_listener.cljs)). The worker reads `assets/<uuid>.<type>` and uploads it ([`worker/sync/assets.cljs:145-172`](../../../../../src/main/frontend/worker/sync/assets.cljs)):
 
-**Photo Integration**:
+1. **E2EE graphs only:** the bytes are encrypted with the graph's AES key using AES-GCM ([`worker/sync/assets.cljs:26-33`, `:164-168`](../../../../../src/main/frontend/worker/sync/assets.cljs); [`src/main/frontend/common/crypt.cljs:194-200`](../../../../../src/main/frontend/common/crypt.cljs)). Other graphs upload the bytes as they are.
+2. After a successful upload, the asset gets `:logseq.property.asset/remote-metadata` ([`worker/sync/assets.cljs:257-266`](../../../../../src/main/frontend/worker/sync/assets.cljs)).
 
-- Take photo → Insert directly into block
-- Choose from library → Upload to assets
+**Download:** other devices fetch assets whose file is missing locally ([`worker/sync/assets.cljs:449`](../../../../../src/main/frontend/worker/sync/assets.cljs)), and an asset block with a missing file requests its download when it renders ([`block.cljs:1098-1108`](../../../../../src/main/frontend/components/block.cljs); [`handler/assets.cljs:301-316`](../../../../../src/main/frontend/handler/assets.cljs)).
 
-### Web Browser
+**Size limits:**
 
-**Features**:
+| Where | Limit | Result | Source |
+| ----- | ----- | ------ | ------ |
+| Adding a file | 100 MiB | Refused with a warning | [`handler/assets.cljs:14-17`](../../../../../src/main/frontend/handler/assets.cljs) |
+| Sync client | 100 MiB | The upload is **silently skipped**, and the asset stays local | [`worker/sync/assets.cljs:19`, `:246-255`](../../../../../src/main/frontend/worker/sync/assets.cljs) |
+| Sync server | 100 MiB, or 200 MiB for E2EE graphs | `413 asset too large` | [`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9-10`, `:226-231`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs) |
 
-- ✅ Image upload and viewing
-- ✅ External URL assets
-- ⚠️ Local file access restricted (security)
-- ⚠️ PDF viewer may have limitations
-- ❌ Asset aliases not available
+The client limit applies to E2EE graphs too, so the server's 200 MiB allowance is not reached from the app. Full table in [Sync Limits](../../reference/features/sync-limits.md).
 
-**CORS Issues**: Some external URLs may be blocked by browser security policies.
+> Removed: the code excerpt `new-task--rtc-upload-asset` cited at `handler/assets.cljs:301-334`, the "Broadcast asset metadata to collaborators" step, and "AES-256" for every upload. That function does not exist at this revision; upload is `upload-remote-asset!` in the sync worker, and encryption applies only to E2EE graphs.
+
+---
+
+## Other Ways to Show Files
+
+**Remote images:** `![Logo](https://example.com/logo.png)` shows the image, and so does a bare image URL. No file is downloaded and no asset is created, so the image is not in exports or backups and breaks if the URL goes away ([asset-sync: Remote http(s) URLs](../../reference/features/asset-sync.md#link-syntax)).
+
+**Files outside the graph (desktop):** `![t](assets:///absolute/path.png)` shows a local file that is not an asset. See [asset-sync: Link syntax](../../reference/features/asset-sync.md#link-syntax) for which path forms work.
+
+**Data URLs:** `![](data:image/png;base64,…)` renders inline ([`block.cljs:660-661`](../../../../../src/main/frontend/components/block.cljs)). The data is stored in the block's text inside `db.sqlite`, so keep it small.
+
+> Removed section: "Asset Aliases (Desktop Only) → Settings → Assets". The Assets settings panel still exists in source ([`src/main/frontend/components/settings.cljs:1535-1536`](../../../../../src/main/frontend/components/settings.cljs)), but it is not in the Settings tab list ([`settings.cljs:1476-1494`](../../../../../src/main/frontend/components/settings.cljs)), so it cannot be opened. Aliases resolve only if the option was already on in this app's local storage ([`src/main/frontend/state.cljs:249`](../../../../../src/main/frontend/state.cljs); [`handler/assets.cljs:19-22`](../../../../../src/main/frontend/handler/assets.cljs)).
+
+---
+
+## Platform Notes
+
+**Desktop app:** every feature above. Only the desktop app offers **Show file in folder** / **Open image in browser**, opening non-media files in their default app, and `assets://` paths.
+
+**Browser:** assets live in browser storage, not a folder you can open ([`browser.cljs:106-111`](../../../../../src/main/frontend/worker/platform/browser.cljs)). Non-media files are download links. Keep a zip export as your copy of the files.
+
+**Native mobile app:**
+
+- Image resizing is off ([`block.cljs:410-412`](../../../../../src/main/frontend/components/block.cljs)).
+- The **Photo** button takes or chooses a photo and also saves it to the device gallery. The `config.edn` key `:mobile/photo` accepts `:allow-editing?` and `:quality` (default 80) ([`camera.cljs:32-41`](../../../../../src/main/frontend/mobile/camera.cljs)).
+- Files shared into Logseq from another app become assets only for document and media types (`doc-formats` plus `media-formats`). Other types show an unsupported-type notice ([`src/main/frontend/mobile/intent.cljs:136-152`, `:190-202`](../../../../../src/main/frontend/mobile/intent.cljs)).
+
+> Removed: "PDF viewing limited (no annotations)", "Video playback (codec-dependent)", "External windows for PDFs" and "CORS issues" as platform features. None were traced to source.
 
 ---
 
 ## Troubleshooting
 
-### Asset Not Displaying
+**"Can't find file {1}."**
+The asset block exists but `assets/<uuid>.<ext>` is missing, for example after copying only `db.sqlite` to another machine. Restore the file from a zip export or a copy of `assets/`, then click **Reload file**. In a synced graph, click **Reload file** once the file is back in place to retry the upload ([`block.cljs:1110-1116`](../../../../../src/main/frontend/components/block.cljs)).
 
-**Problem**: Broken image icon instead of image
+**"Asset exists already, title: …, node reference: [[…]]"**
+A byte-identical file is already in the graph. Reference that asset instead ([`editor.cljs:1772-1778`](../../../../../src/main/frontend/handler/editor.cljs)).
 
-**Possible Causes**:
+**"Asset size shouldn't be larger than 100M"**
+The file is over 100 MiB. Shrink or split it, or link to it remotely.
 
-1. File moved or deleted
-2. Incorrect file path
-3. File name mismatch (case-sensitive on Linux/macOS)
-4. CORS blocking external URL
+**Nothing happens when adding a file**
+The file probably has no extension (see the Note in [Quick Start](#quick-start)). Check the developer console: the desktop app's **View** menu uses Electron's standard `viewMenu` role ([`src/electron/electron/core.cljs:243`](../../../../../src/electron/electron/core.cljs)).
 
-**Solutions**:
+**An asset shows on one device but not another (sync)**
+Check that the asset has `remote-metadata`. If the file is over 100 MiB it was never uploaded ([`worker/sync/assets.cljs:246-255`](../../../../../src/main/frontend/worker/sync/assets.cljs)). Files copied into `assets/` by hand never sync.
 
-- Check file exists in `assets/` folder
-- Verify path: `../assets/filename.ext` (relative to page)
-- Check browser console for errors (Help → Toggle Developer Tools)
-- For external URLs: test in browser first
+**`.heic` photo shows as a file link**
+`heic` is not in the image set that renders inline ([`deps/common/src/logseq/common/config.cljs:96-98`](../../../../../deps/common/src/logseq/common/config.cljs)). Convert it to JPEG or PNG before adding it.
 
-### Upload Fails
+**`assets/` keeps growing after deleting assets**
+Deleting an asset block leaves its file behind (see [Deleting Assets](#deleting-assets)).
 
-**Problem**: Drag & drop doesn't work
-
-**Possible Causes**:
-
-1. File size exceeds 100 MB limit
-2. Network error (remote graphs)
-3. Disk space full
-4. Permission denied (file system access)
-
-**Solutions**:
-
-- Check file size (compress if necessary)
-- Check internet connection (for RTC)
-- Free up disk space
-- Check folder permissions (desktop)
-
-### Asset Path Issues
-
-**Problem**: Asset works locally but broken on another device
-
-**Possible Causes**:
-
-1. Using absolute path instead of relative
-2. Asset not synced (file-based graphs)
-3. Different file systems (Windows vs macOS)
-
-**Solutions**:
-
-- Use relative paths: `../assets/file.png` (not `/Users/name/...`)
-- Ensure `assets/` folder synced via Git/Dropbox
-- Check file name case (Windows case-insensitive, macOS/Linux case-sensitive)
-
-### Duplicate Assets
-
-**Problem**: Same file uploaded multiple times with different names
-
-**Cause**: In file-based graphs, Logseq appends a timestamp to prevent collisions. In database graphs, Logseq deduplicates by SHA-256 checksum and will warn if an identical asset already exists.
-
-**Solution** (file-based graphs):
-
-- Search graph for duplicate references
-- Consolidate to one asset file
-- Update all references to point to single file
-- Delete duplicates manually
+> Removed: "Verify path `../assets/filename.ext` (relative to page)", "Ensure `assets/` folder synced via Git/Dropbox", "Duplicate assets with timestamps" and "Disk space full / Permission denied" advice. These described file graphs or were generic.
 
 ---
 
-## Best Practices
+## Backups
 
-### Performance
+- **Automatic desktop backups and Export SQLite DB do not include assets.** Only **Export both SQLite DB and assets** bundles them ([Backup and Recovery Strategies](../organization/backup-strategies.md#method-4-export-sqlite-db-or-sqlite--assets)).
+- The zip takes every file in `assets/`, including files left behind by deleted assets ([`handler/assets.cljs:269-281`](../../../../../src/main/frontend/handler/assets.cljs); [`src/main/frontend/handler/export.cljs:88-100`](../../../../../src/main/frontend/handler/export.cljs)).
+- When you copy a graph folder yourself, copy `assets/` with it.
 
-✅ **Do**:
-
-- Compress images before upload (< 500 KB per image)
-- Use JPEG for photos, PNG for graphics
-- Use external URLs for large files when possible
-- Keep total assets < 5 GB per graph
-
-❌ **Don't**:
-
-- Upload uncompressed 4K images (10+ MB each)
-- Embed videos > 50 MB (use YouTube instead)
-- Store hundreds of PDFs locally (link externally)
-
-**Image Compression Tools**:
-
-- **ImageOptim** (Mac): Lossless compression
-- **TinyPNG** (Web): Up to 70% size reduction
-- **ffmpeg** (CLI): Batch processing
-
-```bash
-# Compress JPEG to 80% quality
-ffmpeg -i input.jpg -q:v 5 output.jpg
-
-# Resize to max width 1200px
-ffmpeg -i input.png -vf scale=1200:-1 output.png
-```
-
-### Organization
-
-**Consistent Naming**:
-
-```
-assets/
-  ├── 2024-01-20_meeting-screenshot.png
-  ├── 2024-01-20_whiteboard-diagram.png
-  ├── project-x_architecture-v2.png
-```
-
-**Use Prefixes**:
-
-- Date prefix for chronological: `2024-01-20_`
-- Project prefix for grouping: `projectx_`
-- Type suffix: `_diagram`, `_screenshot`, `_photo`
-
-**Asset Inventory Page**:
-
-```markdown
-- [[📎 Asset Inventory]]
-  - Last audit: [[2024-01-20]]
-  - Total assets: 324
-  - Total size: 2.4 GB
-  - Categories:
-    - Screenshots: 156 files
-    - Diagrams: 87 files
-    - Documents: 81 files
-```
-
-### Backups
-
-**Include Assets in Backups**:
-
-- Git: Commit `assets/` folder (if < 1 GB)
-- Export: Settings → Export graph → Includes assets
-- Manual: Copy entire graph folder
-
-**Exclude Large Assets from Git**:
-
-```gitignore
-# .gitignore
-assets/*.mp4
-assets/*.mov
-assets/*.zip
-```
-
-**External Asset Archive**:
-
-- Store large files outside graph
-- Link externally: Dropbox, Google Drive, S3
-- Keep inventory page with links
+> Removed: "Git: commit `assets/`", the `.gitignore` example, "Keep total assets < 5 GB", "Compress images (< 500 KB)", "Don't embed videos > 50 MB", the ImageOptim / TinyPNG / ffmpeg recipes and the "Asset Inventory Page" template. These are not Logseq limits or features, and the only size limit in source is 100 MiB per file.
 
 ---
 
-## Code Reference
+## Code References
 
-**Core Implementation**:
-
-- [`src/main/frontend/handler/assets.cljs`](../../../../../src/main/frontend/handler/assets.cljs) (~418 lines) — Asset upload/download logic
-- [`deps/db/src/logseq/db/frontend/class.cljs`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64) — Asset class definition
-- [`deps/db/src/logseq/db/frontend/asset.cljs`](../../../../../deps/db/src/logseq/db/frontend/asset.cljs) — Database asset utilities
-
-**Key Functions**:
-
-- `new-task--rtc-upload-asset` (line 301-334) — RTC upload with encryption
-- `new-task--rtc-download-asset` (line 336-374) — RTC download and decryption
-- `exceed-limit-size?` (line 22-25) — 100 MB size limit check
-- `normalize-asset-resource-url` (line 85-102) — Path to URL conversion
-- `resolve-asset-real-path-url` (line 67-83) — Resolve asset paths
+- [`src/main/frontend/handler/editor.cljs`](../../../../../src/main/frontend/handler/editor.cljs): `new-asset-block`, `db-based-save-assets!`, `upload-asset!`, `delete-asset-of-block!`, `resize-image!`
+- [`src/main/frontend/handler/assets.cljs`](../../../../../src/main/frontend/handler/assets.cljs): `exceed-limit-size?`, `get-file-checksum`, `<make-asset-url`, `<get-all-assets`
+- [`src/main/frontend/components/block.cljs`](../../../../../src/main/frontend/components/block.cljs): `asset-container`, `resizable-image`, `asset-link`, `asset-cp`
+- [`src/main/frontend/worker/sync/assets.cljs`](../../../../../src/main/frontend/worker/sync/assets.cljs): `upload-remote-asset!`, `download-remote-assets-if-missing!`
+- [`deps/db/src/logseq/db/frontend/class.cljs`](../../../../../deps/db/src/logseq/db/frontend/class.cljs): `:logseq.class/Asset`
+- [`deps/db/src/logseq/db/frontend/property.cljs`](../../../../../deps/db/src/logseq/db/frontend/property.cljs): `:logseq.property.asset/*`
+- [`deps/db/src/logseq/db/frontend/asset.cljs`](../../../../../deps/db/src/logseq/db/frontend/asset.cljs): checksum, type and title helpers
 
 ---
 
 ## Related Documentation
 
-**Tutorials**:
-
-- [Basic Editing](../../tutorials/getting-started/basic-editing.md) — Learn markdown syntax for asset embedding
-
-**How-To Guides**:
-
-- [Video Embedding](../multimedia/video-embed.md) — YouTube, Vimeo, local videos
-- [PDF Annotations](../../reference/features/pdf-annotations.md) — Working with PDF files
-
-**References**:
-
-- [Built-in Classes](../../reference/schema/built-in-classes.md#logseqclassasset) — Asset class schema
-- [Built-in Properties](../../reference/schema/built-in-properties.md#asset-properties) — Asset properties reference
-
-**Explanations**:
-
-- [E2EE Encryption](../../explanation/security/e2ee-encryption.md) — How assets are encrypted in remote graphs
-- [RTC Sync](../../tutorials/collaboration/real-time-sync.md) — Asset synchronization in collaboration
-
----
-
-**Last Updated**: March 2026
-**Status**: 🟢 Stable (Asset management core feature)  
-**Feedback**: Report asset issues on [GitHub](https://github.com/logseq/logseq/issues) with `assets` label
+- [Assets: Link Syntax, File Types, and Sync](../../reference/features/asset-sync.md): every link form, format sets, sync eligibility
+- [Sync Limits](../../reference/features/sync-limits.md): size limits in full
+- [Video Embedding](../multimedia/video-embed.md): YouTube, Vimeo, Bilibili, video URLs
+- [PDF Annotations](../../reference/features/pdf-annotations.md): working with PDF files
+- [Backup and Recovery Strategies](../organization/backup-strategies.md): exports that include assets
+- [Schema Overview](../../reference/database/schema-overview.md): classes and properties
+- [E2EE Encryption](../../explanation/security/e2ee-encryption.md): what is encrypted in synced graphs
+- [Basic Editing](../../tutorials/getting-started/03-basic-editing.md)

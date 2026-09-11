@@ -9,7 +9,7 @@ verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 related-docs:
   - '[Performance Optimization Guide](../optimization/performance-optimization.md)'
-  - '[Backup and Restore](../backup/backup-restore.md)'
+  - '[Backup and Recovery Strategies](../organization/backup-strategies.md)'
   - '[Database Integrity](../../explanation/architecture/database-integrity.md)'
   - '[RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md)'
   - '[File vs DB graphs](../../explanation/concepts/file-vs-db.md)'

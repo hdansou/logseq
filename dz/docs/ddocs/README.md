@@ -62,10 +62,6 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 ### [How-To Guides](how-to/) — _Task-Oriented_
 
-#### [Backup](how-to/backup/)
-
-- [Backup and Restore](how-to/backup/backup-restore.md)
-
 #### [Content](how-to/content/)
 
 - [Create a Flashcard Deck](how-to/content/create-flashcard-deck.md)
@@ -290,7 +286,7 @@ Understand the system:
 - [System Overview](explanation/architecture/system-overview.md)
 - [Data Architecture](explanation/architecture/data-architecture.md)
 - [File-Based vs Database Graphs](explanation/concepts/file-vs-db.md)
-- [Backup & Restore](how-to/backup/backup-restore.md)
+- [Backup and Recovery Strategies](how-to/organization/backup-strategies.md)
 
 ---
 
