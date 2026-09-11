@@ -20,6 +20,12 @@ The 2026-09-11 recount is **66**. The wave-4 audits brought 92 down to 83, and w
 83 down to 66. Wave 5 audited 13 pages; its agents retargeted links whose pages had been renamed
 and dropped links to pages that were never written. The groups have not been recounted.
 
+The 2026-09-11 recount after wave 6 is **51**. Wave 6 audited four pages and merged
+`file-vs-database.md` into `file-vs-db.md`, deleting the duplicate and retargeting its five inbound
+links. Its agents also replaced links to pages that were never written (`sync-issues.md`,
+`page-links.md`, `how-to/navigation/*`, `logseq-sync.md`, `git-sync.md`, `export-graph.md`)
+with links to existing pages.
+
 ## Where the count went
 
 | | Then | Now | What happened |

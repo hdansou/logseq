@@ -6,12 +6,12 @@ every field comes from each document's frontmatter.
 
 | | Count |
 |---|---|
-| Documents | 106 |
-| Audited line by line this pass | 58 |
+| Documents | 105 |
+| Audited line by line this pass | 62 |
 | Authored from source — trusted | 10 |
 | Merged this pass — base inherited, needs a line-by-line audit | 27 |
 | Generated, gated in CI | 1 |
-| Not reviewed | 10 |
+| Not reviewed | 5 |
 
 `merged-not-fully-audited` means the two copies were reconciled against source and
 every ported claim was verified, but content inherited from the surviving base was
@@ -25,11 +25,6 @@ Older date, or none. Highest priority.
 | Document | Last verified | Against |
 |---|---|---|
 | `_templates/frontmatter.md` | ' # YYYY-MM-DD | — |
-| `explanation/concepts/file-vs-database.md` | — | — |
-| `explanation/concepts/graph-visualization.md` | — | — |
-| `explanation/concepts/linked-references.md` | — | — |
-| `how-to/organization/backup-strategies.md` | — | — |
-| `how-to/troubleshooting/troubleshooting-guide.md` | — | — |
 | `_templates/explanation-template.md` | 2026-01-29 | — |
 | `_templates/how-to-template.md` | 2026-01-29 | — |
 | `_templates/reference-template.md` | 2026-01-29 | — |
@@ -64,7 +59,6 @@ Older date, or none. Highest priority.
 | `explanation/concepts/block-editing-philosophy.md` | 2026-09-10 | `be800f1711` |
 | `explanation/concepts/block-tags-vs-page-tags.md` | 2026-09-10 | `be800f1711` |
 | `explanation/concepts/file-organization.md` | 2026-09-10 | `be800f1711` |
-| `explanation/concepts/file-vs-db.md` | 2026-09-10 | `be800f1711` |
 | `explanation/concepts/plugin-architecture.md` | 2026-09-10 | `be800f1711` |
 | `how-to/content/view-types.md` | 2026-09-10 | `be800f1711` |
 | `how-to/optimization/performance-optimization.md` | 2026-09-10 | `be800f1711` |
@@ -85,12 +79,17 @@ Older date, or none. Highest priority.
 | `tutorials/queries/charts-with-hiccup.md` | 2026-09-10 | `be800f1711` |
 | `explanation/architecture/system-overview.md` | 2026-09-11 | `be800f1711` |
 | `explanation/comparisons/rtc-vs-file-sync.md` | 2026-09-11 | `be800f1711` |
+| `explanation/concepts/file-vs-db.md` | 2026-09-11 | `be800f1711` |
+| `explanation/concepts/graph-visualization.md` | 2026-09-11 | `be800f1711` |
+| `explanation/concepts/linked-references.md` | 2026-09-11 | `be800f1711` |
 | `explanation/concepts/local-first-architecture.md` | 2026-09-11 | `be800f1711` |
 | `how-to/content/favorites-recent.md` | 2026-09-11 | `be800f1711` |
 | `how-to/content/hide-tags-from-node.md` | 2026-09-11 | `be800f1711` |
 | `how-to/integrations/custom-css.md` | 2026-09-11 | `be800f1711` |
 | `how-to/integrations/custom-js.md` | 2026-09-11 | `be800f1711` |
+| `how-to/organization/backup-strategies.md` | 2026-09-11 | `be800f1711` |
 | `how-to/tasks/disable-task-time-tracking.md` | 2026-09-11 | `be800f1711` |
+| `how-to/troubleshooting/troubleshooting-guide.md` | 2026-09-11 | `be800f1711` |
 | `reference/interface/slash-commands.md` | 2026-09-11 | `be800f1711` |
 | `reference/platforms/mobile-differences.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/getting-started/01-installation.md` | 2026-09-11 | `be800f1711` |
