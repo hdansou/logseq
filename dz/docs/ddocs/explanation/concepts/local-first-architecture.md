@@ -1,27 +1,33 @@
 ---
 title: 'Local-First Architecture'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'Logseq 2.0.1'
+lastVerified: '2026-09-11'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 quadrant: 'Explanation'
-platform: 'Desktop + Mobile'
+platform: 'Desktop + Web + Mobile'
 related-docs:
   - '[File vs Database Graphs](./file-vs-database.md)'
   - '[E2EE Encryption](../security/e2ee-encryption.md)'
   - '[Database Integrity](../architecture/database-integrity.md)'
+  - '[RTC vs File Sync](../comparisons/rtc-vs-file-sync.md)'
 tags: ['architecture', 'local-first', 'privacy', 'offline', 'sync']
 ---
 
 # Local-First Architecture
 
-This document explains Logseq's local-first architecture philosophy. Understanding this approach helps you appreciate why Logseq works the way it does and how it protects your data and privacy.
+> **Last revised:** 2026-09-11 — verified against `be800f1711`
+
+This page explains Logseq's local-first design: what it means, how the current code implements it, and where the claims stop. Knowing this explains why Logseq behaves the way it does, and what it does and does not protect.
 
 **What You'll Understand:**
 
 - What "local-first" means
 - Why local storage matters
-- How Logseq implements local-first
-- Sync strategies and trade-offs
-- Privacy and ownership implications
+- How Logseq implements local-first today
+- Sync options and trade-offs
+- Privacy and ownership, including what leaves the device
 - Comparison with cloud-first apps
 
 ---
@@ -31,7 +37,7 @@ This document explains Logseq's local-first architecture philosophy. Understandi
 1. [Local-First Principles](#local-first-principles)
 2. [Why Local-First?](#why-local-first)
 3. [Logseq's Implementation](#logseqs-implementation)
-4. [Storage Architectures](#storage-architectures)
+4. [Storage Architecture](#storage-architecture)
 5. [Sync Strategies](#sync-strategies)
 6. [Privacy & Ownership](#privacy--ownership)
 7. [Trade-offs](#trade-offs)
@@ -43,35 +49,31 @@ This document explains Logseq's local-first architecture philosophy. Understandi
 
 ### Core Definition
 
-**Local-First:** Software that stores and processes data primarily on the user's device, with optional cloud sync as a secondary feature.
+**Local-First:** software that stores and processes data mainly on the user's device, with cloud sync as an optional extra.
 
-**Key Principles:**
+**Key Principles, and how Logseq measures up:**
 
 ```markdown
 1. No server required for core functionality
-   ✅ Work offline by default
-   ✅ Full features without internet
-   ✅ No mandatory account
+   ✅ Graphs are created, edited and queried on the device
+   ✅ Sync appears in the new-graph dialog only for some users
+      (see "Logseq Sync" below)
 
 2. Data lives on your device
-   ✅ You have the files
-   ✅ Direct file access
-   ✅ No proprietary formats (or open formats)
+   ✅ One db.sqlite file per graph (desktop) or an OPFS database (web)
+   ⚠️ It is a SQLite file holding DataScript storage, not plain text
 
 3. Fast and responsive
-   ✅ No network latency
-   ✅ Instant operations
-   ✅ No loading spinners
+   ✅ Queries run against a local DataScript database; there is
+      no network round trip
 
 4. Privacy by default
-   ✅ Data never leaves device (unless you choose)
-   ✅ No server-side tracking
-   ✅ You control sharing
+   ✅ Graph content is not uploaded unless you turn on sync
+   ⚠️ Usage analytics and error reports are ON by default (opt-out)
 
 5. Longevity
-   ✅ Works without company servers
-   ✅ Data readable in 10+ years
-   ✅ No vendor lock-in
+   ✅ Works without Logseq's servers
+   ✅ SQLite is a widely readable format, and export paths exist
 ```
 
 ### Local-First vs Cloud-First
@@ -80,41 +82,38 @@ This document explains Logseq's local-first architecture philosophy. Understandi
 
 ```markdown
 Architecture:
-┌─────────┐ Internet ┌─────────┐
-│ Browser │ ←──────────────→ │ Server │
-│ (View) │ Every action │ (Truth) │
-└─────────┘ └─────────┘
+┌─────────┐   every action   ┌─────────┐
+│ Browser │ ←──────────────→ │ Server  │
+│ (View)  │                  │ (Truth) │
+└─────────┘                  └─────────┘
 
 Characteristics:
 
-- Server is source of truth
-- Requires internet for all operations
+- Server is the source of truth
+- Most operations need the network
 - Data stored on company servers
-- Real-time collaboration easy
-- Vendor controls data access
-
-Examples: Notion, Google Docs, Evernote
+- Real-time collaboration is built in
 ```
 
 **Local-First (Logseq):**
 
 ```markdown
 Architecture:
-┌─────────────┐ Optional ┌─────────┐
-│ Local App │ ←────────→ │ Sync │
-│ (Truth) │ Sync │ (Mirror)│
-└─────────────┘ └─────────┘
+┌─────────────────┐  optional   ┌───────────────┐
+│ Local app +     │ ←─────────→ │ db-sync       │
+│ local SQLite    │  tx batches │ server        │
+│ (source of edits)│            │ (orders txs)  │
+└─────────────────┘             └───────────────┘
 
 Characteristics:
 
-- Device is source of truth
-- Works fully offline
-- Data stored locally
-- Collaboration requires sync strategy
-- User controls data
-
-Examples: Logseq, Obsidian (local), VS Code
+- The device holds the full graph and accepts edits offline
+- When sync is on, the server decides the order of transactions;
+  clients rebase their local edits onto it
+- Collaboration needs sync to be switched on for the graph
 ```
+
+> **Corrected:** the old diagram called the sync server a passive "Mirror". With db-sync the server assigns the global transaction order. It rejects batches built on a stale `t` ([`handler/sync.cljs:624-627`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/sync.cljs#L624-L627)), and clients rebase onto that order. See [rtc-vs-file-sync.md](../comparisons/rtc-vs-file-sync.md#db-sync-conflict-resolution).
 
 ---
 
@@ -122,477 +121,251 @@ Examples: Logseq, Obsidian (local), VS Code
 
 ### 1. Speed & Responsiveness
 
-**Local Operations Are Instant:**
+**Local operations skip the network:**
 
 ```markdown
 Cloud-first action:
-User types → Send to server → Server processes →
-Send back → Update UI
-Time: 50-500ms (depending on connection)
+User types → Send to server → Server processes → Send back → Update UI
 
 Local-first action:
-User types → Local process → Update UI
-Time: 1-10ms (instant)
-
-Result:
-
-- No lag while typing
-- No "saving..." spinners
-- Instant search results
-- Smooth interactions
+User types → Local DB worker transacts → Update UI
 ```
 
-**Performance Comparison:**
+In Logseq, edits and queries go to a DB worker on the same machine: a Web Worker on web and mobile, or a `db-worker-node` child process on desktop. They never go to a remote server ([`persist_db.cljs:352-361`](../../../../../src/main/frontend/persist_db.cljs#L352-L361)).
 
-| Operation        | Cloud-First | Local-First |
-| ---------------- | ----------- | ----------- |
-| Load app         | 2-10s       | <1s         |
-| Search 10k notes | 1-3s        | <100ms      |
-| Create page      | 200-500ms   | <10ms       |
-| Switch pages     | 100-300ms   | <10ms       |
-| Edit block       | 50-200ms    | <5ms        |
+> **Unverified:** the earlier performance table ("Load app <1s", "Search 10k notes <100ms", "Edit block <5ms", and cloud-first figures) was removed. Source contains no benchmarks that back those numbers.
 
 ### 2. Offline Functionality
 
 **Work Anywhere:**
 
-```markdown
-Scenarios:
-✈️ Airplane mode: Full functionality
-🚆 Train with spotty WiFi: No interruptions
-🏔️ Remote location: Works perfectly
-🔌 Internet outage: Business as usual
-🌐 Censored network: Complete access
+- Editing, search and queries use only the local database.
+- On a synced graph, offline edits are kept as pending rows in a local `client_ops` table ([`client_op.cljs:40`](../../../../../src/main/frontend/worker/sync/client_op.cljs#L40)). Upload waits until the worker is online and the socket is open ([`apply_txs.cljs:940-945`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L940-L945)).
 
-Cloud-first apps:
-❌ Login fails without internet
-❌ "You're offline" error screens
-❌ Lost work when connection drops
-❌ Degraded or no functionality
-```
+> **Removed:** the scenario list ("Censored network: complete access") and the claims about cloud-first apps, which source cannot support.
 
 ### 3. Privacy & Control
 
-**Your Data, Your Device:**
-
-```markdown
-Local-first:
-
-- Data never leaves device (by default)
-- No server logging your activity
-- No data mining for ads
-- No third-party access
-- Government requests? No data to hand over
-
-Cloud-first:
-
-- All data on company servers
-- Activity logs stored indefinitely
-- Potential data mining
-- Third-party integrations can access data
-- Subject to subpoenas/requests
-```
-
-### 4. Longevity
-
-**Future-Proof:**
+**Your data, your device:**
 
 ```markdown
 Local-first (Logseq):
 
-- Files in standard formats (Markdown, SQLite)
-- Readable without Logseq
-- Works even if Logseq shuts down
-- Data portable to other tools
-- 10+ year accessibility guaranteed
+- Graph content stays on the device unless the graph is synced
+- Graphs are not uploaded for analytics
+- Synced graphs: content goes to the sync server, partly encrypted if E2EE is on
 
 Cloud-first:
 
-- Proprietary formats
-- Dependent on company servers
-- If company closes, data at risk
-- Export may be incomplete
-- Lock-in risk
+- All content on company servers by design
 ```
 
-**Historical Examples:**
+> **Corrected:** earlier text said "No server logging your activity" and, further down, "Logseq app: Knows nothing (no telemetry)". That is wrong; see [What leaves the device](#what-leaves-the-device).
+
+### 4. Longevity
+
+**Future-proofing:**
 
 ```markdown
-Services that shut down:
+Logseq:
 
-- Google Reader (2013)
-- Sunrise Calendar (2016)
-- Inbox by Gmail (2019)
-- Evernote (struggling)
+- Storage is a SQLite file (db.sqlite), readable by any SQLite tool,
+  but its content is DataScript storage, not a table of blocks
+- Export paths: SQLite DB, zip, EDN, standard Markdown (no block properties)
+- The app runs without Logseq's servers
 
-Local-first never "shuts down"
-Your files remain accessible
+Cloud-first:
+
+- Dependent on the company's servers and export tools
 ```
+
+> **Removed:** "Readable without Logseq" and "10+ year accessibility guaranteed". Opening `db.sqlite` in another tool shows only a `kvs` table of serialized DataScript storage ([`sqlite.cljs:13`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs#L13)), not readable notes. The page also listed shut-down services, including "Evernote (struggling)", which is opinion, not source.
 
 ### 5. Cost Structure
 
-**Economic Benefits:**
-
-```markdown
-Cloud-first recurring costs:
-
-- $10-15/month/user forever
-- Costs increase with usage
-- Features behind paywall
-- Price increases over time
-
-Local-first one-time cost:
-
-- Free (open source like Logseq)
-- Or one-time purchase
-- All features available
-- No recurring fees
-- Optional sync subscription
-```
+> **Unverified:** prices ("$10-15/month", "$5/mo sync subscription") cannot be proven from source. The app has plan-limit strings only: "1 synced graph (up to 50MB, notes only)" and "10 synced graphs (up to 5GB each)" ([`en.edn:37`](../../../../../src/resources/dicts/en.edn#L37), [`:52`](../../../../../src/resources/dicts/en.edn#L52)). Those limits are not enforced by the server ([sync-limits.md](../../reference/features/sync-limits.md#account-level-limits--claimed-not-enforced)). The app is open source, and local use needs no account.
 
 ---
 
 ## Logseq's Implementation
 
-### Two Graph Types
+### Graph Types
 
-**File-Based Graphs:**
+**File-Based Graphs (legacy, import only):**
 
-```markdown
-Storage: Plain Markdown files
-
-Structure:
-LogseqGraph/
-├── journals/
-│ ├── 2026-01-22.md
-│ └── 2026-01-21.md
-├── pages/
-│ ├── Projects\_\_\_Alpha.md
-│ └── Meeting Notes.md
-├── assets/
-│ └── images/
-└── logseq/
-├── config.edn
-└── custom.css
-
-Benefits:
-✅ Human-readable
-✅ Git-friendly
-✅ Direct file editing
-✅ Easy backup
-✅ Tool-agnostic
-```
+File-based graphs (a folder of `journals/`, `pages/`, `assets/` and `logseq/config.edn`) **cannot be opened** at `be800f1711`. The graph list keeps only DB graphs ([`repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs#L321-L323)). A file graph gets into the app only through the "File to DB graph" import ([`imports.cljs:444`](../../../../../src/main/frontend/components/imports.cljs#L444); label at [`en.edn:926`](../../../../../src/resources/dicts/en.edn#L926)).
 
 **Database Graphs:**
 
 ```markdown
 Storage: SQLite database
 
-Structure:
-LogseqGraph/
-├── logseq.db (SQLite file)
-├── version-files/ (Transit exports)
-│ └── graph-1737504000.transit
-└── assets/
+Desktop layout:
+~/logseq/graphs/
+└── <graph>/
+    ├── db.sqlite        (the graph)
+    ├── assets/          (images, PDFs, …)
+    └── backup/          (automatic desktop backups)
 
 Benefits:
-✅ Faster queries
-✅ Better performance (large graphs)
-✅ Advanced features
+✅ Typed properties and classes
 ✅ Schema validation
-✅ RTC sync support
+✅ db-sync (RTC) support
 ```
+
+Sources for the layout:
+- **Graphs directory**: `~/logseq/graphs` ([`common/config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs#L55)).
+- **Database file**: `db.sqlite` ([`sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs#L29-L33)).
+- **Assets directory**: `assets` ([`common/config.cljs:56`](../../../../../deps/common/src/logseq/common/config.cljs#L56)).
+- **Backup directory**: `backup` ([`graph_backup.cljs:10-11`](../../../../../src/main/logseq/db_worker/graph_backup.cljs#L10-L11)).
+
+> **Corrected:** the old layout showed `logseq.db` and `version-files/*.transit` exports. The file is `db.sqlite`. `version-files` appears at master only as a file-graph path to ignore ([`deps/common/.../graph.cljs:84`](../../../../../deps/common/src/logseq/common/graph.cljs#L84)); DB graphs never write it.
 
 ### Local Storage Technologies
 
+Each platform runs the same worker core (`frontend.worker.db-core`) on a different SQLite binding.
+
 **Desktop (Electron):**
+- The renderer does not touch SQLite. On desktop, `<start-runtime!` asks the main process for a db-worker runtime ([`persist_db.cljs:352-357`](../../../../../src/main/frontend/persist_db.cljs#L352-L357)).
+- The main process spawns `db-worker-node` as a child process ([`daemon.cljs:226`](../../../../../src/main/logseq/db_worker/daemon.cljs#L226), [`:248`](../../../../../src/main/logseq/db_worker/daemon.cljs#L248)).
+- The renderer talks to it over HTTP and SSE ([`persist_db/remote.cljs:2`](../../../../../src/main/frontend/persist_db/remote.cljs#L2)).
+- The worker opens the database with Node's built-in `node:sqlite` `DatabaseSync` ([`platform/node.cljs:5`](../../../../../src/main/frontend/worker/platform/node.cljs#L5), [`:20`](../../../../../src/main/frontend/worker/platform/node.cljs#L20)).
 
-```javascript
-// File system access
-const fs = require('fs')
+**Web and Mobile (Capacitor):**
+- The app starts a Web Worker and wraps it with Comlink ([`persist_db/browser.cljs:202-208`](../../../../../src/main/frontend/persist_db/browser.cljs#L202-L208)).
+- The worker loads `@sqlite.org/sqlite-wasm` and stores the database in an OPFS pool ([`platform/browser.cljs:4`](../../../../../src/main/frontend/worker/platform/browser.cljs#L4), [`:74`](../../../../../src/main/frontend/worker/platform/browser.cljs#L74)).
 
-// Read file
-fs.readFileSync('/path/to/file.md', 'utf-8')
-
-// Write file
-fs.writeFileSync('/path/to/file.md', content)
-
-// Direct file system access
-// No server roundtrip
-```
-
-**Mobile (Capacitor):**
-
-```typescript
-// Filesystem plugin
-import { Filesystem } from '@capacitor/filesystem'
-
-// Read
-await Filesystem.readFile({
-  path: 'file.md',
-  directory: Directory.Documents,
-})
-
-// Write
-await Filesystem.writeFile({
-  path: 'file.md',
-  data: content,
-  directory: Directory.Documents,
-})
-```
-
-**Browser (Web):**
-
-```javascript
-// File System Access API (modern browsers)
-const handle = await window.showDirectoryPicker()
-
-// Or IndexedDB for database graphs
-const db = await openDB('logseq', 1)
-```
+> **Removed:** the old snippets showed `fs.readFileSync` on `.md` files, `@capacitor/filesystem` reads of `file.md`, `window.showDirectoryPicker()`, and "IndexedDB for database graphs". None of these is how graphs are stored today. (IndexedDB is used in the browser runtime only for small key-value secrets such as the persisted E2EE password; see [e2ee-encryption.md](../security/e2ee-encryption.md).)
 
 ### In-Memory Processing
 
-**DataScript (File-Based):**
+**DataScript over SQLite:**
 
 ```clojure
-;; Load files into memory
-(def conn (d/create-conn schema))
+;; The graph is a DataScript database held in the worker.
+;; Its storage is persisted to SQLite as key/value rows:
+;;   create table if not exists kvs
+;;     (addr INTEGER primary key, content TEXT, addresses JSON)
 
-;; Parse markdown → blocks
-(def blocks (parse-files files))
-
-;; Transact to in-memory DB
-(d/transact! conn blocks)
-
-;; Query in-memory
+;; Queries are Datalog against DataScript, never SQL against a blocks table:
 (d/q '[:find ?title
-       :where [?p :block/name ?title]]
+       :where
+       [?b :block/tags ?t]
+       [?t :db/ident :logseq.class/Task]
+       [?b :logseq.property/status ?s]
+       [?s :db/ident :logseq.property/status.todo]
+       [?b :block/title ?title]]
      @conn)
-
-;; No server queries
-;; All local, all fast
 ```
 
-**SQLite (Database):**
+Sources: [`sqlite.cljs:13`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs#L13) for the `kvs` table. Task status is a closed-value ref with six values: `backlog`, `todo`, `doing`, `in-review`, `done`, `canceled` ([`property.cljs:313-318`](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L313-L318)).
 
-```sql
--- Query local SQLite
-SELECT * FROM blocks
-WHERE marker = 'TODO'
-AND deadline < date('now')
+Full-text search uses a **separate** SQLite database per graph (`"search" + repo-path`, [`db_core.cljs:526`](../../../../../src/main/frontend/worker/db_core.cljs#L526)). It holds an FTS5 trigram table ([`search.cljs:57`](../../../../../src/main/frontend/worker/search.cljs#L57)).
 
--- Runs on device
--- No network latency
--- Privacy preserved
-```
+> **Removed:** the SQL example `SELECT * FROM blocks WHERE marker = 'TODO' AND deadline < date('now')`. The graph database has no `blocks` table, and `marker` is a file-graph attribute.
 
 ---
 
-## Storage Architectures
+## Storage Architecture
 
-### File-Based Architecture
+### File-Based Architecture (legacy)
 
-**How It Works:**
-
-```markdown
-1. Read Phase:
-   - Scan directory for .md files
-   - Parse markdown to blocks
-   - Build graph in memory (DataScript)
-   - Extract properties, links, refs
-2. Work Phase:
-   - All operations in-memory
-   - Instant queries
-   - Real-time updates
-3. Write Phase:
-   - Detect changes
-   - Write modified files
-   - Update timestamps
-   - Preserve formatting
-```
-
-**File Structure Example:**
-
-```markdown
-File: pages/Projects\_\_\_Alpha.md
-
-Content:
-
-- [[Project Alpha]]
-  status:: active
-  owner:: [[Person/Sarah]]
-
-  - TODO Complete milestone 1
-    DEADLINE: <2026-01-30 Wed>
-
-Parsed to:
-Block 1: {uuid: abc-123, content: "Project Alpha", ...}
-Block 2: {uuid: def-456, parent: abc-123, ...}
-```
+> **Removed:** the "Read phase / Work phase / Write phase" description of parsing `.md` files into DataScript and writing them back. File graphs no longer open. The parser (`deps/graph-parser/`) is still used to import file graphs into DB graphs, and some of its text helpers are shared elsewhere; worker search, for example, requires `logseq.graph-parser.text` ([`search.cljs:15`](../../../../../src/main/frontend/worker/search.cljs#L15)).
 
 ### Database Architecture
 
 **How It Works:**
 
 ```markdown
-1. Open Phase:
-   - Open SQLite file
-   - Load schema
-   - Prepare indexes
-2. Work Phase:
-   - SQL queries for data
-   - Transactions for writes
-   - ACID guarantees
-3. Sync Phase:
-   - Export transit file
-   - Upload to sync service
-   - Resolve conflicts
+1. Open phase:
+   - The DB worker opens db.sqlite (desktop) or the OPFS database (web/mobile)
+   - DataScript storage is restored from the kvs table
+   - The search database is opened alongside it
+2. Work phase:
+   - Outliner operations transact into DataScript
+   - Changed storage is written back to SQLite
+   - Queries are Datalog (DataScript), not SQL
+3. Sync phase (only if the graph is synced):
+   - Each local tx is saved as a pending row in client_ops
+   - Pending txs are uploaded as tx/batch messages over a WebSocket
+   - Remote txs are pulled, local pending txs are rebased on top
 ```
 
-**Schema Structure:**
+Sources for the sync phase: [`apply_txs.cljs:1876-1890`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L1876-L1890) (pending txs), [`:960`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L960) and [`:994`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L994) (batch upload), [`:1682-1689`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L1682-L1689) (rebase).
 
-```sql
--- Simplified schema
-CREATE TABLE blocks (
-  id INTEGER PRIMARY KEY,
-  uuid TEXT UNIQUE,
-  content TEXT,
-  parent_id INTEGER,
-  page_id INTEGER,
-  properties JSON,
-  created_at INTEGER,
-  updated_at INTEGER
-);
-
-CREATE INDEX idx_blocks_uuid ON blocks(uuid);
-CREATE INDEX idx_blocks_page ON blocks(page_id);
-```
+> **Removed:**
+> - "Export transit file → upload → resolve conflicts". Sync uploads transaction batches, not transit exports.
+> - The invented `CREATE TABLE blocks (… content TEXT, parent_id …, properties JSON …)` schema. The real on-disk schema is the single `kvs` table above; the logical schema lives in DataScript (see [schema.cljs](../../../../../deps/db/src/logseq/db/frontend/schema.cljs), version `65.33` at `:33`).
 
 ---
 
 ## Sync Strategies
 
-### Git Sync (File-Based)
+### Git, iCloud, Dropbox, Syncthing (file tools)
+
+> **Removed:** the "Git Sync (File-Based)" and "iCloud/Dropbox (File-Based)" workflows. They assumed a folder of Markdown files that Logseq reads, and file graphs no longer open.
+
+> **Unverified:** putting a DB graph's `~/logseq/graphs/<graph>/` folder in Git or a file-sync service. Nothing in source supports it or guards against it. While the app is running, `db.sqlite` is held open by `db-worker-node`, so copying or merging the file from another device could corrupt it. For a copy you can move around, prefer the automatic backups or an export.
+
+### Logseq Sync (db-sync / RTC)
 
 **How It Works:**
 
-```bash
-# Your workflow
-git add .
-git commit -m "Daily updates"
-git push origin main
-
-# On another device
-git pull origin main
-
-# Automatic with scripts
-# Run on file changes
+```markdown
+1. Each local transaction is queued as a pending row (client_ops)
+2. If the graph is E2EE, :block/title and :block/name values are
+   encrypted with the graph's AES-GCM key before upload
+3. Pending txs are sent as tx/batch over a WebSocket (wss://api.logseq.io/sync/…)
+4. The server appends batches in order and tells other clients "changed"
+5. Other clients pull, decrypt, apply remote txs and rebase their own pending txs
+6. If a remote :block/title overwrote a block with pending local edits,
+   the remote value is saved as a sync conflict for you to review
 ```
 
 **Benefits:**
 
 ```markdown
-✅ Version control
-✅ Branching/merging
-✅ Full history
-✅ Conflict resolution
-✅ Free (GitHub/GitLab)
-✅ Works offline (commit locally)
+✅ Near-real-time sync over a persistent WebSocket
+✅ Multi-user editing with presence (who is editing which block)
+✅ Optional E2EE, on by default for new synced graphs
+✅ Works on desktop, web and mobile
 ```
 
 **Challenges:**
 
 ```markdown
-⚠️ Manual process (or scripts)
-⚠️ Merge conflicts require resolution
-⚠️ Large binary assets problematic
-⚠️ Learning curve for Git
-```
-
-### iCloud/Dropbox (File-Based)
-
-**How It Works:**
-
-```markdown
-1. Save graph in synced folder
-   ~/Dropbox/LogseqGraph/
-2. File changes sync automatically
-3. Access from multiple devices
-4. Conflict files created on collision
-```
-
-**Benefits:**
-
-```markdown
-✅ Automatic sync
-✅ Easy setup
-✅ Works with existing accounts
-✅ No Git knowledge needed
-```
-
-**Challenges:**
-
-```markdown
-⚠️ Conflict files (.conflicted)
-⚠️ No version history
-⚠️ Sync timing issues
-⚠️ No encryption in transit
-```
-
-### Logseq Sync (Database)
-
-**How It Works:**
-
-```markdown
-1. Local changes → Transit export
-2. Encrypt with E2EE
-3. Upload to Logseq servers
-4. Download on other devices
-5. Decrypt locally
-6. Merge changes (CRDT)
-
-Server never sees unencrypted data
-```
-
-**Benefits:**
-
-```markdown
-✅ Real-time sync
-✅ End-to-end encryption
-✅ Conflict-free (CRDT)
-✅ Mobile support
-✅ Integrated experience
-```
-
-**Challenges:**
-
-```markdown
-⚠️ Requires subscription ($5/mo)
 ⚠️ Database graphs only
-⚠️ Dependent on Logseq service
+⚠️ Dependent on a sync server (Logseq's, or a self-hosted one)
+⚠️ E2EE covers only block titles, page names and assets;
+   structure and other properties are sent in the clear
+⚠️ Some conflicts are surfaced for manual review, and a local tx that
+   cannot be rebased is dropped
+⚠️ Access is gated: the "Use Logseq Sync?" option appears only for
+   users in the "team" or "rtc_2025_07_10" groups, in dev builds,
+   or when a custom sync server is set
 ```
+
+Sources for the challenges and the steps above:
+- **Encrypted attributes**: [`worker/sync/const.cljs:25`](../../../../../src/main/frontend/worker/sync/const.cljs#L25).
+- **WebSocket URL**: [`config.cljs:41-44`](../../../../../src/main/frontend/config.cljs#L41-L44).
+- **Server ordering**: [`handler/sync.cljs:624-627`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/sync.cljs#L624-L627).
+- **Conflict recording**: [`apply_txs.cljs:1130-1131`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L1130-L1131) and [`:1673-1677`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L1673-L1677).
+- **Dropped rebases**: [`apply_txs.cljs:1700-1710`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L1700-L1710).
+- **Access gate**: [`user.cljs:357-362`](../../../../../src/main/frontend/handler/user.cljs#L357-L362), used at [`repo.cljs:700-704`](../../../../../src/main/frontend/components/repo.cljs#L700-L704).
+
+> **Corrected:** this section used to say "Merge changes (CRDT)", "Conflict-free (CRDT)" and "Server never sees unencrypted data". Source contains no CRDT: the server orders transactions and the client reverses, applies and rebases. The server sees everything outside the encrypted attribute set, and it sees everything on a non-E2EE graph.
+
+> **Unverified:** "Requires subscription ($5/mo)". No price appears in source.
 
 ### Self-Hosted Sync
 
-**Options:**
+The db-sync server can be self-hosted:
+- `deps/db-sync` ships "a Node.js adapter for self-hosting" alongside its Cloudflare Worker ([`deps/db-sync/README.md:4`](../../../../../deps/db-sync/README.md#L4), [`:104`](../../../../../deps/db-sync/README.md#L104)).
+- The app has a **Sync Server URL** setting under Settings → Advanced ([`settings.cljs:927`](../../../../../src/main/frontend/components/settings.cljs#L927)). It is stored in `localStorage` as `sync-server-url` ([`config.cljs:51-56`](../../../../../src/main/frontend/config.cljs#L51-L56)) and replaces the default WebSocket URL ([`:88-93`](../../../../../src/main/frontend/config.cljs#L88-L93)).
+- The setting's own warning reads: "Your Logseq authentication tokens will be sent to this server, so only use a trusted URL" ([`en.edn:1774`](../../../../../src/resources/dicts/en.edn#L1774)).
+- Setting a custom URL also turns on the sync option in the new-graph dialog ([`user.cljs:361`](../../../../../src/main/frontend/handler/user.cljs#L361)).
 
-```markdown
-1. Syncthing (file-based)
-   - P2P sync
-   - No central server
-   - Free and open source
-2. rsync (file-based)
-
-   - Your own server
-   - Full control
-   - Cron automation
-
-3. CRDTs (database)
-   - Self-host sync server
-   - Advanced setup
-   - Full privacy
-```
+> **Removed:** "Syncthing / rsync (file-based)" and "CRDTs (database): self-host sync server". The first two are file-graph workflows; the third named a mechanism that does not exist.
 
 ---
 
@@ -603,77 +376,73 @@ Server never sees unencrypted data
 **You Own Your Data:**
 
 ```markdown
-File-based:
+Database graph:
 
-- Plain markdown files
-- In your filesystem
-- Backup with any tool
-- Read with any editor
-
-Database:
-
-- SQLite file you control
-- Transit exports (readable)
-- Can extract all data
-- Portable format
+- A db.sqlite file on your disk (desktop) or in browser OPFS (web)
+- Automatic hourly backups on desktop, 12 kept, in <graph>/backup/
+- Exports: SQLite DB, zip, EDN, standard Markdown (no block properties)
 
 Contrast with cloud-first:
 
-- Data on their servers
-- Proprietary formats
-- Limited export options
-- Dependent on their API
+- Data primarily on the provider's servers
 ```
 
-### Privacy Guarantees
+Sources:
+- **Backups**: throttled to one per hour ([`electron/db.cljs:15-16`](../../../../../src/electron/electron/db.cljs#L15-L16), applied at [`:60`](../../../../../src/electron/electron/db.cljs#L60)), 12 versions kept ([`:18`](../../../../../src/electron/electron/db.cljs#L18)), written under `backup/` ([`graph_backup.cljs:10`](../../../../../src/main/logseq/db_worker/graph_backup.cljs#L10)).
+- **Exports**: [`export.cljs:125-151`](../../../../../src/main/frontend/components/export.cljs#L125-L151).
 
-**What Logseq Knows (or Doesn't):**
+> **Removed:** "Transit exports (readable)". The transit export is a debug file "to send to us for debugging" ([`en.edn:633`](../../../../../src/resources/dicts/en.edn#L633)), not a portability format.
+
+### What Leaves the Device
+
+**Local operation (no sync):**
 
 ```markdown
-Local operation:
-
-- Logseq app: Knows nothing (no telemetry)
-- Your device: All data
-- Internet: No data sent
-
-With Logseq Sync:
-
-- Logseq servers: Encrypted blobs only
-- No unencrypted content
-- No usage tracking
-- No data mining
-
-With Git/Dropbox:
-
-- Git host: Sees file contents (use private repo)
-- Dropbox: Sees file contents
-- No analytics by Logseq
+- Graph content: not uploaded
+- Usage analytics (PostHog) and error reports (Sentry): ON by default,
+  can be turned off in Settings → Advanced
 ```
+
+The analytics are real, and they are opt-out:
+- Instrumentation starts unless `:instrument/disabled?` is set ([`instrumentation/core.cljs:7-11`](../../../../../src/main/frontend/modules/instrumentation/core.cljs#L7-L11)).
+- That flag is read from local storage key `instrument-disabled`, which is empty on a fresh install ([`state.cljs:114`](../../../../../src/main/frontend/state.cljs#L114)).
+- The toggle reads "Send usage data and diagnostics to Logseq". Its description says: "Logseq will never collect your local graph database or sell your data." ([`en.edn:1704-1705`](../../../../../src/resources/dicts/en.edn#L1704-L1705); row at [`settings.cljs:549-555`](../../../../../src/main/frontend/components/settings.cljs#L549-L555)).
+- PostHog is off in dev builds and is configured with `autocapture false`, `disable_session_recording true`, `mask_all_text true` and `mask_all_element_attributes true` ([`posthog.cljs:32-42`](../../../../../src/main/frontend/modules/instrumentation/posthog.cljs#L32-L42)).
+
+**With Logseq Sync (db-sync):**
+
+```markdown
+- The sync server stores the graph as snapshot rows (kvs) plus a
+  transaction log (tx_log)
+- E2EE graph: :block/title, :block/name and asset bytes are ciphertext;
+  entity structure, other properties, graph name, email and membership are not
+- Non-E2EE graph: everything is readable by the server
+```
+
+The server tables are created at [`deps/db-sync/.../storage.cljs:34-43`](../../../../../deps/db-sync/src/logseq/db_sync/storage.cljs#L34-L43). What E2EE covers, and what it leaves out, is detailed in [e2ee-encryption.md § What Gets Protected](../security/e2ee-encryption.md#what-gets-protected).
+
+> **Corrected:** the old section said "Logseq app: Knows nothing (no telemetry)", "Logseq servers: Encrypted blobs only", "No usage tracking" and "No analytics by Logseq". All four contradict source.
 
 ### Data Portability
 
 **Exit Strategy:**
 
 ```markdown
-Logseq → Other Tools:
+Database graph → other tools:
 
-File-based:
-
-1. Already in Markdown
-2. Import to Obsidian, Notion, any editor
-3. Zero conversion needed
-
-Database:
-
-1. Export to Markdown
-2. Export to JSON/EDN
-3. Parse with custom scripts
-4. No lock-in
-
-Timeline: Minutes to hours
-Data loss: Minimal to none
-Vendor lock-in: None
+1. Export as standard Markdown (drops block properties)
+2. Export as EDN (full data, readable and editable; "Don't rely on this
+   as a primary backup")
+3. Export the SQLite DB or a zip
+4. Read the EDN with your own scripts
 ```
+
+- **Markdown export**: web and desktop only; it is hidden on native mobile ([`export.cljs:140-143`](../../../../../src/main/frontend/components/export.cljs#L140-L143)).
+- **EDN description**: [`en.edn:635`](../../../../../src/resources/dicts/en.edn#L635).
+
+> **Removed:**
+> - "Export to JSON". No JSON export exists in the Export screen.
+> - "Data loss: minimal to none" and "Vendor lock-in: none". The Markdown export itself says it drops block properties.
 
 ---
 
@@ -681,40 +450,31 @@ Vendor lock-in: None
 
 ### Advantages
 
-**✅ Speed & Performance**
+**✅ Speed**
 
 ```markdown
-- Instant operations
-- No loading states
-- Smooth experience
-- Large graphs performant
+- Edits and queries hit a local DB worker, not a server
 ```
 
-**✅ Privacy & Security**
+**✅ Privacy**
 
 ```markdown
-- Data on your device
-- No tracking
-- No data breaches
-- You control access
+- Graph content stays on the device unless you sync it
+- Analytics can be turned off, and PostHog masks text
 ```
 
 **✅ Offline Capability**
 
 ```markdown
-- Work anywhere
-- No internet required
-- Reliable access
-- No downtime
+- The full graph is local
+- Synced graphs queue edits and upload when back online
 ```
 
-**✅ Ownership & Longevity**
+**✅ Ownership**
 
 ```markdown
-- You own files
-- Standard formats
-- Future-proof
-- No vendor lock-in
+- The database file and backups are on your disk
+- Multiple export formats
 ```
 
 ### Disadvantages
@@ -722,67 +482,47 @@ Vendor lock-in: None
 **❌ Collaboration Complexity**
 
 ```markdown
-Challenge: Real-time collaboration harder
+Challenge: collaboration needs a sync server
 
-- No Google Docs-style live editing
-- Sync conflicts possible
-- Requires sync strategy setup
+- The sync option is gated to certain groups or a custom server
+- Conflicting title edits are surfaced for manual review
+- Local edits that cannot be rebased are dropped
 
 Mitigation:
 
-- Logseq Sync for teams
-- Git workflows
-- Single-editor-at-a-time
+- db-sync with presence (see who is editing which block)
 ```
 
-**❌ Multi-Device Sync Setup**
+**❌ Not Plain Text**
 
 ```markdown
-Challenge: Requires configuration
+Challenge: db.sqlite is not human-readable or diff-friendly
 
-- Git: Manual setup
-- Dropbox: Potential conflicts
-- Logseq Sync: Paid feature
-
-Cloud-first:
-
-- Just log in
-- Automatic sync
-- No setup
-
-Trade-off: Convenience vs Privacy
+- External editors and Git no longer work on the live graph
+- Markdown export is one-way and drops block properties
 ```
 
-**❌ Mobile Limitations**
+**❌ Mobile**
 
-```markdown
-Challenge: Mobile filesystem access
-
-- iOS: Restricted file access
-- Android: Better but still limited
-- Background sync: Battery drain
-
-Database graphs help, but:
-
-- Different architecture needed
-- More complex sync
-```
+> **Unverified:** the old claims about iOS and Android file-access limits and background-sync battery drain. On mobile, the graph lives in the Web Worker's OPFS database, not in the device file system ([`persist_db.cljs:352-361`](../../../../../src/main/frontend/persist_db.cljs#L352-L361) chooses the browser worker for every non-Electron runtime). Source says nothing about battery use.
 
 **❌ Backup Responsibility**
 
 ```markdown
-Challenge: You must backup
+Challenge: nothing is backed up off-device unless you arrange it
 
-- Cloud-first: Automatic backups
-- Local-first: Your responsibility
+Built in:
 
-Solutions:
+- Desktop: automatic hourly backups, 12 kept, under <graph>/backup/
+  (same disk as the graph)
+- Export screen: "Backup now" and a scheduled backup to a chosen folder
 
-- Git push (automatic backup)
-- Cloud storage (Dropbox/iCloud)
-- Scheduled local backups
-- Multiple copies
+Still needed:
+
+- Off-device copies of those backups or exports
 ```
+
+Sources: [`electron/db.cljs:15-18`](../../../../../src/electron/electron/db.cljs#L15-L18) and [`en.edn:670-677`](../../../../../src/resources/dicts/en.edn#L670-L677).
 
 ---
 
@@ -793,102 +533,63 @@ Solutions:
 **CRDTs (Conflict-Free Replicated Data Types):**
 
 ```markdown
-What: Data structures that merge automatically
-Why: Enable true real-time collaboration
-Status: Logseq RTC uses CRDTs
-
-Benefits:
-
-- No conflict resolution needed
-- Real-time editing
-- Offline-first still works
-- Best of both worlds
+What: data structures that merge concurrent edits without coordination
+Status in Logseq: NOT used. db-sync is server-ordered transactions with
+client-side reverse/apply/rebase.
 ```
+
+> **Corrected:** "Status: Logseq RTC uses CRDTs". No CRDT library or data type appears in `src/main/frontend/worker/sync/` or `deps/db-sync/`.
 
 **WebAssembly:**
 
 ```markdown
-What: Run native code in browser
-Why: Full app in browser with local storage
-Status: Possible future for Logseq
-
-Benefits:
-
-- No install needed
-- Full performance
-- Access anywhere
-- Still local-first
+What: native-speed code in the browser
+Status in Logseq: already shipping. The web and mobile builds run SQLite
+as WASM (@sqlite.org/sqlite-wasm) on OPFS.
 ```
+
+> **Corrected:** "Status: Possible future for Logseq". WASM SQLite is the current web and mobile storage engine ([`platform/browser.cljs:4`](../../../../../src/main/frontend/worker/platform/browser.cljs#L4)).
 
 **Peer-to-Peer Sync:**
 
-```markdown
-What: Direct device-to-device sync
-Why: No central server needed
-Status: Experimental (Syncthing model)
-
-Benefits:
-
-- Maximum privacy
-- No subscription
-- Fast local network sync
-- Resilient
-```
+> **Unverified:** no peer-to-peer sync exists in source. db-sync always goes through a server.
 
 ### Industry Trends
 
-**More Apps Going Local-First:**
-
-```markdown
-2020s trend:
-
-- Obsidian (local Markdown)
-- Logseq (local-first)
-- Linear (local cache)
-- Figma (local state)
-- VS Code (local files)
-
-Why now:
-
-- Privacy concerns growing
-- Fast devices
-- Better web APIs
-- User demand for ownership
-```
+> **Removed:** the "More apps going local-first" list (Linear, Figma, VS Code, …). It is industry commentary that Logseq source cannot verify.
 
 ---
 
 ## Comparison Table
 
-| Aspect            | Local-First (Logseq)       | Cloud-First (Notion) |
-| ----------------- | -------------------------- | -------------------- |
-| **Speed**         | Instant                    | 50-500ms lag         |
-| **Offline**       | Full functionality         | Limited/none         |
-| **Privacy**       | Data on device             | Data on servers      |
-| **Ownership**     | You own files              | Company owns data    |
-| **Longevity**     | Forever (standard formats) | Dependent on company |
-| **Collaboration** | Requires sync setup        | Built-in, easy       |
-| **Setup**         | Manual sync config         | Just login           |
-| **Cost**          | Free (optional sync)       | $8-10/mo             |
-| **Backup**        | Your responsibility        | Automatic            |
-| **Portability**   | Easy (Markdown)            | Export required      |
+| Aspect            | Local-First (Logseq DB graph)                 | Cloud-First (typical SaaS) |
+| ----------------- | --------------------------------------------- | -------------------------- |
+| **Latency**       | Local DB worker, no network round trip        | Network round trip         |
+| **Offline**       | Full graph available; sync resumes later      | Limited                    |
+| **Privacy**       | Content local unless synced; analytics opt-out | Content on servers        |
+| **Storage**       | `db.sqlite` on your disk (desktop) or OPFS (web) | Provider's servers      |
+| **Collaboration** | db-sync, gated, server-ordered                | Built in                   |
+| **Backup**        | Automatic local hourly backups (desktop); off-device is up to you | Provider-managed |
+| **Portability**   | Export SQLite / zip / EDN / Markdown          | Provider export tools      |
+
+> **Removed:** the Speed ("50-500ms lag"), Cost ("$8-10/mo") and "Company owns data" cells, which source cannot verify.
 
 ---
 
 ## Next Steps
 
-**Embrace Local-First:**
+**Working local-first with Logseq:**
 
-1. Understand your data lives locally
-2. Set up backup strategy
-3. Configure sync (Git/Cloud/Logseq)
-4. Enjoy privacy and speed
-5. Share benefits with others
+1. Remember that your graph is a local `db.sqlite` (desktop) or OPFS database (web)
+2. Copy `<graph>/backup/` or regular exports somewhere off-device
+3. Decide whether to sync, and whether E2EE is enough for your data
+4. Check Settings → Advanced for analytics and the sync server URL
 
 **Related:**
 
 - [File vs Database Graphs](./file-vs-database.md)
 - [E2EE Encryption](../security/e2ee-encryption.md)
+- [RTC vs File Sync](../comparisons/rtc-vs-file-sync.md)
 - [Backup Strategies](../../how-to/organization/backup-strategies.md)
 
 ---
