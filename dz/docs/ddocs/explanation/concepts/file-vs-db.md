@@ -4,6 +4,7 @@ description: 'Understanding the differences between file-based and database-back
 status: stable
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09 (58c47afdd6). The 2026-09-10 date covers only the backup directory (287fe61eed).'
 reviewStatus: audited
 category: concepts
 relatedDocs:

@@ -4,6 +4,7 @@ description: "Complete reference for Logseq's Plugin SDK APIs for extension deve
 status: stable
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Merged 2026-09-09; inherited base not re-read line by line. The 2026-09-10 date covers only the template methods caveat (bd51297f2b).'
 reviewStatus: merged-not-fully-audited
 logseqVersion: '0.11.x'
 platforms: [desktop]

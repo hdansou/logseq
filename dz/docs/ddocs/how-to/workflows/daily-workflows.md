@@ -4,6 +4,7 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09 (ccc03ab0aa). The 2026-09-10 date covers only the simple-query examples, the <% %> template variables (4a37d8997b) and the :default-templates citation (bd51297f2b).'
 reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'

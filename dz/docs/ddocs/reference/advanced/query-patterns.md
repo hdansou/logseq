@@ -4,6 +4,7 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09 (1be80c82a1, 03ae5276c6). The 2026-09-10 date covers only the :block/properties note on :result-transform (bfcaeb03e7).'
 reviewStatus: audited
 quadrant: 'Reference'
 platform: 'Desktop + Mobile (Database graphs only)'

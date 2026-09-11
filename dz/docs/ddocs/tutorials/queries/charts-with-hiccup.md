@@ -6,6 +6,7 @@ difficulty: intermediate
 timeToComplete: '45 minutes'
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09 (bb0da36ad6). The 2026-09-10 date covers only the :result-transform vs :view note (bfcaeb03e7).'
 reviewStatus: audited
 logseqVersion: '0.11.x (DB graphs only)'
 platforms: [desktop, web]

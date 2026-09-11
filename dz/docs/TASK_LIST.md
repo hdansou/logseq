@@ -1,6 +1,6 @@
 # Documentation status
 
-Generated 2026-09-10 by
+Generated 2026-09-11 by
 `dz/support-engineering/script/doc-inventory/gen_task_list.py`. Do not edit by hand —
 every field comes from each document's frontmatter.
 
@@ -128,7 +128,7 @@ Older date, or none. Highest priority.
 | `tutorials/knowledge-management/flashcards-basics.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/task-management/project-planning.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/task-management/todo-basics.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/api/plugin-api.md` | 2026-09-10 | `be800f1711` | full |
+| `reference/api/plugin-api.md` | 2026-09-10 | `be800f1711` | Merged 2026-09-09; inherited base not re-read line by line. The 2026-09-10 date covers only the template methods caveat (bd51297f2b). |
 
 ## Authored from source
 

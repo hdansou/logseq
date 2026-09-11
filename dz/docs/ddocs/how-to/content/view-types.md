@@ -4,6 +4,7 @@ description: 'How to create custom view functions for advanced query results'
 status: stable
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09 (58c47afdd6). The 2026-09-10 date covers only what :result-transform receives (bfcaeb03e7).'
 reviewStatus: audited
 platforms: [desktop, web, mobile]
 graphType: [db]

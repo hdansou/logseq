@@ -4,6 +4,7 @@ status: 🟢 Stable
 version: 'Schema v65.33 / @logseq/libs v0.3.4'
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09 (7800cf72b0). The 2026-09-10 date covers only the built-in macro notes (4a37d8997b) and the removal of the dead template API from the templates section, journal hook and test suite (bd51297f2b).'
 reviewStatus: audited
 quadrant: 'Tutorial'
 platform: '🟠 Desktop Only'

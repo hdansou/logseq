@@ -4,6 +4,7 @@ status: 🟢 Stable
 version: '@logseq/libs v0.3.4'
 lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09 (7800cf72b0). The 2026-09-10 date covers only the common.ts citation in the logseq.Git defect note (4a37d8997b).'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: '🟠 Desktop Only'
