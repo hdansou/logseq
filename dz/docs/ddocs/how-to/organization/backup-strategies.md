@@ -1,29 +1,35 @@
 ---
 title: 'Backup and Recovery Strategies'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
 quadrant: 'How-To'
-platform: 'Desktop + Mobile'
+platform: 'Desktop + Web + Mobile'
+lastVerified: '2026-09-11'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 related-docs:
-  - '[Logseq Sync Setup](../collaboration/logseq-sync.md)'
-  - '[Git Sync](../collaboration/git-sync.md)'
-  - '[Export Graph](./export-graph.md)'
+  - '[Import and Export Guide](./import-export.md)'
+  - '[Backup and Restore](../backup/backup-restore.md)'
+  - '[RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md)'
+  - '[File vs Database Graphs](../../explanation/concepts/file-vs-db.md)'
 tags: ['backup', 'recovery', 'sync', 'export', 'data-safety']
 ---
 
 # Backup and Recovery Strategies
 
-This guide shows you how to protect your Logseq data with effective backup strategies. Learn multiple backup methods, automation techniques, and recovery procedures to ensure your notes are always safe.
+This guide shows you how to protect a Logseq DB graph. It covers the backups Logseq already makes, the exports you can make yourself, how to restore them, and what sync does and does not protect you from.
+
+A DB graph is a single `db.sqlite` file plus an `assets/` folder ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); [`deps/common/src/logseq/common/config.cljs:56`](../../../../../deps/common/src/logseq/common/config.cljs)). It is not a folder of Markdown files, so every backup below copies that database.
 
 **What You'll Learn:**
 
-- Backup methods for file-based and database graphs
-- Automated backup workflows
-- Cloud sync strategies
-- Recovery procedures
-- Disaster recovery planning
+- Where a DB graph and its backups live
+- The built-in automatic backups (desktop and browser)
+- Manual exports and command-line backups
+- Restoring a backup into a new graph
+- Why sync is not a backup
 
-**Time Required:** 30-45 minutes for full setup
+**Time Required:** 15-30 minutes for full setup
 
 ---
 
@@ -40,294 +46,213 @@ This guide shows you how to protect your Logseq data with effective backup strat
 
 ## Understanding Backup Needs
 
+### Where your graph lives
+
+**Desktop app:** DB graphs are stored under `~/logseq/graphs/` ([`deps/common/src/logseq/common/config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)), one folder per graph. The home directory is expanded with Node's `os.homedir()`, so on Windows this is `%USERPROFILE%\logseq\graphs\` ([`deps/common/src/logseq/common/graph.cljs:116-126`](../../../../../deps/common/src/logseq/common/graph.cljs)). A graph's folder holds:
+
+```
+~/logseq/graphs/<graph folder>/
+├── db.sqlite     ← the graph: pages, blocks, properties, settings
+├── assets/       ← images, PDFs and other attachments
+├── backup/       ← automatic and Mod+S snapshots (desktop)
+└── export/       ← output of Export SQLite DB / Export both SQLite DB and assets (desktop)
+```
+
+(`db.sqlite`: [`sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); `backup/`: [`src/main/logseq/db_worker/graph_backup.cljs:10`, `:39-47`](../../../../../src/main/logseq/db_worker/graph_backup.cljs); `export/`: [`src/electron/electron/db.cljs:98-103`](../../../../../src/electron/electron/db.cljs), [`src/main/frontend/handler/export.cljs:78-86`](../../../../../src/main/frontend/handler/export.cljs).)
+
+The folder name is the graph name, URI-encoded, with `%20` turned back into a space and the remaining `%` escapes written as `~` ([`deps/common/src/logseq/common/graph_dir.cljs:6-12`](../../../../../deps/common/src/logseq/common/graph_dir.cljs)). A graph called `my/graph` therefore lives in `my~2Fgraph`.
+
+The graphs directory can be overridden with the `LOGSEQ_GRAPHS_DIR` environment variable ([`graph.cljs:111-114`](../../../../../deps/common/src/logseq/common/graph.cljs)).
+
+> **Unverified:** whether the whole desktop app honours `LOGSEQ_GRAPHS_DIR`. The renderer builds some graph paths from a hard-coded `~/logseq/graphs`, including the "open backups folder" link ([`src/main/frontend/config.cljs:326-335`](../../../../../src/main/frontend/config.cljs)).
+
+**Browser (web app):** the database is stored in the browser's origin private file system ([`src/main/frontend/worker/platform/browser.cljs:74-76`](../../../../../src/main/frontend/worker/platform/browser.cljs)). You cannot reach that storage as a file, so use the backup folder or an export (below).
+
 ### Backup Strategy Matrix
 
-| Graph Type       | Primary Backup | Secondary Backup | Frequency         |
-| ---------------- | -------------- | ---------------- | ----------------- |
-| **File-Based**   | Git sync       | Manual export    | Every commit      |
-| **Database**     | Logseq Sync    | EDN export       | Real-time / Daily |
-| **Desktop Only** | Local backup   | Cloud backup     | Daily             |
-| **Mobile**       | Logseq Sync    | N/A              | Real-time         |
+| Where you use Logseq | Built-in automatic backup | Copy you control | Restore |
+| -------------------- | ------------------------- | ---------------- | ------- |
+| **Desktop app** | Hourly snapshot in `backup/`, 12 kept | Export SQLite DB / zip, CLI backup, then copy off the machine | Import → SQLite or SQLite + assets (.zip); CLI `graph backup restore` |
+| **Browser (Chromium, not mobile)** | Hourly copy into a folder you choose, 12 older copies kept | The chosen folder | Import → SQLite |
+| **Mobile app** | None found in source | See [Mobile](#mobile) | Import |
+| **Logseq Sync** | Not a backup: deletions replicate (see [Sync is not a backup](#sync-is-not-a-backup)) | — | — |
 
 ### What Needs Backing Up?
 
-**File-Based Graphs:**
+- ✅ `db.sqlite`. It holds all content **and** the graph's `logseq/config.edn`, `logseq/custom.css` and `logseq/custom.js`, which are stored as file records inside the database ([`deps/db/src/logseq/db/sqlite/create_graph.cljs:205-220`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)).
+- ✅ `assets/`. **Neither the automatic backups nor Export SQLite DB include assets.** A backup snapshot contains only `db.sqlite` and `metadata.edn` ([`graph_backup.cljs:11-12`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Only **Export both SQLite DB and assets** bundles them ([`handler/export.cljs:88-100`](../../../../../src/main/frontend/handler/export.cljs)).
+- ✅ `backup/` and `export/`, when you copy the graph folder off the machine.
+- ❌ There are no `pages/`, `journals/` or separate `logseq/` config folders in a DB graph.
 
-- ✅ Markdown/Org files (all your notes)
-- ✅ Assets folder (images, PDFs, attachments)
-- ✅ `logseq/` config folder (settings, queries, custom.css)
-- ❌ `logseq/.recycle/` (can be excluded)
-
-**Database Graphs:**
-
-- ✅ SQLite database file (`<graph-name>.db`)
-- ✅ Transit export file (`.edn` backup)
-- ✅ Assets folder
-- ✅ Config (part of database)
+> Removed claim: earlier revisions listed "SQLite database file (`<graph-name>.db`)" and a "Transit export file (`.edn` backup)". The file is `db.sqlite` inside the graph folder. EDN and debug transit are two separate exports, and the app itself says of EDN: "Don't rely on this as a primary backup." ([`src/resources/dicts/en.edn:635`](../../../../../src/resources/dicts/en.edn)).
 
 ---
 
 ## File-Based Graph Backups
 
-### Method 1: Git Sync (Recommended)
+> Removed section. File-based graphs can no longer be opened: the graph list keeps only DB graphs ("use `config/db-based-graph?` to avoid loading old file graphs", [`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)). File Sync was deleted in commit `bcc478b5f7` (2025-12-29). The Git setup, commit scripts, Task Scheduler batch file, "move the graph into iCloud/OneDrive/Dropbox" steps, `logseq/.recycle/` and `logseq/bak/` advice, and the "JSON / Markdown / EDN" export menu all applied to file graphs. The Export dialog has no JSON entry ([`src/main/frontend/components/export.cljs:125-153`](../../../../../src/main/frontend/components/export.cljs)), and no "Export on Schedule" plugin is part of Logseq.
 
-**Best For:** Version control, collaboration, desktop users
-
-**Setup:**
-
-```bash
-# Navigate to your graph folder
-cd ~/Documents/LogseqGraph
-
-# Initialize Git repository
-git init
-
-# Create .gitignore
-cat > .gitignore << EOF
-.DS_Store
-logseq/.recycle/
-logseq/bak/
-node_modules/
-EOF
-
-# Initial commit
-git add .
-git commit -m "Initial commit"
-
-# Add remote (GitHub, GitLab, etc.)
-git remote add origin https://github.com/username/logseq-graph.git
-git push -u origin main
-```
-
-**Daily Workflow:**
-
-```bash
-# Pull changes (if using multiple devices)
-git pull
-
-# Add all changes
-git add .
-
-# Commit with timestamp
-git commit -m "Update $(date '+%Y-%m-%d %H:%M')"
-
-# Push to remote
-git push
-```
-
-**Automate with Script:**
-
-```bash
-#!/bin/bash
-# save as: ~/scripts/logseq-backup.sh
-
-GRAPH_DIR="$HOME/Documents/LogseqGraph"
-cd "$GRAPH_DIR"
-
-# Pull first
-git pull --rebase
-
-# Add and commit
-git add .
-if git diff-index --quiet HEAD --; then
-    echo "No changes to commit"
-else
-    git commit -m "Auto-backup $(date '+%Y-%m-%d %H:%M')"
-    git push
-    echo "Backup completed: $(date)"
-fi
-```
-
-**Schedule with Cron (macOS/Linux):**
-
-```bash
-# Edit crontab
-crontab -e
-
-# Add line (backup every hour)
-0 * * * * /bin/bash ~/scripts/logseq-backup.sh >> ~/logseq-backup.log 2>&1
-```
-
-**Schedule with Task Scheduler (Windows):**
-
-1. Open Task Scheduler
-2. Create Basic Task → Name: "Logseq Backup"
-3. Trigger: Daily at specific time
-4. Action: Start a program → `git-backup.bat`
-
-```batch
-@echo off
-cd C:\Users\YourName\Documents\LogseqGraph
-git pull --rebase
-git add .
-git commit -m "Auto-backup %date% %time%"
-git push
-```
-
----
-
-### Method 2: Cloud Sync (Dropbox, iCloud, OneDrive)
-
-**Best For:** Simple setup, automatic sync, mobile access
-
-**Setup:**
-
-1. **Move graph to cloud folder:**
-
-```bash
-# macOS - iCloud
-mv ~/Documents/LogseqGraph ~/Library/Mobile\ Documents/com~apple~CloudDocs/LogseqGraph
-
-# Windows - OneDrive
-move %USERPROFILE%\Documents\LogseqGraph %USERPROFILE%\OneDrive\LogseqGraph
-
-# Linux - Dropbox
-mv ~/Documents/LogseqGraph ~/Dropbox/LogseqGraph
-```
-
-2. **Open graph from new location in Logseq**
-
-**Pros:**
-
-- ✅ Zero configuration
-- ✅ Automatic sync
-- ✅ Access from multiple devices
-
-**Cons:**
-
-- ❌ No version history (only recent versions)
-- ❌ Potential sync conflicts
-- ❌ Requires cloud subscription
-
----
-
-### Method 3: Manual Export
-
-**Best For:** Offline backups, full control
-
-**Steps:**
-
-1. Open Logseq
-2. Click **⋯ (More)** → **Export graph**
-3. Choose format:
-   - **JSON** - Full export with metadata
-   - **Markdown** - Portable plain text
-   - **EDN** - Logseq internal format
-4. Save to external drive or backup location
-
-**Automate with Plugin:**
-
-Install **Export on Schedule** plugin (if available) to automatically export daily.
+**If you still have a file-graph folder:** Logseq only reads it as input, through ⋯ → **Import** → **File to DB graph**. That import creates a new DB graph ([`src/main/frontend/components/imports.cljs:597-611`](../../../../../src/main/frontend/components/imports.cljs)). Keep a plain copy of the old folder with any file-backup tool until you are happy with the imported graph. See [Import and Export Guide](./import-export.md#from-a-logseq-file-graph-file-to-db).
 
 ---
 
 ## Database Graph Backups
 
-### Method 1: Logseq Sync (Recommended)
+### Method 1: Automatic Desktop Backups (built in)
 
-**Best For:** Real-time backup, E2EE, mobile sync
+**Best For:** Everyone using the desktop app. Nothing to set up.
+
+**How it works:**
+
+- **No setting to turn on.** When a window opens a graph, the app registers it and starts a one-hour timer ([`src/electron/electron/handler.cljs:371-383`](../../../../../src/electron/electron/handler.cljs) → [`src/electron/electron/db.cljs:146-154`](../../../../../src/electron/electron/db.cljs), timer at [`:128-136`](../../../../../src/electron/electron/db.cljs)).
+- **Hourly.** Each tick snapshots every graph that is open in a window ([`db.cljs:105-126`](../../../../../src/electron/electron/db.cljs)). A snapshot is skipped if the newest automatic backup is less than an hour old ([`db.cljs:59-61`](../../../../../src/electron/electron/db.cljs); [`graph_backup.cljs:233-240`, `:253-257`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)).
+- **Keeps 12.** After each snapshot, automatic backups beyond the newest 12 are deleted ([`db.cljs:15-18`](../../../../../src/electron/electron/db.cljs); [`graph_backup.cljs:176-190`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). The interval and the count are constants in source, not settings.
+- **Only open graphs.** A graph with no open window gets no new backups, and the worker refuses with "graph not opened" ([`src/main/frontend/worker/db_core.cljs:985-987`](../../../../../src/main/frontend/worker/db_core.cljs)).
+
+**Layout:** each backup is a folder named `<graph>-<UTC timestamp>`, for example `my-graph-20260911T143000Z`. It contains `db.sqlite` and a `metadata.edn` that records `:source :electron-auto` ([`graph_backup.cljs:77-101`, `:221-231`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). If the name is taken, `-1`, `-2`, … is appended ([`:192-211`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)).
+
+```
+~/logseq/graphs/my-graph/backup/
+├── my-graph-20260911T130000Z/
+│   ├── db.sqlite
+│   └── metadata.edn
+└── my-graph-20260911T140000Z/
+    ├── db.sqlite
+    └── metadata.edn
+```
+
+**Consistency:** the snapshot is taken from the open database. The worker checkpoints the WAL, then runs SQLite's backup API on the live connection ([`db_core.cljs:980-994`](../../../../../src/main/frontend/worker/db_core.cljs); [`deps/db/src/logseq/db/sqlite/backup.cljs:35-44`](../../../../../deps/db/src/logseq/db/sqlite/backup.cljs)). It writes to a temporary file and renames it into place ([`graph_backup.cljs:258-271`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)), so a finished `backup/…/db.sqlite` is a complete file you can copy while Logseq runs.
+
+**Find it:** ⋯ (**More**) → **Export graph**. At the bottom the desktop dialog says "Hourly backups are enabled for this graph, open backups folder for this graph."; the link opens `<graph folder>/backup` ([`components/export.cljs:155-164`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:672`, `:675`](../../../../../src/resources/dicts/en.edn); path from [`frontend/config.cljs:333-335`](../../../../../src/main/frontend/config.cljs)).
+
+> **Note:** 12 hourly snapshots cover only about the last 12 hours the graph was open. They protect against a recent mistake, not a problem you notice a week later. Copy them somewhere else as well (Methods 4-6).
+
+---
+
+### Method 2: Manual Snapshot (Desktop, `Mod+S`)
+
+**Best For:** A checkpoint before a risky change (bulk edit, plugin install, import).
+
+**Steps:**
+
+1. In the desktop app, press `mod+s` (Cmd+S on macOS, Ctrl+S elsewhere). The command is described as "Save the current db to the disk (~/logseq/graphs/your-current-graph)" and is inactive outside the desktop app ([`src/main/frontend/modules/shortcut/config.cljs:376-378`](../../../../../src/main/frontend/modules/shortcut/config.cljs); [`en.edn:394`](../../../../../src/resources/dicts/en.edn)).
+2. The notification "DB backup successfully." appears ([`src/main/frontend/persist_db.cljs:429-440`](../../../../../src/main/frontend/persist_db.cljs)).
+
+**What it does:** it writes a snapshot into the same `backup/` folder with `:source :electron-manual` ([`handler/events.cljs:290-294`](../../../../../src/main/frontend/handler/events.cljs); [`electron/handler.cljs:256-259`](../../../../../src/electron/electron/handler.cljs); [`db.cljs:43-47`](../../../../../src/electron/electron/db.cljs)). Manual snapshots are **not throttled and never pruned**, because the one-hour throttle and the 12-copy limit apply only to automatic backups ([`db.cljs:59-61`](../../../../../src/electron/electron/db.cljs); pruning filters by source at [`graph_backup.cljs:183-186`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Delete old ones yourself.
+
+---
+
+### Method 3: Browser Backup Folder (web app)
+
+**Best For:** Using Logseq in a desktop Chromium browser.
 
 **Setup:**
 
-1. **Enable Logseq Sync:**
+1. ⋯ → **Export graph**. Under **Schedule backup**, click **Set backup folder first** and choose a folder ([`components/export.cljs:63-91`](../../../../../src/main/frontend/components/export.cljs); [`handler/export.cljs:214-227`](../../../../../src/main/frontend/handler/export.cljs); labels at [`en.edn:676-677`](../../../../../src/resources/dicts/en.edn)).
+2. The dialog now shows **Backup folder:** with the folder name, "Backup will be created every hour.", and a **Backup now** button ([`export.cljs:68-111`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:670`, `:673-674`](../../../../../src/resources/dicts/en.edn)).
+3. Click **Backup now**. You get "Backup successful!" or, if nothing changed, "Graph has not been updated since last export." ([`export.cljs:100-106`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:625`, `:649`](../../../../../src/resources/dicts/en.edn)).
 
-   - Open Settings → **Sync**
-   - Click **Enable Sync**
-   - Choose plan (free 1GB or paid)
+**How it works:**
 
-2. **Configure backup retention:**
-   - Settings → Sync → **Backup settings**
-   - Keep version history: 30 days (recommended)
-
-**Features:**
-
-- ✅ Real-time sync across devices
-- ✅ End-to-end encryption
-- ✅ Version history (time travel)
-- ✅ Automatic conflict resolution
-- ✅ Works on mobile
-
-**Recovery:**
-
-- Changes synced automatically
-- Access version history: Right-click block → **Version history**
-- Restore entire graph: Settings → Sync → **Restore from backup**
+- It writes `<chosen folder>/<graph name>/db.sqlite`. Before each new copy, the previous `db.sqlite` is moved to `<graph name>/backups/<epoch ms>.db.sqlite`, and only the newest 12 of those are kept ([`handler/export.cljs:204-212`, `:247-268`](../../../../../src/main/frontend/handler/export.cljs)). Note the folder is `backups` (plural) here, unlike the desktop app's `backup`.
+- It runs every hour for the current graph ([`handler/export.cljs:231`, `:287-299`](../../../../../src/main/frontend/handler/export.cljs)). The timer starts when a graph is opened ([`handler/events.cljs:280-285`](../../../../../src/main/frontend/handler/events.cljs)), and a backup also runs when you switch graphs ([`events.cljs:155-163`](../../../../../src/main/frontend/handler/events.cljs)).
+- Assets are not copied.
+- Click the **×** (**Cancel backup**) next to the folder name to stop ([`export.cljs:72-85`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:671`](../../../../../src/resources/dicts/en.edn)).
+- It needs the File System Access API. Other browsers show "Your browser doesn't support The File System Access API, please switch to a Chromium-based browser." ([`export.cljs:66`, `:112-117`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:679`](../../../../../src/resources/dicts/en.edn)).
+- The section is not shown on mobile, and the timer does not run in the native mobile app ([`export.cljs:165-169`](../../../../../src/main/frontend/components/export.cljs); [`handler/export.cljs:289-291`](../../../../../src/main/frontend/handler/export.cljs)).
 
 ---
 
-### Method 2: Transit Export (Manual Backup)
+### Method 4: Export SQLite DB or SQLite + Assets
 
-**Best For:** Local backups, migration, disaster recovery
+**Best For:** A full copy you move to another disk or cloud storage. Use the zip when you need assets too.
 
-**Export Database:**
+**Steps:**
 
-1. Click **⋯ (More)** → **Export graph**
-2. Choose **EDN (Transit format)**
-3. Save `.edn` file to backup location
+1. ⋯ → **Export graph** ([`components/header.cljs:227-230`](../../../../../src/main/frontend/components/header.cljs)).
+2. Choose one:
+   - **Export SQLite DB**: "Primary way to backup graph's content to a single .sqlite file."
+   - **Export both SQLite DB and assets**: "Primary way to backup graph's content and assets to a .zip file."
+     ([`export.cljs:125-133`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:661`, `:666`, `:678`, `:680`](../../../../../src/resources/dicts/en.edn))
+3. Move the file to your backup location.
 
-**Example Filename:**
+**Where the file goes:**
 
-```
-my-graph-2026-01-21-export.edn
-```
+- **Desktop app:** into the graph's own `export/` folder. The notification shows the path: "SQLite DB exported to {1}." or "ZIP exported to {1}." ([`handler/export.cljs:78-86`, `:118-120`, `:146-154`](../../../../../src/main/frontend/handler/export.cljs); [`electron/handler.cljs:261-263`](../../../../../src/electron/electron/handler.cljs); [`db.cljs:98-103`](../../../../../src/electron/electron/db.cljs); [`en.edn:662`, `:668`](../../../../../src/resources/dicts/en.edn)). The file names end in `_<Unix seconds>.sqlite` / `_<Unix seconds>.zip` ([`handler/export.cljs:50-54`](../../../../../src/main/frontend/handler/export.cljs)). **The export stays on the same disk as the graph**, so copy it off the machine yourself.
+- **Browser:** a save dialog where the browser supports one, otherwise a download ([`handler/export.cljs:121-124`, `:155-169`](../../../../../src/main/frontend/handler/export.cljs)).
 
-**Automate with Script (Electron API):**
+**Other entries in the dialog are not backups:**
 
-```javascript
-// Plugin code to auto-export daily
-async function exportDatabase() {
-  const { invoke } = logseq.api
-  const repo = await logseq.App.getCurrentGraph()
-  const timestamp = new Date().toISOString().slice(0, 10)
+- **Export EDN file**: "Don't rely on this as a primary backup." ([`en.edn:635`](../../../../../src/resources/dicts/en.edn))
+- **Export as standard Markdown (no block properties)**: drops block properties, and cannot be imported back as a graph. The only Markdown import requires a Logseq file graph with `logseq/config.edn` ([`imports.cljs:495-498`](../../../../../src/main/frontend/components/imports.cljs)).
+- **Export public pages** and **Export debug transit file**: for publishing and bug reports.
 
-  await invoke('export-db', {
-    repo: repo.path,
-    format: 'edn',
-    path: `${repo.path}-${timestamp}-export.edn`,
-  })
+See [Import and Export Guide](./import-export.md#export-formats) for details.
 
-  console.log(`Exported: ${timestamp}`)
-}
+> Removed claim: earlier revisions offered "Choose **EDN (Transit format)**" and a plugin script that called `logseq.api` `invoke('export-db', …)` on a `logseq.App.onScheduler('daily-backup', …)` schedule. EDN and debug transit are separate entries, and no `onScheduler` or export-db call exists in the plugin API (`libs/src/`, `src/main/logseq/api/`).
 
-// Schedule daily at 11 PM
-logseq.App.onScheduler('daily-backup', { hour: 23, minute: 0 }, exportDatabase)
+#### Mobile
+
+The mobile app has an Export route ([`src/main/mobile/routes.cljs:19-22`](../../../../../src/main/mobile/routes.cljs)), but its only link, in the mobile header, is commented out ([`src/main/mobile/components/header.cljs:65`](../../../../../src/main/mobile/components/header.cljs)). No other link to it was found. No automatic backup runs in the native mobile app (Methods 1 and 3 are desktop and browser only).
+
+---
+
+### Method 5: Command-Line Backups
+
+**Best For:** Scheduled backups and scripting.
+
+The CLI in `cli/` is installed as `logseq-cli.js` ([`cli/bin/dune`](../../../../../cli/bin/dune)). It has four backup commands ([`cli/lib/cli_parse.ml:175-187`, `:843-871`](../../../../../cli/lib/cli_parse.ml); [`cli/lib/command_registry.ml:225-242`](../../../../../cli/lib/command_registry.ml)):
+
+| Command | Options |
+| ------- | ------- |
+| `graph backup list` | `--graph` |
+| `graph backup create` | `--graph`, optional `--name` (a label) |
+| `graph backup restore` | `--graph`, `--src <backup name>` (required), `--dst <new graph name>` (required) |
+| `graph backup remove` | `--graph`, `--src <backup name>` (required) |
+
+- `create` snapshots the graph through the db-worker backup API. It writes into the same `<graph folder>/backup/` tree, named `<graph>-<label>-<UTC timestamp>`, with `:source :cli` in `metadata.edn` ([`cli/lib/graph.ml:131-155`, `:466-473`, `:796-876`](../../../../../cli/lib/graph.ml)).
+- CLI backups are **not pruned** by the desktop's 12-copy limit, which only counts `:electron-auto` backups ([`graph_backup.cljs:183-186`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Use `graph backup remove`.
+- `restore` imports the backup's `db.sqlite` into the graph named by `--dst` ([`graph.ml:1049-1060`](../../../../../cli/lib/graph.ml)).
+
+The whole lifecycle (create → list → restore → remove) is an end-to-end CLI test case ([`cli-e2e/spec/non_sync_cases.edn:176-200`](../../../../../cli-e2e/spec/non_sync_cases.edn)):
+
+```bash
+CLI=logseq-cli.js   # installed name; adjust to how it runs on your system
+
+$CLI graph backup create --graph my-graph --name nightly
+$CLI --output json graph backup list --graph my-graph
+$CLI graph backup restore --graph my-graph --src my-graph-nightly-20260911T020000Z --dst my-graph-restored
+$CLI graph backup remove --graph my-graph --src my-graph-nightly-20260911T020000Z
 ```
 
 ---
 
-### Method 3: SQLite Database Backup
+### Method 6: Copying the Files Yourself (Time Machine, rsync, external drives)
 
-**Best For:** Advanced users, database admins
+**Best For:** Adding Logseq to an existing machine-wide backup.
 
-**Locate Database File:**
+**What to know about a live `db.sqlite`:** Logseq opens the database in WAL mode, with exclusive locking and automatic checkpointing turned off ([`db_core.cljs:585-592`, `:740-742`](../../../../../src/main/frontend/worker/db_core.cljs)). It checkpoints about 2 seconds after writes and when it closes the graph ([`db_core.cljs:74-75`, `:155-164`, `:471`, `:477-484`](../../../../../src/main/frontend/worker/db_core.cljs)). Until then, recent changes live in the `-wal` file beside `db.sqlite`. A copy of `db.sqlite` taken while Logseq is running can miss them.
 
-```bash
-# macOS
-~/Library/Application Support/Logseq/graphs/<graph-name>.db
+**So:**
 
-# Windows
-%APPDATA%\Logseq\graphs\<graph-name>.db
+- ✅ Back up the `backup/` and `export/` folders plus `assets/`. Finished snapshots are complete files.
+- ✅ To copy `db.sqlite` itself, quit Logseq first. Also stop any CLI server for the graph (`server stop --graph <name>`, [`non_sync_cases.edn:200`](../../../../../cli-e2e/spec/non_sync_cases.edn)).
+- ❌ Don't move a graph folder out of the graphs directory into a cloud-drive folder. The desktop app lists DB graphs only from the graphs directory ([`graph.cljs:123-140`](../../../../../deps/common/src/logseq/common/graph.cljs)), so a moved graph disappears from the list. Separately, cloud clients that copy a database while it is being written are a general SQLite hazard.
 
-# Linux
-~/.config/Logseq/graphs/<graph-name>.db
-```
+> Removed claim: the graph file paths `~/Library/Application Support/Logseq/graphs/<graph-name>.db`, `%APPDATA%\Logseq\graphs\…` and `~/.config/Logseq/graphs/…`. The graph is `~/logseq/graphs/<graph folder>/db.sqlite` on every desktop OS (see [Where your graph lives](#where-your-graph-lives)).
 
-**Manual Backup:**
+---
 
-```bash
-# Copy database file
-cp ~/Library/Application\ Support/Logseq/graphs/my-graph.db \
-   ~/Backups/my-graph-$(date +%Y%m%d).db
+### Sync is not a backup
 
-# Verify integrity
-sqlite3 ~/Backups/my-graph-$(date +%Y%m%d).db "PRAGMA integrity_check;"
-```
+Logseq Sync keeps a graph in step across devices. It does not keep old versions.
 
-**⚠️ Warning:**
+- **Deletions replicate.** Other clients replay `:delete-blocks`, `:delete-page` and `:recycle-delete-permanently` ([`src/main/frontend/worker/sync/apply_txs.cljs:1500-1525`, `:1551-1570`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs)). Deleting something on one device deletes it everywhere. Keep Methods 1-6 running alongside sync.
+- **No version history.** en.edn has no version-history or restore-from-sync strings. The "history" code in the sync worker is undo history ([`apply_txs.cljs:275-279`, `:829`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs)). See also [RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md).
+- **Where it is turned on:** the create-graph dialog offers "Use Logseq Sync?" and then "Encrypt graph data" ([`components/repo.cljs:700-723`](../../../../../src/main/frontend/components/repo.cljs); [`en.edn:745`, `:786`](../../../../../src/resources/dicts/en.edn)). The option appears only for accounts in the `team` or `rtc_2025_07_10` group, with a custom sync server, or in dev builds ([`src/main/frontend/handler/user.cljs:357-362`](../../../../../src/main/frontend/handler/user.cljs)).
+- **E2EE is partial and unrecoverable.** Only `:block/title`, `:block/name` and asset bytes are encrypted ([`src/main/frontend/worker/sync/const.cljs:25-27`](../../../../../src/main/frontend/worker/sync/const.cljs); [E2EE Encryption](../../explanation/security/e2ee-encryption.md)). A forgotten password cannot be recovered. "Force reset password" makes "all currently encrypted graph data stored on the server permanently unreadable" ([`en.edn:613`, `:618`](../../../../../src/resources/dicts/en.edn)), though "You will still be able to access the local version of your graph." ([`en.edn:600`](../../../../../src/resources/dicts/en.edn)).
 
-- Close Logseq before copying database file
-- Database may be locked if Logseq is running
-- Corrupted database cannot be opened
+> Removed claim: "Settings → Sync → Enable Sync / Choose plan (free 1GB or paid)", "Settings → Sync → Backup settings → Keep version history: 30 days", "Right-click block → Version history", "Settings → Sync → Restore from backup", "Pause sync / Resume sync / Re-initialize sync" and "Automatic conflict resolution". None of these labels exist in `en.edn`, and there is no sync retention setting. Title conflicts can need manual review (see [RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md)).
 
 ---
 
@@ -339,44 +264,62 @@ sqlite3 ~/Backups/my-graph-$(date +%Y%m%d).db "PRAGMA integrity_check;"
 
 **Implementation:**
 
-1. **Primary (Real-time):** Logseq Sync or Git sync
-2. **Secondary (Daily):** Local external drive backup
-3. **Tertiary (Weekly):** Cloud storage (encrypted)
+1. **Copy 1 (hourly, same disk):** automatic desktop backups (Method 1) or the browser backup folder (Method 3).
+2. **Copy 2 (daily, external drive):** copy the graph's `backup/` and `assets/` folders (script below).
+3. **Copy 3 (weekly, offsite):** **Export both SQLite DB and assets** (Method 4), encrypted and uploaded to cloud storage.
 
-**Example Script (macOS):**
+> **Unverified:** this script is generic shell and was not run. Set `GRAPH_DIR` to the encoded folder name (see [Where your graph lives](#where-your-graph-lives)).
 
 ```bash
 #!/bin/bash
-# 3-2-1 backup script
+# 3-2-1 backup of a Logseq DB graph (macOS example)
+set -euo pipefail
 
-GRAPH_DIR="$HOME/Documents/LogseqGraph"
-BACKUP_DIR="/Volumes/ExternalDrive/Backups/Logseq"
-CLOUD_DIR="$HOME/Dropbox/Backups/Logseq"
+GRAPH_DIR="$HOME/logseq/graphs/my-graph"
+BACKUP_ROOT="/Volumes/ExternalDrive/Backups/Logseq"
+CLOUD_DIR="$HOME/CloudStorage/Backups/Logseq"
 DATE=$(date +%Y-%m-%d)
+DEST="$BACKUP_ROOT/$DATE"
 
-# Backup 1: Local external drive
-rsync -av --delete "$GRAPH_DIR/" "$BACKUP_DIR/$DATE/"
+mkdir -p "$DEST" "$CLOUD_DIR"
 
-# Backup 2: Cloud (encrypted)
-tar -czf "/tmp/logseq-$DATE.tar.gz" -C "$GRAPH_DIR" .
-gpg --encrypt --recipient your-email@example.com "/tmp/logseq-$DATE.tar.gz"
-mv "/tmp/logseq-$DATE.tar.gz.gpg" "$CLOUD_DIR/"
-rm "/tmp/logseq-$DATE.tar.gz"
+# Copy 2: finished snapshots and assets (safe while Logseq runs)
+rsync -a "$GRAPH_DIR/backup/" "$DEST/backup/"
+rsync -a "$GRAPH_DIR/assets/" "$DEST/assets/"
 
-# Cleanup old backups (keep 30 days)
-find "$BACKUP_DIR" -type d -mtime +30 -delete
-find "$CLOUD_DIR" -type f -mtime +30 -delete
+# Copy 3: encrypted archive offsite
+ARCHIVE="$(mktemp -d)/logseq-$DATE.tar.gz"
+tar -czf "$ARCHIVE" -C "$DEST" .
+gpg --encrypt --recipient your-email@example.com "$ARCHIVE"
+mv "$ARCHIVE.gpg" "$CLOUD_DIR/"
+rm -f "$ARCHIVE"
 
-echo "3-2-1 Backup completed: $DATE"
+# Keep 30 days of dated copies
+find "$BACKUP_ROOT" -mindepth 1 -maxdepth 1 -type d -mtime +30 -exec rm -rf {} +
+find "$CLOUD_DIR" -type f -name 'logseq-*.tar.gz.gpg' -mtime +30 -delete
+
+echo "3-2-1 backup completed: $DATE"
 ```
 
 ---
 
-### Workflow 2: Hourly Git Snapshots
+### Workflow 2: Scheduled CLI Snapshots
 
-**Setup with Launchd (macOS):**
+Automatic desktop backups need the app open with the graph loaded. A scheduled CLI backup runs without that (Method 5).
 
-Create: `~/Library/LaunchAgents/com.user.logseq-backup.plist`
+> **Unverified:** assembled from the CLI option parser and e2e spec, not run. Check how `logseq-cli.js` is invoked on your system.
+
+```bash
+#!/bin/bash
+# save as: ~/scripts/logseq-cli-backup.sh
+set -euo pipefail
+CLI=logseq-cli.js
+GRAPH=my-graph
+
+$CLI graph backup create --graph "$GRAPH" --name scheduled
+```
+
+**Schedule with Launchd (macOS):** create `~/Library/LaunchAgents/com.user.logseq-backup.plist`
 
 ```xml
 <?xml version="1.0" encoding="UTF-8" ?>
@@ -389,130 +332,87 @@ Create: `~/Library/LaunchAgents/com.user.logseq-backup.plist`
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/yourname/scripts/logseq-backup.sh</string>
+        <string>/Users/yourname/scripts/logseq-cli-backup.sh</string>
     </array>
     <key>StartInterval</key>
-    <integer>3600</integer>
-    <key>RunAtLoad</key>
-    <true />
+    <integer>86400</integer>
 </dict>
 </plist>
 ```
-
-**Load:**
 
 ```bash
 launchctl load ~/Library/LaunchAgents/com.user.logseq-backup.plist
 ```
 
----
-
-### Workflow 3: Pre-Shutdown Backup
-
-**macOS - Add to Shell Profile:**
+**Schedule with Cron (macOS/Linux):**
 
 ```bash
-# Add to ~/.zshrc or ~/.bash_profile
-trap 'backup_logseq' EXIT
-
-backup_logseq() {
-    if [ -d "$HOME/Documents/LogseqGraph" ]; then
-        cd "$HOME/Documents/LogseqGraph"
-        git add . && git commit -m "Auto-backup on shutdown" && git push
-    fi
-}
+# daily at 02:00
+0 2 * * * /bin/bash ~/scripts/logseq-cli-backup.sh >> ~/logseq-backup.log 2>&1
 ```
+
+CLI backups are never pruned automatically. Remove old ones with `graph backup remove --src <name>` (names come from `graph backup list`).
+
+> Removed: "Workflow 3: Pre-Shutdown Backup". It committed a file graph to Git from a `trap … EXIT` in `~/.zshrc`. That trap fires whenever a shell exits, not at shutdown, and Git-versioning Markdown files does not apply to DB graphs.
 
 ---
 
 ## Recovery Procedures
 
-### Scenario 1: Accidental Block Deletion
+### Scenario 1: Accidental Deletion
 
-**File-Based Graph:**
+**A page:** deleting a page moves it to **Recycle** ("Node has been moved to Recycle", [`en.edn:1126`](../../../../../src/resources/dicts/en.edn)). The exceptions are tags and properties, which are removed outright, and today's journal, which is emptied rather than deleted ([`deps/outliner/src/logseq/outliner/page.cljs:105-155`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
 
-```bash
-# Option 1: Git history
-git log --all --full-history -- "path/to/file.md"
-git show <commit-hash>:path/to/file.md > recovered-file.md
+1. ⋯ → **Recycle**. The item appears once the Recycle page exists ([`components/header.cljs:222-225`, `:332-334`](../../../../../src/main/frontend/components/header.cljs); [`handler/page.cljs:45-49`](../../../../../src/main/frontend/handler/page.cljs)).
+2. Find the page and click **Restore** ([`en.edn:1823`](../../../../../src/resources/dicts/en.edn)).
 
-# Option 2: Check .recycle folder
-ls logseq/.recycle/
-```
+"Deleted pages and blocks stay here until restored or automatically garbage collected after 30 days." ([`en.edn:1824`](../../../../../src/resources/dicts/en.edn)). The retention is 30 days, checked at most once a day as transactions run ([`deps/outliner/src/logseq/outliner/recycle.cljs:13-14`, `:273-298`](../../../../../deps/outliner/src/logseq/outliner/recycle.cljs); [`worker/handler/transaction.cljs:28-38`](../../../../../src/main/frontend/worker/handler/transaction.cljs)).
 
-**Database Graph:**
+**Blocks:** deleting blocks removes them and their children outright ([`deps/outliner/src/logseq/outliner/core.cljs:431-443`, `:1011-1051`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). They do not go to Recycle. The function that would recycle blocks, `recycle-blocks-tx-data` ([`recycle.cljs:127`](../../../../../deps/outliner/src/logseq/outliner/recycle.cljs)), is called only from tests. To get blocks back:
 
-1. Right-click nearby block → **Version history**
-2. Find deleted block in timeline
-3. Click **Restore this version**
+1. Undo right away with `mod+z` ([`shortcut/config.cljs:235-236`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
+2. Otherwise restore a recent backup into a new graph (Scenario 2) and copy the blocks back.
+
+> Removed claim: "Right-click nearby block → Version history → Find deleted block in timeline → Restore this version". Logseq has no block version history. The only history strings in `en.edn` are "Status history" and property-history labels.
 
 ---
 
-### Scenario 2: Corrupted Graph
+### Scenario 2: Corrupted or Broken Graph
 
-**File-Based Graph:**
+Logseq restores a backup by **importing it as a new graph**. There is no in-app "restore from backup" command. `list-backups` in [`graph_backup.cljs:161-167`](../../../../../src/main/logseq/db_worker/graph_backup.cljs) has no caller in the app.
 
-```bash
-# Restore from Git
-git reset --hard origin/main
+**Steps:**
 
-# Or restore from backup
-cp -r ~/Backups/LogseqGraph-latest/* ~/Documents/LogseqGraph/
-```
+1. **Find the backup file.**
+   - Desktop snapshot: ⋯ → **Export graph** → "open backups folder for this graph", then pick the newest `backup/<graph>-<timestamp>/db.sqlite`.
+   - Desktop export: `<graph folder>/export/…sqlite` or `…zip`.
+   - Browser backup folder: `<folder>/<graph name>/db.sqlite`, or an older `backups/<epoch ms>.db.sqlite`.
+2. ⋯ → **Import** ([`components/header.cljs:232-235`](../../../../../src/main/frontend/components/header.cljs)).
+3. Choose **SQLite** for a `.sqlite` file, or **SQLite + assets (.zip)** for a zip export ([`imports.cljs:572-595`](../../../../../src/main/frontend/components/imports.cljs); [`en.edn:950-951`](../../../../../src/resources/dicts/en.edn)).
+4. Enter a **new** graph name. An empty name or an existing one is rejected ([`imports.cljs:74-110`](../../../../../src/main/frontend/components/imports.cljs); [`en.edn:923`, `:929`](../../../../../src/resources/dicts/en.edn)).
+5. Logseq creates the graph from the file and switches to it ([`src/main/frontend/handler/db_based/import.cljs:104-121`](../../../../../src/main/frontend/handler/db_based/import.cljs)). The zip import also copies the assets and reports how many were imported or skipped ([`import.cljs:123-172`](../../../../../src/main/frontend/handler/db_based/import.cljs)).
 
-**Database Graph:**
+**Command line:** `graph backup restore --graph <old> --src <backup name> --dst <new>` runs the same SQLite import from a `backup/` snapshot (Method 5).
 
-1. Close Logseq
-2. Delete corrupted database:
-   ```bash
-   rm ~/Library/Application\ Support/Logseq/graphs/<graph-name>.db
-   ```
-3. Restore from backup:
-   ```bash
-   cp ~/Backups/<graph-name>-20260115.db \
-      ~/Library/Application\ Support/Logseq/graphs/<graph-name>.db
-   ```
-4. Reopen Logseq
+**Assets:** a plain SQLite import brings no assets, and neither do snapshots.
 
-**Or Import from Transit:**
+> **Unverified:** that copying the old graph's `assets/` folder into the new graph's folder makes the images and files resolve. Not tested. The zip route above is the verified way to restore assets.
 
-1. Click **⋯** → **Import graph**
-2. Choose **EDN file**
-3. Select backup `.edn` file
-4. Create new graph from backup
+> Removed claim: "Close Logseq, `rm` the corrupted `<graph-name>.db`, `cp` the backup over it, reopen". The path was wrong, and replacing `db.sqlite` in place is not a restore path in source. It would also leave a stale `-wal` file beside it (see Method 6). Also removed: "⋯ → Import graph → EDN file → Create new graph from backup". The entry is **EDN to DB graph**, and EDN is not a primary backup.
 
 ---
 
-### Scenario 3: Complete Data Loss
+### Scenario 3: Complete Data Loss (new or wiped machine)
 
 **Recovery Steps:**
 
-1. **Check Logseq Sync:**
+1. **Off-machine copies first.** Take the newest `db.sqlite` snapshot or zip export from your external drive or cloud storage, and import it as in Scenario 2.
+2. **Machine-wide backups** (Time Machine, File History): restore `~/logseq/graphs/<graph folder>/` with Logseq quit, then check whether the graph appears in the list ([`graph.cljs:128-140`](../../../../../deps/common/src/logseq/common/graph.cljs)). If you have to choose, prefer its `backup/` snapshots over a `db.sqlite` that may have been copied while in use.
+3. **Logseq Sync:** after signing in, remote graphs are listed under "Remote graphs:" on the graphs screen ([`components/repo.cljs:350-358`](../../../../../src/main/frontend/components/repo.cljs); [`en.edn:768`](../../../../../src/resources/dicts/en.edn)). Sync holds only the current state, with deletions applied.
 
-   - Login to Logseq
-   - Settings → Sync → **Download graph**
+> **Unverified:** the click-by-click steps for downloading a remote graph onto a new device were not traced.
 
-2. **Check Git Remote:**
-
-   ```bash
-   mkdir ~/LogseqGraph
-   cd ~/LogseqGraph
-   git clone https://github.com/username/logseq-graph.git .
-   ```
-
-3. **Check Cloud Storage:**
-
-   - Download from Dropbox/iCloud/OneDrive
-
-4. **Check Local Backups:**
-
-   - External drives
-   - Time Machine (macOS)
-   - File History (Windows)
-
-5. **Last Resort - Check `.edn` exports:**
-   - Import latest EDN backup
-   - Rebuild graph from scratch
+> Removed claim: "Settings → Sync → Download graph", "git clone" of the graph and "Rebuild graph from scratch from `.edn` exports". There is no such Sync settings entry, and Git applies only to file graphs.
 
 ---
 
@@ -522,158 +422,161 @@ cp -r ~/Backups/LogseqGraph-latest/* ~/Documents/LogseqGraph/
 
 **Daily:**
 
-- [ ] Automatic Git commit/push (if using Git)
-- [ ] Logseq Sync active and syncing
-- [ ] Check backup logs for errors
+- [ ] Nothing to do for automatic desktop backups. Occasionally open the backups folder and check that new timestamps appear.
+- [ ] Copy `backup/` and `assets/` off the machine (Workflow 1), or run a CLI backup (Workflow 2).
+- [ ] Check backup logs for errors.
 
 **Weekly:**
 
-- [ ] Manual EDN export to external drive
-- [ ] Verify backup integrity (open backup file)
-- [ ] Test restore from backup (on test graph)
+- [ ] **Export both SQLite DB and assets** and move the zip offsite.
+- [ ] Test a restore into a throwaway graph (below).
 
 **Monthly:**
 
-- [ ] Clean up old backups (keep 90 days)
-- [ ] Verify cloud backup accessible
-- [ ] Update backup scripts if needed
+- [ ] Remove old `Mod+S` and CLI snapshots from `backup/`. They are never pruned automatically.
+- [ ] Verify the offsite copy is accessible.
+- [ ] Update backup scripts if needed.
 
 ### Testing Your Backups
 
 **Test Restore Process:**
 
-1. Create test graph: `MyGraph-Test`
-2. Restore from backup to test graph
-3. Verify all content present
-4. Check assets/attachments load
-5. Delete test graph
+1. ⋯ → **Import** → **SQLite + assets (.zip)** (or **SQLite**).
+2. Name the new graph `MyGraph-Test`.
+3. Verify pages, properties and recent edits are present.
+4. Check that assets load (zip only).
+5. Delete the test graph. The app warns: "⚠️ Notice that we can't recover this graph after being deleted. Make sure you have backups before deleting it." ([`en.edn:740`](../../../../../src/resources/dicts/en.edn)). Make sure you delete the test graph, not the original.
 
 **Why Test?**
 
 - Corrupted backups may not be discovered until needed
-- Restore process may have changed
-- Validates entire backup pipeline
+- Automatic snapshots contain no assets, so a test shows what the zip adds
+- Validates the entire backup pipeline
 
 ---
 
 ### Security Considerations
 
-**Encrypt Sensitive Graphs:**
+**Encrypt backup files:** snapshots and exports are unencrypted SQLite or zip files. Encrypt them before storing them offsite:
 
 ```bash
-# Encrypt backup with GPG
-gpg --encrypt --recipient your-email@example.com my-graph-export.edn
+# Encrypt a backup with GPG
+gpg --encrypt --recipient your-email@example.com my-graph_1757590000.zip
 
 # Decrypt when needed
-gpg --decrypt my-graph-export.edn.gpg > my-graph-export.edn
+gpg --decrypt my-graph_1757590000.zip.gpg > my-graph_1757590000.zip
 ```
 
-**Use Logseq Sync E2EE:**
+**Logseq Sync E2EE:** choose **Encrypt graph data** when creating a synced graph ([`repo.cljs:713-723`](../../../../../src/main/frontend/components/repo.cljs)). Keep the password safe, because it cannot be recovered ([`en.edn:618`](../../../../../src/resources/dicts/en.edn)). Only titles, page names and assets are encrypted ([`sync/const.cljs:25-27`](../../../../../src/main/frontend/worker/sync/const.cljs)).
 
-- Settings → Sync → Enable **End-to-end encryption**
-- Store encryption key safely (cannot recover without it)
-
-**Git Private Repositories:**
-
-- Never use public repos for private notes
-- Use GitHub private repos or self-hosted Git
+> Removed: "Settings → Sync → Enable End-to-end encryption" (encryption is chosen per graph at creation) and "Git private repositories" (file-graph advice).
 
 ---
 
 ## Backup Strategy by Use Case
 
-### Student/Researcher
+### Single Desktop
 
 **Recommended:**
 
-- Primary: Git sync (version control for thesis/papers)
-- Secondary: Logseq Sync (mobile access)
-- Tertiary: Weekly EDN export to external drive
+- Primary: automatic desktop backups (Method 1), plus `Mod+S` before risky changes
+- Secondary: daily copy of `backup/` and `assets/` to an external drive
+- Tertiary: weekly **Export both SQLite DB and assets**, encrypted, offsite
 
-**Why:** Need version history, collaboration, and offline backups
+**Why:** Snapshots cover recent mistakes, and the offsite zip covers disk loss, including assets.
 
 ---
 
-### Professional/Work Notes
+### Desktop + Sync Across Devices
 
 **Recommended:**
 
-- Primary: Logseq Sync with E2EE (security)
-- Secondary: Daily encrypted cloud backup
-- Tertiary: Git sync to company GitLab (compliance)
+- Primary: automatic desktop backups on at least one desktop
+- Secondary: Logseq Sync for access across devices
+- Tertiary: weekly zip export offsite
 
-**Why:** Security, compliance, and audit trail required
+**Why:** Sync replicates deletions, so it can't replace dated copies.
 
 ---
 
-### Personal/Journal
+### Browser Only
 
 **Recommended:**
 
-- Primary: iCloud/Dropbox sync (convenience)
-- Secondary: Logseq Sync (version history)
-- Tertiary: Monthly USB backup
+- Primary: browser backup folder in a Chromium browser (Method 3)
+- Secondary: weekly **Export both SQLite DB and assets**, because the backup folder has no assets
 
-**Why:** Simplicity and ease of use priority
+**Why:** The browser's own storage is not reachable as a file.
 
 ---
 
-### Multi-Device Power User
+### Mobile
 
 **Recommended:**
 
-- Primary: Logseq Sync (real-time everywhere)
-- Secondary: Git sync (desktop version control)
-- Tertiary: Automated daily EDN export
+- Primary: Logseq Sync to a desktop that makes automatic backups
+- Secondary: periodic zip exports from that desktop
 
-**Why:** Need seamless sync + full control over backups
+**Why:** No automatic backup runs in the native mobile app, and no link to the Export screen was found there ([Mobile](#mobile)).
+
+---
+
+### Automation / Power User
+
+**Recommended:**
+
+- Primary: scheduled `graph backup create` (Workflow 2)
+- Secondary: pruning with `graph backup remove`
+- Tertiary: offsite copy of `backup/` and `assets/` (Workflow 1)
+
+**Why:** Backups run on a schedule, whether or not the app is open.
 
 ---
 
 ## Troubleshooting
 
-**Problem: Git push fails**
+**Problem: the `backup/` folder is empty or has no recent snapshot**
 
-```bash
-# Pull first to merge changes
-git pull --rebase
+Automatic backups cover only graphs open in a window, and run on a one-hour timer that starts when a graph is opened ([`db.cljs:105-136`](../../../../../src/electron/electron/db.cljs)). Leave the graph open for an hour, or press `mod+s` for an immediate snapshot.
 
-# Resolve conflicts if any
-git add .
-git rebase --continue
+**Problem: `backup/` keeps growing**
 
-# Push again
-git push
-```
+Only automatic backups are pruned to 12. `Mod+S` (`:electron-manual`) and CLI (`:cli`) snapshots stay until you delete them ([`graph_backup.cljs:183-186`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Each backup's `metadata.edn` shows its source.
 
-**Problem: Logseq Sync stuck**
+**Problem: "Please specify another name as another graph with this name already exists!"**
 
-1. Settings → Sync → **Pause sync**
-2. Wait 30 seconds
-3. Click **Resume sync**
-4. If still stuck: **Re-initialize sync**
+A restore always creates a new graph. Pick an unused name ([`en.edn:929`](../../../../../src/resources/dicts/en.edn)).
 
-**Problem: EDN export file too large**
+**Problem: "Zip missing db.sqlite. Please check the archive structure."**
 
-```bash
-# Compress export
-gzip my-graph-export.edn
+The **SQLite + assets (.zip)** import needs a `db.sqlite` entry in the zip ([`en.edn:960`](../../../../../src/resources/dicts/en.edn)). Use a zip made by **Export both SQLite DB and assets**.
 
-# Results in: my-graph-export.edn.gz (much smaller)
-```
+**Problem: "DB backup failed, please go to Export and specify a backup folder."**
+
+The browser lost its handle to your backup folder. Open ⋯ → **Export graph** and set the folder again ([`handler/export.cljs:271-274`](../../../../../src/main/frontend/handler/export.cljs); [`en.edn:631`](../../../../../src/resources/dicts/en.edn)).
+
+**Problem: "Your browser doesn't support The File System Access API"**
+
+The browser backup folder needs a Chromium-based browser ([`en.edn:679`](../../../../../src/resources/dicts/en.edn)). Use **Export SQLite DB** in the meantime.
+
+**Problem: a copied `db.sqlite` is missing recent edits**
+
+It was copied while Logseq had changes in the `-wal` file (Method 6). Quit Logseq before copying, or use a `backup/` snapshot.
 
 **Problem: Cannot find database file**
 
 ```bash
 # macOS
-open ~/Library/Application\ Support/Logseq/graphs/
+open ~/logseq/graphs/
 
 # Windows
-explorer %APPDATA%\Logseq\graphs\
+explorer %USERPROFILE%\logseq\graphs\
 
 # Linux
-xdg-open ~/.config/Logseq/graphs/
+xdg-open ~/logseq/graphs/
 ```
+
+> Removed: "Git push fails", "Logseq Sync stuck → Pause / Resume / Re-initialize sync" and "EDN export file too large → gzip". The first is file-graph Git advice, the sync controls do not exist, and EDN is not the backup format.
 
 ---
 
@@ -681,17 +584,18 @@ xdg-open ~/.config/Logseq/graphs/
 
 **Implement Your Strategy:**
 
-1. Choose backup methods from this guide
-2. Set up automated workflows
-3. Test restore procedure
+1. Confirm automatic backups appear in the backups folder
+2. Add an off-machine copy (external drive or offsite zip)
+3. Test a restore into a throwaway graph
 4. Document your backup process
 5. Schedule regular backup verification
 
 **Related Guides:**
 
-- [Logseq Sync Setup](../collaboration/logseq-sync.md)
-- [Git Integration](../collaboration/git-sync.md)
-- [Export and Import](./export-graph.md)
+- [Import and Export Guide](./import-export.md)
+- [Backup and Restore](../backup/backup-restore.md)
+- [RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md)
+- [File vs Database Graphs](../../explanation/concepts/file-vs-db.md)
 
 ---
 
