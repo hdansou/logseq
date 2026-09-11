@@ -3,38 +3,42 @@ title: 'User Profiles'
 status: 'Active Development'
 quadrant: 'Reference'
 platform: 'Desktop (macOS/Windows/Linux)'
-lastVerified: '2026-09-09'
+graphType: [db]
+lastVerified: '2026-09-11'
 verifiedAgainst: 'be800f1711'
-reviewStatus: merged-not-fully-audited
+reviewStatus: audited
 related-docs:
   - '../../tutorials/collaboration/real-time-sync.md'
   - '../../explanation/security/e2ee-encryption.md'
-  - '../../how-to/collaboration/sharing-graphs.md'
 ---
 
-> **Last revised:** 2026-09-09
+> **Last revised:** 2026-09-11
 
 # User Profiles Reference
 
 ## Overview
 
-User Profiles in Logseq store identity information for collaboration features, particularly Real-Time Collaboration (RTC). Each user has a profile with their name and email (and optionally an avatar URL), which appear when editing shared graphs.
+Logseq has **no user-profile feature** in the usual sense. There is no profile settings screen, no display-name or bio field, and no avatar upload control. What exists at `be800f1711` is:
 
-User profile entities are created automatically when a user first makes an edit in a synced graph. The profile is derived from the user's Logseq account (Cognito) credentials and stored as a page entity tagged with `:logseq.class/Page`.
+1. **User pages in the graph.** When you edit a DB graph while signed in, Logseq creates a page entity for your account holding `:logseq.property.user/name` and `:logseq.property.user/email`. Blocks you create point at that page through `:logseq.property/created-by-ref`.
+2. **Presence identity in synced graphs.** Online users and block-editing indicators use the name and email from each person's account token. This data is not read from the graph.
+3. **The sync member list.** Names, emails and roles come from the sync server's `/graphs/:graph-id/members` endpoint.
+
+The CLI's `logseq.cli.profile` namespace is unrelated. It is a "Stage timing profiler for logseq CLI runtime" ([profile.cljs:1-2](../../../../../src/main/logseq/cli/profile.cljs#L1-L2)).
 
 **Primary Use Cases**:
 
-- Display user identity in collaborative editing sessions
-- Show user presence indicators (who's online)
-- Attribute edits to specific users via `:logseq.property/created-by-ref` references
+- Attribute blocks to the account that created them (`:logseq.property/created-by-ref`)
+- Show who is online and who is editing which block in a synced graph
+- Show author names on published pages and in the recycle bin
 
 ## Built-in Properties
 
-Logseq provides three built-in properties for user profiles, defined in the `logseq.property.user/*` namespace:
+Three built-in properties live in the `logseq.property.user` namespace. All three are defined with the same schema ([property.cljs:620-634](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L634)).
 
 ### `:logseq.property.user/name`
 
-**Purpose**: Display name shown to collaborators
+**Purpose**: The account's display name as stored in the graph
 
 **Schema**:
 
@@ -47,14 +51,9 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 
 **Details**:
 
-- **Type**: String (any text)
-- **Public**: Visible to all collaborators in shared graphs
-- **Required**: No (defaults to Cognito username from account token)
-
-**Example Values**:
-
-- `"Alice Johnson"`
-- `"Bob Smith"`
+- **Type**: String
+- **Set by**: the created-by hook, from the account token's `cognito:username` ([pipeline.cljs:396-409](../../../../../src/main/frontend/worker/pipeline.cljs#L396-L409))
+- **User-editable**: No UI sets it
 
 **Code Reference**: [property.cljs:620-624](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L624)
 
@@ -62,7 +61,7 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 
 ### `:logseq.property.user/email`
 
-**Purpose**: Email address for identification
+**Purpose**: The account's email address as stored in the graph
 
 **Schema**:
 
@@ -76,16 +75,11 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 **Details**:
 
 - **Type**: String
-- **Public**: Visible to collaborators
-- **Required**: Yes (automatically set from Logseq account token)
-- **Validation**: No client-side email format validation is performed in the codebase; the value comes directly from the account token
+- **Set by**: the created-by hook, from the account token's `email` claim ([pipeline.cljs:396-409](../../../../../src/main/frontend/worker/pipeline.cljs#L396-L409))
+- **Validation**: None. The value is copied from the token.
+- **Also used as a marker**: the initial-data loader finds user entities through this attribute ([initial_data.cljs:396-401](../../../../../deps/db/src/logseq/db/common/initial_data.cljs#L396-L401))
 
-**Example Values**:
-
-- `"alice@example.com"`
-- `"bob.smith@company.org"`
-
-**Privacy Note**: Email is shared with collaborators in remote graphs. If privacy is a concern, use a dedicated collaboration email.
+**Privacy Note**: The email is stored in the graph itself, so every member of a synced graph receives it. See [Privacy Considerations](#privacy-considerations).
 
 **Code Reference**: [property.cljs:625-629](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L625-L629)
 
@@ -93,7 +87,7 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 
 ### `:logseq.property.user/avatar`
 
-**Purpose**: Profile picture URL for visual identification
+**Purpose**: An image URL for the user
 
 **Schema**:
 
@@ -106,133 +100,145 @@ Logseq provides three built-in properties for user profiles, defined in the `log
 
 **Details**:
 
-- **Type**: String (URL to image)
-- **Public**: Visible to all collaborators
-- **Required**: No (defaults to initials-based avatar)
+- **Type**: String (image URL)
+- **Set by**: nothing in the app. The created-by hook does not set it ([pipeline.cljs:396-409](../../../../../src/main/frontend/worker/pipeline.cljs#L396-L409)).
+- **Read by**: comment rows ([comments_model.cljs:127-132](../../../../../src/main/frontend/components/block/comments_model.cljs#L127-L132)) and the recycle bin's "deleted by" avatar ([recycle.cljs:26-33](../../../../../src/main/frontend/components/recycle.cljs#L26-L33)). Both pass it to `user-avatar` as `avatar-src`.
 
-**Default Behavior**: If no avatar is set, Logseq generates an initials-based avatar using the user's name (e.g., "AJ" for "Alice Johnson") with a dynamically generated background color based on the user's UUID (via the `uniqolor` library in `uuid-color`, `deps/shui/src/logseq/shui/util.cljs:46-52`). Initials are computed grapheme-aware -- two characters for Latin/number names, one otherwise (`initials`, `src/main/frontend/components/avatar.cljs:30-40`).
-
-**Avatar Upload**: Logseq provides a presigned-URL mechanism for uploading avatars to its cloud storage: `<upload-user-avatar` requests a URL from `/logseq/get_presigned_user_avatar_put_url` and PUTs the image to it (`src/main/frontend/handler/user.cljs:392-405`). As of `be800f1711` its only caller is the RTC debug UI (`src/main/frontend/db/rtc/debug_ui.cljs:74`) -- there is no end-user avatar upload control.
+**Avatar Upload**: `<upload-user-avatar` requests a presigned URL from `/logseq/get_presigned_user_avatar_put_url` on the account API and PUTs the image there ([user.cljs:392-405](../../../../../src/main/frontend/handler/user.cljs#L392-L405)). It does not write `:logseq.property.user/avatar`. Its only caller is a test button in the RTC debug UI ([debug_ui.cljs:74](../../../../../src/main/frontend/db/rtc/debug_ui.cljs#L74)), so end users have no avatar upload control.
 
 **Code Reference**: [property.cljs:630-634](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L630-L634)
 
 ---
 
-## How Profiles Are Created
+### `:logseq.property/created-by-ref`
 
-User profiles are **not** manually configured through a dedicated settings UI. Instead, they are created automatically by the `add-created-by-ref-hook` pipeline in `src/main/frontend/worker/pipeline.cljs:411`:
+**Purpose**: Links a block or page to the user entity that created it
 
-1. When a user makes an edit in a synced graph, the system reads the user's JWT ID token
-2. If no profile entity exists for that user UUID, one is created as a page entity (`:block/tags :logseq.class/Page`, `:block/uuid` = the token's `sub`) with `:logseq.property.user/name` (set to the token's `cognito:username`) and `:logseq.property.user/email` (`gen-created-by-block`, `src/main/frontend/worker/pipeline.cljs:396-408`)
-3. The new or existing profile entity is then referenced via `:logseq.property/created-by-ref` on edited blocks (`src/main/frontend/worker/pipeline.cljs:421-434`)
+```clojure
+{:title "Node created by"
+ :schema {:type :entity
+          :hide? true}
+ :queryable? true}
+```
 
-The hook is skipped for undo/redo transactions and for RTC/download-graph transactions (`pipeline.cljs:412-414`).
-
-Note: The avatar property is defined in the schema but is **not** set by `gen-created-by-block` during profile creation.
+**Code Reference**: [property.cljs:653-656](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L653-L656)
 
 ---
 
-## How Profiles Appear in Collaboration
+## How User Pages Are Created
 
-### User Presence Indicator
+No settings UI configures a profile. The worker pipeline's `add-created-by-ref-hook` creates and links user pages automatically ([pipeline.cljs:411-444](../../../../../src/main/frontend/worker/pipeline.cljs#L411-L444)). It is called for every local transaction ([pipeline.cljs:530](../../../../../src/main/frontend/worker/pipeline.cljs#L530)):
 
-In shared graphs, online users appear in the header area. The `rtc-collaborators` component (`src/main/frontend/components/header.cljs:120-149`) displays an avatar for each online user, plus a user-plus button that opens the collaboration members dialog.
+1. If the transaction is not undo, redo, or an incoming sync/download transaction, and a signed-in ID token exists, the hook decodes the token ([pipeline.cljs:413-415](../../../../../src/main/frontend/worker/pipeline.cljs#L413-L415))
+2. It looks up the entity whose `:block/uuid` is the token's `sub` ([pipeline.cljs:416](../../../../../src/main/frontend/worker/pipeline.cljs#L416)). If none exists, it adds one ([pipeline.cljs:396-409](../../../../../src/main/frontend/worker/pipeline.cljs#L396-L409)):
+   - `:block/uuid` = token `sub`
+   - `:block/title` and `:block/name` = token `cognito:username`
+   - `:block/tags` = `:logseq.class/Page`
+   - `:logseq.property.user/name` = token `cognito:username`
+   - `:logseq.property.user/email` = token `email`
+3. It sets `:logseq.property/created-by-ref` on newly created entities that don't have one yet ([pipeline.cljs:427-432](../../../../../src/main/frontend/worker/pipeline.cljs#L427-L432)). It also sets it on blocks whose title changes from blank to non-blank ([pipeline.cljs:434-441](../../../../../src/main/frontend/worker/pipeline.cljs#L434-L441)).
 
-**Avatar Display**:
+The hook does **not** check whether the graph is synced. Any DB graph edited while you are signed in gets your user page and `created-by-ref` links. The page's title is your account username, and nothing later updates the name or email if your account changes.
 
-- Initials on a colored background (color derived from user UUID via `uniqolor`)
-- The avatar is rendered by `frontend.components.avatar/user-avatar` (`src/main/frontend/components/avatar.cljs:42-62`), which wraps `shui/avatar`, at small sizes (`w-5 h-5` = 20x20px in the header, `header.cljs:144`)
-- If `avatar-src` is supplied, an `<img>` is rendered; otherwise the initials fallback is used (`avatar.cljs:58-62`)
+---
 
-**Online User Data**: The presence system provides `:user/email`, `:user/name`, `:user/uuid`, and `:user/editing-block-uuid` for each online user.
+## How Identity Appears in Collaboration
 
-### Editing Indicators
+### Online Users in the Header
 
-When collaborators edit blocks, their avatar appears next to the block being edited. The `editing-user-avatar` function (`src/main/frontend/components/block.cljs:2234-2244`) renders the editing user's initials at `w-4 h-4` with their unique color.
+In a synced graph, the `rtc-collaborators` component shows a user-plus button (opens the Members dialog) and one avatar per online user ([header.cljs:120-149](../../../../../src/main/frontend/components/header.cljs#L120-L149)).
 
-**Cursor Colors**: Each user gets a unique color dynamically generated from their UUID using the `uniqolor` library (not a fixed palette). The color is computed with saturation range [55, 70], lightness 70 and `differencePoint` 60 (`deps/shui/src/logseq/shui/util.cljs:46-52`); it is applied to the fallback background at 50/255 alpha (`avatar.cljs:47-49`).
+- **Where the data comes from**: the sync server builds each online user from JWT claims: `sub`, `email`, `preferred_username` / `cognito:username` / `username`, and `name` ([presence.cljs:6-19](../../../../../deps/db-sync/src/logseq/db_sync/worker/presence.cljs#L6-L19)). The client turns them into `:user/uuid`, `:user/name` (username, else name, else user id) and `:user/email` ([presence.cljs:61-71](../../../../../src/main/frontend/worker/sync/presence.cljs#L61-L71)). Graph properties are not consulted.
+- **Rendering**: `avatar/user-avatar` at `w-5 h-5`, with no image source, so always initials ([header.cljs:143-148](../../../../../src/main/frontend/components/header.cljs#L143-L148))
+- **Tooltip**: the user's email through `display-email`, which is masked by default ([header.cljs:146](../../../../../src/main/frontend/components/header.cljs#L146))
 
-### Block Attribution
+### Block Editing Indicators
 
-Edits are attributed to users via the `:logseq.property/created-by-ref` property ("Node created by", `deps/db/src/logseq/db/frontend/property.cljs:653`), which references the user's profile entity.
+While another user edits a block, their initials avatar (`w-4 h-4`) appears in that block's control area ([block.cljs:2234-2244](../../../../../src/main/frontend/components/block.cljs#L2234-L2244)). Your own editing is never shown, and only the first editor per block is kept ([events.cljs:425-434](../../../../../src/main/frontend/handler/events.cljs#L425-L434)).
+
+### Members List
+
+**Settings → Collaboration**, or the header's user-plus dialog, lists members with name, email and role ([settings.cljs:1197-1273](../../../../../src/main/frontend/components/settings.cljs#L1197-L1273)). That data comes from the server's members endpoint. The name shown is the username, else the email, else the user id ([sync.cljs:251-282](../../../../../src/main/frontend/handler/db_based/sync.cljs#L251-L282)).
+
+### Avatar Appearance
+
+- **Initials**: `initials` takes two graphemes when the name starts with a Latin letter or a digit, otherwise one, upper-cased ([avatar.cljs:30-40](../../../../../src/main/frontend/components/avatar.cljs#L30-L40))
+- **Colour**: `uuid-color` runs `uniqolor` on the user UUID with saturation `[55, 70]`, lightness `70`, `differencePoint` `60` ([util.cljs:46-52](../../../../../deps/shui/src/logseq/shui/util.cljs#L46-L52))
+- **Background**: the colour with hex alpha `50` appended, about 31% opacity ([avatar.cljs:45-49](../../../../../src/main/frontend/components/avatar.cljs#L45-L49))
+- **Image**: rendered only when a non-empty `avatar-src` is passed ([avatar.cljs:58-59](../../../../../src/main/frontend/components/avatar.cljs#L58-L59)), which the header and block indicators never do
+
+### Email Masking
+
+Emails in the header tooltip and the members list are masked by default. `:ui/mask-email?` defaults to `true` ([state.cljs:464](../../../../../src/main/frontend/state.cljs#L464)), and `mask-email?` treats anything except `false` as "mask" ([util/email.cljs:28-30](../../../../../src/main/frontend/util/email.cljs#L28-L30)). In the members list, an eye button with the tooltip **Show email address** / **Hide email address** reveals one address ([components/email.cljs:36-56](../../../../../src/main/frontend/components/email.cljs#L36-L56); [en.edn:38](../../../../../src/resources/dicts/en.edn#L38), [:57](../../../../../src/resources/dicts/en.edn#L57)). The header tooltip has no reveal.
+
+> **Known defect:** setting `:ui/mask-email? false` in `config.edn` does not unmask emails. Both call sites pass the whole `[:config]` subscription ([components/email.cljs:25-26](../../../../../src/main/frontend/components/email.cljs#L25-L26), [header.cljs:124](../../../../../src/main/frontend/components/header.cljs#L124)). That state is keyed by repo ([state.cljs:491](../../../../../src/main/frontend/state.cljs#L491)), so `(:ui/mask-email? config)` finds no value and masking stays on.
+
+---
+
+## Where the Properties Are Used or Excluded
+
+| Consumer | Behaviour | Source |
+| -------- | --------- | ------ |
+| Comments | Reads `:logseq.property.user/avatar` of the comment's `created-by-ref` | [comments_model.cljs:127-132](../../../../../src/main/frontend/components/block/comments_model.cljs#L127-L132) |
+| Recycle bin | "Deleted by" avatar uses `user/name` (else `:block/title`) and `user/avatar` | [recycle.cljs:26-33](../../../../../src/main/frontend/components/recycle.cljs#L26-L33) |
+| Published pages | "By:" lists the titles (usernames) of the `created-by-ref` users of the page and its blocks | [render.cljs:1083-1097](../../../../../deps/publish/src/logseq/publish/render.cljs#L1083-L1097), [:1244](../../../../../deps/publish/src/logseq/publish/render.cljs#L1244) |
+| Publish payload | Drops `:logseq.property.user/email` datoms | [worker/publish.cljs:227](../../../../../src/main/frontend/worker/publish.cljs#L227) |
+| Initial data load | Includes every datom of every entity with `user/email` | [initial_data.cljs:396-401](../../../../../deps/db/src/logseq/db/common/initial_data.cljs#L396-L401), [:432](../../../../../deps/db/src/logseq/db/common/initial_data.cljs#L432) |
+| SQLite graph datom export | Excludes the three user properties and `created-by-ref` | [export.cljs:899-906](../../../../../deps/db/src/logseq/db/sqlite/export.cljs#L899-L906) |
+| Markdown mirror | Skips pages that have `user/email` | [markdown_mirror.cljs:552-557](../../../../../src/main/frontend/worker/markdown_mirror.cljs#L552-L557) |
+| Class property UI | Excludes the user properties | [handler/property.cljs:40-49](../../../../../src/main/frontend/handler/property.cljs#L40-L49) |
+
+> **Unverified:** whether generic plugin property APIs return `logseq.property.user/*` values. `IAppProxy.getUserInfo` is declared ([LSPlugin.ts:411](../../../../../libs/src/LSPlugin.ts#L411)), but no host implementation was found under `src/main/logseq`.
 
 ---
 
 ## Privacy Considerations
 
-### What Gets Shared
+### What Is Stored in the Graph
 
-When you join a remote graph, these profile properties are **automatically shared** with all collaborators:
+A user page stores **only**:
 
-- Name (`:logseq.property.user/name`)
-- Email (`:logseq.property.user/email`)
-- Avatar URL (`:logseq.property.user/avatar`) if set
+- Your account username (`:block/title`, `:block/name`, `:logseq.property.user/name`)
+- Your account email (`:logseq.property.user/email`)
 
-**Not shared**:
+In a synced graph these datoms replicate like any other data. Every member can see and query them, and they sit in each member's local copy.
 
-- Account password (never leaves your device)
-- E2EE password (local only)
-- Other graphs you own
-- Local-only graphs
+**End-to-end encryption does not cover them.** E2EE encrypts only `:block/title` and `:block/name` values ([const.cljs:25-27](../../../../../src/main/frontend/worker/sync/const.cljs#L25-L27)). The username in the title is encrypted, but `:logseq.property.user/name` and `:logseq.property.user/email` are not in that set.
 
-### Data Visibility
+### Outside the Graph
 
-**Who can see your profile**:
+- The sync server knows each connected user's token claims and broadcasts name, username and email to online members ([presence.cljs:6-19](../../../../../deps/db-sync/src/logseq/db_sync/worker/presence.cljs#L6-L19), [:38-40](../../../../../deps/db-sync/src/logseq/db_sync/worker/presence.cljs#L38-L40))
+- Published pages show author **usernames** but strip emails (table above)
 
-- All collaborators in **shared remote graphs** (if you join)
-- Logseq servers (for sync coordination)
-- Not visible to: Public, search engines, non-collaborators
+### Limiting Exposure
 
-**Where it's stored**:
-
-- Logseq cloud database (for sync)
-- Collaborators' local databases (cached as part of the graph)
-- Your local database (original)
-
-### Using Private Email
-
-If you want to collaborate without exposing your personal email:
-
-**Option 1: Create Alias**
-
-- Gmail: Use `yourname+logseq@gmail.com` (delivered to `yourname@gmail.com`)
-- ProtonMail, Fastmail: Create dedicated alias
-
-**Option 2: Separate Logseq Account**
-
-- Create new account with a work-specific email
-- Use only for collaboration graphs
+The stored email is your Logseq account email. If you don't want collaborators to see a particular address, sign in with an account that uses an address you are willing to share.
 
 ---
 
 ## Advanced Usage
 
-### DataScript Query
+### Datalog Query
 
-You can query user profiles in a graph using DataScript:
+The hook stores `user/name` and `user/email` as plain strings ([pipeline.cljs:408-409](../../../../../src/main/frontend/worker/pipeline.cljs#L408-L409)), so they can be matched directly:
 
 ```clojure
-;; Get all user profiles in graph
+;; All user pages in the graph
 [:find ?name ?email
  :where
- [?b :logseq.property.user/name ?name]
- [?b :logseq.property.user/email ?email]]
+ [?u :logseq.property.user/name ?name]
+ [?u :logseq.property.user/email ?email]]
 ```
 
-Note: Not all user entities will have an avatar set, so querying for all three fields with an inner join may return fewer results than expected.
+```clojure
+;; Blocks created by a given username
+[:find (pull ?b [:block/uuid :block/title])
+ :where
+ [?u :logseq.property.user/name "alice"]
+ [?b :logseq.property/created-by-ref ?u]]
+```
 
-### Where Profile Data Is Consumed
-
-Besides the header presence list and block editing indicators, profile properties are read by:
-
-- Comments (`:logseq.property.user/avatar`, `src/main/frontend/components/block/comments_model.cljs:130`)
-- The recycle bin / trash view, which shows who deleted a node (`src/main/frontend/components/recycle.cljs:30-33`)
-
-> **Not implemented:** there is no profile settings screen, no `logseq profile ...` CLI command, and no plugin API for reading or writing `logseq.property.user/*`. Profiles are created and maintained entirely by the pipeline hook described above.
-
-### Initial Data Export
-
-User profile datoms are included in the initial data export via `get-all-user-datoms` (`deps/db/src/logseq/db/common/initial_data.cljs:396`, called at `:432`). This function finds all entities with `:logseq.property.user/email` and returns their complete datom sets.
+Because nothing sets `user/avatar`, adding it as a required clause will usually return nothing.
 
 ---
 
@@ -242,17 +248,17 @@ User profile datoms are included in the initial data export via `get-all-user-da
 
 **Source**: [deps/db/src/logseq/db/frontend/property.cljs:620-634](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L620-L634)
 
-The user profile properties are defined as part of the `built-in-properties` map. All three share the same schema structure: string type, not hidden, and public.
+All three user properties are entries in the `built-in-properties` map, with the same schema: string type, not hidden, public.
 
 ### DataScript Schema
 
-The user profile properties do **not** have explicit entries in the DataScript schema file (`deps/db/src/logseq/db/frontend/schema.cljs`). They are dynamically registered as part of the built-in properties system. There is no `:db.unique/identity` constraint on `:logseq.property.user/email` in the schema. Instead, uniqueness of user profiles is enforced at the application level by looking up entities by their block UUID (which corresponds to the user's Cognito sub/UUID).
+The user properties have no entries in `deps/db/src/logseq/db/frontend/schema.cljs`, and `:logseq.property.user/email` carries no uniqueness constraint. User entities are unique because the hook looks them up by `[:block/uuid <token sub>]` ([pipeline.cljs:416](../../../../../src/main/frontend/worker/pipeline.cljs#L416)), and `:block/uuid` is `:db.unique/identity` ([schema.cljs:61](../../../../../deps/db/src/logseq/db/frontend/schema.cljs#L61)).
 
 **Key Points**:
 
-- User profile entities are identified by `:block/uuid` (the user's Cognito UUID), which does have `:db.unique/identity`
-- All user properties store single string values
-- No database-level validation is performed on property values
+- A user entity is identified by `:block/uuid`, which equals the account's token `sub`
+- All user properties hold single string values
+- No validation is applied to the values
 
 ---
 
@@ -260,23 +266,15 @@ The user profile properties do **not** have explicit entries in the DataScript s
 
 **Tutorials**:
 
-- [Getting Started with RTC](../../tutorials/collaboration/real-time-sync.md) -- Learn collaborative editing with profiles
-
-**How-To Guides**:
-
-- [Sharing Graphs](../../how-to/collaboration/sharing-graphs.md) -- Invite collaborators and manage access
+- [Getting Started with Real-Time Collaboration](../../tutorials/collaboration/real-time-sync.md): presence, members, roles
 
 **Explanations**:
 
-- [E2EE Encryption](../../explanation/security/e2ee-encryption.md) -- How profiles are encrypted in shared graphs
-- [RTC Architecture](../../../dz/docs/01-onboarding/rtc-onboarding.md) -- Technical deep dive into collaboration
-
-**References**:
-
-- [Built-in Properties](../schema/built-in-properties.md) -- All built-in properties including user properties
+- [E2EE Encryption](../../explanation/security/e2ee-encryption.md): what is and isn't encrypted
+- [RTC Architecture](../../../01-onboarding/rtc-onboarding.md): developer onboarding for sync
 
 ---
 
-**Last Updated**: September 2026
-**Status**: Active Development (Profile features expanding for RTC)
-**Feedback**: Report profile issues on [GitHub](https://github.com/logseq/logseq/issues)
+**Last Updated**: 2026-09-11
+**Status**: Active Development
+**Feedback**: Report issues on [GitHub](https://github.com/logseq/logseq/issues)
