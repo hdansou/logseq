@@ -180,12 +180,12 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 ##### [Plugin Apis / Pr 12395](reference/plugin-apis/pr-12395/)
 
-- [Postmate transport: MessageChannel optimization](reference/plugin-apis/pr-12395/01-postmate-message-channel.md)
+- [Postmate MessageChannel transport](reference/plugin-apis/pr-12395/01-postmate-message-channel.md)
 - [Experiments.registerHostedRenderer](reference/plugin-apis/pr-12395/02-hosted-renderer.md)
 - [Experiments.registerSidebarRenderer](reference/plugin-apis/pr-12395/03-sidebar-renderer.md)
 - [App.getCurrentRoute](reference/plugin-apis/pr-12395/04-app-get-current-route.md)
-- [`Editor.getBlockProperties` — class default values are now merged in](reference/plugin-apis/pr-12395/05-block-properties-class-defaults.md)
-- [`helpers.ts` → `common.ts` rename](reference/plugin-apis/pr-12395/06-helpers-to-common-rename.md)
+- [Editor.getBlockProperties class defaults](reference/plugin-apis/pr-12395/05-block-properties-class-defaults.md)
+- [helpers.ts to common.ts rename](reference/plugin-apis/pr-12395/06-helpers-to-common-rename.md)
 - [PR #12395 — Plugin libs refactor](reference/plugin-apis/pr-12395/README.md)
 
 #### [Syntax](reference/syntax/)

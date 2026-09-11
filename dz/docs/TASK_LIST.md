@@ -1,17 +1,17 @@
 # Documentation status
 
-Generated 2026-09-09 by
+Generated 2026-09-10 by
 `dz/support-engineering/script/doc-inventory/gen_task_list.py`. Do not edit by hand —
 every field comes from each document's frontmatter.
 
 | | Count |
 |---|---|
 | Documents | 106 |
-| Audited line by line this pass | 31 |
+| Audited line by line this pass | 44 |
 | Authored from source — trusted | 10 |
 | Merged this pass — base inherited, needs a line-by-line audit | 27 |
 | Generated, gated in CI | 1 |
-| Not reviewed | 37 |
+| Not reviewed | 24 |
 
 `merged-not-fully-audited` means the two copies were reconciled against source and
 every ported claim was verified, but content inherited from the surviving base was
@@ -25,26 +25,18 @@ Older date, or none. Highest priority.
 | Document | Last verified | Against |
 |---|---|---|
 | `_templates/frontmatter.md` | ' # YYYY-MM-DD | — |
-| `explanation/concepts/file-organization.md` | — | — |
 | `explanation/concepts/file-vs-database.md` | — | — |
 | `explanation/concepts/graph-visualization.md` | — | — |
 | `explanation/concepts/linked-references.md` | — | — |
 | `explanation/concepts/local-first-architecture.md` | — | — |
-| `how-to/optimization/performance-optimization.md` | — | — |
 | `how-to/organization/backup-strategies.md` | — | — |
-| `how-to/organization/import-export.md` | — | — |
 | `how-to/troubleshooting/troubleshooting-guide.md` | — | — |
-| `how-to/workflows/zettelkasten-method.md` | — | — |
 | `reference/interface/slash-commands.md` | — | — |
-| `reference/interface/templates-system.md` | — | — |
 | `reference/platforms/mobile-differences.md` | — | — |
-| `reference/plugin-apis/pr-12395/05-block-properties-class-defaults.md` | — | — |
-| `reference/plugin-apis/pr-12395/06-helpers-to-common-rename.md` | — | — |
 | `_templates/explanation-template.md` | 2026-01-29 | — |
 | `_templates/how-to-template.md` | 2026-01-29 | — |
 | `_templates/reference-template.md` | 2026-01-29 | — |
 | `_templates/tutorial-template.md` | 2026-01-29 | — |
-| `explanation/concepts/block-tags-vs-page-tags.md` | 2026-04-22 | — |
 | `how-to/content/hide-tags-from-node.md` | 2026-04-28 | — |
 | `how-to/tasks/disable-task-time-tracking.md` | 2026-04-28 | — |
 | `explanation/architecture/system-overview.md` | 2026-05-30 | — |
@@ -56,11 +48,6 @@ Older date, or none. Highest priority.
 | `tutorials/getting-started/02-first-graph.md` | 2026-05-30 | — |
 | `tutorials/getting-started/03-basic-editing.md` | 2026-05-30 | — |
 | `tutorials/getting-started/04-linking-pages.md` | 2026-05-30 | — |
-| `explanation/concepts/block-editing-philosophy.md` | 2026-09-09 | be800f1711 |
-| `explanation/concepts/plugin-architecture.md` | 2026-09-09 | be800f1711 |
-| `how-to/workflows/meeting-notes-workflow.md` | 2026-09-09 | be800f1711 |
-| `reference/formatting/markdown-syntax.md` | 2026-09-09 | be800f1711 |
-| `reference/plugin-apis/pr-12395/01-postmate-message-channel.md` | 2026-09-09 | be800f1711 |
 
 ## Audited line by line
 
@@ -69,21 +56,13 @@ Older date, or none. Highest priority.
 | `explanation/architecture/block-editor.md` | 2026-09-09 | `be800f1711` |
 | `explanation/architecture/data-architecture.md` | 2026-09-09 | `be800f1711` |
 | `explanation/architecture/database-integrity.md` | 2026-09-09 | `be800f1711` |
-| `explanation/architecture/plugin-security.md` | 2026-09-09 | `be800f1711` |
 | `explanation/architecture/schema-system.md` | 2026-09-09 | `be800f1711` |
 | `explanation/concepts/bidirectional-properties.md` | 2026-09-09 | `be800f1711` |
-| `explanation/concepts/file-vs-db.md` | 2026-09-09 | `be800f1711` |
 | `explanation/concepts/tag-properties-vs-page-properties.md` | 2026-09-09 | `be800f1711` |
 | `explanation/features/how-publishing-works.md` | 2026-09-09 | `be800f1711` |
 | `explanation/security/e2ee-encryption.md` | 2026-09-09 | `be800f1711` |
-| `how-to/content/view-types.md` | 2026-09-09 | `be800f1711` |
 | `how-to/multimedia/video-embed.md` | 2026-09-09 | `be800f1711` |
 | `how-to/queries/advanced-queries.md` | 2026-09-09 | `be800f1711` |
-| `how-to/workflows/daily-workflows.md` | 2026-09-09 | `be800f1711` |
-| `how-to/workflows/research-workflow.md` | 2026-09-09 | `be800f1711` |
-| `how-to/workflows/task-management-workflows.md` | 2026-09-09 | `be800f1711` |
-| `reference/advanced/query-patterns.md` | 2026-09-09 | `be800f1711` |
-| `reference/advanced/query-system.md` | 2026-09-09 | `be800f1711` |
 | `reference/configuration/keyboard-shortcuts.md` | 2026-09-09 | `be800f1711` |
 | `reference/data/properties-reference.md` | 2026-09-09 | `be800f1711` |
 | `reference/features/calculator.md` | 2026-09-09 | `be800f1711` |
@@ -93,10 +72,31 @@ Older date, or none. Highest priority.
 | `reference/plugin-apis/pr-12395/04-app-get-current-route.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/advanced/advanced-queries-tutorial.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/advanced/custom-theme-tutorial.md` | 2026-09-09 | `be800f1711` |
-| `tutorials/advanced/workflow-automation-tutorial.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/integrations/mcp-integration.md` | 2026-09-09 | `be800f1711` |
 | `tutorials/plugins/first-plugin.md` | 2026-09-09 | `be800f1711` |
-| `tutorials/queries/charts-with-hiccup.md` | 2026-09-09 | `be800f1711` |
+| `explanation/architecture/plugin-security.md` | 2026-09-10 | `be800f1711` |
+| `explanation/concepts/block-editing-philosophy.md` | 2026-09-10 | `be800f1711` |
+| `explanation/concepts/block-tags-vs-page-tags.md` | 2026-09-10 | `be800f1711` |
+| `explanation/concepts/file-organization.md` | 2026-09-10 | `be800f1711` |
+| `explanation/concepts/file-vs-db.md` | 2026-09-10 | `be800f1711` |
+| `explanation/concepts/plugin-architecture.md` | 2026-09-10 | `be800f1711` |
+| `how-to/content/view-types.md` | 2026-09-10 | `be800f1711` |
+| `how-to/optimization/performance-optimization.md` | 2026-09-10 | `be800f1711` |
+| `how-to/organization/import-export.md` | 2026-09-10 | `be800f1711` |
+| `how-to/workflows/daily-workflows.md` | 2026-09-10 | `be800f1711` |
+| `how-to/workflows/meeting-notes-workflow.md` | 2026-09-10 | `be800f1711` |
+| `how-to/workflows/research-workflow.md` | 2026-09-10 | `be800f1711` |
+| `how-to/workflows/task-management-workflows.md` | 2026-09-10 | `be800f1711` |
+| `how-to/workflows/zettelkasten-method.md` | 2026-09-10 | `be800f1711` |
+| `reference/advanced/query-patterns.md` | 2026-09-10 | `be800f1711` |
+| `reference/advanced/query-system.md` | 2026-09-10 | `be800f1711` |
+| `reference/formatting/markdown-syntax.md` | 2026-09-10 | `be800f1711` |
+| `reference/interface/templates-system.md` | 2026-09-10 | `be800f1711` |
+| `reference/plugin-apis/pr-12395/01-postmate-message-channel.md` | 2026-09-10 | `be800f1711` |
+| `reference/plugin-apis/pr-12395/05-block-properties-class-defaults.md` | 2026-09-10 | `be800f1711` |
+| `reference/plugin-apis/pr-12395/06-helpers-to-common-rename.md` | 2026-09-10 | `be800f1711` |
+| `tutorials/advanced/workflow-automation-tutorial.md` | 2026-09-10 | `be800f1711` |
+| `tutorials/queries/charts-with-hiccup.md` | 2026-09-10 | `be800f1711` |
 
 ## Merged this pass — needs a line-by-line audit
 
@@ -115,7 +115,6 @@ Older date, or none. Highest priority.
 | `how-to/tasks/repeating-tasks.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/api/http-api.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/api/mcp-server.md` | 2026-09-09 | `be800f1711` | full |
-| `reference/api/plugin-api.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/configuration/config-edn-db.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/configuration/config-edn.md` | 2026-09-09 | `be800f1711` | full |
 | `reference/configuration/css-variables.md` | 2026-09-09 | `be800f1711` | full |
@@ -129,6 +128,7 @@ Older date, or none. Highest priority.
 | `tutorials/knowledge-management/flashcards-basics.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/task-management/project-planning.md` | 2026-09-09 | `be800f1711` | full |
 | `tutorials/task-management/todo-basics.md` | 2026-09-09 | `be800f1711` | full |
+| `reference/api/plugin-api.md` | 2026-09-10 | `be800f1711` | full |
 
 ## Authored from source
 
