@@ -2,7 +2,7 @@
 title: 'Plugin API Reference'
 description: "Complete reference for Logseq's Plugin SDK APIs for extension development"
 status: stable
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: merged-not-fully-audited
 logseqVersion: '0.11.x'
@@ -1458,8 +1458,17 @@ setBlockIcon(blockId: BlockIdentity, iconType: 'tabler-icon' | 'emoji', iconName
 
 ### Template APIs
 
-`libs/src/LSPlugin.ts:532-541`: `getTemplate`, `existTemplate`,
-`createTemplate`, `removeTemplate`, `insertTemplate`.
+`libs/src/LSPlugin.ts:533-541`: `getTemplate`, `existTemplate`,
+`createTemplate`, `removeTemplate`, `insertTemplate`; plus `getCurrentGraphTemplates` (`:513`).
+
+> **Declared, not implemented.** None of these six has a host implementation at `be800f1711`. They
+> lived in `src/main/logseq/api/file_based.cljs`, which commit `eaa5a57337` ("remove file based
+> api") deleted, and nothing under `src/main/logseq/` replaces them. A call is snake-cased to a host
+> name such as `get_template` (`libs/src/common.ts`, `invokeHostExportedApi`), finds no match, and
+> reaches `throw new Error('Not existed method #…')` (`libs/src/common.ts:328-330`). That code path
+> was read, not run. Users insert templates with `/Template`, and templates can apply themselves to
+> tagged blocks through the "Apply template to tags" property — see
+> [Templates System](../interface/templates-system.md).
 
 ---
 

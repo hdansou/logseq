@@ -16,7 +16,7 @@ tags: ['automation', 'workflows', 'plugins', 'scripting', 'productivity']
 
 # Workflow Automation Tutorial
 
-Automate repetitive tasks in Logseq using queries, templates and a plugin. This hands-on tutorial builds a working automation plugin against a **DB graph**, using APIs verified to exist in `@logseq/libs` v0.3.4.
+Automate repetitive tasks in Logseq using queries, templates and a plugin. This hands-on tutorial builds a working automation plugin against a **DB graph**, using APIs that are both declared in `@logseq/libs` v0.3.4 and implemented by the host at `be800f1711`. Some declared methods have no host implementation; where this tutorial meets one, it says so.
 
 > **This tutorial targets DB graphs.** The queries below use DB-graph attributes
 > (`:block/title`, `:logseq.property/status`, `:logseq.property/deadline`) and Datalog passed to
@@ -110,7 +110,6 @@ DB graphs themselves live under `~/logseq/graphs`
 ├── index.js
 └── workflows/
     ├── task-processor.js
-    ├── template-runner.js
     └── scheduler.js
 ```
 
@@ -356,8 +355,8 @@ zoomed in.
 In a DB graph a template is a block tagged **`#Template`** — `:logseq.class/Template`
 (`deps/db/src/logseq/db/frontend/class.cljs:100-102`). It carries one built-in property,
 `:logseq.property/template-applied-to` ("Apply template to tags",
-`deps/db/src/logseq/db/frontend/property.cljs:696`), which makes the template offered automatically
-on blocks carrying those tags (`src/main/frontend/worker/pipeline.cljs:107`). Applying a template is
+`deps/db/src/logseq/db/frontend/property.cljs:696`), which makes the template insert itself automatically
+into blocks that gain one of those tags (`src/main/frontend/worker/pipeline.cljs:94-150`). Applying a template is
 the outliner operation `:apply-template`
 (`deps/outliner/src/logseq/outliner/op.cljs:265`, `op/construct.cljc:517-532`).
 
@@ -370,58 +369,36 @@ the outliner operation `:apply-template`
 > prompt or picker. Logseq's `{{...}}` macros are the built-in `img` macro, the embed and video
 > macros the block renderer handles, and user macros declared under `:macros` in `config.edn`
 > (`deps/common/src/logseq/common/util/macro.cljs:1-40`); there is no `input`, `select`, `cursor`
-> or `date` macro. The whole engine has been replaced below with the template API that does exist.
+> or `date` macro.
 
-### The Template API
+### Why a Plugin Cannot Insert Templates Here
 
-Five methods on `IAppProxy` (`libs/src/LSPlugin.ts:532-541`):
+`IAppProxy` still declares six template methods — `getCurrentGraphTemplates`
+(`libs/src/LSPlugin.ts:513`) and `getTemplate`, `existTemplate`, `createTemplate`,
+`removeTemplate`, `insertTemplate` (`:533-541`) — but **none of them is implemented by the host at
+`be800f1711`**. Their implementations lived in `src/main/logseq/api/file_based.cljs`, which commit
+`eaa5a57337` ("remove file based api") deleted, and nothing under `src/main/logseq/` replaces them.
+A call such as `logseq.App.insertTemplate(...)` is snake-cased to the host name `insert_template`
+— `App` gets no namespace prefix; only `git`, `ui`, `assets` and `utils` do
+(`libs/src/LSPlugin.user.ts:1064-1065`) — matches nothing in `invokeHostExportedApi`, and reaches
+`throw new Error('Not existed method #…')` (`libs/src/common.ts:328-330`). That path was read in
+source, not run.
 
-```typescript
-logseq.App.getTemplate(name)                      // => Promise<BlockEntity | null>
-logseq.App.existTemplate(name)                    // => Promise<Boolean>
-logseq.App.createTemplate(targetUuid, name, opts) // opts?: { overwrite: boolean }
-logseq.App.removeTemplate(name)
-logseq.App.insertTemplate(targetUuid, name)       // insert by name into a target block
-```
+> **Removed:** an earlier revision of this page presented those five methods as "the template API
+> that does exist" and built an `applyTemplate` helper, a context-sensitive `Smart template` slash
+> command, a journal hook and a `testTemplateApply` test on top of them. All of it depended on
+> methods with no implementation, so it has been removed rather than left to fail at runtime.
 
-`insertTemplate` takes the **template's name**, not its content — you do not expand it yourself.
+What does work, without a plugin:
 
-**Step 1: Apply a template to a block**
+- **Insert by hand** with `/Template` (`src/main/frontend/commands.cljs:339-343`).
+- **Apply automatically** by setting "Apply template to tags" on the template: when a block gains
+  one of those tags, the template's children are inserted into it
+  (`src/main/frontend/worker/pipeline.cljs:94-150`). For a journal template, set it to `Journal` —
+  the `:default-templates` config key is file-graph only
+  (`deps/common/src/logseq/common/config.cljs:138-139`).
 
-```javascript
-async function applyTemplate(targetUuid, name) {
-  if (!(await logseq.App.existTemplate(name))) {
-    await logseq.UI.showMsg(`No template named "${name}"`, 'warning')
-    return
-  }
-  await logseq.App.insertTemplate(targetUuid, name)
-}
-```
-
-**Step 2: Choose a template from context**
-
-Since there is no picker API, decide in code and insert by name:
-
-```javascript
-function templateForNow() {
-  const hour = new Date().getHours()
-  const day = new Date().getDay()
-
-  if (day === 0 || day === 6) return 'weekend-project'
-  if (hour >= 9 && hour < 17) return 'work-task'
-  if (hour >= 17 && hour < 22) return 'evening-reflection'
-  return 'general'
-}
-
-logseq.Editor.registerSlashCommand('Smart template', async ({ uuid }) => {
-  await applyTemplate(uuid, templateForNow())
-})
-```
-
-`registerSlashCommand(tag, action)` (`libs/src/LSPlugin.ts:666-669`) hands its callback an event
-carrying `{ uuid }` — the block the command was invoked in (`BlockCommandCallback`).
-
-**Step 3: Apply on a schedule, not on page creation**
+**Hooks for page and journal events**
 
 > **Deleted:** `logseq.App.onPageCreated` does not exist. The `IAppProxy` hook events are
 > `onCurrentGraphChanged`, `onGraphAfterIndexed`, `onThemeModeChanged`, `onThemeChanged`,
@@ -429,13 +406,13 @@ carrying `{ uuid }` — the block the command was invoked in (`BlockCommandCallb
 > `onBlockRendererSlotted`, `onMacroRendererSlotted`, `onPageHeadActionsSlotted`, `onRouteChanged`
 > and `onSidebarVisibleChanged` (`libs/src/LSPlugin.ts:559-605`). There is no page-created hook.
 
-The two hooks that get you close:
+The nearest hooks:
 
 ```javascript
-// Fires when today's journal page is created (libs/src/LSPlugin.ts:565)
+// Fires when today's journal page is created (libs/src/LSPlugin.ts:565).
+// A journal template does not need this hook: set "Apply template to tags" to Journal instead.
 logseq.App.onTodayJournalCreated(async ({ title }) => {
-  const page = await logseq.Editor.getPage(title)
-  if (page) await applyTemplate(page.uuid, 'daily-note')
+  console.log('journal created', title)
 })
 
 // Fires on every route change (libs/src/LSPlugin.ts:604)
@@ -1445,7 +1422,6 @@ const AutomationTests = {
     console.log('Running automation tests...')
 
     await this.testTaskProcessing()
-    await this.testTemplateApply()
     await this.testBatchOperations()
 
     console.log('All tests complete!')
@@ -1469,25 +1445,6 @@ const AutomationTests = {
     await logseq.Editor.deletePage(testPage.title ?? testPage.name)
 
     console.log('✓ Task processing test passed')
-  },
-
-  async testTemplateApply() {
-    console.log('Test: Template Apply')
-
-    if (!(await logseq.App.existTemplate('work-task'))) {
-      throw new Error('Fixture template "work-task" is missing')
-    }
-
-    const page = await logseq.Editor.createPage(`Test-tpl-${Date.now()}`)
-    await logseq.App.insertTemplate(page.uuid, 'work-task')
-
-    const tree = await logseq.Editor.getPageBlocksTree(page.title ?? page.name)
-    if (!tree || tree.length === 0) {
-      throw new Error('Template did not insert anything')
-    }
-
-    await logseq.Editor.deletePage(page.title ?? page.name)
-    console.log('✓ Template apply test passed')
   },
 
   async testBatchOperations() {

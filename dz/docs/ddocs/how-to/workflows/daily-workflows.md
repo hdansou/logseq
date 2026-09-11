@@ -712,7 +712,7 @@ and `current page` are substituted; any other name loses its `<% %>` wrapper, so
 
 The `:default-templates` key in `config.edn` is deprecated for DB graphs; it "is
 replaced by #Template and the `Apply template to tags` property"
-(`deps/common/src/logseq/common/config.cljs:137-138`).
+(`deps/common/src/logseq/common/config.cljs:138-139`).
 
 ```markdown
 1. Tag the Daily Note block with Template.
