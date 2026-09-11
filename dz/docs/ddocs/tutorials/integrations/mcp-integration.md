@@ -4,8 +4,9 @@ status: 🟡 Active Development
 version: 'Desktop MCP server added 2025-09-17 (a16c89b986)'
 quadrant: 'Tutorial'
 platform: 'Desktop (Electron)'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-11'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-09. The 2026-09-11 date covers only the no-tokens authentication note (Host / authentication section).'
 reviewStatus: audited
 related-docs:
   - '[CLI Development Guide](../../reference/tools/cli-reference.md)'
@@ -182,7 +183,7 @@ The Fastify `preHandler` hook applies to every route except `/`, and validates t
 
 Two behaviours follow:
 
-- If you have configured **no** tokens, `when-let` short-circuits and **no authentication is enforced** on `/mcp`.
+- If you have configured **no** tokens, `when-let` short-circuits and **the token value is not checked**. The header must still be present: `validate-auth-token` first calls `string/replace` on it, which throws on a missing header, and the pre-handler turns that into a 401 (`src/electron/electron/server.cljs:85`, `:96-103`). Any `Authorization` value therefore passes.
 - If you have configured tokens, every MCP request needs `Authorization: Bearer <token>`. Manage tokens from the API-server popup's token panel.
 
 ### Host / DNS-rebinding check
