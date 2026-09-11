@@ -16,6 +16,10 @@ committed in `ad3b4d893a`, whose five files went from 10 broken links to 2. Thos
 unverified, so a link there resolving means its target exists, not that the citation is right.
 The group lists below are from the 2026-09-09 snapshot.
 
+The 2026-09-11 recount is **66**. The wave-4 audits brought 92 down to 83, and wave 5 brought
+83 down to 66. Wave 5 audited 13 pages; its agents retargeted links whose pages had been renamed
+and dropped links to pages that were never written. The groups have not been recounted.
+
 ## Where the count went
 
 | | Then | Now | What happened |

@@ -7,11 +7,11 @@ every field comes from each document's frontmatter.
 | | Count |
 |---|---|
 | Documents | 106 |
-| Audited line by line this pass | 44 |
+| Audited line by line this pass | 58 |
 | Authored from source — trusted | 10 |
 | Merged this pass — base inherited, needs a line-by-line audit | 27 |
 | Generated, gated in CI | 1 |
-| Not reviewed | 24 |
+| Not reviewed | 10 |
 
 `merged-not-fully-audited` means the two copies were reconciled against source and
 every ported claim was verified, but content inherited from the surviving base was
@@ -28,26 +28,12 @@ Older date, or none. Highest priority.
 | `explanation/concepts/file-vs-database.md` | — | — |
 | `explanation/concepts/graph-visualization.md` | — | — |
 | `explanation/concepts/linked-references.md` | — | — |
-| `explanation/concepts/local-first-architecture.md` | — | — |
 | `how-to/organization/backup-strategies.md` | — | — |
 | `how-to/troubleshooting/troubleshooting-guide.md` | — | — |
-| `reference/interface/slash-commands.md` | — | — |
-| `reference/platforms/mobile-differences.md` | — | — |
 | `_templates/explanation-template.md` | 2026-01-29 | — |
 | `_templates/how-to-template.md` | 2026-01-29 | — |
 | `_templates/reference-template.md` | 2026-01-29 | — |
 | `_templates/tutorial-template.md` | 2026-01-29 | — |
-| `how-to/content/hide-tags-from-node.md` | 2026-04-28 | — |
-| `how-to/tasks/disable-task-time-tracking.md` | 2026-04-28 | — |
-| `explanation/architecture/system-overview.md` | 2026-05-30 | — |
-| `explanation/comparisons/rtc-vs-file-sync.md` | 2026-05-30 | — |
-| `how-to/content/favorites-recent.md` | 2026-05-30 | — |
-| `how-to/integrations/custom-css.md` | 2026-05-30 | — |
-| `how-to/integrations/custom-js.md` | 2026-05-30 | — |
-| `tutorials/getting-started/01-installation.md` | 2026-05-30 | — |
-| `tutorials/getting-started/02-first-graph.md` | 2026-05-30 | — |
-| `tutorials/getting-started/03-basic-editing.md` | 2026-05-30 | — |
-| `tutorials/getting-started/04-linking-pages.md` | 2026-05-30 | — |
 
 ## Audited line by line
 
@@ -97,6 +83,20 @@ Older date, or none. Highest priority.
 | `reference/plugin-apis/pr-12395/06-helpers-to-common-rename.md` | 2026-09-10 | `be800f1711` |
 | `tutorials/advanced/workflow-automation-tutorial.md` | 2026-09-10 | `be800f1711` |
 | `tutorials/queries/charts-with-hiccup.md` | 2026-09-10 | `be800f1711` |
+| `explanation/architecture/system-overview.md` | 2026-09-11 | `be800f1711` |
+| `explanation/comparisons/rtc-vs-file-sync.md` | 2026-09-11 | `be800f1711` |
+| `explanation/concepts/local-first-architecture.md` | 2026-09-11 | `be800f1711` |
+| `how-to/content/favorites-recent.md` | 2026-09-11 | `be800f1711` |
+| `how-to/content/hide-tags-from-node.md` | 2026-09-11 | `be800f1711` |
+| `how-to/integrations/custom-css.md` | 2026-09-11 | `be800f1711` |
+| `how-to/integrations/custom-js.md` | 2026-09-11 | `be800f1711` |
+| `how-to/tasks/disable-task-time-tracking.md` | 2026-09-11 | `be800f1711` |
+| `reference/interface/slash-commands.md` | 2026-09-11 | `be800f1711` |
+| `reference/platforms/mobile-differences.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/getting-started/01-installation.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/getting-started/02-first-graph.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/getting-started/03-basic-editing.md` | 2026-09-11 | `be800f1711` |
+| `tutorials/getting-started/04-linking-pages.md` | 2026-09-11 | `be800f1711` |
 
 ## Merged this pass — needs a line-by-line audit
 
