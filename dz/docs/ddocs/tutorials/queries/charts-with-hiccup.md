@@ -16,7 +16,7 @@ relatedDocs:
   howTo:
     - '[../../how-to/queries/advanced-queries.md](../../how-to/queries/advanced-queries.md)'
   reference:
-    - '[../../reference/configuration/config-edn-db.md](../../reference/configuration/config-edn-db.md)'
+    - '[config.edn Reference](../../reference/configuration/config-edn.md)'
 ---
 
 # Build ASCII and SVG Charts in Logseq Queries with Hiccup

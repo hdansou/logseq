@@ -115,7 +115,7 @@ Branch off `master` (not `eng-documentation`). Unit tests: `bb dev:test -v <ns>`
       Done when: `bb dev:lint-and-test` is green and a code review finds nothing blocking. The PR describes the new key, the fallback rules and the out-of-scope surfaces.
       Est: ~15 min
 
-- [ ] **5. Docs (after merge)** — in `eng-documentation`: `dz/docs/ddocs/reference/configuration/config-edn-db.md` and [028](../../07-investigations/028-default-image-size.md).
+- [ ] **5. Docs (after merge)** — in `eng-documentation`: `dz/docs/ddocs/reference/configuration/config-edn.md` (merged with the former `config-edn-db.md` on 2026-09-11) and [028](../../07-investigations/028-default-image-size.md).
       Document the key. Note that the `custom.css` `img[width="250"]` workaround stops matching once the key is set to another value, and should be removed.
       Done when: both pages are updated and their review dates bumped.
       Est: ~15 min
