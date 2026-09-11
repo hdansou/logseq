@@ -17,7 +17,7 @@ counted. What is left needs judgment, which is why it is written down rather tha
 |---|---:|---:|---|
 | Source links at the wrong depth | 88 | **0** | `../../` from a page five levels deep resolves inside `ddocs/`, not at the repo root. Stage 1 of the merge re-depthed 19 and missed the rest; 47 were fixed mechanically and the audits fixed the other 41 as they went. |
 | Doc links whose target moved | 30 | **6** | Rewritten only where exactly one file in the tree carries that basename. The remaining 6 sit in files a concurrent review was editing. |
-| `_templates/` placeholders | 27 | 27 | **Not defects.** `relevant-guide.md`, `relevant-tutorial.md` and friends are deliberate placeholders in the Diátaxis templates. The checker should skip `_templates/` the way `rank_risk.py` already does. |
+| `_templates/` placeholders | 27 | **0** | **Not defects.** `relevant-guide.md`, `relevant-tutorial.md` and friends are deliberate placeholders in the Diátaxis templates. `check_links.py` now skips `_templates/`, as `rank_risk.py` already did. |
 | Missing assets | 8 | 6 | Screenshots and a `LICENSE` that were never committed. |
 | Links to documents that were never written | 103 | **87** | The real backlog. See below. |
 | **Total** | **257** | **126** | |
@@ -67,8 +67,8 @@ built-in classes are enumerated in `deps/db/src/logseq/db/frontend/class.cljs:18
 
 ## Recommended next steps
 
-1. Teach `check_links.py` to skip `_templates/`, removing 27 false positives from every future
-   run. This is a tooling fix, not a docs fix.
+1. ~~Teach `check_links.py` to skip `_templates/`~~ — done 2026-09-10; 27 false positives gone
+   from every run.
 2. Work Group 1 as link edits, confirming each target by reading it.
 3. Take Group 2 to a decision — most of these links were written aspirationally by pages that
    were themselves never verified, so dropping the link is often the honest answer.

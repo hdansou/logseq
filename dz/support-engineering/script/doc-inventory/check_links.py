@@ -5,6 +5,8 @@
 
 With --against, each broken link is also tested from the corresponding path in
 <old-root>, so breakage introduced by a move is separated from pre-existing rot.
+
+_templates/ is skipped: its links are deliberate placeholders, not rot.
 """
 import sys, os, re, argparse
 
@@ -31,7 +33,8 @@ def main():
     ap.add_argument("root"); ap.add_argument("--against")
     a = ap.parse_args()
     ok = introduced = preexisting = 0
-    for dp, _, ns in os.walk(a.root):
+    for dp, ds, ns in os.walk(a.root):
+        ds[:] = [d for d in ds if d != "_templates"]
         for n in sorted(ns):
             if not n.endswith(".md"): continue
             p = os.path.join(dp, n)
