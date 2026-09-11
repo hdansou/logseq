@@ -1,56 +1,60 @@
 ---
 title: 'PDF Annotations'
-status: '🟠 Desktop Only'
-version: 'Since v0.5.0'
+status: '🟠 Desktop and web app shell only'
+version: 'PDF extension since 2021-07 (82330fb3f4, first tag 0.3.2); storage as of DB schema 65.33'
 quadrant: 'Reference'
-platform: 'Desktop (macOS/Windows/Linux) — ⚠️ Not available on mobile'
-lastVerified: '2026-09-09'
+graphType: [db]
+platform: 'Desktop (Electron) and web app shell; not mounted by the native mobile app shell'
+lastVerified: '2026-09-11'
 verifiedAgainst: 'be800f1711'
-reviewStatus: merged-not-fully-audited
+reviewStatus: audited
 related-docs:
   - '../../how-to/multimedia/asset-management.md'
-  - '../../reference/schema/built-in-classes.md#logseqclasspdf-annotation'
-  - '../../tutorials/getting-started/basic-editing.md'
+  - '../../reference/database/schema-overview.md#block-classes'
+  - '../../tutorials/getting-started/03-basic-editing.md'
 ---
 
-> **Last revised:** 2026-09-09
+> **Last revised:** 2026-09-11
 
 # PDF Annotations Reference
 
 ## Overview
 
-Logseq includes a full-featured PDF viewer with annotation capabilities built on PDF.js. You can highlight text, capture screenshots of regions, search within PDFs, and navigate pages—all without leaving the app. Annotations are stored as blocks in your graph for easy reference and linking.
+Logseq includes a PDF viewer built on PDF.js (`pdfjsViewer.PDFViewer`, `src/main/frontend/extensions/pdf/core.cljs:802-813`). You can highlight text, capture rectangular areas as images, search inside the PDF and browse its outline without leaving the app. Every highlight is stored as a block tagged with the built-in `PDF Annotation` class, as a child of the PDF's asset block.
 
 **Key Features**:
 
-- 📄 PDF viewing with pagination
-- ✏️ Text highlighting (5 colors)
-- 📷 Area highlighting with screenshots
-- 🔍 Full-text search within PDFs
-- 🔗 Annotations linked to blocks
-- 📑 Table of contents navigation
-- 🔍 Zoom controls
-- ⌨️ Keyboard shortcuts
+- 📄 PDF viewing with a page input and previous/next buttons
+- ✏️ Text highlighting (5 fixed colours)
+- 📷 Area highlighting, saved as PNG assets
+- 🔍 Find in PDF (Enter to search, match case)
+- 🔗 Each highlight is a block with a `[[uuid]]` ref
+- 📑 Outline (table of contents) and Highlights list
+- 🔍 Zoom in/out, auto fit, Ctrl/Cmd+wheel zoom
+- ⌨️ Four keyboard shortcuts
 
-⚠️ **Platform Limitation**: PDF viewing currently works only on **Desktop (macOS/Windows/Linux)** and partially on **Web browsers**. **Mobile apps (iOS/Android) cannot open PDFs** (known issue).
+⚠️ **Platform Limitation**: The viewer is mounted by the shared desktop/web app container (`src/main/frontend/components/theme.cljs:159`, used from `src/main/frontend/components/container.cljs:502`). The native mobile app shell (`src/main/mobile/`) does not require that container or any `frontend.extensions.pdf` namespace, so the viewer is not mounted there. See [Platform Compatibility](#platform-compatibility).
 
 ## Quick Start
 
 ### Open a PDF
 
-**Method 1: Drag & Drop**
+In a DB graph a PDF is an **asset block**: a block tagged `#Asset` whose file is stored as `assets/<block-uuid>.pdf` (`src/main/frontend/handler/editor.cljs:1760-1802`, file name at `:1792`).
 
-1. Drag PDF file from file manager
-2. Drop onto any block
-3. PDF uploaded to `assets/` folder
-4. Link inserted: `![Document](../assets/doc.pdf)`
-5. Click link → PDF opens in viewer
+**Method 1: Drag & Drop or Paste**
 
-**Method 2: File Picker**
+1. Start editing a block
+2. Drop the PDF onto the main content area (`src/main/frontend/components/container.cljs:66-74`), or paste a copied file (`src/main/frontend/handler/paste.cljs:271-280`)
+3. Logseq creates an asset block and copies the file into `assets/`
+4. Click the PDF's title → the viewer opens
 
-1. Type `/Upload a file`
-2. Select PDF from dialog
-3. Click link to open
+**Method 2: Slash Command**
+
+1. Type `/Upload an asset` (`src/main/frontend/commands.cljs:335-338`; label `src/resources/dicts/en.edn:568`)
+2. Select the PDF in the file dialog
+3. Click the PDF's title to open it
+
+Assets larger than 100 MB are rejected (`src/main/frontend/handler/editor.cljs:1785-1789`). Uploading a file whose checksum matches an existing asset shows "Asset exists already" instead of creating a duplicate (`editor.cljs:1770-1778`).
 
 **Method 3: External Link**
 
@@ -58,7 +62,11 @@ Logseq includes a full-featured PDF viewer with annotation capabilities built on
 ![Research Paper](https://arxiv.org/pdf/2301.12345.pdf)
 ```
 
-**Result**: PDF opens in full-screen viewer with toolbar
+The leading `!` is required: `show-link?` only routes a link to the media renderer when the text starts with `!` or is a bare http(s) link to an image/audio/video format (`src/main/frontend/components/block.cljs:1417-1427`, `src/main/frontend/config.cljs:186`). `pdf` is in `doc-formats` (`config.cljs:174-175`), so the link renders as a PDF link that opens the viewer (`block.cljs:592-600`).
+
+A PDF opened from a link has no asset block. Picking a highlight colour, or clicking **Annotations page**, opens the **Create asset** dialog with the warning "Creating a local asset from an external one. PDF annotations require a local asset to work properly." (`core.cljs:184-186`, `src/main/frontend/extensions/pdf/toolbar.cljs:583-586`, `src/main/frontend/components/assets.cljs:280-300`, `en.edn:86`).
+
+**Result**: The viewer opens in a resizable panel beside the main content (`core.cljs:87-124`, `core.cljs:1100-1113`)
 
 ---
 
@@ -67,36 +75,40 @@ Logseq includes a full-featured PDF viewer with annotation capabilities built on
 ### Layout
 
 ```txt
-┌────────────────────────────────────────────────────────────┐
-│  [⬅] [➡] Page 3/25 [🔍-] [🔍+] [🔍Fit] [📑] [🖍Yellow] [✕]│ Toolbar
-├────────────────────────────────────────────────────────────┤
-│                                                             │
-│                     PDF Content                             │
-│                   (Page rendered)                           │
-│                                                             │
-│  Selected text appears here with highlight menu            │
-│  [ Yellow ] [ Red ] [ Green ] [ Blue ] [ Purple ]          │
-│                                                             │
-└────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│ [⚙] [▭] [🖍] [🔍-] [🔍+] [Fit] [☰] [🔍] [Annotations] [⧉] [ 3 ]/25 [↑][↓] Close │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│                          PDF Content                                     │
+│                                                                          │
+│  Selected text → context menu:                                           │
+│  [yellow] [red] [green] [blue] [purple]                                  │
+│  Copy ref · Copy text · Linked references · Delete                       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Toolbar Controls
 
-| Icon     | Function                    | Shortcut     |
-| -------- | --------------------------- | ------------ |
-| ⬅        | Previous page               | Alt+P        |
-| ➡        | Next page                   | Alt+N        |
-| Page X/Y | Jump to page (type number)  | —            |
-| 🔍-      | Zoom out                    | —            |
-| 🔍+      | Zoom in                     | —            |
-| 🔍Fit    | Auto fit                    | —            |
-| 📑       | Outline / Highlights panel  | —            |
-| 🖍        | Highlight mode toggle       | —            |
-| 🔲       | Area selection mode         | Cmd or Shift |
-| 🔍       | Find / Search               | Alt+F        |
-| ✕        | Close PDF viewer            | Alt+X        |
+In toolbar order (`src/main/frontend/extensions/pdf/toolbar.cljs:527-629`):
 
-Bindings are registered as the `:pdf/*` shortcut namespace: `:pdf/previous-page` `alt+p`, `:pdf/next-page` `alt+n`, `:pdf/close` `alt+x`, `:pdf/find` `alt+f` (`src/main/frontend/modules/shortcut/config.cljs:54-64`).
+| Button (tooltip)                    | Function                                                                                  | Shortcut |
+| ----------------------------------- | ----------------------------------------------------------------------------------------- | -------- |
+| More settings                       | Viewer theme (light/warm/dark), area-highlight dashed style, coloured label for highlight blocks, auto-open context menu, document metadata (`toolbar.cljs:85-113`) | —        |
+| Area highlight (⌘ on macOS, Shift elsewhere) | Toggle area-selection mode                                                        | —        |
+| Highlight mode                      | While on, a new text selection is highlighted immediately with the last-used colour (`core.cljs:150`, `core.cljs:206-208`) | —        |
+| Zoom out / Zoom in                  | Step zoom                                                                                 | —        |
+| Auto fit                            | Sets `currentScaleValue` to `"auto"` (`src/main/frontend/extensions/pdf/utils.cljs:111-112`) | —        |
+| Outline                             | Popup with **Contents** and **Highlights** tabs                                           | —        |
+| Search                              | Find in PDF                                                                               | Alt+F    |
+| Annotations page                    | Navigates to the PDF asset block, whose children are the annotation blocks (`src/main/frontend/extensions/pdf/assets.cljs:265-269`) | —        |
+| Open in external window             | Moves the viewer into a separate window (see [External Window](#external-window))         | —        |
+| Page input, ↑ / ↓                   | Type a page number and press Enter; previous / next page                                  | Alt+P / Alt+N |
+| Close                               | Close the viewer                                                                          | Alt+X    |
+
+Bindings are registered as the `:pdf/*` shortcut namespace: `:pdf/previous-page` `alt+p`, `:pdf/next-page` `alt+n`, `:pdf/close` `alt+x`, `:pdf/find` `alt+f` (`src/main/frontend/modules/shortcut/config.cljs:54-64`). The handler group is enabled only while not editing a block (`config.cljs:599-601`) and only while the viewer is mounted (`core.cljs:1058-1061`). They are listed under **Others** in the shortcut settings (`config.cljs:882-887`, label `en.edn:1792`).
+
+Tooltip labels are from `src/resources/dicts/en.edn:1185-1216`.
 
 ---
 
@@ -104,64 +116,74 @@ Bindings are registered as the `:pdf/*` shortcut namespace: `:pdf/previous-page`
 
 ### Create Highlight
 
-1. Open PDF
-2. Select text (click & drag with mouse)
-3. Context menu appears with color options:
+1. Open a PDF
+2. Select text
+3. The context menu appears (with the default **Auto open context menu for selections** setting on; with it off, hold Alt while selecting — `core.cljs:143`, `core.cljs:151-152`, default at `src/main/frontend/state.cljs:291`):
    ```txt
-   [ Yellow ] [ Red ] [ Green ] [ Blue ] [ Purple ]
+   [yellow] [red] [green] [blue] [purple]
+   Copy text
    ```
-4. Click a color
-5. Annotation block created automatically
+4. Click a colour
+5. Logseq creates the annotation block and copies its `[[uuid]]` ref to the clipboard (`core.cljs:188-195`, `assets.cljs:210-216`)
 
 **Result**:
 
-- Text highlighted in PDF
-- Block created in graph:
-  ```markdown
-  - Selected text content #PDF-Annotation
-    id:: block-uuid
-  ```
+- The text is highlighted in the PDF
+- A child block is inserted under the PDF asset block (`assets.cljs:104-110`). Its title is the selected text, its UUID equals the highlight id, and it carries these properties (`assets.cljs:92-103`):
+  - `:block/tags` `#{:logseq.class/Pdf-annotation}`
+  - `:logseq.property/ls-type` `:annotation`
+  - `:logseq.property.pdf/hl-color` (closed value), `:logseq.property/asset` (the PDF asset), `:logseq.property.pdf/hl-page`, `:logseq.property.pdf/hl-value` (the full highlight map)
+- In the outline the block shows a `P<page>` prefix (`block.cljs:2462-2466`) and a `data-hl-color` attribute used to colour it (`block.cljs:3450-3453`)
 
-### Highlight Colors
+### Highlight Colours
 
-| Color     | Use Case                   | DB Ident (closed-value)         | Display Value |
-| --------- | -------------------------- | ------------------------------- | ------------- |
-| 🟡 Yellow | General highlights         | `:logseq.property/color.yellow` | `"yellow"`    |
-| 🔴 Red    | Important / Critical       | `:logseq.property/color.red`    | `"red"`       |
-| 🟢 Green  | Definitions / Key concepts | `:logseq.property/color.green`  | `"green"`     |
-| 🔵 Blue   | References / Citations     | `:logseq.property/color.blue`   | `"blue"`      |
-| 🟣 Purple | Questions / To review      | `:logseq.property/color.purple` | `"purple"`    |
+The palette is fixed to five colours (`core.cljs:226-228`). They are the closed values of `:logseq.property.pdf/hl-color` (`deps/db/src/logseq/db/frontend/property.cljs:231-242`):
 
-**Tip**: Use color consistently for categorization (e.g., red = action items, blue = quotes).
+| Colour    | DB Ident (closed value)         | Value      |
+| --------- | ------------------------------- | ---------- |
+| 🟡 Yellow | `:logseq.property/color.yellow` | `"yellow"` |
+| 🔴 Red    | `:logseq.property/color.red`    | `"red"`    |
+| 🟢 Green  | `:logseq.property/color.green`  | `"green"`  |
+| 🔵 Blue   | `:logseq.property/color.blue`   | `"blue"`   |
+| 🟣 Purple | `:logseq.property/color.purple` | `"purple"` |
+
+The colours carry no built-in meaning. The initial last-used colour is yellow (`core.cljs:35`).
+
+**Tip**: Pick a convention and use it consistently (e.g. red = action items, blue = quotes).
 
 ### Navigate to Highlight
 
-**From PDF Viewer**:
+**From the PDF Viewer**:
 
-- Click highlighted text → Jumps to annotation block
-- Or right-click → "Copy block reference"
+- Click a highlight → its context menu opens (`core.cljs:258-264`, `core.cljs:273-276`) with the colours, **Copy ref**, **Copy text** (text highlights only), **Linked references** and **Delete** (`core.cljs:226-236`)
+- **Linked references** navigates to the annotation block (`assets.cljs:257-263`)
+- **Copy ref** copies `[[<uuid>]]` (`assets.cljs:210-216`, `src/main/frontend/util/ref.cljs:5-7`)
+- In **Outline → Highlights**, click an entry to scroll to it; double-click or use its link button to go to the annotation block (`toolbar.cljs:399-420`)
+- Drag a highlight into the editor to drop a `[[<uuid>]]` ref (`core.cljs:266-271`, `core.cljs:303-305`)
 
-**From Graph**:
+**From the Graph**:
 
-- Click block reference `((block-uuid))` → PDF opens to highlight
+- Click the `P<page>` prefix of an annotation block → the PDF opens and scrolls to the highlight (`block.cljs:2446-2457`, `assets.cljs:234-251`). The prefix is rendered inside `text-block-title` (`block.cljs:2414`, `block.cljs:2446-2469`), so it also appears where the block is shown through a `[[<uuid>]]` ref.
 
-### Update Highlight Color
+### Update Highlight Colour
 
-1. Select existing highlight
-2. Click different color in menu
-3. Color updates immediately
+1. Click an existing highlight
+2. Click a different colour
+3. The overlay and the annotation block's `hl-color` update (`core.cljs:197-198`, `core.cljs:595-601`, `assets.cljs:181-189`)
+
+> **Note:** `update-hl-block!` writes only `:logseq.property.pdf/hl-color` (`assets.cljs:181-189`). Highlights are reloaded from `:logseq.property.pdf/hl-value` (`assets.cljs:122-133`), which is written only when the block is created (`assets.cljs:99`), and the overlay colour is read from that map (`core.cljs:256`). From source, the overlay should show the original colour after the PDF is reopened; this has not been reproduced live.
 
 ### Delete Highlight
 
-**Method 1: From PDF**
+**Method 1: From the PDF**
 
-1. Right-click highlighted text
-2. Select "Delete highlight"
+1. Click the highlight
+2. Select **Delete** — the overlay is removed and the annotation block is deleted (`core.cljs:174-178`, `assets.cljs:203-208`)
 
-**Method 2: From Block**
+**Method 2: From the Block**
 
-1. Delete annotation block
-2. Highlight removed from PDF
+1. Delete the annotation block
+2. The highlight is gone the next time the PDF is opened, because highlights are loaded from blocks whose `:logseq.property/asset` is the PDF (`assets.cljs:122-133`)
 
 ---
 
@@ -169,39 +191,34 @@ Bindings are registered as the `:pdf/*` shortcut namespace: `:pdf/previous-page`
 
 ### Create Area Highlight
 
-1. Open PDF
-2. Enable area selection mode (🔲 button in toolbar)
-3. Click and drag to select rectangular region
-4. Context menu appears with color options
-5. Click a color
-6. Screenshot captured and saved
+1. Open a PDF
+2. Turn on area-selection mode with the toolbar button, or hold ⌘ (Meta) or Shift while dragging (`core.cljs:433-439`)
+3. Drag a rectangle larger than 10×10 px on a page (`core.cljs:514-515`)
+4. The context menu appears; click a colour
+5. The region is captured and the annotation block is created. Area mode turns itself off after one selection (`core.cljs:534`)
 
 **Result**:
 
-- Screenshot saved as PNG image:
-  - **File-based**: `assets/{pdf-name}/{page}_{id}_{timestamp}.png`
-  - **Database**: Asset block with UUID reference
-- Block created with image embed:
-  ```markdown
-  - ![](../assets/doc/3_abc123_1705852800.png) #PDF-Annotation
-    id:: block-uuid
-  ```
+- The region is drawn from the page canvas at `devicePixelRatio` into a PNG (`assets.cljs:149-179`) and saved through the normal asset pipeline as a file named `pdf area highlight.png` (`assets.cljs:139-142`)
+- That creates a separate **Asset** block whose file is `assets/<image-asset-uuid>.png` (`editor.cljs:1792`; read back via `src/main/frontend/handler/assets.cljs:52-57`)
+- The annotation block gets `:logseq.property.pdf/hl-type :area` and `:logseq.property.pdf/hl-image` pointing to that asset (`assets.cljs:101-103`). Its title is the current localised date rather than text, and it is collapsed (`assets.cljs:86-94`)
+- The image asset block is moved under the annotation block (`assets.cljs:112-120`)
+- The annotation block renders the image with **Asset ref block**, **Copy image** and **Maximize image** buttons (`assets.cljs:291-334`, `block.cljs:2468-2469`)
+
+Existing area highlights can be resized by dragging their edges; the image is re-captured (`core.cljs:313-390`). As with colour changes, only `hl-color` is written back (`core.cljs:306`, `assets.cljs:181-189`), so the new position is not saved to `hl-value`.
 
 ### Use Cases
 
 - Capture diagrams from research papers
 - Screenshot tables and charts
-- Save equations without OCR errors
+- Save equations as images
 - Archive visual content
 
 ### Edit Area Image
 
-Once saved, the screenshot is a standard image asset. You can:
+The capture is an ordinary image asset. Use **Asset ref block** on the image to open its asset block (`assets.cljs:308-314`).
 
-- Open in external editor (right-click → Open in external app)
-- Add annotations (use image editing tools)
-- Crop/resize
-- Upload modified version
+> **Unverified:** Editing the PNG outside Logseq or replacing it with a modified file was not traced in source.
 
 ---
 
@@ -211,40 +228,37 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **Toolbar**:
 
-- ⬅ **Previous** — Go to previous page (Alt+P)
-- ➡ **Next** — Go to next page (Alt+N)
-- **Page input** — Type page number, press Enter
+- **Page input** — type a page number and press Enter; values above the page count go to the last page (`toolbar.cljs:605-618`)
+- **↑ / ↓** — previous / next page (`toolbar.cljs:621-623`)
 
-**Keyboard**:
+**Keyboard** (not while editing a block):
 
 - **Alt+P** — Previous page
 - **Alt+N** — Next page
-- **Home** — First page
-- **End** — Last page
-- **Page Up** — Scroll up
-- **Page Down** — Scroll down
 
 **Mouse**:
 
 - **Scroll wheel** — Scroll through pages
-- **Click page thumbnail** (if outline open) — Jump to page
+
+The last visited page is saved per PDF in `:logseq.property.asset/last-visit-page` (`core.cljs:925-931`) and restored on open (`assets.cljs:131`, `core.cljs:958-959`). That property is excluded from sync (`deps/db/src/logseq/db/frontend/property.cljs:589-593`).
 
 ### Table of Contents
 
 **Open Outline**:
 
-1. Click 📑 button in toolbar
-2. Sidebar opens with PDF structure
+1. Click the **Outline** toolbar button
+2. A popup opens on the **Contents** tab (`toolbar.cljs:422-460`)
 
 **Navigate**:
 
-- Click section title → Jumps to page
-- Expand/collapse nested sections
+- Click a title → jumps to its destination (`toolbar.cljs:308-309`)
+- Click the arrow to expand/collapse nested entries (`toolbar.cljs:303-307`)
+- Esc closes the popup (`toolbar.cljs:351-359`)
 
 **Example Outline**:
 
 ```txt
-📑 Outline
+Contents | Highlights
   ├─ Abstract
   ├─ 1. Introduction
   ├─ 2. Related Work
@@ -254,38 +268,37 @@ Once saved, the screenshot is a standard image asset. You can:
   └─ References
 ```
 
-**Note**: Outline only available if PDF has embedded table of contents (many PDFs don't).
+**Note**: Contents come from the PDF's embedded outline (`toolbar.cljs:339`); without one the tab shows "No outlines" (`toolbar.cljs:374`, `en.edn:1203`).
 
 ### Search Within PDF
 
 **Open Search**:
 
-- Click 🔍 in toolbar
-- Or press **Alt+F**
+- Click **Search** in the toolbar
+- Or press **Alt+F** (`src/main/frontend/extensions/pdf/utils.cljs:188-193`)
 
 **Search Box**:
 
 ```txt
-┌───────────────────────────────────────┐
-│  Search: [machine learning     ]  🔍 │
-│  Match case [Aa]                      │
-│  3 of 12 matches ("machine learning") │
-│  [ ⬆ Previous ]  [ ⬇ Next ]          │
-└───────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  [search            ]  [Aa] [˄] [˅] [✕]     │
+│  3 of 12 matches ("machine learning")       │
+└─────────────────────────────────────────────┘
 ```
 
 **Features**:
 
-- Search triggered on Enter (not incremental — type query then press Enter)
-- Case-sensitive toggle
-- Navigate between matches (chevron up/down buttons)
-- Highlights all occurrences across pages
+- Search runs on Enter, not while typing (`toolbar.cljs:229-240`)
+- **Aa** toggles match case (`toolbar.cljs:258-261`)
+- Chevron buttons go to the previous / next match (`toolbar.cljs:263-270`)
+- All matches are highlighted as a phrase search (`toolbar.cljs:170-178`)
+- Results read "{current} of {total} matches" or "Not found." (`toolbar.cljs:277-287`, `en.edn:1194`, `en.edn:1204`)
 
 **Keyboard**:
 
 - **Enter** — Next match
 - **Shift+Enter** — Previous match
-- **Esc** — Close search
+- **Esc** — Clear the query; press again on an empty box to close (`toolbar.cljs:242-247`)
 
 ---
 
@@ -295,83 +308,105 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **Toolbar Buttons**:
 
-- **🔍-** — Zoom out
-- **🔍+** — Zoom in
-- **🔍Fit** — Auto fit to container width
+- **Zoom out / Zoom in** — multiply or divide the scale by 1.05, then round to one decimal place, clamped to 0.25–5.0 (`utils.cljs:8-10`, `utils.cljs:66-84`). In practice each click moves about 0.1.
+- **Auto fit** — fit to the container width
 
 **Mouse**:
 
-- **Cmd+Scroll** / **Ctrl+Scroll** — Zoom in/out (handled via wheel event in `pdf-highlights`)
-
-**Zoom Range**: Continuous zoom from 25% to 500% (scale factor 1.05x per step)
+- **Ctrl+Wheel** / **Cmd+Wheel** — zoom around the pointer by a factor of 1.05 per wheel event (`core.cljs:648-678`). This path does not apply the 0.25–5.0 clamp.
 
 ### Fit Modes
 
-- **Auto Fit** — Automatic scaling to fit the container (the "Auto fit" toolbar button sets `currentScaleValue` to `"auto"`)
-- **Custom Zoom** — Manual zoom level via +/- buttons or Ctrl/Cmd+scroll
+- **Auto Fit** — the default scale when a PDF opens (`core.cljs:824-827`), re-applied on resize (`core.cljs:828-830`)
+- **Custom Zoom** — any scale set with the buttons or the wheel
 
-**Persistence**: Zoom level and last-visited page saved per PDF via the `:ls-update-extra-state` event.
+**Persistence**: Only the page is restored. The scale is written to browser storage under `pdf-last-visit-scale/<asset-db-id>` (`core.cljs:933-937`), but nothing reads that key back and the loader returns only `:page` (`assets.cljs:131`), so PDFs reopen at Auto fit (`core.cljs:960`).
+
+### Viewer Settings
+
+**More settings** also holds per-device toggles kept in browser storage (`toolbar.cljs:49-66`):
+
+- Viewer theme: light, warm, dark (`toolbar.cljs:85-90`, `toolbar.cljs:488-494`)
+- Dashed style for area highlight
+- Coloured label for highlight block
+- Auto open context menu for selections
+- Document metadata dialog with **Copy all** (`toolbar.cljs:103-131`)
 
 ---
 
 ## Annotation Storage
 
-### File-Based Graphs (Legacy)
+### File-Based Graphs (Import Only)
 
-> **Removed:** The current codebase has removed file-based graph support for PDF annotations. `ensure-ref-block!` (`src/main/frontend/extensions/pdf/assets.cljs:112-114`) now delegates unconditionally to `db-based-ensure-ref-block!` (`assets.cljs:78`). The EDN format below is retained only as historical reference for older Logseq versions.
+File graphs cannot be opened (`src/main/frontend/components/repo.cljs:321-323`). There is no `hls__` page or `assets/<name>.edn` highlights file in a DB graph.
 
-**Highlights File**: `assets/{filename}.edn`
+When a file graph is **imported**, its PDF annotations are converted:
 
-**Format** (EDN):
+- `assets/<pdf-name>.edn` supplies the highlights and `pages/hls__<pdf-name>.md` supplies block text and child blocks (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1649-1676`)
+- Each highlight becomes a `Pdf-annotation` block under the PDF asset, keeping its id, colour, page and full map in `hl-value` (`exporter.cljs:1540-1576`). Only block text is imported from the `hls__` page, not tags or properties (`exporter.cljs:1588`)
+- Images in `assets/<pdf-name>/` become asset blocks titled "pdf area highlight" (`exporter.cljs:1619-1639`)
+
+The importer reads these keys of each highlight (`exporter.cljs:1540-1575`):
 
 ```clojure
 {:highlights
  [{:id #uuid "highlight-uuid"
    :page 3
-   :position {:bounding {:x1 100 :y1 200 :x2 300 :y2 250
-                         :width 200 :height 50}
-              :rects [{:x1 100 :y1 200 :x2 300 :y2 225}]}
-   :content {:text "The highlighted text"}
-   :properties {:color "yellow"}}]
-
- :extra
- {:page 5       ; Last visited page
-  :scale 1.25}} ; Last zoom level
+   :position {:bounding {...} :rects [...] :page 3}
+   :content {:text "The highlighted text"}   ; area highlights also have :image
+   :properties {:color "yellow"}}]}
 ```
-
-**Annotation Blocks**: Created in `hls__{filename}` page
-
-**Area Images**: `assets/{filename}/{page}_{id}_{timestamp}.png`
 
 ### Database Graphs (Current)
 
-**Asset Block**:
+**Asset Block** (`src/main/frontend/handler/editor.cljs:1794-1802`):
 
 ```clojure
 {:block/uuid #uuid "pdf-asset-uuid"
- :block/tags [:logseq.class/Asset]
+ :block/title "doc"                                    ;; file name without extension
+ :block/tags #{:logseq.class/Asset}
  :logseq.property.asset/type "pdf"
- :logseq.property.asset/external-url "https://example.com/doc.pdf" ;; only for remote PDFs
+ :logseq.property.asset/size 123456
+ :logseq.property.asset/checksum "…"
+ :logseq.property.asset/external-url "https://example.com/doc.pdf" ;; only for external assets
  :logseq.property.asset/last-visit-page 5}
-;; For local PDFs, the file is stored at assets/{uuid}.pdf
-;; and referenced via "../assets/{uuid}.pdf"
+;; A local PDF's file is assets/<pdf-asset-uuid>.pdf
+;; and is opened as "../assets/<uuid>.pdf" (assets.cljs:239)
 ```
 
-**Annotation Block**:
+`Asset` requires `type`, `size` and `checksum` (`deps/db/src/logseq/db/frontend/class.cljs:68-74`). Property schemas: `type` (`property.cljs:554-558`), `external-url` (`:559-563`), `external-file-name` (`:565-569`), `size` (`:570-574`), `checksum` (`:585-588`), `last-visit-page` (`:589-593`).
+
+**Annotation Block** (`src/main/frontend/extensions/pdf/assets.cljs:92-110`):
 
 ```clojure
-{:block/uuid #uuid "annotation-uuid"
- :block/title "highlighted text content"
- :block/tags [:logseq.class/Pdf-annotation]
+{:block/uuid #uuid "annotation-uuid"                     ;; = highlight :id
+ :block/title "highlighted text content"                 ;; area: localised date
+ :block/parent [:block/uuid #uuid "pdf-asset-uuid"]
+ :block/tags #{:logseq.class/Pdf-annotation}
+ :logseq.property/ls-type :annotation
  :logseq.property/asset [:block/uuid #uuid "pdf-asset-uuid"]
- :logseq.property.pdf/hl-color :logseq.property/color.yellow
+ :logseq.property.pdf/hl-color :logseq.property/color.yellow ;; ref to the closed value
  :logseq.property.pdf/hl-page 3
- :logseq.property.pdf/hl-value {;; full highlight data structure
-   :id #uuid "..." :page 3 :position {...} :content {...}
-   }
- :logseq.property.pdf/hl-type :area ; for area highlights
+ :logseq.property.pdf/hl-value {:id #uuid "..." :page 3 :position {...}
+                                :content {...} :properties {:color "yellow"}}
+ ;; area highlights only:
+ :logseq.property.pdf/hl-type :area
  :logseq.property.pdf/hl-image [:block/uuid #uuid "image-asset-uuid"]}
 ```
+
+Property schemas (`deps/db/src/logseq/db/frontend/property.cljs`):
+
+| Property                            | Type                             | Line      |
+| ----------------------------------- | -------------------------------- | --------- |
+| `:logseq.property/asset`            | `:entity`                        | 221-223   |
+| `:logseq.property/ls-type`          | `:keyword`                       | 226-227   |
+| `:logseq.property.pdf/hl-type`      | `:keyword`                       | 229-230   |
+| `:logseq.property.pdf/hl-color`     | `:default` with 5 closed values  | 231-242   |
+| `:logseq.property.pdf/hl-page`      | `:raw-number`                    | 243-244   |
+| `:logseq.property.pdf/hl-image`     | `:entity`                        | 245-246   |
+| `:logseq.property.pdf/hl-value`     | `:map`                           | 247-248   |
+
+All are `:hide? true`, so they do not appear in the block's property list.
 
 **Class Definition**: [`class.cljs:91-98`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L91-L98)
 
@@ -390,145 +425,144 @@ Once saved, the screenshot is a standard image asset. You can:
 
 ## Querying Annotations
 
-### Database Graphs Only
+`{{query …}}` does not run in a DB graph; it renders a deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Use the advanced queries below: type `/Advanced Query`, which creates a block tagged `#Query` with a Clojure code property (`src/main/frontend/commands.cljs:125-131`, `commands.cljs:326`), and paste the map. A query that reads as an EDN map runs as an advanced query (`block.cljs:4090-4103`).
 
 **All PDF Annotations**:
 
 ```clojure
-{{query (property :block/tags :logseq.class/Pdf-annotation)}}
+{:query [:find (pull ?b [*])
+         :where
+         [?b :block/tags ?t]
+         [?t :db/ident :logseq.class/Pdf-annotation]]}
 ```
 
-**Annotations from Specific PDF**:
+**Annotations from a Specific PDF** (asset title = file name without extension, `editor.cljs:1765-1769`):
 
 ```clojure
-{{query (and (property :block/tags :logseq.class/Pdf-annotation)
-             (property :logseq.property/asset [[document.pdf]]))}}
+{:query [:find (pull ?b [*])
+         :where
+         [?b :logseq.property/asset ?a]
+         [?a :block/title "document"]]}
 ```
 
-**Highlights by Color**:
+**Highlights by Colour**:
 
 ```clojure
-{{query (and (property :block/tags :logseq.class/Pdf-annotation)
-             (property :logseq.property.pdf/hl-color :logseq.property/color.red))}}
+{:query [:find (pull ?b [*])
+         :where
+         [?b :logseq.property.pdf/hl-color ?c]
+         [?c :db/ident :logseq.property/color.red]]}
 ```
 
-**Annotations on Specific Page**:
+**Annotations on a Specific Page** (`hl-page` is a raw number, not a ref):
 
 ```clojure
-{{query (and (property :block/tags :logseq.class/Pdf-annotation)
-             (property :logseq.property.pdf/hl-page 5))}}
+{:query [:find (pull ?b [*])
+         :where
+         [?b :logseq.property/ls-type :annotation]
+         [?b :logseq.property.pdf/hl-page 5]]}
 ```
 
 **Area Highlights Only**:
 
 ```clojure
-{{query (and (property :block/tags :logseq.class/Pdf-annotation)
-             (property :logseq.property.pdf/hl-type :area))}}
+{:query [:find (pull ?b [*])
+         :where
+         [?b :logseq.property.pdf/hl-type :area]]}
 ```
 
 ---
 
 ## Advanced Features
 
-### External Window (Desktop Only)
+### External Window
 
 **Open PDF in Separate Window**:
 
-1. Right-click PDF link
-2. Select "Open in new window"
-3. PDF opens in system window (outside Logseq)
+1. Click **Open in external window** in the viewer toolbar (`toolbar.cljs:589-599`)
+2. The viewer moves into a new window opened with `window.open("about:blank")`, 700×800 by default (`src/main/frontend/extensions/pdf/windows.cljs:75-122`)
+3. In that window the button reads **Open in app window**; it and **Close** return the viewer (`toolbar.cljs:590-599`, `toolbar.cljs:625-628`)
+
+The window's size is remembered (`windows.cljs:80-85`, `windows.cljs:105-109`). On desktop, Electron allows `about:blank` pop-ups as framed windows (`src/electron/electron/window.cljs:186-201`).
 
 **Benefits**:
 
 - Multi-monitor setups
-- Keep PDF visible while editing graph
-- Separate zoom/navigation state
+- Keep the PDF visible while editing the graph
 
-**Code Reference**: [`windows.cljs:74-122`](../../../../../src/main/frontend/extensions/pdf/windows.cljs#L74-L122)
+> **Unverified:** Behaviour of the external window in the web build (browser pop-up blocking) was not checked.
+
+**Code Reference**: [`windows.cljs:75-122`](../../../../../src/main/frontend/extensions/pdf/windows.cljs#L75-L122)
 
 ### Copy Block Reference
 
-**From Highlight**:
+**From a Highlight**:
 
-1. Right-click highlighted text
-2. Select "Copy block reference"
-3. Paste elsewhere: `((block-uuid))`
+1. Click the highlight
+2. Select **Copy ref** (a new highlight copies its ref automatically)
+3. Paste elsewhere: `[[<uuid>]]` (`src/main/frontend/util/ref.cljs:5-7`)
 
 **Use Case**: Link to specific highlights from other notes
 
 **Example**:
 
 ```markdown
-- According to the paper ((highlight-uuid)), the results show...
+- According to the paper [[6650c1e2-3b7a-4c2e-9f5a-1d2e3f4a5b6c]], the results show...
 ```
+
+`((uuid))` is file-graph syntax and renders as literal text in a DB graph (`block.cljs:1556-1557`).
 
 ### Goto Block Reference
 
-**From Annotation Block**:
+**From the Annotation Block**:
 
-- Click block reference → PDF opens to highlight location
+- Click the `P<page>` prefix → the PDF opens at the highlight
 
-**From PDF**:
+**From the PDF**:
 
-- Click highlight → Jumps to annotation block in graph
+- Click the highlight → **Linked references** → jumps to the annotation block
 
-**Bidirectional Navigation**: Seamlessly move between PDF and graph.
+### Plugin Context-Menu Items
+
+Plugins can add items to the text-highlight context menu with `registerHighlightContextMenuItem` (`libs/src/LSPlugin.user.ts:619`, type `highlight-context-menu-item` at `:301`). The host renders them for text highlights when plugins are enabled (`core.cljs:238-249`).
 
 ---
 
 ## Platform Compatibility
 
-### ✅ Desktop (Electron) — Full Support
+### ✅ Desktop (Electron)
+
+The viewer is mounted in the app container (`theme.cljs:159`), asset links resolve the file URL with `assets-handler/<make-asset-url` (`block.cljs:558-565`), and the external window is allowed by Electron's window-open handler (`window.cljs:186-201`).
 
 **Features**:
 
-- ✅ PDF viewing with all features
-- ✅ Text & area highlighting
-- ✅ Search & navigation
-- ✅ External window support
-- ✅ Local & remote PDFs
+- ✅ PDF viewing, text and area highlights
+- ✅ Find, outline, highlights list
+- ✅ External window
+- ✅ Local and external PDFs
 - ✅ Keyboard shortcuts
 
-**Best Experience**: Use desktop app for PDF work.
+### ⚠️ Web Browser
 
-### ⚠️ Web Browser — Partial Support
+The web build uses the same container, so the viewer is mounted, and asset links use the same URL resolution (`block.cljs:558-565`). If opening fails, Logseq falls back to a `showOpenFilePicker` file picker and writes the chosen PDF into the graph (`block.cljs:530-544`).
 
-**Features**:
+> **Unverified:** Highlight reliability, pop-up blocking of the external window and CORS behaviour for external PDFs in browsers were not checked.
 
-- ✅ PDF viewing
-- ⚠️ Text highlighting (buggy)
-- ⚠️ Area highlighting (buggy)
-- ✅ Search & navigation
-- ⚠️ External window (may be blocked)
-- ✅ Remote PDFs
-- ⚠️ Local PDFs (file:// protocol restricted)
+### ❌ Mobile (iOS/Android)
 
-**Known Issues**:
+**Status**: The native mobile app shell does not mount the viewer.
 
-- Annotation block creation may fail
-- CORS restrictions for some remote PDFs
-- Browser security policies may interfere
+**Code Evidence**:
 
-### ❌ Mobile (iOS/Android) — Not Supported
+- The only mount of `pdf/default-embed-playground` is `src/main/frontend/components/theme.cljs:159`, reached through `theme/container` in `src/main/frontend/components/container.cljs:502`. The portal target `#app-single-container` is also rendered there (`container.cljs:575`, `core.cljs:1113`)
+- The mobile app root `src/main/mobile/components/app.cljs:1-34` requires neither `frontend.components.container` nor any `frontend.extensions.pdf` namespace, and `git grep` finds no reference to them anywhere under `src/main/mobile/`
+- Shared block rendering still renders a PDF asset as a PDF link and sets `:pdf/current` when clicked (`block.cljs:592-600`, `block.cljs:520-528`), but nothing on mobile renders that state
 
-**Status**: PDF viewer **does not work** on mobile native apps
+> **Unverified:** What a tap on a PDF asset does on a device was not reproduced.
 
-**Issue**: Clicking PDF link does nothing (known bug)
+**Workaround**: Use the desktop app
 
-**Platforms Affected**:
-
-- iOS (iPhone)
-- iPadOS (iPad)
-- Android phones/tablets
-
-**Workaround**: Use desktop or web version
-
-**Code Evidence**: No mobile-specific checks in PDF extension:
-
-- [`core.cljs`](../../../../../src/main/frontend/extensions/pdf/core.cljs) — Assumes full browser environment
-- No fallback to native PDF viewer
-
-**Investigation Report**: See [PDF Platform Compatibility Investigation](../../dz/docs/07-investigations/pdf-feature-platform-compatibility-investigation.md)
+**Investigation Report**: See [PDF Platform Compatibility Investigation](../../../07-investigations/pdf-feature-platform-compatibility-investigation.md) (predates this audit)
 
 ---
 
@@ -536,72 +570,51 @@ Once saved, the screenshot is a standard image asset. You can:
 
 ### PDF Won't Open
 
-**Problem**: Clicking PDF link does nothing
+**Problem**: Clicking a PDF does nothing or shows an error
 
-**Possible Causes**:
+**Errors the loader reports** (`core.cljs:996-1034`):
 
-1. Mobile platform (known limitation)
-2. File path incorrect
-3. PDF corrupted
-4. PDF.js library failed to load
+| Error                      | Message                                                          |
+| -------------------------- | ---------------------------------------------------------------- |
+| `MissingPDFException`      | "Is this the correct path?" (`en.edn:1201`)                      |
+| `InvalidPDFException`      | "Is this .pdf file corrupted? Please confirm with external pdf viewer." (`en.edn:1191`) |
+| `PasswordException`        | Password prompt (`core.cljs:897-917`)                            |
+| anything else              | "Please confirm with pdf file resource." (`en.edn:1195`)         |
 
 **Solutions**:
 
-- **Mobile**: Use desktop instead (mobile not supported)
-- **Desktop/Web**: Check file exists in `assets/` folder
-- Test PDF in external viewer (Adobe Acrobat, Preview, etc.)
-- Check browser console for errors (Help → Toggle Developer Tools)
+- **Mobile**: Use desktop; the viewer is not mounted on mobile
+- Check the file exists at `assets/<asset-uuid>.pdf`
+- Test the PDF in an external viewer
+- Check the developer console (the loader logs `[PDF loader]`, `core.cljs:999`)
 
 ### Annotations Not Saving
 
-**Problem**: Highlights disappear after closing PDF
+**Problem**: Picking a colour does not create an annotation block
 
-**Possible Causes**:
+**Causes found in source**:
 
-1. Database write error
-2. Network error (RTC sync)
-3. Graph is in read-only state
+1. The PDF has no asset block (opened from a link) → the **Create asset** dialog opens instead (`core.cljs:185-186`)
+2. The colour's closed value could not be resolved → no block is inserted (`assets.cljs:90-91`)
 
-**Solutions**:
+**Also note**: Colour changes and area resizes are not written to `hl-value` (see [Update Highlight Colour](#update-highlight-colour)), so the PDF overlay can differ from the block after reopening.
 
-- Check for error notifications
-- Verify graph is writable (not read-only)
-- Check disk space
-- For RTC: check internet connection
+> **Unverified:** Other failure modes (write errors, read-only graphs, sync) were not traced.
 
 ### Search Not Finding Text
 
-**Problem**: Search returns no results for text visible in PDF
+**Problem**: Search returns no results for text visible in the PDF
 
-**Possible Causes**:
-
-1. PDF is scanned image without text layer (OCR needed)
-2. Text is embedded as image
-3. Non-standard encoding
+Find uses PDF.js's find controller over the PDF's text (`core.cljs:809-811`). A scanned PDF with no text layer has nothing to match.
 
 **Solutions**:
 
-- Test copy-paste from PDF (if can't copy, no text layer)
-- Use external OCR tool (Adobe Acrobat, ABBYY) to create searchable PDF
-- For images embedded as text: search won't work
+- Test copy-paste from the PDF (if you can't select text, there is no text layer)
+- Run the PDF through an external OCR tool, then upload the searchable copy
 
 ### Slow Performance
 
-**Problem**: PDF loading/navigation is slow
-
-**Possible Causes**:
-
-1. Large PDF (100+ pages)
-2. High-resolution images in PDF
-3. Many annotations
-4. Remote PDF with slow connection
-
-**Solutions**:
-
-- Wait for initial load (PDF.js caches pages)
-- Reduce zoom level
-- Use local PDFs instead of remote
-- Split large PDFs into smaller documents
+> **Unverified:** No PDF-specific performance handling was found beyond PDF.js rendering. General advice: prefer local assets to external URLs, and split very large PDFs.
 
 ---
 
@@ -609,23 +622,9 @@ Once saved, the screenshot is a standard image asset. You can:
 
 ### Organization
 
-**Dedicated PDF Library Page**:
+**All PDFs in one place**: The built-in `Asset` class uses a gallery view (`deps/db/src/logseq/db/frontend/class.cljs:72`). Open the **Asset** tag page to browse every asset.
 
-```markdown
-- [[📚 PDF Library]]
-  - [[Research Papers]]
-    - [[Paper 1]] — ![](../assets/paper1.pdf)
-    - [[Paper 2]] — ![](../assets/paper2.pdf)
-  - [[Books]]
-  - [[Manuals]]
-```
-
-**Tag PDFs by Topic**:
-
-```markdown
-- [[Machine Learning Paper]] #research #ML #2024
-  - ![PDF](../assets/ml-paper.pdf)
-```
+**Tag PDFs by Topic**: Add your own tags to the PDF's asset block, for example `#research`, then query or browse by tag.
 
 ### Annotation Workflow
 
@@ -636,14 +635,14 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **2. Second Pass — Add Notes**
 
-- Review yellow highlights
-- Add your own thoughts as child blocks:
-  ```markdown
-  - "The key insight is..." #PDF-Annotation
-    - **My note**: This relates to [[Other Concept]]
+- Open **Annotations page** from the toolbar
+- Add your thoughts as child blocks under an annotation block:
+  ```txt
+  - "The key insight is..."          ← annotation block (P3)
+    - My note: This relates to [[Other Concept]]
   ```
 
-**3. Synthesize — Color-Code**
+**3. Synthesize — Colour-Code** (your convention)
 
 - Red: Critical points
 - Green: Definitions
@@ -652,19 +651,12 @@ Once saved, the screenshot is a standard image asset. You can:
 
 **4. Create Summary**
 
-- Aggregate annotations into summary page
-- Link to highlights: `((block-uuid))`
+- Aggregate annotations on a summary page
+- Link to highlights with `[[<uuid>]]` (use **Copy ref**)
 
 ### Backup
 
-**File-Based**: Commit `assets/` folder to git
-
-```bash
-git add assets/document.pdf assets/document.edn assets/document/
-git commit -m "Add PDF annotations for research paper"
-```
-
-**Database**: Export graph regularly (includes PDFs and annotations)
+**Database graphs**: Use **Export both SQLite DB and assets** (`src/resources/dicts/en.edn:666`), which writes a `.zip` of the database and the `assets/` folder. The PDFs, the area-highlight PNGs and the annotation blocks are all included. **Export SQLite DB** (`en.edn:661`) is described as backing up "to a single .sqlite file" (`en.edn:678`), while the zip covers "content and assets" (`en.edn:680`).
 
 ---
 
@@ -688,9 +680,13 @@ git commit -m "Add PDF annotations for research paper"
 - `pdf-highlights` (core.cljs:557) — Highlight rendering and management
 - `add-hl!` (core.cljs:577) — Create new highlight (local fn inside `pdf-highlights`)
 - `pdf-highlights-ctx-menu` (core.cljs:126) — Colour picker / highlight context menu
-- `inflate-asset` (assets.cljs:34) — Convert PDF path to asset object
+- `default-embed-playground` (core.cljs:1100) — Mounts the viewer into `#app-single-container`
+- `inflate-asset` (assets.cljs:34) — Convert PDF path to the `:pdf/current` map
 - `db-based-ensure-ref-block!` (assets.cljs:78) — Create the annotation block
-- `ensure-ref-block!` (assets.cljs:112) — Thin wrapper that delegates to `db-based-ensure-ref-block!`
+- `ensure-ref-block!` (assets.cljs:112) — Calls `db-based-ensure-ref-block!`, then moves an area image asset under the annotation block
+- `db-based-load-hls-data$` (assets.cljs:122) — Load highlights from annotation blocks
+- `open-block-ref!` (assets.cljs:253) — Open the PDF at a highlight from its block
+- `open-pdf-file` (block.cljs:513) — Open a PDF from a rendered link or asset
 
 ---
 
@@ -702,19 +698,19 @@ git commit -m "Add PDF annotations for research paper"
 
 **References**:
 
-- [Built-in Classes](../../reference/schema/built-in-classes.md#logseqclasspdf-annotation) — PDF annotation class schema
-- [Asset Class](../../reference/schema/built-in-classes.md#logseqclassasset) — Asset class for PDFs
+- [Database Schema — Block Classes](../../reference/database/schema-overview.md#block-classes) — includes `Pdf-annotation`
+- [Database Schema — Asset Properties](../../reference/database/schema-overview.md#asset-properties)
 
 **Investigations**:
 
-- [PDF Platform Compatibility Report](../../dz/docs/07-investigations/pdf-feature-platform-compatibility-investigation.md) — Detailed technical investigation (1405 lines)
+- [PDF Platform Compatibility Report](../../../07-investigations/pdf-feature-platform-compatibility-investigation.md) — earlier technical investigation, not re-audited here
 
 ---
 
 **Last Updated**: September 2026
-**Status**: 🟠 Desktop Only (Mobile support missing)  
-**Feedback**: Report PDF issues on [GitHub](https://github.com/logseq/logseq/issues) with `pdf` label
+**Status**: 🟠 Desktop and web app shell (not mounted by the native mobile app)
+**Feedback**: Report PDF issues on [GitHub](https://github.com/logseq/logseq/issues)
 
 ---
 
-⚠️ **Mobile Users**: PDF viewing is not available on mobile. We recommend using the desktop app or web browser for PDF annotation workflows. Mobile support is under investigation.
+⚠️ **Mobile Users**: The PDF viewer is not mounted in the native mobile app. Use the desktop app for PDF annotation workflows.
