@@ -1,13 +1,16 @@
 ---
 title: 'Linked References and Backlinks'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
+lastVerified: '2026-09-11'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
 related-docs:
   - '[Block Editing Philosophy](./block-editing-philosophy.md)'
   - '[Graph Visualization](./graph-visualization.md)'
-  - '[Page Links Tutorial](../../tutorials/getting-started/page-links.md)'
+  - '[Linking Pages Tutorial](../../tutorials/getting-started/04-linking-pages.md)'
 tags: ['links', 'backlinks', 'references', 'bidirectional', 'graph']
 ---
 
@@ -15,13 +18,15 @@ tags: ['links', 'backlinks', 'references', 'bidirectional', 'graph']
 
 This document explains how linked references and backlinks work in Logseq, why bidirectional linking matters, and how to leverage this powerful feature for knowledge management.
 
+> **Last revised:** 2026-09-11 (verified against `be800f1711`). Source links point at that revision.
+
 **What You'll Understand:**
 
 - Forward links vs backlinks
 - Bidirectional linking concept
 - Unlinked references
 - How Logseq tracks connections
-- Reference types and hierarchy
+- Reference types and what each one stores
 - Practical applications
 
 ---
@@ -60,6 +65,8 @@ Block A → [[Page B]]     Forward link (explicit)
         Page B ← A       Backlink (automatic)
 ```
 
+Only the forward link is stored. When you save a block, Logseq records every node the block points at in the block's `:block/refs` attribute ([`deps/db/src/logseq/db/frontend/schema.cljs:71-72`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)). A backlink is that same attribute read in reverse: a page's linked references are the blocks whose `:block/refs` contain the page ([`deps/db/src/logseq/db/common/reference.cljs:248-259`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
+
 ### Why Links Matter
 
 **Traditional Documents:**
@@ -81,13 +88,14 @@ To find references:
 Page [[Project Alpha]]
 ↓ Automatically shows:
 
-- All explicit links ([[Project Alpha]])
-- All block references
-- All unlinked mentions
-- Full context for each
+- Linked references: blocks that link to the page or to one of its aliases
+- Unlinked references: blocks whose text mentions the page title
+- The page each block lives on, with its parent blocks as a breadcrumb
 
 No manual work required
 ```
+
+Both sections sit below the page content ([`src/main/frontend/components/page.cljs:521-537`](../../../../../src/main/frontend/components/page.cljs)). References to individual blocks on the page are not listed here: each referenced block carries its own count (see [Block References](#2-block-references)).
 
 ---
 
@@ -99,35 +107,45 @@ No manual work required
 
 ```markdown
 [[Page Name]] → Links to page
-[[Projects/Work/Alpha]] → Links to nested page
-[[Page Name|Display Text]] → Links with custom text
+[Display Text]([[Page Name]]) → Links with custom text
 ```
+
+The labelled form renders your text as a link to the page ([`src/main/frontend/components/block.cljs:1559-1563`](../../../../../src/main/frontend/components/block.cljs)).
+
+> **Removed:** `[[Page Name|Display Text]]`. No handling for a `|` label inside `[[...]]` was found in the source; the labelled form above is the one the renderer handles.
+
+Page names are matched without regard to case: `[[project alpha]]` finds the existing "Project Alpha" page, because the lookup lower-cases the name ([`deps/outliner/src/logseq/outliner/core.cljs:201`](../../../../../deps/outliner/src/logseq/outliner/core.cljs), [`deps/db/src/logseq/db/frontend/entity_util.cljs:107-109`](../../../../../deps/db/src/logseq/db/frontend/entity_util.cljs)). A link to a page that doesn't exist yet creates it when the block is saved ([`deps/outliner/src/logseq/outliner/core.cljs:197-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
+
+A title with `/`, such as `Projects/Work/Alpha`, is split into one page per segment under **Library** when you create it with **New page** ([`deps/outliner/src/logseq/outliner/page.cljs:385-388`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
+
+> **Unverified:** What a `/` link does when the block is saved without picking **New page**. That save path creates the page without asking for the split ([`deps/outliner/src/logseq/outliner/core.cljs:205-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
 
 **Example:**
 
 ```markdown
 - Working on [[Project Alpha]]
-  - Client: [[Company/Acme Corp]]
-  - Team: [[Person/Sarah]], [[Person/John]]
-  - Status: [[Status/In Progress]]
+  - Client: [[Acme Corp]]
+  - Team: [[Sarah]], [[John]]
 ```
 
-**This creates 5 forward links** from current block to:
+**This creates 4 forward links** from these blocks to:
 
 1. Project Alpha
-2. Company/Acme Corp
-3. Person/Sarah
-4. Person/John
-5. Status/In Progress
+2. Acme Corp
+3. Sarah
+4. John
+
+Logseq stores each link by the target's UUID, so the saved text is `[[<uuid>]]` rather than `[[Project Alpha]]` ([`deps/db/src/logseq/db/frontend/content.cljs:129-130`](../../../../../deps/db/src/logseq/db/frontend/content.cljs)). That is why renaming a page doesn't break its links: saving a new page title only changes the page's own name ([`deps/outliner/src/logseq/outliner/core.cljs:362-372`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
 
 ### Block References
 
 **Reference Specific Block:**
 
 ```markdown
-((block-uuid)) → References exact block
-((block-uuid Display)) → Custom display text
+[[<block-uuid>]] → References exact block
 ```
+
+A block reference uses the same brackets as a page link, with the block's UUID inside. **Copy block ref** on a block's context menu produces it ([`src/main/frontend/components/content.cljs:288-292`](../../../../../src/main/frontend/components/content.cljs); [`src/main/frontend/util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs)).
 
 **Example:**
 
@@ -135,30 +153,28 @@ No manual work required
 Original block (in daily journal):
 
 - Decision: Use PostgreSQL for database
-  id:: db-decision
 
-Reference in project plan:
+Reference in project plan (pasted after Copy block ref):
 
-- Database choice: ((db-decision))
-  ↑ Shows full original block content
+- Database choice: [[3f2f9a5c-1a94-4ec7-a57f-31f9f13b5f9d]]
+  ↑ Resolves to the original block
 ```
+
+> **Removed:** `((block-uuid))`, `((block-uuid Display))` and custom `id:: db-decision` block ids. Typing `((` shows the warning "To reference a node, please use `[[]]`." ([`src/main/frontend/handler/editor.cljs:1949-1952`](../../../../../src/main/frontend/handler/editor.cljs)), and `((uuid))` text renders literally ([`src/main/frontend/components/block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs)). `id:: value` typed into a block is text, not a property.
 
 ### Embeds
 
 **Embed Content:**
 
 ```markdown
-{{embed ((block-uuid))}} → Embeds block content
-{{embed [[Page Name]]}} → Embeds entire page
+/Node embed → search for a block, pick it
 ```
 
-**Example:**
+`/Node embed` inserts a new sibling block whose `:block/link` points at the chosen node ([`src/main/frontend/components/editor.cljs:289-306`](../../../../../src/main/frontend/components/editor.cljs)). The link counts as a reference: `:block/link` is added to the embedding block's `:block/refs` ([`deps/outliner/src/logseq/outliner/pipeline.cljs:118-121`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)).
 
-```markdown
-- Project requirements:
-  {{embed [[Requirements/Core Features]]}}
-  ↑ Shows full page content inline
-```
+> **Removed:** `{{embed ((block-uuid))}}` and `{{embed [[Page Name]]}}`. The macro now renders "{{embed}} is deprecated. Use '/Node embed' command instead." ([`src/main/frontend/components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
+
+> **Unverified:** Whether `/Node embed` can embed a whole page, and whether an embed shows the embedded block's children.
 
 ---
 
@@ -175,29 +191,29 @@ You create: A → [[B]] (forward link)
 Logseq creates: B ← A (backlink, automatic)
 ```
 
+Nothing extra is written for B. The "Linked references" list is computed from the blocks that reference B, plus the blocks that reference any of B's aliases ([`deps/db/src/logseq/db/common/reference.cljs:269-285`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
+
 **Example:**
 
 ```markdown
-Daily journal (2026-01-22):
+Daily journal (Jan 22nd, 2026):
 
 - Meeting about [[Project Alpha]]
-  - Discussed timeline
-  - Reviewed budget
 
 Project Alpha page automatically shows:
 ┌─────────────────────────────────────┐
-│ Linked References │
+│ Linked references                   │
 ├─────────────────────────────────────┤
-│ • [[2026-01-22]] │
-│ - Meeting about [[Project Alpha]] │
-│ - Discussed timeline │
-│ - Reviewed budget │
+│ Jan 22nd, 2026                      │
+│ - Meeting about [[Project Alpha]]   │
 └─────────────────────────────────────┘
 ```
 
+Journal pages are titled `MMM do, yyyy` by default ([`deps/common/src/logseq/common/util/date_time.cljs:10`](../../../../../deps/common/src/logseq/common/util/date_time.cljs)).
+
 ### Finding Backlinks
 
-**Location:** Bottom of every page
+**Location:** Below the page content ([`src/main/frontend/components/page.cljs:521-529`](../../../../../src/main/frontend/components/page.cljs); label "Linked references", `en.edn:1920`). The section only appears when the page has at least one reference ([`src/main/frontend/components/reference.cljs:51-62`](../../../../../src/main/frontend/components/reference.cljs)).
 
 ```markdown
 Page: [[Project Alpha]]
@@ -205,42 +221,52 @@ Page: [[Project Alpha]]
 [Content of page]
 
 ────────────────────────────
-Linked References (5) ← All pages that link here
+Linked references 5          ← blocks that link here, grouped by page
 
-- [[2026-01-22]]
-- [[Team Meeting Notes]]
-- [[Budget Proposal]]
-- [[Risk Register]]
-- [[Weekly Review]]
+- Jan 22nd, 2026
+- Team Meeting Notes
+- Budget Proposal
 
-Unlinked References (2) ← Mentions without links
+Unlinked references          ← mentions without links
 
-- [[2026-01-15]]
-- [[Email Archive]]
+- Jan 15th, 2026
+- Email Archive
 ```
+
+The number next to the heading counts referencing blocks, not pages ([`deps/db/src/logseq/db/common/view.cljs:560-562`](../../../../../deps/db/src/logseq/db/common/view.cljs); [`src/main/frontend/components/views.cljs:2695-2702`](../../../../../src/main/frontend/components/views.cljs)). The blocks are grouped under the page they live on ([`src/main/frontend/components/views.cljs:2598-2607`](../../../../../src/main/frontend/components/views.cljs); [`deps/db/src/logseq/db/common/view.cljs:544-545`](../../../../../deps/db/src/logseq/db/common/view.cljs)).
+
+Linked references also show when a page is open in the right sidebar, which renders the same page component with `:sidebar? true` ([`src/main/frontend/components/right_sidebar.cljs:58-63`](../../../../../src/main/frontend/components/right_sidebar.cljs)). Unlinked references do not show in the sidebar, on the home view, or on tag and property pages ([`src/main/frontend/components/page.cljs:531-537`](../../../../../src/main/frontend/components/page.cljs)).
+
+On a tag page, blocks tagged with that tag (or one of its child tags) are left out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs), `:281-283`). They are listed on the page's **Tagged nodes** tab instead ([`src/main/frontend/components/page.cljs:392-395`](../../../../../src/main/frontend/components/page.cljs); `en.edn:195`).
 
 ### Backlink Context
 
-**Full Context Shown:**
+**Context Shown:**
 
 ```markdown
 Backlink includes:
 
-1. Source page name
-2. Full parent hierarchy
-3. Original block content
-4. Surrounding context
+1. Source page name (the group heading)
+2. The parent blocks, as a breadcrumb
+3. The referencing block itself
 
 Example backlink display:
 ┌────────────────────────────────┐
-│ [[2026-01-22]] │ ← Source page
-│ - Morning review │ ← Parent block
-│ - TODO Follow up on │ ← Grandparent
-│ [[Project Alpha]] │ ← The link (highlighted)
-│ - Sarah mentioned │ ← Child context
-│ timeline concerns │
+│ Jan 22nd, 2026                 │ ← Source page
+│ Morning review > Follow up     │ ← Breadcrumb of parents
+│ - [[Project Alpha]] timeline   │ ← The referencing block
 └────────────────────────────────┘
 ```
+
+Referencing blocks that share a parent are shown together under one breadcrumb of that parent chain ([`deps/db/src/logseq/db/common/view.cljs:546-558`](../../../../../deps/db/src/logseq/db/common/view.cljs); [`src/main/frontend/components/views.cljs:2193-2202`](../../../../../src/main/frontend/components/views.cljs)). Each one is rendered with the normal block component, not as a text snippet ([`src/main/frontend/components/views.cljs:2161-2174`](../../../../../src/main/frontend/components/views.cljs)).
+
+> **Removed:** "The link (highlighted)" and "Surrounding context" in the display. Only the Unlinked references view passes a highlight term ([`src/main/frontend/components/reference.cljs:69`](../../../../../src/main/frontend/components/reference.cljs)).
+
+### Filtering Backlinks
+
+The section's **Page filter** button opens a list of other pages connected to the referencing blocks, each with a count. The list draws on pages those blocks, their parents and their children link to, plus the pages the blocks sit on ([`src/main/frontend/components/reference.cljs:14-44`](../../../../../src/main/frontend/components/reference.cljs); [`deps/db/src/logseq/db/common/reference.cljs:49-64`](../../../../../deps/db/src/logseq/db/common/reference.cljs); `en.edn:1633`). "Click to include and shift-click to exclude. Click again to remove." (`en.edn:1637`). Includes must all match; any exclude removes a block ([`deps/db/src/logseq/db/common/reference.cljs:122-130`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
+
+The choices are saved on the page as the **Included references** and **Excluded references** properties, so they persist ([`deps/db/src/logseq/db/frontend/property.cljs:253-258`](../../../../../deps/db/src/logseq/db/frontend/property.cljs); [`deps/db/src/logseq/db/common/reference.cljs:240-246`](../../../../../deps/db/src/logseq/db/common/reference.cljs)). The filter icon takes the success colour with only includes, the error colour with only excludes, and the warning colour with both ([`src/main/frontend/components/reference.cljs:28-39`](../../../../../src/main/frontend/components/reference.cljs)).
 
 ---
 
@@ -259,10 +285,14 @@ Unlinked mention:
 "We discussed Project Alpha in today's meeting"
 ↑ No [[]] brackets
 
-Logseq detects this and shows in "Unlinked References"
+Logseq detects this and shows in "Unlinked references"
 ```
 
+Nothing is stored for an unlinked mention. Logseq searches for it when the section is shown.
+
 ### How Detection Works
+
+A node counts as an unlinked reference when its text contains the page title, ignoring case ([`deps/db/src/logseq/db/common/reference.cljs:309-318`](../../../../../deps/db/src/logseq/db/common/reference.cljs)). Nodes that already reference the page, embeds, and built-in nodes are skipped (`:319-326`). Matching is a plain substring test, not a word match.
 
 **Matching Rules:**
 
@@ -274,12 +304,14 @@ Page name: [[Customer Success]]
 - "Customer Success team"
 - "customer success metrics"
 - "CUSTOMER SUCCESS"
+- "Customer Successes" (substring)
 
 ❌ Won't match:
 
 - "Customer" (partial)
 - "Success" (partial)
 - "Cust Success" (abbreviated)
+- A mention of one of the page's aliases (only the title is searched)
 ```
 
 ### Converting Unlinked References
@@ -291,20 +323,22 @@ Before:
 
 - Project Alpha timeline is delayed
 
-After (click "Link" button):
+After (edit the block and wrap the mention in [[ ]]):
 
 - [[Project Alpha]] timeline is delayed
   ↑ Now an explicit link
 ```
+
+> **Removed:** The "Link" button. The Unlinked references component renders the matching blocks and has no per-item link action ([`src/main/frontend/components/reference.cljs:64-76`](../../../../../src/main/frontend/components/reference.cljs)).
 
 **Why Convert:**
 
 ```markdown
 Benefits:
 
-- More visible in graph
+- Drawn in the graph: graph edges come from stored references only
 - Appears in Linked (not Unlinked) section
-- Stronger semantic connection
+- Survives renaming, because the link is stored by UUID
 - Query-friendly
 
 Keep unlinked when:
@@ -313,6 +347,8 @@ Keep unlinked when:
 - Not semantically important
 - Would create noise
 ```
+
+The graph view builds its page-to-page edges from `:block/refs` ([`src/main/frontend/worker/graph_view.cljs:562-576`](../../../../../src/main/frontend/worker/graph_view.cljs)), so an unlinked mention draws no edge.
 
 ---
 
@@ -331,11 +367,11 @@ User must:
 - Manually track backlinks
 - Search to find references
 
-Example (Wikipedia):
+Example (a static web page):
 
-- "Paris" article links to "France"
-- "France" article must manually link back
-- No automatic "mentioned in" section
+- An article about "Paris" links to "France"
+- The "France" page doesn't list who links to it
+- Adding a link back is a separate, manual edit
 ```
 
 ### Bidirectional Links (Two-Way)
@@ -357,6 +393,8 @@ Example (Logseq):
   → No manual work
   → Always in sync
 ```
+
+"Always in sync" holds because references are recalculated from a block's content and properties whenever the block is saved ([`src/main/frontend/worker/pipeline.cljs:45-70`](../../../../../src/main/frontend/worker/pipeline.cljs)).
 
 ### Mental Model Shift
 
@@ -382,12 +420,12 @@ Pages exist as nodes:
 - [[Project Alpha]]
 - [[Side Project]]
 - [[Sarah]]
-- [[Technology/PostgreSQL]]
+- [[PostgreSQL]]
 
 Links create structure:
 [[Project Alpha]]
 → [[Sarah]] (team member)
-→ [[Technology/PostgreSQL]] (tech used)
+→ [[PostgreSQL]] (tech used)
 → [[Side Project]] (related work)
 
 Structure emerges from connections
@@ -403,7 +441,7 @@ Structure emerges from connections
 
 ```markdown
 Syntax: [[Page Name]]
-Shows on: Target page's "Linked References"
+Shows on: Target page's "Linked references"
 ```
 
 **Example:**
@@ -415,9 +453,9 @@ Source:
 
 Target (Project Alpha page):
 ┌─────────────────────────────────┐
-│ Linked References │
-│ • From [[2026-01-22]] │
-│ - Discussed [[Project Alpha]] │
+│ Linked references               │
+│ Jan 22nd, 2026                  │
+│ - Discussed [[Project Alpha]]   │
 └─────────────────────────────────┘
 ```
 
@@ -426,12 +464,13 @@ Target (Project Alpha page):
 **Reference Specific Block:**
 
 ```markdown
-Syntax: ((block-uuid))
-Shows on:
-
-- Block's page (Linked References)
-- Block's own reference list
+Syntax: [[<block-uuid>]]
+Shows on: the referenced block itself, as a reference count
 ```
+
+A referenced block shows a small count button beside its content ([`src/main/frontend/components/block.cljs:3502-3518`](../../../../../src/main/frontend/components/block.cljs); tooltip "Open block references", `en.edn:132`). Clicking it toggles the block's own linked references underneath it ([`src/main/frontend/components/block.cljs:3520-3526`](../../../../../src/main/frontend/components/block.cljs), `:4606-4608`); shift-click opens them in the right sidebar (`:3512-3516`). The list starts hidden unless the `:ui/auto-expand-block-refs?` config option expands it (`:4265-4268`; [`src/main/frontend/state.cljs:736-738`](../../../../../src/main/frontend/state.cljs)).
+
+A block reference does not appear in the Linked references of the page that holds the block. That list follows references to the page itself ([`deps/db/src/logseq/db/common/reference.cljs:251`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
 
 **Example:**
 
@@ -439,16 +478,15 @@ Shows on:
 Original block:
 
 - Key decision: Use REST API
-  id:: rest-decision
 
-Reference:
+Reference (pasted after Copy block ref):
 
-- Architecture follows ((rest-decision))
+- Architecture follows [[6a1c0c55-2f0e-4b8e-9d0a-8a4f1f2f3b7e]]
 
 Backlink shows on:
 
-- Current page's Linked References
-- Can navigate to original
+- The original block's reference count
+- Can navigate to the referencing block from there
 ```
 
 ### 3. Tags
@@ -456,9 +494,13 @@ Backlink shows on:
 **Hashtag References:**
 
 ```markdown
-Syntax: #tag or [[Tag]]
-Shows on: Tag page's Linked References
+Syntax: #tag
+Shows on: Tag page's "Tagged nodes" tab
 ```
+
+`#tag` does more than link. It tags the block, and a new tag is created as a class ([`deps/graph-parser/src/logseq/graph_parser/block.cljs:534-537`](../../../../../deps/graph-parser/src/logseq/graph_parser/block.cljs); [`deps/outliner/src/logseq/outliner/core.cljs:197-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). The tag is also added to the block's references ([`deps/outliner/src/logseq/outliner/pipeline.cljs:118`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)), so queries and the graph see it. The tag page, however, lists tagged blocks under **Tagged nodes** and leaves them out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs); [`src/main/frontend/components/page.cljs:392-395`](../../../../../src/main/frontend/components/page.cljs)).
+
+A plain `[[Meeting]]` link to the same page doesn't tag the block, so that block does appear in Linked references.
 
 **Example:**
 
@@ -467,22 +509,26 @@ Source:
 
 - This is an important #meeting note
 
-Target (#meeting page):
+Target (Meeting tag page):
 ┌──────────────────────────────────┐
-│ Linked References │
-│ • From [[2026-01-22]] │
-│ - Important #meeting note │
+│ Tagged nodes                     │
+│ - This is an important #meeting  │
+│   note                           │
 └──────────────────────────────────┘
 ```
+
+> **Removed:** "Syntax: `#tag` or `[[Tag]]`" as equivalents. File graphs treated them alike; file graphs can no longer be opened ([`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)).
 
 ### 4. Property References
 
 **Property Value Links:**
 
 ```markdown
-Syntax: property:: [[Value]]
-Shows on: Value page's Linked References
+Syntax: add a property with /Add property, type "node", value = a page
+Shows on: Value page's "Linked references"
 ```
+
+Add properties with `/Add property` ([`src/main/frontend/commands.cljs:354-358`](../../../../../src/main/frontend/commands.cljs); `en.edn:306`). A property of type `node` holds pages or other nodes ([`deps/db/src/logseq/db/frontend/property/type.cljs:21`](../../../../../deps/db/src/logseq/db/frontend/property/type.cljs)). When a property value is a page or object, it is added to the block's references ([`deps/outliner/src/logseq/outliner/pipeline.cljs:105-116`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)). A user date-time property, and the built-in Scheduled and Deadline properties, reference the journal page for that day (`:62-82`).
 
 **Example:**
 
@@ -490,8 +536,8 @@ Shows on: Value page's Linked References
 Source:
 
 - Task description
-  project:: [[Project Alpha]]
-  owner:: [[Sarah]]
+  (property "project" = Project Alpha)
+  (property "owner" = Sarah)
 
 Shows backlinks on:
 
@@ -499,29 +545,24 @@ Shows backlinks on:
 - Sarah's page
 ```
 
-### Reference Hierarchy
+> **Removed:** `project:: [[Project Alpha]]` property lines. `key:: value` typed into a block is file-graph syntax and is stored as text, not as a property.
 
-**Strength of Connection:**
+### What Each Type Stores
 
-```markdown
-Strongest:
+| Type | Written to | Listed on |
+| --- | --- | --- |
+| Page link `[[Page]]` | `:block/refs` | Page's Linked references |
+| Block reference `[[<uuid>]]` | `:block/refs` | Referenced block's count |
+| Tag `#tag` | `:block/tags` and `:block/refs` | Tag page's Tagged nodes |
+| Node property value | the property, and `:block/refs` | Value page's Linked references |
+| Embed (`/Node embed`) | `:block/link` and `:block/refs` | Embedded block's count |
+| Unlinked mention | nothing | Page's Unlinked references |
 
-1. Block reference ((uuid))
-   → Exact, immutable
+Sources: [`deps/outliner/src/logseq/outliner/pipeline.cljs:98-121`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs) (what goes into `:block/refs`); [`deps/db/src/logseq/db/common/reference.cljs:248-259`](../../../../../deps/db/src/logseq/db/common/reference.cljs), `:309-326` (what each section lists).
 
-2. Page link [[Page]]
-   → Semantic, explicit
+> **Unverified:** That an embed shows up in the embedded block's count. `:block/link` is added to `:block/refs` (cited above), and the count reads `:block/refs` ([`deps/db/src/logseq/db/common/initial_data.cljs:255-271`](../../../../../deps/db/src/logseq/db/common/initial_data.cljs)), but this wasn't checked live.
 
-3. Property reference
-   → Structured metadata
-
-4. Tag #tag
-   → Categorization
-
-5. Unlinked reference
-   → Casual mention
-   Weakest
-```
+> **Removed:** The "Reference Hierarchy / Strength of Connection" ranking (block reference strongest, unlinked weakest). Logseq doesn't weight references. Every stored reference is the same kind of `:block/refs` value ([`deps/db/src/logseq/db/frontend/schema.cljs:71-72`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)); the types differ in where they are listed, as the table shows.
 
 ---
 
@@ -536,11 +577,11 @@ Center: [[Project Alpha]]
 
 Spokes (automatically linked via backlinks):
 
-- [[2026-01-22]] - Daily updates
-- [[Meeting/Kickoff]] - Decisions
-- [[Person/Sarah]] - Team members
-- [[Risk/Database]] - Issues
-- [[Budget/Q1]] - Resources
+- Jan 22nd, 2026 - Daily updates
+- [[Kickoff Meeting]] - Decisions
+- [[Sarah]] - Team members
+- [[Database Risk]] - Issues
+- [[Q1 Budget]] - Resources
 
 Navigate from any spoke → hub
 Navigate from hub → any spoke
@@ -552,13 +593,13 @@ All connections visible
 **Personal Page:**
 
 ```markdown
-Page: [[Person/Sarah]]
+Page: [[Sarah]]
 
-Linked References show:
+Linked references show:
 
 - All meetings mentioned
 - All projects involved in
-- All tasks assigned
+- All tasks whose "owner" property is Sarah
 - All decisions participated in
 
 Automatic: No manual tracking required
@@ -567,7 +608,7 @@ Automatic: No manual tracking required
 **Example:**
 
 ```markdown
-[[Person/Sarah]]
+[[Sarah]]
 
 Skills:
 
@@ -576,20 +617,20 @@ Skills:
 - Team leadership
 
 ────────────────────────────
-Linked References (23):
+Linked references 23
 
-[[2026-01-22]]
+Jan 22nd, 2026
 
-- Meeting with [[Person/Sarah]]
+- Meeting with [[Sarah]]
   - Discussed database optimization
 
-[[Project Alpha]]
+Project Alpha
 
-- Team lead: [[Person/Sarah]]
+- Team lead: [[Sarah]]
 
-[[Risk/Performance]]
+Performance Risk
 
-- Owner: [[Person/Sarah]]
+- Owner: [[Sarah]]
 ```
 
 ### 3. Research & Learning
@@ -620,31 +661,33 @@ Each page's backlinks show:
 **Tracking Decisions:**
 
 ```markdown
-Decision page: [[Decision/Use REST API]]
+Decision page: [[Use REST API]]
 
-date:: [[2026-01-15]]
-context:: [[Project Alpha]] redesign
-decided-by:: [[Person/Sarah]], [[Person/John]]
-rationale::
+Properties (added with /Add property):
+- date: Jan 15th, 2026 (a date property)
+- context: Project Alpha (a node property)
+- decided by: Sarah, John (a node property, multiple values)
 
+Blocks:
 - Simpler than GraphQL
 - Team has expertise
 - Easier to debug
 
 ────────────────────────────
-Linked References:
+Linked references:
 
-[[Project Alpha]] → Shows decision context
-[[Architecture Review]] → Shows discussion
-[[2026-01-15]] → Shows when decided
+Project Alpha → Shows decision context
+Architecture Review → Shows discussion
 ```
+
+A node property value adds a reference to the value page, so the decision shows up in the Linked references of Project Alpha, Sarah and John ([`deps/outliner/src/logseq/outliner/pipeline.cljs:105-116`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)). A `date` property's value is a journal page ([`deps/db/src/logseq/db/frontend/property/type.cljs:157-161`](../../../../../deps/db/src/logseq/db/frontend/property/type.cljs)), so it lands in that day's Linked references too.
 
 **Later references:**
 
 ```markdown
 [[Implementation Plan]]
 
-- API design follows ((rest-api-decision))
+- API design follows [[<uuid of the decision block>]]
   ↑ Links to original decision
   ↑ Full context preserved
 ```
@@ -654,12 +697,11 @@ Linked References:
 **Zettelkasten Style:**
 
 ```markdown
-Source: [[Paper/Attention Is All You Need]]
+Source: [[Attention Is All You Need]]
 
 Key insights:
 
 - Self-attention mechanism
-  id:: attention-insight
   - Allows parallel processing
   - Better than RNNs for long sequences
 
@@ -670,14 +712,16 @@ Related concepts:
 - [[GPT Architecture]]
 
 ────────────────────────────
-Linked References:
+Linked references:
 
 Shows everywhere this paper influenced:
 
-- [[Project/NLP System]]
-- [[Learning/Deep Learning]]
-- [[2026-01-22]] daily notes
+- NLP System
+- Deep Learning
+- Jan 22nd, 2026 daily notes
 ```
+
+To cite the "Self-attention mechanism" block elsewhere, use **Copy block ref** on it and paste the `[[<uuid>]]`.
 
 ---
 
@@ -690,9 +734,9 @@ Shows everywhere this paper influenced:
 ```markdown
 ✅ Good (many links):
 
-- Meeting with [[Person/Sarah]] about [[Project Alpha]]
-  discussed [[Risk/Database Performance]] and decided
-  to use [[Technology/Redis]] for [[Caching Strategy]].
+- Meeting with [[Sarah]] about [[Project Alpha]]
+  discussed [[Database Performance]] and decided
+  to use [[Redis]] for [[Caching Strategy]].
 
 More links = richer context
 More backlinks = better discovery
@@ -718,12 +762,12 @@ Content:
 
 - Overview
 - Key links:
-  - [[Meeting/Kickoff]]
+  - [[Kickoff Meeting]]
   - [[Risk Register]]
   - [[Timeline]]
   - [[Team Members]]
 
-Linked References:
+Linked references:
 
 - All daily mentions
 - All related tasks
@@ -741,17 +785,20 @@ Result: One-stop reference
 ✅ Consistent:
 
 - [[Project Alpha]] (everywhere)
-- [[Person/Sarah Smith]] (everywhere)
+- [[Sarah Smith]] (everywhere)
 
 ❌ Inconsistent:
 
 - [[Project Alpha]]
 - [[Alpha Project]]
-- [[project alpha]]
 - [[Proj. Alpha]]
 
 Result: Split references, broken graph
 ```
+
+Capitalisation alone doesn't split references: `[[project alpha]]` resolves to the same page as `[[Project Alpha]]` ([`deps/db/src/logseq/db/frontend/entity_util.cljs:107-109`](../../../../../deps/db/src/logseq/db/frontend/entity_util.cljs)).
+
+When a page really does go by two names, give it the built-in **Alias** property ([`deps/db/src/logseq/db/frontend/property.cljs:68-74`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)). Blocks that link to an alias are included in the page's Linked references ([`deps/db/src/logseq/db/common/reference.cljs:275`](../../../../../deps/db/src/logseq/db/common/reference.cljs), `:284-285`), and the alias relation works in both directions ([`deps/db/src/logseq/db/frontend/rules.cljc:21-25`](../../../../../deps/db/src/logseq/db/frontend/rules.cljc)). Unlinked references still search only the page's own title.
 
 ### 4. Leverage Unlinked References
 
@@ -761,7 +808,7 @@ Result: Split references, broken graph
 Monthly practice:
 
 1. Open important hub pages
-2. Review "Unlinked References"
+2. Review "Unlinked references"
 3. Convert relevant mentions to links
 4. Strengthens connections
 5. Discovers patterns
@@ -773,10 +820,10 @@ Monthly practice:
 
 ```markdown
 - Task description
-  project:: [[Project Alpha]]
-  owner:: [[Person/Sarah]]
-  status:: [[Status/In Progress]]
-  priority:: [[Priority/High]]
+  (property "project" = Project Alpha, type node)
+  (property "owner" = Sarah, type node)
+  (built-in Status = Doing)
+  (built-in Priority = High)
 
 Benefits:
 
@@ -784,6 +831,10 @@ Benefits:
 - Filterable
 - Structured backlinks
 ```
+
+Status is a built-in property with fixed choices (Backlog, Todo, Doing, In Review, Done, Canceled), not a page you link to ([`deps/db/src/logseq/db/frontend/property.cljs:313-318`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)).
+
+> **Unverified:** Whether picking a Status or Priority choice adds a reference to that choice. Choices are stored as entities, but whether they pass the page-or-object test in `pipeline.cljs:84-92` wasn't traced.
 
 ---
 
@@ -794,7 +845,7 @@ Benefits:
 **Index Page Pattern:**
 
 ```markdown
-[[MOC/Projects]]
+[[Projects Index]]
 
 Active:
 
@@ -806,20 +857,22 @@ Completed:
 
 - [[Project Legacy]]
 
-All project backlinks visible here
+One click from here to each project's page and its backlinks
 ```
+
+> **Removed:** "All project backlinks visible here". An index page's Linked references list the blocks that link to the index page, not the backlinks of the pages it lists ([`deps/db/src/logseq/db/common/reference.cljs:248-259`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
 
 ### Daily Notes Aggregation
 
 **Time-Based Hub:**
 
 ```markdown
-[[2026-01-22]]
+Jan 22nd, 2026
 
 Mentions today:
 
 - [[Project Alpha]] → See backlink
-- [[Person/Sarah]] → See backlink
+- [[Sarah]] → See backlink
 - [[Meeting Notes]] → See backlink
 
 Each page shows today's context via backlink
@@ -830,13 +883,13 @@ Each page shows today's context via backlink
 **Learning Graph:**
 
 ```markdown
-[[Concept/Machine Learning]]
+[[Machine Learning]]
 ↓ Links to
-[[Concept/Neural Networks]]
-↓ Links to  
-[[Concept/Backpropagation]]
+[[Neural Networks]]
 ↓ Links to
-[[Concept/Gradient Descent]]
+[[Backpropagation]]
+↓ Links to
+[[Gradient Descent]]
 
 Backlinks show:
 
@@ -854,39 +907,52 @@ Backlinks show:
 ```markdown
 Solution:
 
+- Use the Page filter to include or exclude source pages
 - More specific page names
-- Use namespaces: [[Projects/Alpha]] not [[Alpha]]
-- Archive old content
+- Tag blocks instead of linking the tag page: on a tag
+  page, tagged blocks move to "Tagged nodes"
 - Use properties for structure
 ```
+
+> **Removed:** "Use namespaces: `[[Projects/Alpha]]` not `[[Alpha]]`" and "Archive old content". A `/` title is split into separate pages (see [Forward Links](#creating-forward-links)), and no archive mechanism affecting references was found.
 
 **Problem: Missing expected backlinks**
 
 ```markdown
 Check:
 
-- Spelling of page name
-- Case sensitivity (shouldn't matter, but check)
+- Spelling of page name (capitalisation doesn't matter)
 - Link syntax: [[Page]] not [Page]
-- Wait for indexing (refresh)
+- ((uuid)) is plain text, not a reference; use [[uuid]]
+- A reference to one block shows on that block's count,
+  not in the page's Linked references
+- On a tag page, tagged blocks are under "Tagged nodes"
+- A Page filter is active (the filter icon is coloured)
 ```
+
+> **Removed:** "Wait for indexing (refresh)". References are recalculated in the same save that changes the block ([`src/main/frontend/worker/pipeline.cljs:45-70`](../../../../../src/main/frontend/worker/pipeline.cljs)); there is no separate reference index.
 
 **Problem: Unlinked references not showing**
 
 ```markdown
 Reasons:
 
-- Partial word match (needs exact)
-- Special characters in name
-- Very short names (<3 chars)
-- Indexing delay
+- You are in the right sidebar, on the home view, or on
+  a tag or property page, where the section is hidden
+- The mention doesn't contain the whole title
+- The block already links to the page
+- The mention uses an alias, not the page title
 
 Solutions:
 
-- Exact name match
-- Simplify page names
-- Re-index graph
+- Open the page itself
+- Mention the full page title
+- Rebuild the search index (see below)
 ```
+
+Whether the section appears at all is decided by a full-text search: Logseq takes up to 100 search hits for the page title and shows the section if one of them contains the title and doesn't already link the page ([`src/main/frontend/worker/handler/block.cljs:524-534`](../../../../../src/main/frontend/worker/handler/block.cljs)). A stale search index can therefore hide the section. **Rebuild search index** (`en.edn:414`; shortcut `mod+c mod+s`, [`src/main/frontend/modules/shortcut/config.cljs:337-338`](../../../../../src/main/frontend/modules/shortcut/config.cljs)) refreshes it.
+
+> **Removed:** "Special characters in name", "Very short names (<3 chars)" and "Re-index graph". Matching is a plain substring test with no length rule ([`deps/db/src/logseq/db/common/reference.cljs:313-317`](../../../../../deps/db/src/logseq/db/common/reference.cljs)), and the only re-index command found rebuilds the search index.
 
 ---
 
@@ -904,7 +970,7 @@ Solutions:
 
 - [Block Editing Philosophy](./block-editing-philosophy.md)
 - [Graph Visualization](./graph-visualization.md)
-- [Page Links Tutorial](../../tutorials/getting-started/page-links.md)
+- [Linking Pages Tutorial](../../tutorials/getting-started/04-linking-pages.md)
 
 ---
 

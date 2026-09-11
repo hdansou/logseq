@@ -1,13 +1,15 @@
 ---
 title: 'Graph Visualization and Navigation'
 status: 🟢 Stable
-version: 'Logseq v0.10.9'
+version: 'DB graph schema 65.33'
+lastVerified: '2026-09-11'
+verifiedAgainst: 'be800f1711'
+reviewStatus: audited
 quadrant: 'Explanation'
-platform: 'Desktop + Mobile'
+platform: 'Desktop'
 related-docs:
   - '[Linked References](linked-references.md)'
-  - '[Graph Navigation How-To](../../how-to/navigation/graph-navigation.md)'
-  - '[Search Strategies](../../how-to/navigation/search-strategies.md)'
+  - '[Linking Pages Tutorial](../../tutorials/getting-started/04-linking-pages.md)'
 tags: ['graph', 'visualization', 'navigation', 'connections', 'knowledge-graph']
 ---
 
@@ -15,12 +17,14 @@ tags: ['graph', 'visualization', 'navigation', 'connections', 'knowledge-graph']
 
 This document explains Logseq's graph visualization system—how your notes form an interconnected knowledge graph, and how to navigate and understand these relationships. Master the graph view to discover insights and connections in your knowledge base.
 
+> **Last revised:** 2026-09-11 (verified against `be800f1711`). Source links point at that revision.
+
 **What You'll Learn:**
 
 - Graph structure and representation
-- Types of connections (links, references, embeds)
+- Types of connections (links, tags, properties, hierarchy)
 - Graph navigation techniques
-- Local vs global graph views
+- Page graph vs global graph views
 - Graph-based discovery
 
 **Prerequisites:**
@@ -47,8 +51,8 @@ This document explains Logseq's graph visualization system—how your notes form
 
 A **knowledge graph** represents your notes as:
 
-- **Nodes** (vertices) = Pages/blocks
-- **Edges** (connections) = Links, references, tags
+- **Nodes** (vertices) = Pages, tags, and tagged nodes
+- **Edges** (connections) = Links, tags, property values, hierarchy
 
 ```
         Page A
@@ -63,49 +67,51 @@ A **knowledge graph** represents your notes as:
 **Example:**
 
 ```markdown
-# [[Projects]]
+Page "Projects":
 
-- [[Project Alpha]]
-  - Status: #active
+- [[Project Alpha]] #active
   - Owner: [[John]]
   - Related: [[Client X]]
 
-# [[John]]
+Page "John":
 
 - Role: Engineer
 - Projects: [[Project Alpha]], [[Project Beta]]
-- Tags: #team
 ```
 
-**Graph:**
+**Graph (All pages view):**
 
 ```
-Projects ←→ Project Alpha ←→ John
-              ↓                ↓
-            Client X      Project Beta
-              ↑
-            [#active]
+        active (tag)
+             │
+Client X ─ Projects ─── Project Alpha
+             │               │
+            John ────────────┘
+             │
+        Project Beta
 ```
+
+Every edge from a block is drawn between the block's page and the page it references ([`src/main/frontend/worker/graph_view.cljs:562-576`](../../../../../src/main/frontend/worker/graph_view.cljs)). The "Owner: [[John]]" block sits on the Projects page, so the edge runs from Projects to John, not from Project Alpha. A `#tag` on a block is one of those references, so Projects also connects to "active".
 
 ### Graph Types in Logseq
 
 **1. Global Graph**
 
-- Shows all pages and connections
+- Shows your whole graph, in one of two view modes: **Tags** or **All pages** ([`src/main/frontend/components/graph.cljs:313-338`](../../../../../src/main/frontend/components/graph.cljs); `en.edn:787-789`)
 - Bird's-eye view of entire knowledge base
-- Access: Toolbar → Graph icon or `Cmd+Shift+G`
+- Access: **Graph view** in the left sidebar, one of the navigation items shown by default ([`src/main/frontend/components/left_sidebar.cljs:313-320`](../../../../../src/main/frontend/components/left_sidebar.cljs), `:234-235`; `en.edn:1076`), or press `g g` ([`src/main/frontend/modules/shortcut/config.cljs:396-397`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). Both open the `/graph` route, rendered by `global-graph` ([`src/main/frontend/routes.cljs:49-51`](../../../../../src/main/frontend/routes.cljs))
 
-**2. Local Graph**
+> **Removed:** `Cmd+Shift+G`. The graph view shortcut is `g g`; `g shift+g` is "Go to all graphs" ([`src/main/frontend/modules/shortcut/config.cljs:399`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 
-- Shows connections for current page only
-- Focused view (1-3 hops away)
-- Access: Page menu → "Show graph view"
+**2. Page Graph**
 
-**3. Namespace Graph**
+- Shows connections for one page
+- Fixed at the page's direct neighbours, plus links among those neighbours
+- Access: open the right sidebar and click **Page graph** in its top bar ([`src/main/frontend/components/right_sidebar.cljs:519-526`](../../../../../src/main/frontend/components/right_sidebar.cljs), `:126-128`; `en.edn:799`)
 
-- Pages in same namespace hierarchy
-- Example: `Projects/`, `Team/`
-- Organized hierarchically
+> **Removed:** "Page menu → Show graph view" and "1-3 hops away". The page graph is added from the right sidebar, and it is built from one hop around the page ([`src/main/frontend/worker/graph_view.cljs:980-1021`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+
+> **Removed:** "Namespace Graph". There is no namespace graph mode; the global graph has only the Tags and All pages modes ([`src/main/frontend/worker/graph_view.cljs:920-928`](../../../../../src/main/frontend/worker/graph_view.cljs)). Page hierarchy does appear in All pages as parent edges (see [Edge Types](#edge-types)).
 
 ---
 
@@ -113,45 +119,59 @@ Projects ←→ Project Alpha ←→ John
 
 ### Node Types
 
-**Pages (Primary Nodes)**
+**All pages view**
+
+Every page is a node, marked with a kind ([`src/main/frontend/worker/graph_view.cljs:518-524`](../../../../../src/main/frontend/worker/graph_view.cljs)):
 
 ```markdown
-[[Project Alpha]] → Page node
-[[People/John]] → Namespaced page node
-[[2026-01-21]] → Journal page node
+Project Alpha → page
+Jan 21st, 2026 → journal (hidden unless "Show journals" is on)
+active → tag (a tag is a page too)
 ```
 
-**Tags (Semantic Nodes)**
+Some pages are left out: hidden or recycled pages, property pages, built-in pages, and pages with **Excluded from Graph view?** set ([`src/main/frontend/worker/graph_view.cljs:785-798`](../../../../../src/main/frontend/worker/graph_view.cljs), `:838-848`, `:868-871`). Pages with no connections are still drawn: the global graph never asks to hide orphans ([`src/main/frontend/components/graph.cljs:785-788`](../../../../../src/main/frontend/components/graph.cljs); [`src/main/frontend/worker/graph_view.cljs:611-613`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+
+**Tags view**
 
 ```markdown
-#active → Tag node (implicit page)
-#status/in-progress → Nested tag node
+#meeting → tag node
+A block tagged #meeting → object node, linked to the tag
 ```
 
-**Properties (Metadata Nodes)**
+Tags view draws tags and the nodes tagged with them, blocks and pages alike ([`src/main/frontend/worker/graph_view.cljs:407-481`](../../../../../src/main/frontend/worker/graph_view.cljs)). Structural built-in tags such as Tag, Property, Page and Asset are not drawn (`:57-64`). A tag with nothing tagged is not drawn either, and if no tag has tagged nodes the view is empty (`:452-455`).
+
+**Properties**
 
 ```markdown
-status:: active → Property creates implicit connection
-project:: [[Alpha]] → Explicit page reference
+A node property "project" whose value is Project Alpha
+→ an edge labelled "project" to Project Alpha
 ```
+
+> **Removed:** `status:: active` and `project:: [[Alpha]]`. `key:: value` typed into a block is file-graph syntax and is stored as text, not as a property. Add properties with `/Add property`.
 
 ### Edge Types
 
 **1. Page Links (Explicit Connections)**
 
 ```markdown
-[[Project Alpha]] mentions [[Client X]]
+A block on Project Alpha mentions [[Client X]]
 ```
 
-**Graph:** `Project Alpha —[mentions]→ Client X`
+**Graph:** `Project Alpha — Client X`
 
-**2. Block References (Granular Links)**
+In All pages, each reference from a block becomes an edge from the block's page to the referenced page ([`src/main/frontend/worker/graph_view.cljs:562-576`](../../../../../src/main/frontend/worker/graph_view.cljs)). Only edges whose two ends are both drawn nodes are kept (`:775-783`).
+
+**2. Block References**
 
 ```markdown
-((block-uuid)) → References specific block
+[[<block-uuid>]] → References specific block
 ```
 
-**Graph:** `Current Block —[refs]→ Referenced Block's Page`
+**Graph (All pages):** no edge. The referenced block isn't a page node, so the reference is dropped when edges are matched to nodes ([`src/main/frontend/worker/graph_view.cljs:775-783`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+
+> **Removed:** `((block-uuid))` and "Current Block —[refs]→ Referenced Block's Page". A block reference is `[[<uuid>]]` ([`src/main/frontend/util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs)); `((uuid))` renders as literal text ([`src/main/frontend/components/block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs)).
+
+> **Unverified:** How the page graph treats a block reference. It collects every `:block/refs` target of the page's blocks ([`src/main/frontend/worker/graph_view.cljs:949-961`](../../../../../src/main/frontend/worker/graph_view.cljs)), which can include blocks; whether those are drawn as nodes wasn't checked.
 
 **3. Tags (Classification)**
 
@@ -159,15 +179,28 @@ project:: [[Alpha]] → Explicit page reference
 - Project meeting #meeting #important
 ```
 
-**Graph:** `Block —[tagged]→ meeting, important`
+**Graph:**
 
-**4. Backlinks (Reverse Connections)**
+- Tags view: `Block —→ meeting, important` (the block is an object node) ([`src/main/frontend/worker/graph_view.cljs:431-437`](../../../../../src/main/frontend/worker/graph_view.cljs))
+- All pages: `Block's page — meeting, important`, because the tags are part of the block's references ([`deps/outliner/src/logseq/outliner/pipeline.cljs:118`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)). A page that is itself tagged also links to its tag ([`src/main/frontend/worker/graph_view.cljs:594-599`](../../../../../src/main/frontend/worker/graph_view.cljs))
 
-Automatically tracked:
+**4. Property Values**
+
+A user property whose values are nodes draws an edge from the node that has the property to each value, labelled with the property's name ([`src/main/frontend/worker/graph_view.cljs:300-346`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+
+**5. Hierarchy**
+
+- A page's parent page (for example the `Projects` page above `Alpha` when a `Projects/Alpha` title was split) draws an edge in All pages ([`src/main/frontend/worker/graph_view.cljs:601-609`](../../../../../src/main/frontend/worker/graph_view.cljs))
+- A tag that extends another tag draws an "extends" edge in both views (`:348-372`, `:380-389`)
+
+**6. Backlinks (Reverse Connections)**
+
+A backlink is the same edge seen from the other end. All pages view and the page graph draw an arrowhead from the linking page to the linked one; Tags view draws none, since the global graph passes arrows off and only those two views override it ([`src/main/frontend/extensions/graph/pixi.cljs:1785-1788`](../../../../../src/main/frontend/extensions/graph/pixi.cljs), `:201-203`; [`src/main/frontend/components/graph.cljs:21`](../../../../../src/main/frontend/components/graph.cljs)).
 
 ```
 Page A links to Page B
-  ⇒ Page B shows "backlink" from Page A
+  ⇒ Page B shows "Linked references" from Page A
+  ⇒ The graph draws one edge between A and B
 ```
 
 ---
@@ -176,90 +209,107 @@ Page A links to Page B
 
 ### Global Graph View
 
-**Access:** Click **Graph** icon in toolbar
+**Access:** **Graph view** in the left sidebar, or `g g`
 
 **Interface Elements:**
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  [Filter] [Orphans] [Color by] [Layout]  [⚙️]  │
-├─────────────────────────────────────────────────┤
 │                                                 │
-│         ○ ── ○ ── ○                            │
+│         ○ ── ○ ── ○                             │
 │        /       \    \                           │
 │       ○         ○ ── ○                          │
 │      /          |                               │
 │     ○ ────────  ○                               │
 │                                                 │
-│   [Your interconnected knowledge graph]        │
+│   [Your interconnected knowledge graph]         │
 │                                                 │
+├─────────────────────────────────────────────────┤
+│  [⚙ Graph settings] [⟲ Time travel] [↻ Reset]   │
 └─────────────────────────────────────────────────┘
 ```
 
+The canvas has a bottom toolbar with the **Graph settings** button, the **Time travel** control, and a **Reset graph view** button that appears once something is selected or focused ([`src/main/frontend/components/graph.cljs:692-717`](../../../../../src/main/frontend/components/graph.cljs), `:682-690`; `en.edn:772`, `:777`, `:780`).
+
+> **Removed:** "[Filter] [Orphans] [Color by] [Layout]" toolbar buttons. The toolbar holds only the three controls above.
+
 **Controls:**
 
-| Control               | Action           |
-| --------------------- | ---------------- |
-| **Mouse wheel**       | Zoom in/out      |
-| **Click + drag**      | Pan around       |
-| **Click node**        | Select/highlight |
-| **Double-click node** | Open page        |
-| **Right-click**       | Context menu     |
-| **Hover**             | Show page title  |
+| Control | Action |
+| --- | --- |
+| **Mouse wheel** | Zoom in/out around the pointer |
+| **Drag empty space** | Pan around |
+| **Drag a node** | Move it; connected nodes follow, more weakly further away |
+| **Click node** | Highlight it and its neighbours; everything else dims |
+| **Click a highlighted node** | Remove its highlight |
+| **Click empty space** | Clear the highlight |
+| **Double-click node** | Open the page |
+| **Shift-click node** | Open it in the right sidebar |
+| **Cmd-click (macOS) / Ctrl-click** | Preview the node in a popup |
+| **Hover** | Emphasise the node and show its label |
+
+Sources: wheel zoom, scale clamped to 0.05–3.6 ([`src/main/frontend/extensions/graph/pixi.cljs:1593-1618`](../../../../../src/main/frontend/extensions/graph/pixi.cljs); [`src/main/frontend/extensions/graph/pixi/logic.cljs:278-300`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs)); pan and node drag (`pixi.cljs:1503-1511`); dragged neighbours follow by Depth with decaying weight (`pixi.cljs:2272-2278`); click, double-click within 320 ms and shift-click (`logic.cljs:276`, `:303-323`; `pixi.cljs:1458-1479`); Cmd/Ctrl-click preview (`pixi.cljs:1450-1457`; [`src/main/frontend/util.cljc:1071-1074`](../../../../../src/main/frontend/util.cljc)); open and open-in-sidebar ([`src/main/frontend/components/graph_actions.cljs:68-73`](../../../../../src/main/frontend/components/graph_actions.cljs)); preview popup (`graph_actions.cljs:32-66`); click on empty space clears (`pixi.cljs:1590-1592`); hover emphasis and label (`logic.cljs:263-274`, `:349-357`).
+
+> **Removed:** "Right-click → Context menu". The renderer listens only for pointer down/move/up/leave, wheel and keydown, and its keydown handler does nothing ([`src/main/frontend/extensions/graph/pixi.cljs:1624-1629`](../../../../../src/main/frontend/extensions/graph/pixi.cljs), `:1619-1620`).
 
 ### Graph Settings
 
-**Access:** Settings icon in graph view
+**Access:** The settings (gear) button in the bottom toolbar opens **Graph settings**. Settings are "Saved per graph" ([`src/main/frontend/components/graph.cljs:656-680`](../../../../../src/main/frontend/components/graph.cljs); `en.edn:777-778`), in the browser's local storage under a key for that graph (`graph.cljs:32-34`, `:98-114`).
 
 **Display Options:**
 
 ```yaml
-Show orphan pages:
-  true/false
-  # Pages with no connections
+View mode:
+  - Tags (default)
+  - All pages
 
-Show journal pages:
-  true/false
-  # Daily notes pages
+Displayed tags:        # Tags view only
+  Search tags, Select all, Clear
+  One checkbox per tag, with its count
 
-Show page previews:
-  true/false
-  # Hover tooltip with content
-
-Layout algorithm:
-  - Force-directed (organic clustering)
-  - Circular (organized circle)
-  - Hierarchical (tree structure)
-
-Color scheme:
-  - By page type (journal, namespace, orphan)
-  - By tag (#project = blue, #personal = green)
-  - By creation date (older = cooler colors)
+Layout:                # labelled "Force graph"
+  Node and link counts
+  Depth: 1-5 (default 1)
+    # How far a highlight spreads from the clicked node;
+    # disabled until a node is selected
+  Link distance: 36-180, step 6 (default 72)
+  Grid layout: true/false     # Tags view only
+  Show journals: true/false   # All pages view only, default off
 ```
 
-### Local Graph View
+Sources: defaults ([`src/main/frontend/components/graph.cljs:16-30`](../../../../../src/main/frontend/components/graph.cljs)); the three groups (`:313-338`, `:340-384`, `:427-473`); Depth disabled without a selection (`:395-397`); Depth spreading the highlight ([`src/main/frontend/extensions/graph/pixi/logic.cljs:219-251`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs)); labels `en.edn:742-753`, `:787-789`.
+
+> **Removed:** "Show orphan pages", "Show page previews", the "Layout algorithm" choice (circular, hierarchical) and the "Color scheme" choice (by type, by tag, by creation date). None of these settings exist in the panel ([`src/main/frontend/components/graph.cljs:656-680`](../../../../../src/main/frontend/components/graph.cljs)).
+
+**Excluding a page:** A page with the built-in **Excluded from Graph view?** checkbox property ([`deps/db/src/logseq/db/frontend/property.cljs:425-430`](../../../../../deps/db/src/logseq/db/frontend/property.cljs); `en.edn:1468`) is left out of All pages. In Tags view, the page and its blocks are left out ([`src/main/frontend/worker/graph_view.cljs:231-248`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+
+> **Unverified:** How to set **Excluded from Graph view?** from the UI. The property is defined with `:hide? true`, and no page-menu action for it was found.
+
+### Time Travel
+
+The **Time travel** slider hides every node created after the chosen date, so you can replay how the graph grew. Its play button ("Now") animates the slider forward to the present ([`src/main/frontend/components/graph.cljs:475-522`](../../../../../src/main/frontend/components/graph.cljs), `:580-654`; `en.edn:780-781`).
+
+### Page Graph View
 
 **Per-Page Graph:**
 
 ```
 Current Page: [[Project Alpha]]
 
-Connected Pages (1 hop):
-- [[Team]]
-- [[Client X]]
-- [[Roadmap]]
-- #active
+Nodes:
+- Project Alpha (pinned in the centre)
+- Pages Project Alpha's blocks link to: [[Client X]], [[Roadmap]]
+- Pages whose blocks link to Project Alpha: [[Team]]
+- Project Alpha's tags, and the tags they extend
 
-Connected Pages (2 hops):
-- [[John]] (via Team)
-- [[Budget]] (via Client X)
+Edges:
+- Project Alpha to each of those nodes
+- Links among the neighbour pages themselves
 ```
 
-**Adjustable Depth:**
+The page graph opens on the page you are viewing, or on today's journal when you aren't on a page ([`src/main/frontend/components/page.cljs:623-651`](../../../../../src/main/frontend/components/page.cljs)). It counts references to the page's aliases too, and it leaves out journal pages that mention it ([`src/main/frontend/worker/graph_view.cljs:930-961`](../../../../../src/main/frontend/worker/graph_view.cljs), `:963-1021`). Nodes are placed in rings by distance from the page, which is pinned in the centre ([`src/main/frontend/extensions/graph/pixi/logic.cljs:1083-1111`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs), `:654-656`). Labels are shown without zooming (`logic.cljs:488-490`), and double-click, shift-click and Cmd/Ctrl-click work as in the global graph ([`src/main/frontend/components/page.cljs:602-610`](../../../../../src/main/frontend/components/page.cljs)).
 
-- 1 hop: Direct connections only
-- 2 hops: Friends-of-friends
-- 3 hops: Extended network
+> **Removed:** "Adjustable Depth: 1 hop / 2 hops / 3 hops" and "Connected Pages (2 hops): John (via Team)". The page graph has no settings panel and doesn't walk past direct neighbours; a second-hop page shows up only if it is itself linked to the page ([`src/main/frontend/worker/graph_view.cljs:980-1021`](../../../../../src/main/frontend/worker/graph_view.cljs)).
 
 **Example Visualization:**
 
@@ -268,7 +318,7 @@ Connected Pages (2 hops):
            |
     Team—[Project Alpha]—Client X
       |                     |
-    John                 Budget
+      └──── (edge only if Team links Client X)
 ```
 
 ---
@@ -282,7 +332,7 @@ Connected Pages (2 hops):
 **Example: Project Hub**
 
 ```markdown
-# [[Projects]]
+Page "Projects":
 
 - [[Project Alpha]]
 - [[Project Beta]]
@@ -294,9 +344,9 @@ Projects (center) ←→ All project pages (spokes)
 
 **Navigation:**
 
-1. Open `[[Projects]]`
-2. View local graph
-3. Click any spoke to explore
+1. Open the Projects page
+2. Add **Page graph** in the right sidebar
+3. Double-click any spoke to open it
 4. Follow connections outward
 
 ### Pattern 2: Cluster Exploration
@@ -305,20 +355,21 @@ Projects (center) ←→ All project pages (spokes)
 
 **Steps:**
 
-1. Open global graph
-2. Look for dense clusters (many connections)
-3. Zoom in to identify cluster theme
+1. Open the global graph in **Tags** view
+2. Each tag's nodes are pulled together around it, with a shaded cluster background ([`src/main/frontend/extensions/graph/pixi/logic.cljs:1441-1453`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs), `:810-858`)
+3. Zoom in near a tag: the view focuses on that tag and its nodes ([`src/main/frontend/extensions/graph/pixi.cljs:193-199`](../../../../../src/main/frontend/extensions/graph/pixi.cljs), `:2214-2234`)
 4. Double-click nodes to explore content
 
 **Example Clusters:**
 
 ```
-Work Cluster:           Personal Cluster:
-  ○ Projects              ○ Journal
-  ○ Meetings              ○ Reflections
-  ○ Team                  ○ Goals
-  ○ Clients               ○ Habits
+#Project cluster:       #Book cluster:
+  ○ Project Alpha         ○ Atomic Habits
+  ○ Project Beta          ○ Deep Work
+  ○ Website Redesign      ○ Thinking, Fast and Slow
 ```
+
+In Tags view the clusters are the tags themselves. Logseq doesn't run a clustering or community-detection algorithm on links.
 
 ### Pattern 3: Path Traversal
 
@@ -343,15 +394,21 @@ Machine Learning
 3. Follow promising link
 4. Repeat until reaching page B
 
+In the global graph, clicking page A and raising **Depth** highlights everything within that many hops, which can make a short path visible.
+
+> **Unverified:** A built-in "find path between two pages" action. None was found.
+
 ### Pattern 4: Orphan Discovery
 
 **Use Case:** Find isolated pages (potential cleanup)
 
 **Steps:**
 
-1. Graph view → Enable "Show orphans"
-2. Orphan pages appear disconnected
+1. Graph view → **All pages** view mode
+2. Pages with no connections are drawn apart from the rest: after the layout runs, All pages moves unlinked nodes into rings around the linked ones ([`src/main/frontend/extensions/graph/pixi/logic.cljs:1471-1472`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs), `:1037-1050`, `:953-979`). From 2,500 nodes the fast layout lays every node out in a plain grid instead, so orphans aren't set apart (`:1384-1387`, `:1003-1035`)
 3. Review: Delete or connect?
+
+> **Removed:** "Enable 'Show orphans'". There is no such toggle; All pages always includes orphans ([`src/main/frontend/worker/graph_view.cljs:611-613`](../../../../../src/main/frontend/worker/graph_view.cljs)).
 
 **Example:**
 
@@ -369,26 +426,30 @@ Orphan Pages (no connections):
 **Example:**
 
 ```markdown
-# [[Product Roadmap]]
+Page "Product Roadmap":
 
-Linked References:
+Linked references:
 
-- [[Q1 Planning]] mentions roadmap
-- [[Team Meeting 2026-01-15]] discussed roadmap
-- [[Client X Proposal]] references roadmap
+- Q1 Planning: mentions [[Product Roadmap]]
+- Team Meeting (Jan 15th, 2026): discussed [[Product Roadmap]]
+- Client X Proposal: references [[Product Roadmap]]
 ```
 
 **Navigation:**
 
-1. View "Linked References" section (bottom of page)
-2. Click any reference to see context
+1. View the "Linked references" section below the page content
+2. Each referencing block is shown under its page, with its parent blocks as a breadcrumb
 3. Follow trail of connections
+
+See [Linked References](linked-references.md) for how the section is built.
 
 ---
 
 ## Graph Analysis
 
 ### Analyzing Your Graph
+
+Logseq's graph view reports only the number of nodes and links on screen ([`src/main/frontend/components/graph.cljs:441-443`](../../../../../src/main/frontend/components/graph.cljs)). The metrics below are ways to read the picture yourself; Logseq doesn't compute them.
 
 **Metrics to Consider:**
 
@@ -400,15 +461,17 @@ Low degree = Leaf page (few connections)
 Zero degree = Orphan (isolated)
 ```
 
+Degree is visible: a node's radius grows with the square root of its number of links, up to a cap ([`src/main/frontend/extensions/graph/pixi/logic.cljs:593-614`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs)). In Tags view only tag nodes grow; other nodes keep a small fixed size (`:607-609`).
+
 **Example Analysis:**
 
 ```
 [[Projects]] → 47 connections (hub)
-[[Daily Notes]] → 312 connections (super hub)
+Today's journal → 312 connections (super hub)
 [[Random Idea]] → 0 connections (orphan)
 ```
 
-**2. Clustering Coefficient**
+**2. Clustering (Density)**
 
 ```
 Dense cluster = Related topic area
@@ -451,7 +514,7 @@ No path = Unconnected domains
 - ✅ Most pages connected (few orphans)
 - ✅ Clear topic clusters
 - ✅ Hub pages for major topics
-- ✅ Average path length < 5
+- ✅ Related topics a few hops apart
 
 **Unhealthy Graph:**
 
@@ -459,6 +522,8 @@ No path = Unconnected domains
 - ❌ Single mega-cluster (no structure)
 - ❌ Long paths between related topics
 - ❌ Duplicate pages with similar names
+
+These are rules of thumb, not measurements Logseq takes.
 
 ---
 
@@ -477,20 +542,19 @@ No path = Unconnected domains
 
 - Met with [[John]] about [[Project Alpha]]
   - Discussed [[Roadmap]] and [[Budget]]
-  - Action items: #todo
 ```
 
 **2. Create Hub Pages**
 
 ```markdown
-# [[Projects]] (Hub)
+Page "Projects" (hub):
 
 - [[Project Alpha]]
 - [[Project Beta]]
 - [[Project Gamma]]
 - [[Archived Projects]]
 
-# [[Team]] (Hub)
+Page "Team" (hub):
 
 - [[John]]
 - [[Sarah]]
@@ -514,14 +578,18 @@ No path = Unconnected domains
 - [[Project Gamma]]
 ```
 
+Capitalisation alone doesn't create a duplicate: page names are looked up lower-cased ([`deps/db/src/logseq/db/frontend/entity_util.cljs:107-109`](../../../../../deps/db/src/logseq/db/frontend/entity_util.cljs)).
+
 **4. Leverage Tags**
 
 ```markdown
 - Project kickoff meeting #meeting #project #q1
-  - Creates connections to all three tag pages
+  - Creates connections to all three tags
 ```
 
-**5. Create Namespace Hierarchies**
+`#tag` tags the block and creates the tag if it's new ([`deps/outliner/src/logseq/outliner/core.cljs:197-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). In Tags view the block joins each tag's cluster; in All pages, the block's page links to each tag.
+
+**5. Create Page Hierarchies**
 
 ```markdown
 [[Projects/Work/Alpha]]
@@ -531,13 +599,17 @@ No path = Unconnected domains
 Creates structured graph clusters
 ```
 
+Creating a `/` title with **New page** splits it into one page per segment under **Library** ([`deps/outliner/src/logseq/outliner/page.cljs:385-388`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)). All pages draws an edge from each page to its parent ([`src/main/frontend/worker/graph_view.cljs:601-609`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+
+> **Unverified:** Whether a `/` title typed as a link and saved without **New page** is split as well.
+
 ### Graph Maintenance
 
 **Weekly Cleanup:**
 
 1. **Find orphans:**
 
-   - Graph view → Show orphans
+   - Graph view → All pages
    - Link or delete
 
 2. **Merge duplicates:**
@@ -573,9 +645,9 @@ Found:
 
 ## Advanced Visualization
 
-### Custom Graph Layouts
+### How the Graph Is Laid Out
 
-**Force-Directed (Default):**
+**Force-directed (default):**
 
 ```
 ○     ○
@@ -587,65 +659,54 @@ Found:
 Pages cluster naturally based on connections
 ```
 
-**Circular:**
+The layout is a force simulation from `d3-force`: links pull connected nodes to the **Link distance**, nodes repel each other, and a collision force keeps them from overlapping ([`src/main/frontend/extensions/graph/pixi/logic.cljs:3`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs), `:1420-1440`). The simulation runs a fixed number of steps before drawing, fewer for bigger graphs (`:1454-1457`, `:879-897`). The result is drawn with PixiJS ([`src/main/frontend/extensions/graph/pixi.cljs:2`](../../../../../src/main/frontend/extensions/graph/pixi.cljs); `package.json:163`, `:182`).
 
-```
-    ○
-  ○   ○
-○   ○   ○
-  ○   ○
-    ○
+**Tags view clusters:**
 
-Pages arranged in circle (alphabetical or by date)
-```
+Tags view adds a pull toward each tag's cluster position (`logic.cljs:1441-1453`), and with **Grid layout** on it arranges the clusters in a grid without the force step (`:1402-1403`, `:1218-1295`).
 
-**Hierarchical:**
+**Large graphs:**
 
-```
-      ○
-    / | \
-   ○  ○  ○
-  /|  |  |\
- ○ ○  ○  ○ ○
+At 10,000 nodes in Tags view, or 2,500 in All pages, Logseq switches to a faster layout that skips the force simulation. It also caps how many nodes and edges it draws (`logic.cljs:664-720`, `:1378-1394`).
 
-Tree structure (parent-child relationships)
-```
+> **Unverified:** How the graph view performs at any particular size. The thresholds above are code constants, not measured limits.
+
+> **Removed:** "Circular" and "Hierarchical" layouts. No such layout options exist; the only layout choice is **Grid layout** in Tags view ([`src/main/frontend/components/graph.cljs:461-467`](../../../../../src/main/frontend/components/graph.cljs)).
 
 ### Color Coding
 
-**By Page Type:**
+**By Node Kind:**
 
 ```
-🔵 Blue = Regular pages
-🟢 Green = Journal pages
-🟡 Yellow = Namespace pages
-🔴 Red = Orphan pages
-⚪ White = Tag pages
+Violet = Tags
+Amber  = Property pages
+Sky blue = Journal pages
+Blue   = The current page (page graph)
+Grey   = Other pages
 ```
 
-**By Tag:**
+The worker colours nodes by kind ([`src/main/frontend/worker/graph_view.cljs:526-542`](../../../../../src/main/frontend/worker/graph_view.cljs)); nodes without a colour fall back to the renderer's tag, property and default colours ([`src/main/frontend/extensions/graph/pixi/logic.cljs:496-505`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs)). Exact shades differ between light and dark themes.
 
-```
-#work → Blue nodes
-#personal → Green nodes
-#project → Orange nodes
-```
+> **Removed:** The colour legend with yellow namespace pages, red orphan pages and white tag pages, and "By Tag" colouring (`#work` blue, `#personal` green). Colours come only from the node kinds above.
+
+> **Unverified:** Whether large All pages graphs (10,000+ pages) keep the per-kind colours. That path gives every node the same grey ([`src/main/frontend/worker/graph_view.cljs:726-737`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+
+### Labels
+
+Page labels appear once you zoom in far enough, on hover, and for highlighted nodes ([`src/main/frontend/extensions/graph/pixi.cljs:1903-1908`](../../../../../src/main/frontend/extensions/graph/pixi.cljs); [`src/main/frontend/extensions/graph/pixi/logic.cljs:8-19`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs), `:349-372`). Property and "extends" edges carry labels ([`src/main/frontend/worker/graph_view.cljs:300-346`](../../../../../src/main/frontend/worker/graph_view.cljs)), drawn once you zoom in to at least 0.82× ([`src/main/frontend/extensions/graph/pixi.cljs:189`](../../../../../src/main/frontend/extensions/graph/pixi.cljs), `:1789-1793`; [`src/main/frontend/components/graph.cljs:22`](../../../../../src/main/frontend/components/graph.cljs)).
 
 ### Graph Filtering
 
 **Show only:**
 
-- Pages with specific tag
-- Pages in namespace
-- Pages created in date range
-- Pages with >X connections
+- Chosen tags (**Displayed tags**, Tags view)
+- Pages other than journals (**Show journals** off, All pages view)
+- Nodes created up to a date (**Time travel**)
+- Everything except pages marked **Excluded from Graph view?**
 
-**Example Filter:**
+Sources: [`src/main/frontend/components/graph.cljs:248-268`](../../../../../src/main/frontend/components/graph.cljs) (displayed tags), `:524-546` (journals), `:498-522` (time travel); [`src/main/frontend/worker/graph_view.cljs:231-248`](../../../../../src/main/frontend/worker/graph_view.cljs) (excluded).
 
-```
-Show only: #project AND namespace:Work/
-Result: Work-related project pages only
-```
+> **Removed:** Filtering by namespace, by created-date range, and by connection count, and the `Show only: #project AND namespace:Work/` filter syntax. The graph view has no filter expression; its filters are the four above.
 
 ---
 
@@ -654,20 +715,20 @@ Result: Work-related project pages only
 ### Workflow 1: Daily Review
 
 1. Open today's journal
-2. View local graph
+2. Add **Page graph** in the right sidebar
 3. Identify missing connections
 4. Add links as appropriate
 
 ### Workflow 2: Topic Exploration
 
 1. Start with seed page
-2. View local graph (2-hop)
-3. Identify interesting connections
+2. Open the global graph and click the seed page
+3. Raise **Depth** to 2 to highlight two hops out
 4. Follow path to discovery
 
 ### Workflow 3: Content Audit
 
-1. Global graph view
+1. Global graph view, **All pages**
 2. Find orphans
 3. Decide: Connect, archive, or delete
 4. Find duplicate names (similar nodes close together)
@@ -675,7 +736,7 @@ Result: Work-related project pages only
 ### Workflow 4: Idea Generation
 
 1. Pick two random pages
-2. Find shortest path between them
+2. Trace a path between them by following links
 3. Use path as creative constraint
 4. Generate ideas connecting concepts
 
@@ -683,19 +744,9 @@ Result: Work-related project pages only
 
 ## Mobile Graph View
 
-**Mobile Limitations:**
+No graph view was found in the mobile app. Its router defines only `/`, `/page/:name`, `/import` and `/export` ([`src/main/mobile/routes.cljs:8-19`](../../../../../src/main/mobile/routes.cljs)). Its tabs are home, graphs (the graph list), go to, search, flashcards and capture ([`src/main/mobile/components/app.cljs:272-283`](../../../../../src/main/mobile/components/app.cljs)). The graph view route belongs to the desktop app's router ([`src/main/frontend/routes.cljs:49-51`](../../../../../src/main/frontend/routes.cljs)).
 
-- Smaller viewport (harder to see full graph)
-- Touch gestures instead of mouse
-- Limited filtering options
-- May be slow on large graphs
-
-**Mobile Best Practices:**
-
-1. Use local graph view (not global)
-2. Reduce hop depth (1-2 max)
-3. Use search instead of visual navigation
-4. Switch to desktop for graph analysis
+> **Removed:** "Mobile Limitations" and "Mobile Best Practices" (local graph, reduced hop depth). They describe a mobile graph view that the mobile code doesn't route to.
 
 ---
 
@@ -703,30 +754,35 @@ Result: Work-related project pages only
 
 **Graph view is empty:**
 
-- Check "Show journal pages" setting
-- Verify pages have connections
-- Reload graph (⌘ R)
+- You're in **Tags** view (the default) and no tag has tagged nodes; Tags view is then empty ([`src/main/frontend/worker/graph_view.cljs:452-455`](../../../../../src/main/frontend/worker/graph_view.cljs)). Switch **View mode** to **All pages**
+- In Tags view, **Displayed tags** was cleared; use **Select all**
+- The **Time travel** slider is set to an early date; press its play button to return to "Now"
+- "Graph failed to load." appears: use **Retry** ([`src/main/frontend/components/graph.cljs:386-393`](../../../../../src/main/frontend/components/graph.cljs); `en.edn:728`, `:773`)
+
+> **Removed:** "Reload graph (⌘ R)". No graph-specific reload shortcut was found; a failed build offers **Retry**.
 
 **Graph is too cluttered:**
 
-- Hide journal pages
-- Hide orphan pages
-- Filter by namespace or tag
-- Use local graph instead
+- Turn **Show journals** off (All pages)
+- Narrow **Displayed tags** (Tags view)
+- Mark noisy pages **Excluded from Graph view?**
+- Use the page graph instead
+
+> **Removed:** "Hide orphan pages" and "Filter by namespace". Neither control exists (see [Graph Settings](#graph-settings)).
 
 **Performance is slow:**
 
-- Reduce visible nodes (hide journals)
-- Close other tabs
-- Increase RAM allocation
-- Consider archiving old content
+- Reduce visible nodes (hide journals, narrow displayed tags)
+- Use the page graph for a single page
+
+> **Removed:** "Close other tabs", "Increase RAM allocation" and "Consider archiving old content". No graph setting or source behind them was found. Large graphs already switch to a faster layout (see [How the Graph Is Laid Out](#how-the-graph-is-laid-out)).
 
 **Nodes overlap/hard to see:**
 
 - Zoom in
 - Pan to area of interest
-- Switch layout algorithm
-- Adjust spacing in settings
+- Increase **Link distance**
+- Turn on **Grid layout** (Tags view)
 
 ---
 
@@ -742,9 +798,10 @@ Result: Work-related project pages only
 
 **Related Guides:**
 
-- [Linked References Tutorial](linked-references.md)
-- [Navigation Strategies](../../how-to/navigation/graph-navigation.md)
-- [Search Techniques](../../how-to/navigation/search-strategies.md)
+- [Linked References](linked-references.md)
+- [Linking Pages Tutorial](../../tutorials/getting-started/04-linking-pages.md)
+
+> **Removed:** Links to `how-to/navigation/graph-navigation.md` and `how-to/navigation/search-strategies.md`. Neither page exists.
 
 ---
 
