@@ -2,7 +2,7 @@
 title: 'Query System Reference'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 quadrant: 'Reference'
@@ -41,7 +41,9 @@ This reference documents Logseq's advanced query system—Datalog queries for re
 > One nuance on that list: `:block/properties` is not a DataScript attribute either, so it never
 > matches in a `:where` clause — but it survives as a *computed entity lookup* returning
 > `{property-ident value}` (`deps/db/src/logseq/db/common/entity_plus.cljc:138-146`, dispatched at
-> `:162-163`). It therefore works on an entity, such as inside `:result-transform`, and only there.
+> `:162-163`). It therefore works on a DataScript entity object and only there — not in a `:where` clause, and not
+> inside `:result-transform`, which receives plain pulled maps from `d/q`
+> (`src/main/frontend/worker/handler/query.cljs:243-261`).
 
 ---
 

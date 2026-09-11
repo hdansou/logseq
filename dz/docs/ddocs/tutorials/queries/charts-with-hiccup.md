@@ -4,7 +4,7 @@ description: 'Learn to render ASCII bar charts and full SVG line charts directly
 status: draft
 difficulty: intermediate
 timeToComplete: '45 minutes'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 logseqVersion: '0.11.x (DB graphs only)'
@@ -299,7 +299,7 @@ For richer parameterization, design your view to accept a "sentinel" first row �
 ## Findings: New Capabilities
 
 - **Queries now execute in the DB worker behind a render-resource contract.** `src/main/frontend/worker/handler/render_resource/query.cljs` (added 2026-08-04) validates the query spec, runs it, applies `:result-transform`, and normalizes every row before it crosses back to the UI. This is what changed the shape `:view` receives.
-- **`:result-transform` and `:view` no longer see the same data.** `:result-transform` runs in the worker on the *pre-normalization* rows — pulled maps or entities (`render_resource/query.cljs:181-202`). `:view` runs in the UI on the *post-normalization* rows, where block cells have already collapsed to UUIDs. Do entity-level filtering and sorting in `:result-transform`; do presentation in `:view`.
+- **`:result-transform` and `:view` no longer see the same data.** `:result-transform` runs in the worker on the *pre-normalization* rows — pulled maps (or raw ids and scalars for a non-pull `:find`), straight from `d/q` (`render_resource/query.cljs:181-202`; `worker/handler/query.cljs:243-261`). `:view` runs in the UI on the *post-normalization* rows, where block cells have already collapsed to UUIDs. Do row-level filtering and sorting in `:result-transform`; do presentation in `:view`.
 - **A `:result-transform` must return a sequential or set**, or the worker fails the resource with `"Query result transform must return rows"` (`render_resource/query.cljs:188-191`).
 - `config.edn` supports both `:query/views` and `:query/result-transforms` as keyword-addressable functions (`src/main/frontend/schema/handler/common_config.cljc:34-38`), so you can keep chart rendering and post-processing reusable and centralized.
 - User property **and class** idents are generated with random uniqueness suffixes in DB graphs (`deps/db/src/logseq/db/frontend/db_ident.cljc:82-90`); query snippets should always discover idents from the graph, or match on `:block/title`, instead of hardcoding guessed names.

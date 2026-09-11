@@ -2,7 +2,7 @@
 title: 'View Functions'
 description: 'How to create custom view functions for advanced query results'
 status: stable
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 platforms: [desktop, web, mobile]
@@ -49,12 +49,14 @@ Two more consequences of the same normalisation:
   returns `(first tuple)` when the tuple has one element and the tuple itself otherwise
   ([`query.cljs:40-46`](../../../../../src/main/frontend/worker/handler/render_resource/query.cljs)).
   A `[:find ?a ?b]` query therefore yields two-element vectors, not maps.
-- **`:result-transform` runs *before* normalisation, so it still sees full entities.** The order in
+- **`:result-transform` runs *before* normalisation, so it still sees the raw rows** — pulled maps
+  for a `(pull …)` query, not DataScript entity objects, because the query is a plain `d/q`
+  ([`worker/handler/query.cljs:243-261`](../../../../../src/main/frontend/worker/handler/query.cljs)). The order in
   `query-result-rows` is: build tuples → filter block results → apply `:result-transform` →
   `normalize-query-row` ([`query.cljs:195-202`](../../../../../src/main/frontend/worker/handler/render_resource/query.cljs)).
   This asymmetry is the key to the recipes in this guide.
 
-> **Looks like a Logseq defect, not a docs defect.** `:result-transform` sees entities and `:view`
+> **Looks like a Logseq defect, not a docs defect.** `:result-transform` sees pulled maps and `:view`
 > sees UUIDs, from the same pipeline, a few lines apart. Any `:view` that wants block text has to
 > get it via `:result-transform`. Worth raising upstream.
 
@@ -126,7 +128,7 @@ The map you type into that code block looks like this:
 
 ## The core pattern: transform, then view
 
-Because `:result-transform` sees entities and `:view` sees normalised cells, the reliable way to
+Because `:result-transform` sees pulled maps and `:view` sees normalised cells, the reliable way to
 render block text is to project it in the transform:
 
 ```clojure
@@ -224,7 +226,8 @@ Project the titles first, then render:
 
 ## Accessing Block Data
 
-Everything in this section applies **inside `:result-transform`**, where rows are still entities.
+Everything in this section applies **inside `:result-transform`**, where rows are still the pulled
+maps — so read only attributes your pull pattern includes.
 By the time `:view` runs, they are UUIDs.
 
 ### Common Fields
@@ -256,7 +259,7 @@ validator is plain `number?`
 ### Access Patterns
 
 ```clojure
-;; Inside :result-transform, rows are entities:
+;; Inside :result-transform, rows are pulled maps:
 (:block/title b)
 
 ;; Closed-value properties are refs — take the ref's title for a display name

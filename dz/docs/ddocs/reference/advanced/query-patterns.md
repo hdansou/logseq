@@ -2,7 +2,7 @@
 title: 'Query Patterns Reference'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 quadrant: 'Reference'
@@ -500,8 +500,9 @@ rather than digging into a map.
 `lookup-kv-then-entity` intercepts the key and `get-properties` builds a `{property-ident value}`
 map from the entity's own property attributes
 (`deps/db/src/logseq/db/common/entity_plus.cljc:138-146`, dispatched at `:162-163`). So
-`(:block/properties e)` works on an entity — inside `:result-transform`, which receives entities —
-but never as a query clause.
+`(:block/properties e)` works on a DataScript entity object, but never as a query clause — and not
+inside `:result-transform` either. A transform receives plain pulled maps from `d/q`
+(`src/main/frontend/worker/handler/query.cljs:243-261`), and a pulled map carries no computed key.
 
 **User property idents are not guessable.** When you create a property named "Status", Logseq mints
 an ident in the `user.property` namespace **with a random 8-character suffix** — one non-digit

@@ -1131,11 +1131,14 @@ Three things worth knowing about this query:
   instead. `:breadcrumb-show?` and `:group-by-page?` are likewise inert —
   `group-by-page?` returns `false` immediately for any DB graph
   (`src/main/frontend/components/query/result.cljs:10-11`).
-- `:result-transform` works, and receives block **entities** before they are
-  normalised (`src/main/frontend/worker/handler/render_resource/query.cljs:181-201`),
-  so `(sort-by :block/title …)` is fine. Sorting by a user property is not: the
-  key in `(:block/properties b)` is the generated ident
-  (`:user.property/Author-a1b2c3d4`), not `:author`.
+- `:result-transform` works, and receives the raw rows before they are normalised
+  (`src/main/frontend/worker/handler/render_resource/query.cljs:181-201`). For a
+  `(pull …)` query those are plain pulled maps from `d/q`, not entities
+  (`src/main/frontend/worker/handler/query.cljs:243-261`), so `(sort-by :block/title …)`
+  works as long as the pull pattern includes `:block/title`. Sorting by a user property
+  is harder: in the pulled map it sits under its generated ident
+  (`:user.property/Author-a1b2c3d4`), not `:author`, and a pulled map has no
+  `:block/properties` key.
 
 ### Citation Tracking
 
