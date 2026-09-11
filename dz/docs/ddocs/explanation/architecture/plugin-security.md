@@ -2,7 +2,7 @@
 title: 'Plugin Security Architecture'
 status: 🟢 Stable
 version: '@logseq/libs v0.3.4'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 quadrant: 'Explanation'
@@ -388,7 +388,7 @@ logseq.provideUI({
 
 Found while auditing this page against `be800f1711`. These are product issues, not documentation issues:
 
-- **`logseq.Git` is dead API.** `IGitProxy` is declared (`libs/src/LSPlugin.ts:1010-1026`) and `logseq.Git` is exposed (`libs/src/LSPlugin.user.ts:1135-1137`), which routes `execCommand` to the host as `git_exec_command` (the `nstag` prefix at `libs/src/LSPlugin.user.ts:1061-1065`, snake-cased in `invokeHostExportedApi`). No such method is exported anywhere under `src/`, so the call reaches `throw new Error('Not existed method #git_exec_command')` (`libs/src/common.ts:331-333`). `IAppProxy.execGitCommand` is deprecated in favour of it (`libs/src/LSPlugin.ts:500-504`), pointing users at a method that cannot work.
+- **`logseq.Git` is dead API.** `IGitProxy` is declared (`libs/src/LSPlugin.ts:1010-1026`) and `logseq.Git` is exposed (`libs/src/LSPlugin.user.ts:1135-1137`), which routes `execCommand` to the host as `git_exec_command` (the `nstag` prefix at `libs/src/LSPlugin.user.ts:1061-1065`, snake-cased in `invokeHostExportedApi`). No such method is exported anywhere under `src/`, so the call reaches `throw new Error('Not existed method #git_exec_command')` (`libs/src/common.ts:328-330`). `IAppProxy.execGitCommand` is deprecated in favour of it (`libs/src/LSPlugin.ts:500-504`), pointing users at a method that cannot work.
 - **`PluginLocalOptions.allow` is declared but never assigned** (`libs/src/LSPlugin.core.ts:224`, consumed at `libs/src/LSPlugin.caller.ts:289`), so the only per-frame restriction the loader can express is permanently unset.
 - **The `effect` flag is attacker-controlled.** It is copied out of the plugin's own `package.json` (`libs/src/LSPlugin.core.ts:705`) and decides whether the plugin frame is same-origin with the app (`:471-480`). A plugin chooses its own origin.
 

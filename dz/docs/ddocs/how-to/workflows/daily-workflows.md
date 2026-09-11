@@ -2,7 +2,7 @@
 title: 'Daily Workflow Setup Guide'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 quadrant: 'How-To'
@@ -181,14 +181,32 @@ g j → Journals (today is at the top)
 ```markdown
 ## Morning Review
 
-- Yesterday: [[<% yesterday %>]]
-  - Completed: {{query (and [[<% yesterday %>]] (task done))}}
-  - Pending:   {{query (and [[<% yesterday %>]] (task todo doing))}}
+- Yesterday: <% yesterday %>
+  - Completed
+    - (and <% yesterday %> (task done))        ← /Query block
+  - Pending
+    - (and <% yesterday %> (task todo doing))        ← /Query block
 - Focus today: [Write your main goal]
 - Energy level: 🟢 High / 🟡 Medium / 🔴 Low
 ```
 
-Two simple-query filters need an explicit `and` — `{{query [[Page]] (task done)}}`
+> **`{{query …}}` does not work in a DB graph.** Typed into a block it renders only a
+> deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Entered as the query
+> of a `/Query` block it becomes a full-text search for that literal text, because `sanitize-q`
+> quotes anything that does not start with `(`, `"`, a page ref or `[?`
+> (`src/main/frontend/components/query/builder.cljs:543-552`). Every simple query in this guide is
+> therefore shown as the bare form you enter after typing `/Query`.
+
+> **Query lines in these templates.** A line marked `← /Query block` is a block of its own: type
+> `/Query` on it and enter the form shown. `/Query` moves the block's whole title into the query
+> (`src/main/frontend/handler/editor.cljs:4377-4394`), so a label cannot share the line and goes in
+> the parent block instead. `<% today %>` and `<% yesterday %>` already insert a page reference
+> (`deps/outliner/src/logseq/outliner/template.cljs:74`), so they are written bare, not inside
+> `[[…]]`. Inside a template they are fixed to the day the template is inserted; in a standalone
+> `/Query` they are recomputed each time the query runs
+> (`src/main/frontend/worker/query_dsl.cljs:92-110`).
+
+Two simple-query filters need an explicit `and` — `[[Page]] (task done)`
 is not an implicit conjunction; `and`, `or` and `not` are the only combinators
 (`src/main/frontend/worker/query_dsl.cljs:548-549`).
 
@@ -319,9 +337,9 @@ While viewing any page:
 ```
 
 **Usage:** `/Template` → "Capture", from anywhere. `<% current page %>` and
-`<% time %>` are two of the five substituted variables; anything else inside
-`<% … %>` stays literal
-(`deps/outliner/src/logseq/outliner/template.cljs:104-112,127-128`).
+`<% time %>` are two of the five substituted variables; any other name loses its
+`<% %>` wrapper and is left as bare text
+(`deps/outliner/src/logseq/outliner/template.cljs:104-112,114-128`).
 
 ### Inbox Processing
 
@@ -342,8 +360,10 @@ Structure:
 
 **Inbox Processing Query:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query [[inbox]]}}
+[[inbox]]
 ```
 
 **Process Daily (5-10 minutes):**
@@ -367,7 +387,7 @@ Structure:
 
 # Meeting: <% current page %>
 
-date:      [[<% today %>]]
+date:      <% today %>
 time:      <% time %>
 attendees:
 duration:
@@ -492,7 +512,7 @@ Clear inbox items:
 
 ```markdown
 g t → Go to tomorrow's journal (config.cljs:405-406)
-or navigate to [[<% tomorrow %>]]
+or navigate to <% tomorrow %>
 
 Prepare:
 
@@ -506,13 +526,13 @@ Prepare:
 ```markdown
 - Evening review                 ← tagged Template
 
-## Evening Review - [[<% today %>]]
+## Evening Review - <% today %>
 
 review-time: <% time %>
 
 ### Completed Today
 
-{{query (and [[<% today %>]] (task done))}}
+(and <% today %> (task done))        ← /Query block
 
 ### What Went Well ✅
 
@@ -557,11 +577,11 @@ notes:
 
 ### Wins This Week 🎉
 
-{{query (and (between -7d today) (task done))}}
+(and (between -7d today) (task done))        ← /Query block
 
 ### Incomplete Items
 
-{{query (and (between -7d today) (task todo doing))}}
+(and (between -7d today) (task todo doing))        ← /Query block
 
 `(between …)` filters on the **journal page** a block sits on: the rule requires
 `[?p :block/tags :logseq.class/Journal]` and compares `:block/journal-day`, a
@@ -607,7 +627,7 @@ created: <% time %>
 
 ## 🌅 Morning Review (5 min)
 
-- [ ] Review yesterday: [[<% yesterday %>]]
+- [ ] Review yesterday: <% yesterday %>
 - [ ] Set daily intention
 - [ ] Check calendar/deadlines
 
@@ -664,7 +684,8 @@ and Canceled (`deps/db/src/logseq/db/frontend/property.cljs:313-318`).
 
 ## 🌙 Evening Review (10 min)
 
-- [ ] Completed: {{query (and [[<% today %>]] (task done))}}
+- [ ] Completed
+  - (and <% today %> (task done))        ← /Query block
 - [ ] Process inbox
 - [ ] Plan tomorrow
 
@@ -678,13 +699,14 @@ improve:
 
 ## 🔗 Related
 
-- Previous: [[<% yesterday %>]]
-- Next: [[<% tomorrow %>]]
+- Previous: <% yesterday %>
+- Next: <% tomorrow %>
 ```
 
 `<% week %>` is not a variable — only `today`, `yesterday`, `tomorrow`, `time`
-and `current page` are substituted, and anything else is left as literal text
-(`deps/outliner/src/logseq/outliner/template.cljs:104-112,127-128`).
+and `current page` are substituted; any other name loses its `<% %>` wrapper, so
+`<% week %>` becomes the bare word `week`
+(`deps/outliner/src/logseq/outliner/template.cljs:104-112,114-128`).
 
 **Auto-Insert Template:**
 
@@ -714,7 +736,7 @@ deliberately includes private tags
 
 # Weekly Review
 
-date: [[<% today %>]]
+date: <% today %>
 
 ---
 
@@ -722,7 +744,7 @@ date: [[<% today %>]]
 
 ### Completed Tasks
 
-{{query (and (between -7d today) (task done))}}
+(and (between -7d today) (task done))        ← /Query block
 count:
 
 ### Goals Progress
@@ -1003,7 +1025,7 @@ sprint:: [[2026-Sprint-04]]
 ```markdown
 - Habit tracker                  ← tagged Template
 
-## Habits - [[<% today %>]]
+## Habits - <% today %>
 
 ### Morning Habits
 
@@ -1043,8 +1065,10 @@ queryable; it survives only as a plugin-SDK back-compat shim
 already encodes both that and the `:block/journal-day` comparison
 (`deps/db/src/logseq/db/frontend/rules.cljc:94-100`):
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (tags Habits) (between -7d today))}}
+(and (tags Habits) (between -7d today))
 ```
 
 ---

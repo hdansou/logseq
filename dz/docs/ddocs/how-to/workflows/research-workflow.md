@@ -2,7 +2,7 @@
 title: 'Research Workflow'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 quadrant: 'How-To'
@@ -189,8 +189,8 @@ Insert a saved template later with `/Template`
 Only five dynamic variables are substituted when a template is applied:
 `<% today %>`, `<% yesterday %>`, `<% tomorrow %>`, `<% time %>` and
 `<% current page %>` (`deps/outliner/src/logseq/outliner/template.cljs:104-112`).
-Anything else inside `<% … %>` is left as literal text
-(`template.cljs:127-128`). There is no `{{title}}`-style prompt for template
+Any other name loses its `<% %>` wrapper and is left as bare text — `<% week %>`
+becomes `week` (`template.cljs:114-128`). There is no `{{title}}`-style prompt for template
 arguments — fill the blanks in after inserting.
 
 **Research Project Template:**
@@ -199,7 +199,7 @@ arguments — fill the blanks in after inserting.
 - Research project        ← tagged Template
   project-type:: [[Research Project]]
   status:: planning
-  started:: [[<% today %>]]
+  started:: <% today %>
   deadline::
   advisor:: [[Person/]]
   collaborators::
@@ -433,9 +433,19 @@ Query by status. The simple-query form is enough here — `(property …)` resol
 the property by its title, so you never have to know the generated ident
 (`src/main/frontend/worker/query_dsl.cljs:343-356`):
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (property reading-status "to-read") (property source-type "Paper"))}}
+(and (property reading-status "to-read") (property source-type "Paper"))
 ```
+
+> **`{{query …}}` does not work in a DB graph.** Typed into a block it renders only a
+> deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Entered as the query
+> of a `/Query` block it becomes a full-text search for that literal text, because `sanitize-q`
+> quotes anything that does not start with `(`, `"`, a page ref or `[?`
+> (`src/main/frontend/components/query/builder.cljs:543-552`). Every simple query in this guide is
+> therefore shown as the bare form you enter after typing `/Query`; in an outline, a line marked
+> `← /Query block` is its own `/Query` block.
 
 Simple-query property names are read as symbols, so a property whose title
 contains a space cannot be named this way — keep research property titles to a
@@ -895,7 +905,7 @@ sub-tags that extend `Concept` (`deps/db/src/logseq/db/frontend/rules.cljc:266-2
 
   ## Related Concept Notes
 
-  {{query (and [[Thesis-ML-Ethics]] (tags Concept))}}
+  (and [[Thesis-ML-Ethics]] (tags Concept))        ← /Query block
 
   Selected concepts:
 
@@ -1150,8 +1160,10 @@ not queryable.
 Or, as a simple query, since a bare string is a full-text `block-content` filter
 (`deps/db/src/logseq/db/frontend/rules.cljc:84-87`):
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and [[Smith-2025-Ethics-AI]] "embed")}}
+(and [[Smith-2025-Ethics-AI]] "embed")
 ```
 
 ---

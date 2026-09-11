@@ -2,7 +2,7 @@
 title: 'Workflow Automation Tutorial'
 status: 🟢 Stable
 version: 'Schema v65.33 / @logseq/libs v0.3.4'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 quadrant: 'Tutorial'
@@ -212,8 +212,12 @@ variable to drive one.
 
 > **Deleted:** an earlier revision of this page showed an "auto-dashboard" template using
 > `{{currentTime}}`, `{{sum of tasks}}`, `{{today tasks}}` and `{{overdue count}}`. None of these
-> exist. Logseq's `{{...}}` macros are the built-in `{{query ...}}` plus whatever you define under
-> `:macros` in `config.edn` (`deps/common/src/logseq/common/util/macro.cljs:1-40`).
+> exist. Logseq's `{{...}}` macros are the built-in `img` macro
+> (`src/main/frontend/state.cljs:512-513`), the embed and video macros the block renderer handles
+> (`src/main/frontend/components/block.cljs:1870-1920`), and whatever you define under `:macros` in
+> `config.edn` (`deps/common/src/logseq/common/util/macro.cljs:1-40`). `{{query …}}` is not one of
+> them any more: in a DB graph it renders only a deprecation warning (`block.cljs:1870-1871`); use
+> `/Query`.
 
 ### Auto-Tagging System
 
@@ -363,8 +367,8 @@ the outliner operation `:apply-template`
 > `logseq.UI.prompt` and `logseq.UI.select`. **None of these exist.** `IUIProxy`
 > (`libs/src/LSPlugin.ts:1032-1043`) has exactly six members — `showMsg`, `closeMsg`,
 > `queryElementRect`, `queryElementById`, `checkSlotValid`, `resolveThemeCssPropsVals` — and no
-> prompt or picker. Logseq's `{{...}}` macros are the built-in `{{query ...}}` plus user macros
-> declared under `:macros` in `config.edn`
+> prompt or picker. Logseq's `{{...}}` macros are the built-in `img` macro, the embed and video
+> macros the block renderer handles, and user macros declared under `:macros` in `config.edn`
 > (`deps/common/src/logseq/common/util/macro.cljs:1-40`); there is no `input`, `select`, `cursor`
 > or `date` macro. The whole engine has been replaced below with the template API that does exist.
 

@@ -2,7 +2,7 @@
 title: 'Task Management Workflows'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-10'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 quadrant: 'How-To'
@@ -313,9 +313,19 @@ generated from that list as `Priority <name>`, plus a `No priority` entry
 
 **Priority Query:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (task todo doing) (priority high urgent))}}
+(and (task todo doing) (priority high urgent))
 ```
+
+> **`{{query …}}` does not work in a DB graph.** Typed into a block it renders only a
+> deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Entered as the query
+> of a `/Query` block it becomes a full-text search for that literal text, because `sanitize-q`
+> quotes anything that does not start with `(`, `"`, a page ref or `[?`
+> (`src/main/frontend/components/query/builder.cljs:543-552`). Every simple query in this guide is
+> therefore shown as the bare form you enter after typing `/Query`; in an outline, a line marked
+> `← /Query block` is its own `/Query` block.
 
 Both `(task …)` and `(priority …)` are simple-query operators that go through
 the default-aware rules (`src/main/frontend/worker/query_dsl.cljs:411-429`), and
@@ -398,7 +408,7 @@ later with `/Template` (`src/main/frontend/commands.cljs:339-343`).
 ```markdown
 - (type here)  #Task #inbox   ← plus the Template tag
   Status:   Todo
-  captured: [[<% today %>]]
+  captured: <% today %>
   source:   <% current page %>
 ```
 
@@ -509,8 +519,10 @@ Note that `[[GTD/Next Actions]]` creates two pages — `GTD` and
 
 **Context Query:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and [[Office]] (task todo))}}
+(and [[Office]] (task todo))
 ```
 
 Or, as an advanced query with the page name passed in — `:block/name` is the
@@ -534,7 +546,7 @@ pages the name to pass is the leaf:
 ```markdown
 - GTD weekly review           ← tagged Template
 
-# GTD Weekly Review - [[<% today %>]]
+# GTD Weekly Review - <% today %>
 
 ## 1. Get Clear
 
@@ -645,7 +657,7 @@ Examples:
 
 ```markdown
 - <Project Name>  #Project    ← plus the Template tag
-  created:  [[<% today %>]]
+  created:  <% today %>
   Deadline: <pick a date>
   para-status: active
 
@@ -679,8 +691,10 @@ than as a page-name prefix — `(tags …)` is a first-class query operator and 
 also picks up tags that extend the one you name
 (`deps/db/src/logseq/db/frontend/rules.cljc:266-295`):
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (tags Project) (property para-status "active"))}}
+(and (tags Project) (property para-status "active"))
 ```
 
 If you prefer the page hierarchy, walk `:block/parent` instead, which is what
@@ -722,7 +736,7 @@ Examples:
 
 ```markdown
 - <Area Name>  #Area          ← plus the Template tag
-  created: [[<% today %>]]
+  created: <% today %>
 
 ## Responsibilities
 
@@ -950,8 +964,10 @@ The six built-in statuses already give you Kanban columns, so you do not need a
 
 **Visual Query:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (task backlog todo doing "in review" done)}}
+(task backlog todo doing "in review" done)
 ```
 
 `:group-by-page?` will not give you columns: it returns `false` immediately for
@@ -994,14 +1010,18 @@ render one query as a board, use the view builder on the query block, or write a
 
 **By Priority:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (task todo) (priority urgent high))}}
+(and (task todo) (priority urgent high))
 ```
 
 **By Project:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and [[Alpha]] (task todo doing))}}
+(and [[Alpha]] (task todo doing))
 ```
 
 **Quick Wins (< 15 min):**
@@ -1026,8 +1046,10 @@ With `time-estimate` as a **number** property holding minutes:
 
 **Energy-Based:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (task todo) (property energy "high"))}}
+(and (task todo) (property energy "high"))
 ```
 
 **Waiting Items:**
@@ -1037,14 +1059,18 @@ not fit, add your own `waiting-for` property and query on its presence — the
 one-argument `(property …)` form matches "has this property at all"
 (`src/main/frontend/worker/query_dsl.cljs:394-401`):
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (task todo doing) (property waiting-for))}}
+(and (task todo doing) (property waiting-for))
 ```
 
 **Completed This Week:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (task done) (between -7d today))}}
+(and (task done) (between -7d today))
 ```
 
 The `between` rule filters on the **journal page** the block sits on: it
@@ -1081,12 +1107,14 @@ is the deprecated spelling (`inputs.cljs:80`).
 ```markdown
 - Daily morning review        ← tagged Template
 
-## Morning Review - [[<% today %>]]
+## Morning Review - <% today %>
 
 ### Yesterday
 
-- Completed: {{query (and [[<% yesterday %>]] (task done))}}
-- Pending:   {{query (and [[<% yesterday %>]] (task todo))}}
+- Completed
+  - (and <% yesterday %> (task done))        ← /Query block
+- Pending
+  - (and <% yesterday %> (task todo))        ← /Query block
 
 ### Today's Plan
 
@@ -1101,8 +1129,17 @@ is the deprecated spelling (`inputs.cljs:80`).
 3. (task)  #Task  Status: Todo, Priority: High
 ```
 
+> **Query lines in these templates.** A line marked `← /Query block` is a block of its own: type
+> `/Query` on it and enter the form shown. `/Query` moves the block's whole title into the query
+> (`src/main/frontend/handler/editor.cljs:4377-4394`), so a label cannot share the line and goes in
+> the parent block instead. `<% today %>` and `<% yesterday %>` already insert a page reference
+> (`deps/outliner/src/logseq/outliner/template.cljs:74`), so they are written bare, not inside
+> `[[…]]`. Inside a template they are fixed to the day the template is inserted; in a standalone
+> `/Query` they are recomputed each time the query runs
+> (`src/main/frontend/worker/query_dsl.cljs:92-110`).
+
 Two simple-query filters have to be joined by an explicit boolean operator —
-`{{query [[Page]] (task done)}}` is not an implicit AND. `and`, `or` and `not`
+`[[Page]] (task done)` is not an implicit AND. `and`, `or` and `not`
 are the only combinators (`src/main/frontend/worker/query_dsl.cljs:548-549`).
 
 **Evening Review (10 min):**
@@ -1110,15 +1147,15 @@ are the only combinators (`src/main/frontend/worker/query_dsl.cljs:548-549`).
 ```markdown
 - Daily evening review        ← tagged Template
 
-## Evening Review - [[<% today %>]]
+## Evening Review - <% today %>
 
 ### Completed
 
-{{query (and [[<% today %>]] (task done))}}
+(and <% today %> (task done))        ← /Query block
 
 ### Incomplete
 
-{{query (and [[<% today %>]] (task todo doing))}}
+(and <% today %> (task todo doing))        ← /Query block
 
 ### Rollover Decisions
 
@@ -1142,7 +1179,7 @@ improve-tomorrow::
 
 # Weekly Review
 
-date: [[<% today %>]]
+date: <% today %>
 
 ## 1. Gather & Process (10 min)
 
@@ -1155,12 +1192,12 @@ date: [[<% today %>]]
 
 ### Completed This Week
 
-{{query (and (between -7d today) (task done))}}
+(and (between -7d today) (task done))        ← /Query block
 Count:
 
 ### Incomplete Tasks
 
-{{query (task todo doing "in review")}}
+(task todo doing "in review")        ← /Query block
 Action: Reschedule, cancel, or keep
 
 ### Projects Review
@@ -1205,7 +1242,7 @@ time-blocks::
 
 # Monthly Review
 
-date: [[<% today %>]]
+date: <% today %>
 
 ## 1. Projects (20 min)
 
@@ -1216,7 +1253,7 @@ date: [[<% today %>]]
 
 ### Project Health
 
-{{query (property project)}}
+(property project)        ← /Query block
 
 ### Decisions
 
@@ -1278,8 +1315,10 @@ UUID (`deps/common/src/logseq/common/util/block_ref.cljs:9`); get one with
 
 **Query for Blocked Tasks:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (and (task todo doing) (property depends-on))}}
+(and (task todo doing) (property depends-on))
 ```
 
 ### Time Tracking
@@ -1324,8 +1363,10 @@ compute a streak — `streak` is yours to update.
 
 **Habit Query:**
 
+Type `/Query`, then enter:
+
 ```clojure
-{{query (property habit true)}}
+(property habit true)
 ```
 
 ### Batch Processing
