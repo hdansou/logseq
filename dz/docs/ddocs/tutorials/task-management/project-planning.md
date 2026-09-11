@@ -3,12 +3,12 @@ title: 'Project Planning'
 description: 'Learn to plan and track larger projects with Logseq'
 type: tutorial
 status: stable
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-11'
 verifiedAgainst: 'be800f1711'
-reviewStatus: merged-not-fully-audited
+reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
-graphType: [file, db]
+graphType: [db]
 difficulty: intermediate
 timeToComplete: '25 minutes'
 prerequisites: ['todo-basics']
@@ -17,19 +17,16 @@ relatedDocs:
     - '[Todo Basics](todo-basics.md)'
   howTo:
     - '[Advanced Queries](../../how-to/queries/advanced-queries.md)'
+    - '[View Functions](../../how-to/content/view-types.md)'
 ---
 
 # Project Planning
 
-> **Last revised:** 2026-09-09
+> **Last revised:** 2026-09-11
 
-> Learn to plan, organize, and track larger projects in Logseq.
+> Learn to plan, organize, and track larger projects in a Logseq DB graph.
 
-> **Note on syntax:** The markdown snippets in Steps 1-3, 6 and 7 use file-graph syntax
-> (`TODO`/`DONE` markers, `[#A]` priorities, `SCHEDULED:`/`DEADLINE:` lines, `key:: value`
-> properties). In a **DB graph** none of those are text: you set the built-in **Status**,
-> **Priority**, **Scheduled** and **Deadline** properties on the block instead — see
-> [Todo Basics](todo-basics.md). The dashboard queries in Steps 5-7 are DB-graph queries.
+> **DB graphs only.** In a DB graph, `TODO`/`DONE` markers, `[#A]` priorities, `SCHEDULED:`/`DEADLINE:` lines and `key:: value` properties are not syntax. They are plain text. This tutorial sets the built-in **Status**, **Priority**, **Scheduled**, **Deadline** and **Assignee** properties instead, and adds other properties with `/Add property`. The outlines below show the result: a property is written as `Name: value` under its block, but you set it through the UI rather than typing that text.
 
 ## What You'll Learn
 
@@ -49,33 +46,31 @@ Every project starts with a dedicated page.
 
 ### Basic Structure
 
-Create a new page called "Project Alpha":
+1. Create a new page called "Project Alpha".
+2. Click **Set property** under the page title to add page properties.
+3. Add these properties:
+   - **Stage**, with the value `Active`. Don't call it "Status": that is the built-in task property, and setting it on a page also tags the page `#Task`.
+   - **Owner**, a node property pointing at `[[Your Name]]`.
+   - **Start date** and **Target date**, as date properties.
+4. Add top-level blocks for the sections, with child blocks under each:
 
-```markdown
-# Project Alpha
+```
+Project Alpha                         ← page
+  Stage: Active                       (page properties)
+  Owner: [[Your Name]]
+  Start date: Feb 1st, 2026
+  Target date: Mar 15th, 2026
 
-status:: active
-owner:: [[Your Name]]
-start-date:: [[2026-02-01]]
-target-date:: [[2026-03-15]]
-
-## Overview
-
-A brief description of what this project is about.
-
-## Goals
-
-- Goal 1
-- Goal 2
-- Goal 3
-
-## Tasks
-
-(We'll add these next)
-
-## Notes
-
-(Reference materials and discussions)
+- Overview
+  - A brief description of what this project is about.
+- Goals
+  - Goal 1
+  - Goal 2
+  - Goal 3
+- Tasks
+  - (We'll add these next)
+- Notes
+  - (Reference materials and discussions)
 ```
 
 ### Project Template
@@ -84,44 +79,33 @@ Save this as a template for reuse:
 
 1. Create the blocks you want to reuse under a single parent block
 2. Tag that parent with `#Template` to turn it into a template
-3. Later, use the slash command `/Template` ("Insert a created template here") to drop a
-   copy wherever you need it
+3. Later, use the slash command `/Template` ("Insert a created template here") to insert a copy wherever you need it. The parent's child blocks are what get inserted.
 
-> **Removed:** The file-graph "right-click -> Make template" menu item. There is no such
-> command in the current source; templates are created by tagging a node with `#Template`.
+> **Removed:** the file-graph "right-click → Make template" menu item. `make-template`, "make template" and "make a template" appear nowhere under `src/main` or in `en.edn`. Templates are created by tagging a node with `#Template`.
 
 ---
 
 ## Step 2: Break Down Into Phases
 
-Organize work into logical phases:
+Organize work into logical phases. Make each phase a block with its own **Stage** property, and put its tasks underneath. Set each task's status with `/Todo`, `/Doing` or `/Done`, or with `Cmd/Ctrl+Enter`:
 
-```markdown
-## Phases
-
-### Phase 1: Research
-
-status:: complete
-
-- DONE Gather requirements
-- DONE Analyze competitors
-- DONE Interview stakeholders
-
-### Phase 2: Design
-
-status:: in-progress
-
-- DONE Create wireframes
-- DOING Design mockups
-- TODO Get feedback
-
-### Phase 3: Implementation
-
-status:: not-started
-
-- TODO Build MVP
-- TODO Testing
-- TODO Deploy
+```
+- Phases
+  - Phase 1: Research
+    Stage: Complete
+    - Gather requirements          (Status: Done)
+    - Analyze competitors          (Status: Done)
+    - Interview stakeholders       (Status: Done)
+  - Phase 2: Design
+    Stage: In progress
+    - Create wireframes            (Status: Done)
+    - Design mockups               (Status: Doing)
+    - Get feedback                 (Status: Todo)
+  - Phase 3: Implementation
+    Stage: Not started
+    - Build MVP                    (Status: Todo)
+    - Testing                      (Status: Todo)
+    - Deploy                       (Status: Todo)
 ```
 
 ---
@@ -130,35 +114,42 @@ status:: not-started
 
 ### Main Task Breakdown
 
-```markdown
-## All Tasks
+Under **Tasks**, add one block per task, then set:
 
-TODO [#A] Complete requirements document
-SCHEDULED: <2026-02-05>
-assignee:: [[Alice]]
+- **Status** with `/Todo`
+- **Priority** with `/Priority High` or `/Priority Medium`
+- **Scheduled** or **Deadline** with `/Scheduled` or `/Deadline`
+- **Assignee** with `/Add property` → Assignee. Assignee is a built-in node property that can hold several people.
+- **depends-on**, a node property you create with `/Add property`
 
-TODO [#A] Design system architecture
-DEADLINE: <2026-02-10>
-assignee:: [[Bob]]
-
-TODO [#B] Set up development environment
-assignee:: [[Alice]]
-
-TODO [#B] Create component library
-SCHEDULED: <2026-02-15>
-assignee:: [[Carol]]
-depends-on:: [[Design system architecture]]
+```
+- All Tasks
+  - Complete requirements document
+    Status: Todo · Priority: High · Scheduled: Feb 5th, 2026
+    Assignee: [[Alice]]
+  - Design system architecture
+    Status: Todo · Priority: High · Deadline: Feb 10th, 2026
+    Assignee: [[Bob]]
+  - Set up development environment
+    Status: Todo · Priority: Medium
+    Assignee: [[Alice]]
+  - Create component library
+    Status: Todo · Priority: Medium · Scheduled: Feb 15th, 2026
+    Assignee: [[Carol]]
+    depends-on: Design system architecture
 ```
 
 ### Nested Tasks
 
-```markdown
-TODO Build user authentication
-TODO Design login flow
-TODO Implement backend API
-TODO Create frontend components
-TODO Write tests
-TODO Document API
+Indent subtasks under their parent task with `Tab`:
+
+```
+- Build user authentication        (Status: Todo)
+  - Design login flow              (Status: Todo)
+  - Implement backend API          (Status: Todo)
+  - Create frontend components     (Status: Todo)
+  - Write tests                    (Status: Todo)
+  - Document API                   (Status: Todo)
 ```
 
 ---
@@ -167,89 +158,91 @@ TODO Document API
 
 ### Reference Other Pages
 
-```markdown
-## Related
-
-- See [[Meeting Notes - 2026-02-01]] for kickoff discussion
-- Requirements in [[Project Alpha - Requirements]]
-- Design specs in [[Project Alpha - Design]]
+```
+- Related
+  - See [[Meeting Notes - 2026-02-01]] for kickoff discussion
+  - Requirements in [[Project Alpha - Requirements]]
+  - Design specs in [[Project Alpha - Design]]
 ```
 
 ### Bidirectional Links
 
-When you link to another page, it automatically shows as a "Linked Reference" on that page.
+When you link to another page, the linking block shows up in that page's linked references.
 
-For example, if you have a page for [[Alice]], her name will show all projects she's assigned to.
+Property values count as links too. For example, a task whose **Assignee** is `[[Alice]]` references Alice's page, so every task assigned to her appears on her page.
 
 ---
 
 ## Step 5: Build a Project Dashboard
 
-Create a query-based dashboard to track progress:
+Create a query-based dashboard to track progress. Each query lives in its own block, and `/Query` or `/Advanced Query` turns the whole block into the query. So put each heading in a parent block and the query in a child block:
+
+- **Dashboard**
+  - **🔴 High Priority**
+    - `/Advanced Query` block (below: "Urgent Tasks")
+  - **🟡 In Progress**
+    - `/Advanced Query` block ("Currently Working")
+  - **✅ Recently Completed**
+    - `/Advanced Query` block ("Done This Week")
+
+**Urgent Tasks:**
 
 ```clojure
-## Dashboard
-
-### 🔴 High Priority
-#+BEGIN_QUERY
-{:title "Urgent Tasks"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?project
-         :where [?b :block/refs ?p]
-                [?p :block/name ?project]
-                [?b :block/tags :logseq.class/Task]
-                [?b :logseq.property/status ?s]
-                [?s :db/ident ?status]
-                [(contains? #{:logseq.property/status.todo
-                              :logseq.property/status.doing} ?status)]
-                [?b :logseq.property/priority ?pr]
-                [?pr :db/ident :logseq.property/priority.high]]
+         :where
+         [?p :block/name ?project]
+         [?b :block/page ?p]
+         [?b :block/tags ?t]
+         [?t :db/ident :logseq.class/Task]
+         [?b :logseq.property/status ?s]
+         [?s :db/ident ?status]
+         [(contains? #{:logseq.property/status.todo
+                       :logseq.property/status.doing} ?status)]
+         [?b :logseq.property/priority ?pr]
+         [?pr :db/ident :logseq.property/priority.high]]
  :inputs ["project alpha"]}
-#+END_QUERY
-
-### 🟡 In Progress
-#+BEGIN_QUERY
-{:title "Currently Working"
- :query [:find (pull ?b [*])
-         :in $ ?project
-         :where [?b :block/refs ?p]
-                [?p :block/name ?project]
-                [?b :logseq.property/status ?s]
-                [?s :db/ident :logseq.property/status.doing]]
- :inputs ["project alpha"]}
-#+END_QUERY
-
-### ✅ Recently Completed
-#+BEGIN_QUERY
-{:title "Done This Week"
- :query [:find (pull ?b [*])
-         :in $ ?project ?week-ago
-         :where [?b :block/refs ?p]
-                [?p :block/name ?project]
-                [?b :logseq.property/status ?s]
-                [?s :db/ident :logseq.property/status.done]
-                [?b :block/updated-at ?updated]
-                [(>= ?updated ?week-ago)]]
- :inputs ["project alpha" :-7d-ms]}
-#+END_QUERY
 ```
 
-> **Note:** These queries use the DB graph property model. Tasks are tagged with
-> `:logseq.class/Task` and use `:logseq.property/status` (closed values
-> `status.backlog`, `status.todo`, `status.doing`, `status.in-review`, `status.done`,
-> `status.canceled`) and `:logseq.property/priority` (`priority.low`, `priority.medium`,
-> `priority.high`, `priority.urgent`) instead of the legacy `:block/marker` and
-> `:block/priority` attributes.
+**Currently Working:**
+
+```clojure
+{:query [:find (pull ?b [*])
+         :in $ ?project
+         :where
+         [?p :block/name ?project]
+         [?b :block/page ?p]
+         [?b :logseq.property/status ?s]
+         [?s :db/ident :logseq.property/status.doing]]
+ :inputs ["project alpha"]}
+```
+
+**Done This Week:**
+
+```clojure
+{:query [:find (pull ?b [*])
+         :in $ ?project ?week-ago
+         :where
+         [?p :block/name ?project]
+         [?b :block/page ?p]
+         [?b :logseq.property/status ?s]
+         [?s :db/ident :logseq.property/status.done]
+         [?b :block/updated-at ?updated]
+         [(>= ?updated ?week-ago)]]
+ :inputs ["project alpha" :-7d-ms]}
+```
+
+`:block/name` is the page title in lower case, so the input is `"project alpha"`. `:block/page` matches every block on the page, including nested subtasks. `:block/updated-at` changes on any edit, so "Done This Week" means "done, and last edited this week".
+
+> **Corrected:** an earlier version matched tasks with `[?b :block/refs ?p]`. That finds blocks that *link to* Project Alpha, not the tasks written on its page. If you track tasks from other pages by linking them to the project, use `:block/refs` instead.
+
+> **Removed:** the `#+BEGIN_QUERY` … `#+END_QUERY` wrappers and the `:title` keys. In a DB graph, `#+BEGIN_QUERY` is deprecated in favour of `/Advanced Query`, and `:title` is not a query key. Enter the bare map.
+
+> **Note:** these queries use the DB graph property model. A task is tagged with `:logseq.class/Task`. Its `:logseq.property/status` has the closed values `status.backlog`, `status.todo`, `status.doing`, `status.in-review`, `status.done` and `status.canceled`, and its `:logseq.property/priority` has `priority.low`, `priority.medium`, `priority.high` and `priority.urgent`. The legacy `:block/marker` and `:block/priority` attributes do not exist.
 >
-> Status and priority values are **references** to closed-value entities, so a query
-> binds an entity id, not a keyword. Match the identity with a datom pattern
-> (`[?s :db/ident :logseq.property/status.done]`) rather than calling `(:db/ident ?s)`
-> inside a predicate — a predicate receives the raw entity id, so keyword lookup on it
-> returns `nil` and the clause never matches.
+> Status and priority values are **references** to closed-value entities, so a query binds an entity id, not a keyword. Match the identity with a datom pattern such as `[?s :db/ident :logseq.property/status.done]`, rather than calling `(:db/ident ?s)` inside a predicate. A predicate receives the raw entity id, so a keyword lookup on it returns `nil` and the clause never matches.
 >
-> Simpler alternative: the built-in `task` and `priority` rules are injected into
-> advanced queries automatically, so `(task ?b #{"Todo" "Doing"})` and
-> `(priority ?b #{"High"})` also work and are easier to read.
+> Simpler alternative: the built-in `task` and `priority` rules are added to advanced queries automatically. `(task ?b #{"Todo" "Doing"})` and `(priority ?b #{"High"})` also work, and they are easier to read.
 
 ---
 
@@ -257,51 +250,41 @@ Create a query-based dashboard to track progress:
 
 ### Milestone View
 
-```markdown
-## Milestones
+Make each milestone a task with a **Deadline**, and list its criteria as child blocks:
 
-TODO 🎯 Milestone 1: Requirements Complete
-DEADLINE: <2026-02-10>
-
-- Requirements doc approved
-- Stakeholder sign-off
-
-TODO 🎯 Milestone 2: Design Approved  
-DEADLINE: <2026-02-20>
-
-- All mockups reviewed
-- Design system complete
-
-TODO 🎯 Milestone 3: MVP Launch
-DEADLINE: <2026-03-15>
-
-- Core features working
-- Testing complete
-- Deployed to staging
+```
+- Milestones
+  - 🎯 Milestone 1: Requirements Complete
+    Status: Todo · Deadline: Feb 10th, 2026
+    - Requirements doc approved
+    - Stakeholder sign-off
+  - 🎯 Milestone 2: Design Approved
+    Status: Todo · Deadline: Feb 20th, 2026
+    - All mockups reviewed
+    - Design system complete
+  - 🎯 Milestone 3: MVP Launch
+    Status: Todo · Deadline: Mar 15th, 2026
+    - Core features working
+    - Testing complete
+    - Deployed to staging
 ```
 
 ### Timeline Query
 
-Show upcoming deadlines:
+To show upcoming deadlines, add a parent block **📅 Upcoming Deadlines** with an `/Advanced Query` child block:
 
 ```clojure
-#+BEGIN_QUERY
-{:title "📅 Upcoming Deadlines"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?today-ms ?project
-         :where [?b :block/refs ?p]
-                [?p :block/name ?project]
-                [?b :logseq.property/deadline ?d]
-                [(>= ?d ?today-ms)]]
+         :where
+         [?p :block/name ?project]
+         [?b :block/page ?p]
+         [?b :logseq.property/deadline ?d]
+         [(>= ?d ?today-ms)]]
  :inputs [:start-of-today-ms "project alpha"]}
-#+END_QUERY
 ```
 
-> **Note:** `Deadline` and `Scheduled` are `:datetime` properties, stored as epoch
-> milliseconds directly on the block. Compare them against a millisecond input such as
-> `:start-of-today-ms`, `:end-of-today-ms` or a relative form like `:+7d-end`.
-> The plain `:today` input resolves to a `YYYYMMDD` integer (for journal-day
-> comparisons), so comparing it against a datetime property silently matches everything.
+> **Note:** `Deadline` and `Scheduled` are `:datetime` properties, stored as epoch milliseconds directly on the block. Compare them against a millisecond input such as `:start-of-today-ms`, `:end-of-today-ms`, or a relative form like `:+7d-end`. The plain `:today` input resolves to a `YYYYMMDD` integer, meant for journal-day comparisons. Any epoch-millisecond value is far larger than that integer, so `(>= ?d ?today)` is true for every deadline.
 
 ---
 
@@ -311,37 +294,34 @@ Show upcoming deadlines:
 
 Use properties to assign work:
 
-```markdown
-TODO Review design mockups
-assignee:: [[Alice]]
-reviewer:: [[Bob]]
-status:: waiting-review
+- **Assignee**, the built-in property
+- **reviewer**, a node property you create with `/Add property`
+- **Status** set to **In Review** with `/In Review`
+
+```
+- Review design mockups
+  Status: In Review
+  Assignee: [[Alice]]
+  reviewer: [[Bob]]
 ```
 
 ### Person Dashboard
 
-Create a page for each team member showing their tasks:
+On each team member's page, add a parent block such as **Alice's Tasks** with an `/Advanced Query` child block:
 
 ```clojure
-## [[Alice]]'s Tasks
-
-#+BEGIN_QUERY
-{:title "Assigned to Alice"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :in $ ?assignee-name
-         :where [?b :block/tags :logseq.class/Task]
-                [?b :logseq.property/status ?s]
-                [?s :db/ident ?status]
-                [(contains? #{:logseq.property/status.todo
-                              :logseq.property/status.doing} ?status)]
-                [?b :user.property/assignee ?person]
-                [?person :block/title ?assignee-name]]
+         :where
+         (task ?b #{"Todo" "Doing"})
+         [?b :logseq.property/assignee ?person]
+         [?person :block/title ?assignee-name]]
  :inputs ["Alice"]}
-#+END_QUERY
 ```
 
-> **Note:** Custom properties like `assignee` are namespaced as `:user.property/assignee`
-> in DB graphs. The property must be created in your graph before using it in queries.
+To reuse one query on every person's page, replace the name with `:current-page` and match `[?person :block/name ?assignee-name]`. That input resolves to the lower-cased title of the page holding the query block.
+
+> **Corrected:** an earlier version queried `:user.property/assignee`. Assignee is the built-in `:logseq.property/assignee`. A property you create yourself gets an ident with a random suffix, such as `:user.property/reviewer-` followed by eight random characters, so `:user.property/reviewer` alone never matches.
 
 ---
 
@@ -349,38 +329,29 @@ Create a page for each team member showing their tasks:
 
 ### Create Review Template
 
-```markdown
-# Weekly Review - <% today %>
+Create a block tagged `#Template`. Its children are what gets inserted:
 
-## Progress This Week
-
-- Completed:
-  -
-- In Progress:
-  -
-
-## Blockers
-
--
-
-## Next Week
-
--
-
-## Metrics
-
-tasks-completed:: 0
-tasks-added:: 0
 ```
+- Weekly review template #Template
+  - Weekly Review - <% today %>
+    - Progress This Week
+      - Completed:
+      - In Progress:
+    - Blockers
+    - Next Week
+```
+
+When you insert it with `/Template`, `<% today %>` becomes a reference to today's journal page. It is stored as `[[<uuid>]]` and displayed as the journal's title. If you want counts such as tasks completed, add number properties with `/Add property`. `tasks-completed:: 0` text does not create a property.
 
 ### Link Reviews to Project
 
-```markdown
-## Weekly Reviews
+If you keep each review on its own page, list them on the project page:
 
-- [[Weekly Review - 2026-02-07]]
-- [[Weekly Review - 2026-02-14]]
-- [[Weekly Review - 2026-02-21]]
+```
+- Weekly Reviews
+  - [[Weekly Review - 2026-02-07]]
+  - [[Weekly Review - 2026-02-14]]
+  - [[Weekly Review - 2026-02-21]]
 ```
 
 ---
@@ -391,9 +362,9 @@ Create your own project:
 
 1. Create page "Home Office Setup"
 2. Add phases: Plan, Buy, Assemble, Organize
-3. Add 3-4 tasks per phase with priorities
-4. Set deadlines for key milestones
-5. Create a simple dashboard query
+3. Add 3-4 tasks per phase, and set a priority on each with `/Priority`
+4. Set deadlines for key milestones with `/Deadline`
+5. Create a simple dashboard query. Type `/Query`, then enter `(and (task todo doing) (page "Home Office Setup"))`
 6. Link to any reference pages (inspiration, shopping lists)
 
 ---
@@ -402,7 +373,7 @@ Create your own project:
 
 ### Keep Projects Visible
 
-Pin important project pages to the sidebar for quick access.
+Choose **Add to Favorites** from a project page's menu. The page then appears under **Favorites** in the left sidebar.
 
 ### Regular Updates
 
@@ -410,15 +381,17 @@ Update task status daily. Stale data makes planning unreliable.
 
 ### Archive Completed Projects
 
-When done, change status to "complete" and optionally move to an archive page.
+When a project is done, set its **Stage** to "Complete", and optionally move it to an archive page.
 
 ### Use Namespaces
 
-Organize related pages with namespaces:
+Organize related pages with namespaced titles:
 
 - `Project Alpha/Requirements`
 - `Project Alpha/Design`
 - `Project Alpha/Meeting Notes`
+
+In a DB graph, a title like `Project Alpha/Requirements` creates one page per segment. `Requirements` becomes a child of `Project Alpha`, and the top-level page sits under the built-in **Library** page.
 
 ---
 
@@ -441,4 +414,4 @@ Organize related pages with namespaces:
 
 ---
 
-_Last updated: 2026-09-09_
+_Last updated: 2026-09-11_

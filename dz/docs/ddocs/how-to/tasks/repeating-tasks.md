@@ -3,25 +3,34 @@ title: 'Setting Up Repeating Tasks'
 status: 🟢
 since-version: 'v65.0'
 quadrant: 'How-To'
-last-verified: '2026-09-09'
+last-verified: '2026-09-11'
 verified-against: 'be800f1711'
-reviewStatus: merged-not-fully-audited
+reviewStatus: audited
 platform: 'All'
 related-docs:
   - 'tutorials/task-management/todo-basics.md'
-  - 'reference/features/property-history.md'
-  - 'reference/database/property-types.md'
+  - 'how-to/tasks/disable-task-time-tracking.md'
+  - 'reference/data/properties-reference.md'
 ---
 
 # Setting Up Repeating Tasks
 
-> **Last revised:** 2026-09-09 (verified against `be800f1711`)
+> **Last revised:** 2026-09-11 (verified against `be800f1711`)
 
-Learn how to create tasks that automatically repeat on a schedule, perfect for recurring activities, habits, and regular reviews.
+This guide shows how to make a task in a Logseq **DB graph** repeat. When you mark it Done, Logseq moves its date forward and sets it back to Todo. It suits recurring activities, habits and regular reviews.
+
+> **File-graph syntax does not apply.** Org repeater cookies such as `SCHEDULED: <2026-01-11 Sun .+1d>`, `TODO`/`DONE` text markers, and `key:: value` lines such as `repeat/recur-unit:: day` are file-graph syntax. A DB graph reads none of them. Repeating is stored in hidden built-in properties that the date picker sets for you ([property.cljs:354-399](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399)). Importing a file graph converts its `.+`, `+` and `++` repeaters into those properties ([exporter.cljs:558-585](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L558-L585)).
 
 ## Overview
 
-Repeating tasks in Logseq automatically reschedule themselves when completed. The repeat engine uses a repeat type to decide how the next occurrence is calculated, and it can toggle a configured checked property instead of only `status`. This is ideal for:
+A repeating task reschedules itself when you complete it. After each transaction, the DB worker runs its built-in commands ([pipeline.cljs:515-518](../../../../../src/main/frontend/worker/pipeline.cljs#L515-L518)). When a task has **Repeat task** turned on and its Status changes to Done, the "Repeated task" command:
+
+1. moves the task's Scheduled and/or Deadline date to the next occurrence, and
+2. sets Status back to Todo ([commands.cljs:18-25](../../../../../src/main/frontend/worker/commands.cljs#L18-L25)).
+
+The same block is updated in place. No copy is created. The command does not run for an undo, a rebase, or changes that arrive from sync or a graph download ([pipeline.cljs:515-517](../../../../../src/main/frontend/worker/pipeline.cljs#L515-L517)).
+
+This is ideal for:
 
 - Daily habits (exercise, journaling)
 - Weekly reviews (team meetings, planning sessions)
@@ -30,216 +39,145 @@ Repeating tasks in Logseq automatically reschedule themselves when completed. Th
 
 ## Findings: New Capabilities
 
-- `repeat/repeat-type` is a first-class setting with three behaviors: `dotted-plus` advances from completion, `plus` advances from the original scheduled date, and `double-plus` advances from the scheduled date while skipping forward to the next future occurrence.
-- `repeat/repeat-type` defaults to `double-plus`, both as the property default value ([property.cljs:392](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L392)) and as the runtime fallback when the property is absent ([commands.cljs:201-202](../../../../../src/main/frontend/worker/commands.cljs#L201-L202)).
-- `repeat/checked-property` lets a repeating task use a property other than `status` as its completion toggle.
-- Repeat properties are preserved by the graph parser/exporter round-trip for repeated timestamps.
+- Repeat type is a first-class setting with three behaviors. **Advance from completion** (`dotted-plus`) counts from the moment you complete the task. **Advance from scheduled** (`plus`) counts once from the current date. **Advance from scheduled, skip to future** (`double-plus`) counts from the current date in whole steps until the result is in the future ([commands.cljs:111-155](../../../../../src/main/frontend/worker/commands.cljs#L111-L155)).
+- The repeat type defaults to `double-plus`, both as the property's default value ([property.cljs:392](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L392)) and as the runtime fallback when the property is absent ([commands.cljs:201-202](../../../../../src/main/frontend/worker/commands.cljs#L201-L202)).
+- The **When** setting (`repeat/checked-property`) lets a repeating task use a property other than Status as its completion toggle ([commands.cljs:33-67](../../../../../src/main/frontend/worker/commands.cljs#L33-L67)).
+- Any date or datetime property can repeat, not only Scheduled and Deadline. The repeat panel appears in every date property's picker, where it is labelled "Repeat date" or "Repeat datetime" ([value.cljs:388-392](../../../../../src/main/frontend/components/property/value.cljs#L388-L392), [:539](../../../../../src/main/frontend/components/property/value.cljs#L539)). A `:date` property advances to a journal page ([commands.cljs:204-217](../../../../../src/main/frontend/worker/commands.cljs#L204-L217)).
+- Importing a file graph converts its org repeaters into these properties ([exporter.cljs:566-585](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L566-L585)).
+
+> **Corrected:** an earlier version said repeat properties are "preserved by the graph parser/exporter round-trip". The code converts in one direction only: file-graph repeaters become DB repeat properties on import.
 
 ## Basic Repeating Task
 
 ### Creating a Simple Repeat
 
-Add `repeat` properties to any task:
-
-```markdown
-- TODO Water plants
-  repeat/repeated?:: true
-  repeat/recur-frequency:: 3
-  repeat/recur-unit:: day
-  repeat/repeat-type:: double-plus
-  repeat/temporal-property:: scheduled
-```
+1. Create a task: type `/Todo`, then `Water plants`.
+2. Type `/Scheduled` (or `/Deadline`). The date editor opens for that property ([commands.cljs:264-276](../../../../../src/main/frontend/commands.cljs#L264-L276), [:664-668](../../../../../src/main/frontend/commands.cljs#L664-L668)).
+3. Pick a date, and a time if you want one.
+4. In the panel beside the calendar, check **Repeat task**. This turns on the task's repeat flag and records the property you opened as the date to advance ([value.cljs:379-392](../../../../../src/main/frontend/components/property/value.cljs#L379-L392)).
+5. Under **Every**, enter `3` and choose **Day** ([value.cljs:393-399](../../../../../src/main/frontend/components/property/value.cljs#L393-L399)).
+6. Under **Next date**, keep **Advance from scheduled, skip to future** ([value.cljs:400-403](../../../../../src/main/frontend/components/property/value.cljs#L400-L403)).
+7. Leave **When** set to Status. The panel shows **is: Done** ([value.cljs:404-443](../../../../../src/main/frontend/components/property/value.cljs#L404-L443)).
 
 **What this does:**
 
-- Task repeats every 3 days
-- When you mark it DONE, the date advances according to the repeat type and the checked property resets to TODO or its unchecked state
-- The scheduled or deadline date is updated to the next occurrence
+- The task repeats every 3 days.
+- When you mark it Done, the Scheduled date advances according to the repeat type, and Status goes back to Todo.
+- A repeating task shows a repeat icon next to its date ([value.cljs:672-673](../../../../../src/main/frontend/components/property/value.cljs#L672-L673)).
 
-### Enabling Repeat via the UI
+> **Note:** the repeat panel has the classes `hidden sm:flex` ([value.cljs:375](../../../../../src/main/frontend/components/property/value.cljs#L375)), so it is not shown on narrow screens.
 
-To enable repeating on a task through the interface, open the scheduled or deadline property editor and use the repeat settings panel:
-
-1. Create a task: `TODO Review notes`
-2. Add a `scheduled` or `deadline` date property
-3. Enable repeating with the `Repeat task` toggle
-4. Configure frequency, unit, repeat type, and checked property
-
-> **Removed:** The older “click the date property and check a Repeat task box in the popup” description is stale. The current UI exposes a repeat settings panel with repeat toggle, frequency, unit, repeat type, and checked-property controls.
+> **Removed:** the `repeat/repeated?:: true`, `repeat/recur-frequency:: 3` … text blocks. In a DB graph that text is ordinary block content, not properties, and it makes nothing repeat.
 
 ## Repeat Properties
 
 ### Core Properties
 
-| Property                   | Type     | Values                               | Description                     |
-| -------------------------- | -------- | ------------------------------------ | ------------------------------- |
-| `repeat/recur-frequency`   | Number   | 1, 2, 3...                           | How often to repeat             |
-| `repeat/recur-unit`        | Choice   | Minute, Hour, Day, Week, Month, Year | Time unit                       |
-| `repeat/repeat-type`       | Choice   | dotted-plus, plus, double-plus       | How the next occurrence is computed |
-| `repeat/repeated?`         | Checkbox | true/false                           | Marks as repeating task         |
-| `repeat/temporal-property` | Property | deadline or scheduled                | Which date to advance first; when unset, every date property present on the task is advanced |
-| `repeat/checked-property`  | Property | (defaults to status)                 | Which property marks completion |
+These are hidden built-in properties. You set them through the panel, not by typing them.
+
+| Property ident | Panel control | Type | Values and default |
+| -------------- | ------------- | ---- | ------------------ |
+| `:logseq.property.repeat/repeated?` | **Repeat task** checkbox | Checkbox | true/false |
+| `:logseq.property.repeat/recur-frequency` | **Every** number | Number | Default `1` |
+| `:logseq.property.repeat/recur-unit` | **Every** unit | Closed values | Minute, Hour, Day, Week, Month, Year. Default Day. Minute and Hour are not offered for a `:date` property ([value.cljs:1246-1255](../../../../../src/main/frontend/components/property/value.cljs#L1246-L1255)) |
+| `:logseq.property.repeat/repeat-type` | **Next date** | Closed values | Advance from completion, Advance from scheduled, Advance from scheduled, skip to future (default) |
+| `:logseq.property.repeat/temporal-property` | Set when you check **Repeat task** | Property | The date property whose picker you opened. Removed when you uncheck **Repeat task** ([value.cljs:381-387](../../../../../src/main/frontend/components/property/value.cljs#L381-L387)) |
+| `:logseq.property.repeat/checked-property` | **When** | Property | Unset means Status ([commands.cljs:33-39](../../../../../src/main/frontend/worker/commands.cljs#L33-L39)). The choices are Status plus any non-built-in property on the block with at least two closed values ([value.cljs:404-409](../../../../../src/main/frontend/components/property/value.cljs#L404-L409)) |
 
 ### Property Details
 
-**From code ([property.cljs:354-399](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399)):**
+The definitions are at [property.cljs:354-399](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399). An unset frequency falls back to 1 at completion time ([commands.cljs:173-195](../../../../../src/main/frontend/worker/commands.cljs#L173-L195)). Looking up an unset property on an entity returns the property's default value ([entity_plus.cljc:112-127](../../../../../deps/db/src/logseq/db/common/entity_plus.cljc#L112-L127)), so an unset unit reads as Day.
 
-```clojure
-:logseq.property.repeat/recur-frequency
-(let [schema {:type :number
-              :public? false}]
-  {:title "Repeating recur frequency"
-   :schema schema
-   :properties {:logseq.property/hide-empty-value true
-                :logseq.property/default-value 1}
-   :queryable? true})
+### Repeat Types
 
-:logseq.property.repeat/recur-unit
-{:title "Repeating recur unit"
- :schema {:type :default :public? false}
- :closed-values (mapv (fn [[db-ident value]]
-                        {:db-ident db-ident :value value ...})
-                      [[:logseq.property.repeat/recur-unit.minute "Minute"]
-                       [:logseq.property.repeat/recur-unit.hour "Hour"]
-                       [:logseq.property.repeat/recur-unit.day "Day"]
-                       [:logseq.property.repeat/recur-unit.week "Week"]
-                       [:logseq.property.repeat/recur-unit.month "Month"]
-                       [:logseq.property.repeat/recur-unit.year "Year"]])
- :properties {:logseq.property/hide-empty-value true
-              :logseq.property/default-value :logseq.property.repeat/recur-unit.day}
- :queryable? true}
-
-:logseq.property.repeat/repeated?
-{:title "Node Repeats?"
- :schema {:type :checkbox :hide? true}
- :queryable? true}
-
-:logseq.property.repeat/repeat-type
-{:title "Repeating type"
- :schema {:type :default :public? false}
- :closed-values (mapv (fn [[db-ident value]]
-                        {:db-ident db-ident :value value ...})
-                      [[:logseq.property.repeat/repeat-type.dotted-plus "Advance from completion"]
-                       [:logseq.property.repeat/repeat-type.plus "Advance from scheduled"]
-                       [:logseq.property.repeat/repeat-type.double-plus "Advance from scheduled, skip to future"]])
- :properties {:logseq.property/hide-empty-value true
-              :logseq.property/default-value :logseq.property.repeat/repeat-type.double-plus}
- :queryable? true}
-
-:logseq.property.repeat/temporal-property
-{:title "Repeating Temporal Property"
- :schema {:type :property :hide? true}}
-
-:logseq.property.repeat/checked-property
-{:title "Repeating Checked Property"
- :schema {:type :property :hide? true}}
-```
+| Panel choice | Ident | Next date |
+| ------------ | ----- | --------- |
+| Advance from completion | `repeat-type.dotted-plus` | Now + frequency × unit. The time of day comes from the moment you complete the task ([commands.cljs:111-114](../../../../../src/main/frontend/worker/commands.cljs#L111-L114)) |
+| Advance from scheduled | `repeat-type.plus` | Current date + frequency × unit, once. The result can still be in the past ([commands.cljs:116-121](../../../../../src/main/frontend/worker/commands.cljs#L116-L121)) |
+| Advance from scheduled, skip to future | `repeat-type.double-plus` | Current date + whole multiples of frequency × unit, until the result is after now ([commands.cljs:123-140](../../../../../src/main/frontend/worker/commands.cljs#L123-L140)). Also used for an unknown type ([commands.cljs:154-155](../../../../../src/main/frontend/worker/commands.cljs#L154-L155)) |
 
 ## Common Patterns
 
+Each pattern lists the panel settings. Create the task with `/Todo`, then set the date with `/Scheduled` or `/Deadline`.
+
 ### Daily Habit
 
-```markdown
-- TODO Morning meditation
-  scheduled:: [[2026-01-11]]
-  repeat/recur-frequency:: 1
-  repeat/recur-unit:: day
-  repeat/temporal-property:: scheduled
-```
+- Task: **Morning meditation**
+- Scheduled: 2026-01-11
+- **Repeat task** checked, **Every** 1 Day, **Next date** left at the default
 
 **Behavior:**
 
-- Appears every day
-- When completed today, reschedules to tomorrow
-- If completed late, advances to the next future date (not the missed date)
+- Completing it on the scheduled day moves Scheduled to the next day.
+- If you complete it late, Scheduled moves to the next date after now, not to the missed date.
 
 ### Weekly Review
 
-```markdown
-- TODO Weekly team review
-  scheduled:: [[2026-01-13]]
-  repeat/recur-frequency:: 1
-  repeat/recur-unit:: week
-  repeat/temporal-property:: scheduled
-```
+- Task: **Weekly team review**
+- Scheduled: 2026-01-12 (a Monday)
+- **Repeat task** checked, **Every** 1 Week
 
 **Behavior:**
 
-- Repeats every Monday (if Jan 13 is Monday)
-- Completion advances the scheduled date to next Monday
-- Day of week is preserved by construction: `cljs-time` arithmetic is UTC, so adding whole weeks never drifts and no fix-up is applied (`commands.cljs:123-126`)
+- Completion moves Scheduled to the next Monday.
+- The weekday is preserved. cljs-time adds a week as 7 days, and a test checks this ("preserves week day", [commands_test.cljs:116-117](../../../../../src/test/frontend/worker/commands_test.cljs#L116-L117)).
+
+> **Corrected:** the earlier example used 2026-01-13 and called it a Monday. 2026-01-13 is a Tuesday.
 
 ### Monthly Bill Payment
 
-```markdown
-- TODO Pay internet bill
-  deadline:: [[2026-01-31]]
-  repeat/recur-frequency:: 1
-  repeat/recur-unit:: month
-  repeat/temporal-property:: deadline
-```
+- Task: **Pay internet bill**
+- Deadline: 2026-01-28
+- **Repeat task** checked, **Every** 1 Month
 
 **Behavior:**
 
-- Due last day of each month
-- Completion sets next month's deadline
-- Adjusts for month length (28-31 days)
+- Each completion moves Deadline to the same day of the next month.
+- Pick a day that exists in every month (1–28). cljs-time adds months with `goog.date.Interval.MONTHS`, and Closure's `goog.date.Date.prototype.add` caps the day at the target month's length. The capped day is then carried forward, so a Jan 31 deadline goes to Feb 28, then Mar 28. This follows from library code (cljs-time `period-fn`; Closure `goog/date/date.js`) and has not been reproduced in the app.
+
+> **Removed:** "Due last day of each month … adjusts for month length (28-31 days)". Nothing in the repeat code tracks month-end.
 
 ### Biweekly Meeting
 
-```markdown
-- TODO Sprint planning meeting
-  scheduled:: [[2026-01-13]]
-  repeat/recur-frequency:: 2
-  repeat/recur-unit:: week
-  repeat/temporal-property:: scheduled
-```
+- Task: **Sprint planning meeting**
+- Scheduled: 2026-01-12
+- **Repeat task** checked, **Every** 2 Week
 
 **Behavior:**
 
-- Every 2 weeks
-- Consistent interval, always advancing to a future date
+- Every 2 weeks.
+- With the default **Next date**, the result is always in the future.
 
 ### Quarterly Review
 
-```markdown
-- TODO Quarterly goal review
-  deadline:: [[2026-03-31]]
-  repeat/recur-frequency:: 3
-  repeat/recur-unit:: month
-  repeat/temporal-property:: deadline
-```
+- Task: **Quarterly goal review**
+- Deadline: 2026-03-31
+- **Repeat task** checked, **Every** 3 Month
 
 **Behavior:**
 
-- Every 3 months
-- Q1: Mar 31, Q2: Jun 30, Q3: Sep 30, Q4: Dec 31
+- Every 3 months. Because the day is capped and then carried forward (see above), the dates run Mar 31 → Jun 30 → Sep 30 → Dec 30. They do not return to the 31st.
+
+> **Corrected:** the earlier version said the fourth date would be Dec 31.
 
 ## Advanced Configuration
 
 ### Multiple Deadlines
 
-Create separate tasks for different aspects:
+Create separate tasks for different aspects. Put them under a parent block, and give each child its own Deadline and repeat settings:
 
-```markdown
-- # Project Review (Repeating)
-
-  - TODO Prepare review materials
-    deadline:: [[2026-01-15]]
-    repeat/recur-frequency:: 1
-    repeat/recur-unit:: month
-  - TODO Conduct review meeting
-    deadline:: [[2026-01-20]]
-    repeat/recur-frequency:: 1
-    repeat/recur-unit:: month
-```
+- Parent block: **Project Review (Repeating)**
+  - Child: **Prepare review materials**. Status Todo, Deadline 2026-01-15, **Repeat task** on, **Every** 1 Month
+  - Child: **Conduct review meeting**. Status Todo, Deadline 2026-01-20, **Repeat task** on, **Every** 1 Month
 
 ### Both Scheduled and Deadline
 
-When a task has both `scheduled` and `deadline` properties, completion reschedules both, not just the one named by `repeat/temporal-property`. Two cases:
+When a task has both `scheduled` and `deadline` properties, completion reschedules both, not only the one named by `repeat/temporal-property`. Two cases:
 
-- **`temporal-property` is set** -- that property is advanced first, and the other of scheduled/deadline is also advanced if the task has it.
-- **`temporal-property` is not set** -- every one of `scheduled`/`deadline` that is present on the task is advanced. It does *not* silently default to `scheduled`.
+- **`temporal-property` is Scheduled or Deadline.** That property is advanced, and so is the other one if the task has it.
+- **`temporal-property` is not set.** Every one of Scheduled and Deadline that is present on the task is advanced. It does *not* silently default to Scheduled.
+
+If `temporal-property` is some other date property, only that property is advanced (the `case` returns `nil` for it).
 
 **From code ([commands.cljs:224-249](../../../../../src/main/frontend/worker/commands.cljs#L224-L249)):**
 
@@ -256,15 +194,15 @@ When a task has both `scheduled` and `deadline` properties, completion reschedul
   (let [explicit-property-ident (:db/ident (:logseq.property.repeat/temporal-property entity))]
     (if explicit-property-ident
       (let [other-property-idents (case explicit-property-ident
-                                    :logseq.property/scheduled
-                                    (when (:logseq.property/deadline entity)
-                                      [:logseq.property/deadline])
+                                   :logseq.property/scheduled
+                                   (when (:logseq.property/deadline entity)
+                                     [:logseq.property/deadline])
 
-                                    :logseq.property/deadline
-                                    (when (:logseq.property/scheduled entity)
-                                      [:logseq.property/scheduled])
+                                   :logseq.property/deadline
+                                   (when (:logseq.property/scheduled entity)
+                                     [:logseq.property/scheduled])
 
-                                    nil)]
+                                   nil)]
         (distinct (cons explicit-property-ident other-property-idents)))
       (existing-repeat-temporal-property-idents entity))))
 
@@ -272,100 +210,84 @@ When a task has both `scheduled` and `deadline` properties, completion reschedul
   (mapcat #(compute-reschedule-property-tx db entity %) (reschedule-property-idents entity)))
 ```
 
-If neither `scheduled` nor `deadline` is present, nothing is rescheduled -- `compute-reschedule-property-tx` returns nothing without a current date value ([commands.cljs:209](../../../../../src/main/frontend/worker/commands.cljs#L209)).
+If the task has no value for any of these dates, nothing is rescheduled, because `compute-reschedule-property-tx` returns nothing without a current date value ([commands.cljs:209](../../../../../src/main/frontend/worker/commands.cljs#L209)). The second action still runs, though ([commands.cljs:251-254](../../../../../src/main/frontend/worker/commands.cljs#L251-L254)), so Status goes straight back to Todo.
 
 ## Managing Repeating Tasks
 
 ### Viewing All Repeats
 
-Query all repeating tasks:
+Type `/Advanced Query` and enter:
 
 ```clojure
-#+BEGIN_QUERY
 {:query [:find (pull ?b [*])
          :where
-         [?b :logseq.property.repeat/repeated? true]]
- :breadcrumb-show? false}
-#+END_QUERY
+         [?b :logseq.property.repeat/repeated? true]]}
 ```
 
-### Filter by Frequency
+Checkbox values are stored as plain booleans, because `:checkbox` is not a ref property type ([type.cljs:58-74](../../../../../deps/db/src/logseq/db/frontend/property/type.cljs#L58-L74)).
 
-Find daily tasks:
+### Filter by Unit
+
+Find weekly repeats:
 
 ```clojure
-#+BEGIN_QUERY
 {:query [:find (pull ?b [*])
          :where
          [?b :logseq.property.repeat/repeated? true]
-         [?b :logseq.property.repeat/recur-frequency 1]
-         [?b :logseq.property.repeat/recur-unit
-             :logseq.property.repeat/recur-unit.day]]}
-#+END_QUERY
+         [?b :logseq.property.repeat/recur-unit ?u]
+         [?u :db/ident :logseq.property.repeat/recur-unit.week]]}
 ```
+
+The unit is a closed value, so match it through its `:db/ident`. The frequency is a number, and number values are stored as refs whose value lives in `:logseq.property/value` ([type.cljs:52-61](../../../../../deps/db/src/logseq/db/frontend/property/type.cljs#L52-L61)). To filter on it, use `[?b :logseq.property.repeat/recur-frequency ?f] [?f :logseq.property/value 2]`.
+
+> **Corrected:** the earlier `[?b :logseq.property.repeat/recur-frequency 1]` never matches, because the attribute holds a ref, not the number.
+
+> **Unverified:** whether the panel stores a unit or frequency you leave at its default. If it does not, those tasks have no stored datom, and a `:where` pattern on that attribute will not find them. That is why this example filters on Week rather than the default Day.
 
 ### Dashboard Query
 
-Create a repeating tasks dashboard:
+Create a repeating-tasks dashboard. Each query needs its own block, so put the headings in parent blocks:
 
-```markdown
-- # Repeating Tasks Dashboard
+- **Repeating Tasks Dashboard**
+  - **Daily**
+    - An `/Advanced Query` block:
+      ```clojure
+      {:query [:find (pull ?b [*])
+               :where
+               [?b :logseq.property.repeat/repeated? true]
+               [?b :logseq.property.repeat/recur-unit ?u]
+               [?u :db/ident :logseq.property.repeat/recur-unit.day]]}
+      ```
+  - **Weekly**
+    - An `/Advanced Query` block:
+      ```clojure
+      {:query [:find (pull ?b [*])
+               :where
+               [?b :logseq.property.repeat/repeated? true]
+               [?b :logseq.property.repeat/recur-unit ?u]
+               [?u :db/ident :logseq.property.repeat/recur-unit.week]]}
+      ```
 
-  - ## Daily
-
-    #+BEGIN_QUERY
-    {:query [:find (pull ?b [*])
-    :where
-    [?b :logseq.property.repeat/repeated? true]
-    [?b :logseq.property.repeat/recur-unit
-    :logseq.property.repeat/recur-unit.day]]}
-    #+END_QUERY
-
-  - ## Weekly
-    #+BEGIN_QUERY
-    {:query [:find (pull ?b [*])
-    :where
-    [?b :logseq.property.repeat/repeated? true]
-    [?b :logseq.property.repeat/recur-unit
-    :logseq.property.repeat/recur-unit.week]]}
-    #+END_QUERY
-```
+> **Removed:** the `#+BEGIN_QUERY` … `#+END_QUERY` wrappers. In a DB graph they are deprecated in favour of `/Advanced Query` ([en.edn:120](../../../../../src/resources/dicts/en.edn#L120)). The `:breadcrumb-show?` and `:group-by-page?` keys were removed too. See the [Query System reference](../../reference/advanced/query-system.md) for the keys a DB graph honours.
 
 ### Pause a Repeat
 
-Temporarily stop repeating:
-
-```markdown
-- TODO Task to pause
-  repeat/recur-frequency:: 1
-  repeat/recur-unit:: week
-  repeat/repeated?:: false
-```
-
-Or delete the repeat properties entirely.
+Open the task's date picker and uncheck **Repeat task**. That sets the repeat flag to false and removes `temporal-property` ([value.cljs:381-387](../../../../../src/main/frontend/components/property/value.cljs#L381-L387)). The command only runs for tasks whose repeat flag is true ([commands.cljs:20-21](../../../../../src/main/frontend/worker/commands.cljs#L20-L21)).
 
 ### Modify Repeat Schedule
 
-Change frequency:
-
-```markdown
-- TODO Task
-  repeat/recur-frequency:: 2
-  repeat/recur-unit:: week
-```
-
-The next completion will use the new schedule.
+Open the date picker and change **Every** or **Next date**. The values are read at the moment of completion ([commands.cljs:199-202](../../../../../src/main/frontend/worker/commands.cljs#L199-L202)), so the next completion uses the new schedule.
 
 ## Completion Behavior
 
 ### What Happens When You Complete
 
-When you mark a repeating task as DONE, Logseq runs a command pipeline (defined in `frontend.worker.commands`) that:
+When you mark a repeating task as Done, Logseq runs a command pipeline (defined in `frontend.worker.commands`) that:
 
-1. **Reschedules the date** -- The scheduled/deadline date advances according to the repeat type, frequency, and unit
-2. **Resets completion state** -- The task's status property is set back to TODO, or the configured `checked-property` is returned to its unchecked state
+1. **Reschedules the date.** The date advances according to the repeat type, frequency and unit.
+2. **Resets completion state.** Status is set back to Todo, or the configured **When** property returns to its unchecked state.
 
-The task is modified in place -- no new copy is created. The same block gets its date updated and status reset.
+The task is modified in place, and no new copy is created. The same block gets its date updated and its status reset.
 
 **From code ([commands.cljs:18-25](../../../../../src/main/frontend/worker/commands.cljs#L18-L25)):**
 
@@ -380,166 +302,121 @@ The task is modified in place -- no new copy is created. The same block gets its
             [:set-property :status :todo]]}]
 ```
 
+The trigger is a transaction that sets Status to Done ([commands.cljs:98-106](../../../../../src/main/frontend/worker/commands.cljs#L98-L106)). It makes no difference how you set it: `Cmd/Ctrl+Enter`, `/Done`, the status picker or a checkbox.
+
+With a **When** property, "done" means the choice whose checkbox state is true (or `true` for a checkbox property), and "reset" means the choice whose checkbox state is false (or `false`) ([commands.cljs:41-67](../../../../../src/main/frontend/worker/commands.cljs#L41-L67)).
+
+> **Possible defect (from reading the source, not reproduced):** if the **When** property is a closed-value property and none of its choices has a checkbox state, `get-value` falls back to `:logseq.property/status.done`. That value can never belong to the other property, so the task never repeats. Meanwhile the panel still shows "is: Done", because it uses the same fallback ([value.cljs:417-419](../../../../../src/main/frontend/components/property/value.cljs#L417-L419)).
+
 ### Example Flow
 
-**Original:**
+**Original:** **Water plants**, Status Todo, Scheduled 2026-01-11, **Every** 3 Day, default **Next date**.
 
-```markdown
-- TODO Water plants
-  scheduled:: [[2026-01-11]]
-  repeat/recur-frequency:: 3
-  repeat/recur-unit:: day
-```
+**After marking it Done on Jan 11:** the same block, with Scheduled 2026-01-14 and Status Todo.
 
-**After marking DONE on Jan 11 (same task, updated in place):**
-
-```markdown
-- TODO Water plants
-  scheduled:: [[2026-01-14]]
-  repeat/recur-frequency:: 3
-  repeat/recur-unit:: day
-```
-
-The date advances 3 days to Jan 14, and the status resets to TODO. If you completed a task that was overdue (e.g., you mark it done on Jan 15 when it was scheduled for Jan 11), the date skips forward to the next future occurrence (Jan 17), not the next sequential date (Jan 14).
+The date advances 3 days to Jan 14, and the status resets to Todo. Suppose instead you complete an overdue task on Jan 15 when it was scheduled for Jan 11. The date skips forward to the next occurrence after now, Jan 17, not the next one in sequence, Jan 14 ([commands.cljs:123-140](../../../../../src/main/frontend/worker/commands.cljs#L123-L140)). With **Advance from scheduled** it would be Jan 14, which is already past. With **Advance from completion** it would be Jan 18, at the time you completed it.
 
 ## Integration with Other Features
 
 ### With Scheduled & Deadline
 
-Combine for flexible scheduling:
+Combine them for flexible scheduling: give the task both a Scheduled and a Deadline date, and turn on **Repeat task** from the Scheduled picker.
 
-```markdown
-- TODO Important repeating task
-  scheduled:: [[2026-01-11]]
-  deadline:: [[2026-01-15]]
-  repeat/recur-frequency:: 2
-  repeat/recur-unit:: week
-  repeat/temporal-property:: scheduled
-```
+When `temporal-property` is Scheduled, Scheduled is the primary date advanced, and Deadline is also rescheduled when present. If `temporal-property` is not set, every date property present on the task (Scheduled and/or Deadline) is advanced ([commands.cljs:231-246](../../../../../src/main/frontend/worker/commands.cljs#L231-L246)).
 
-When `temporal-property` is set to `scheduled`, the scheduled date is the primary date advanced, but the deadline is also rescheduled when present. If `temporal-property` is not set, every date property present on the task (`scheduled` and/or `deadline`) is advanced ([commands.cljs:231-246](../../../../../src/main/frontend/worker/commands.cljs#L231-L246)).
+While a task is not Done or Canceled, today's journal lists it in **Scheduled and Deadline** whenever its date falls within the next 7 days ([property.cljs:859-871](../../../../../src/main/frontend/worker/handler/property.cljs#L859-L871)).
 
 ### With Task Properties
 
-Add priorities and other properties:
-
-```markdown
-- TODO Review security logs
-  scheduled:: [[2026-01-11]]
-  priority:: High
-  repeat/recur-frequency:: 1
-  repeat/recur-unit:: day
-```
+Add priorities and other properties as usual, for example `/Priority High`. Repeating only changes the date properties and the completion property.
 
 ### With Property History
 
-Property history is enabled per-property, not per-task. To track changes to a property across all tasks that use it, enable history on the property itself via the property settings UI. The `enable-history?` setting is a property-level checkbox (`:view-context :property`), not a block-level property.
+Property history is enabled per property, not per task. To track changes to a property across all tasks that use it, turn on **Enable property history** on the property itself. It is a property-level checkbox (`:view-context :property`), not a block-level property ([property.cljs:635-640](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L635-L640)). Status and Priority have it on by default ([property.cljs:321](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L321), [:339](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L339)), so each Done → Todo cycle is recorded ([commands.cljs:26-31](../../../../../src/main/frontend/worker/commands.cljs#L26-L31)). See [Stop Task Time Tracking](disable-task-time-tracking.md).
 
 ## Troubleshooting
 
 ### Task Not Repeating
 
-**Problem:** Completed task doesn't reschedule
+**Problem:** A completed task doesn't reschedule.
 
 **Check:**
 
-1. `repeat/repeated?` is set to true (checkbox checked)
-2. `repeat/recur-frequency` has valid number
-3. `repeat/recur-unit` is one of the valid values (Minute, Hour, Day, Week, Month, Year)
-4. `repeat/repeat-type` is set to the behavior you want
-5. Task has a `scheduled` or `deadline` date property set
-6. Task status is being changed to DONE (or the checked state of the `checked-property`)
+1. **Repeat task** is checked ([commands.cljs:20-21](../../../../../src/main/frontend/worker/commands.cljs#L20-L21)).
+2. **Every** is a number greater than 0. Zero or less produces no next date ([commands.cljs:168-171](../../../../../src/main/frontend/worker/commands.cljs#L168-L171)).
+3. The unit is one of Minute, Hour, Day, Week, Month or Year.
+4. **Next date** is set to the behavior you want.
+5. The task has a value for Scheduled, Deadline, or the date property you enabled repeating from. Without one, Status only flips back to Todo.
+6. Status was actually changed to Done, or the **When** property to its checked value.
+7. The change was not an undo, and did not arrive through sync ([pipeline.cljs:515-518](../../../../../src/main/frontend/worker/pipeline.cljs#L515-L518)).
 
 ### Wrong Repeat Date
 
-**Problem:** Task reschedules to incorrect date
+**Problem:** The task reschedules to an unexpected date.
 
 **Solution:**
 
-- Verify `repeat/temporal-property` is set to the correct property (scheduled or deadline). If unset, whichever of scheduled/deadline the task actually has is advanced.
-- Verify `repeat/repeat-type` matches the intended timing rule.
-- Check frequency/unit combination
-- Ensure the temporal property has a date value on the task
-- Note: `double-plus` advances to a future date, skipping past occurrences; `plus` can land in the past if the original schedule is overdue
+- Check which date property repeating was enabled from (`repeat/temporal-property`). If it is unset, whichever of Scheduled and Deadline the task has is advanced.
+- Check that **Next date** matches the timing rule you want.
+- Check the frequency and unit combination.
+- Make sure the date property has a value on the task.
+- Note: `double-plus` moves to a future date, skipping past occurrences. `plus` can land in the past if the task is overdue. `dotted-plus` counts from the time you completed the task.
+- Month steps cap the day at the month's length and carry the capped day forward. See [Monthly Bill Payment](#monthly-bill-payment).
 
 ### Can't Pause Repeat
 
-**Problem:** Task keeps rescheduling
+**Problem:** The task keeps rescheduling.
 
 **Solution:**
 
-- Uncheck `repeat/repeated?` (set to false)
-- Or remove all `repeat/*` properties
+- Uncheck **Repeat task** in the date picker.
 
 ## Best Practices
 
 ### 1. Use Appropriate Units
 
-```markdown
-Good: Natural intervals
+Good: natural intervals
 
-- Daily: Use "day"
-- Weekly: Use "week"
-- Monthly: Use "month"
+- Daily: use Day
+- Weekly: use Week
+- Monthly: use Month
 
-Avoid: Awkward conversions
+Avoid awkward conversions:
 
-- Weekly: Don't use "7 days"
-- Monthly: Don't use "4 weeks" (inaccurate)
-```
+- Monthly: don't use 4 Week, which drifts from calendar months
 
-### 2. Choose Right Temporal Property
+### 2. Choose the Right Temporal Property
 
-```markdown
-scheduled: For start-date tasks
-
-- TODO Begin monthly review
-  scheduled:: [[2026-01-15]]
-  repeat/temporal-property:: scheduled
-
-deadline: For due-date tasks
-
-- TODO Submit report
-  deadline:: [[2026-01-31]]
-  repeat/temporal-property:: deadline
-```
+- **Scheduled**, for tasks with a start date. Example: **Begin monthly review**, with Scheduled 2026-01-15 and repeating enabled from the Scheduled picker.
+- **Deadline**, for tasks with a due date. Example: **Submit report**, with Deadline 2026-01-28 and repeating enabled from the Deadline picker.
 
 ### 3. Organize by Frequency
 
-```markdown
-# Daily Habits
+Group repeating tasks under parent blocks:
 
-- TODO Exercise
-- TODO Journal
-
-# Weekly Reviews
-
-- TODO Team standup
-- TODO Personal review
-
-# Monthly Tasks
-
-- TODO Pay bills
-- TODO Review goals
-```
+- **Daily Habits**
+  - Exercise (Todo, repeats every 1 Day)
+  - Journal (Todo, repeats every 1 Day)
+- **Weekly Reviews**
+  - Team standup (Todo, repeats every 1 Week)
+  - Personal review (Todo, repeats every 1 Week)
+- **Monthly Tasks**
+  - Pay bills (Todo, repeats every 1 Month)
+  - Review goals (Todo, repeats every 1 Month)
 
 ### 4. Use Queries for Overview
 
-Create master view of all repeats:
+Create a master view of all repeats. Add a parent block **All Repeating Tasks** with an `/Advanced Query` child:
 
-```markdown
-- # All Repeating Tasks
-  #+BEGIN_QUERY
-  {:query [:find (pull ?b [*])
-  :where
-  [?b :logseq.property.repeat/repeated? true]]
-  :collapsed? false
-  :group-by-page? false}
-  #+END_QUERY
+```clojure
+{:query [:find (pull ?b [*])
+         :where
+         [?b :logseq.property.repeat/repeated? true]]
+ :collapsed? false}
 ```
 
 ## See Also
 
 - [Todo System Basics](../../tutorials/task-management/todo-basics.md)
-- [Property History Guide](property-history.md)
-- [Property Types Reference](../../reference/database/property-types.md)
+- [Stop Task Time Tracking](disable-task-time-tracking.md)
+- [Properties Reference](../../reference/data/properties-reference.md)
