@@ -11,18 +11,23 @@ The headline number started at **257 broken links** and was widely assumed to be
 It is not. Most of it was two mechanical bugs and one category that should never have been
 counted. What is left needs judgment, which is why it is written down rather than fixed.
 
+The 2026-09-10 recount (126 → 92) is the `_templates/` skip (27) plus the partial wave-4 edits
+committed in `ad3b4d893a`, whose five files went from 10 broken links to 2. Those edits are still
+unverified, so a link there resolving means its target exists, not that the citation is right.
+The group lists below are from the 2026-09-09 snapshot.
+
 ## Where the count went
 
 | | Then | Now | What happened |
 |---|---:|---:|---|
 | Source links at the wrong depth | 88 | **0** | `../../` from a page five levels deep resolves inside `ddocs/`, not at the repo root. Stage 1 of the merge re-depthed 19 and missed the rest; 47 were fixed mechanically and the audits fixed the other 41 as they went. |
-| Doc links whose target moved | 30 | **6** | Rewritten only where exactly one file in the tree carries that basename. The remaining 6 sit in files a concurrent review was editing. |
+| Doc links whose target moved | 30 | **2** | Rewritten only where exactly one file in the tree carries that basename. Four more were fixed by wave-4 partial edits (below); 2 remain. |
 | `_templates/` placeholders | 27 | **0** | **Not defects.** `relevant-guide.md`, `relevant-tutorial.md` and friends are deliberate placeholders in the Diátaxis templates. `check_links.py` now skips `_templates/`, as `rank_risk.py` already did. |
 | Missing assets | 8 | 6 | Screenshots and a `LICENSE` that were never committed. |
-| Links to documents that were never written | 103 | **87** | The real backlog. See below. |
-| **Total** | **257** | **126** | |
+| Links to documents that were never written | 103 | **84** | The real backlog. See below. |
+| **Total** | **257** | **92** | Recounted 2026-09-10. |
 
-## The 87, which are 49 distinct documents
+## The never-written links (87 at the 2026-09-09 snapshot, 84 now)
 
 These are links to pages that do not exist anywhere in the tree. They fall into two groups,
 and the split matters because only one of them is a writing task.
