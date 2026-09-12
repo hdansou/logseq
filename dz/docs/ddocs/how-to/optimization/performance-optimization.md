@@ -4,8 +4,9 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
-lastVerified: '2026-09-10'
+lastVerified: '2026-09-12'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-10 (7490ff2964). The 2026-09-12 date covers only the Settings > Features platform gates (the Plugins row is web-only; HTTP server and Markdown Mirror are Electron-only).'
 reviewStatus: audited
 related-docs:
   - '[Database Integrity](../../explanation/architecture/database-integrity.md)'
@@ -106,7 +107,7 @@ Settings → Advanced → auto update (desktop app, macOS and Windows)
 Settings → Features → Plugins
 ```
 
-The Plugins row switches the plugin system on or off ([`settings.cljs:778-781`](../../../../../src/main/frontend/components/settings.cljs); label "Plugins" at [`en.edn:1737`](../../../../../src/resources/dicts/en.edn)). Disable individual plugins you do not use from the plugins page.
+The Plugins row switches the plugin system on or off ([`settings.cljs:778-781`](../../../../../src/main/frontend/components/settings.cljs); label "Plugins" at [`en.edn:1737`](../../../../../src/resources/dicts/en.edn)). **The row appears only in the web app**: it is rendered `(when (and web-platform? config/feature-plugin-system-on?) ...)` ([`settings.cljs:1154-1155`](../../../../../src/main/frontend/components/settings.cljs)), and `web-platform?` is false on desktop and on native mobile ([`util.cljc:128-130`](../../../../../src/main/frontend/util.cljc)). On desktop, disable plugins one at a time from the plugins page instead.
 
 > Removed claim: the plugin-count impact figures ("3-5 plugins: Minimal … 20+ plugins: Significant slowdown") had no source.
 
@@ -336,12 +337,15 @@ Linux: htop → logseq
 **Settings → Features** renders exactly these rows ([`settings.cljs:1129-1181`](../../../../../src/main/frontend/components/settings.cljs)):
 
 ```markdown
-- Plugins (plugin system)
-- HTTP server
-- Markdown Mirror ("Write a derived Markdown copy of edited pages to the graph's mirror/markdown folder. Desktop only.", en.edn:1732)
+- Plugins (plugin system)   — web only
+- HTTP server               — Electron only
+- Markdown Mirror           — Electron only ("Write a derived Markdown copy of edited pages to the graph's mirror/markdown folder. Desktop only.", en.edn:1732)
 - Flashcards
 - Semantic search
 ```
+
+Three of those rows are gated: Plugins on `web-platform?`, HTTP server and Markdown Mirror on
+`(util/electron?)` ([`settings.cljs:1154-1159`](../../../../../src/main/frontend/components/settings.cljs)). So no build shows all five.
 
 (Row functions `plugin-system-switcher-row`, `http-server-switcher-row`, `markdown-mirror-row`, `flashcards-switcher-row` and `semantic-search-row`.) Turn off the ones you do not use.
 
