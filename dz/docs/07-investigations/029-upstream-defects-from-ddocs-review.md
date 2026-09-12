@@ -25,18 +25,18 @@ Severity is not assigned here. What matters for triage is whether the path is re
 
 | What looks wrong | Where | Notes |
 |---|---|---|
-| Before any API token is saved, the desktop HTTP/MCP server accepts **any** `Authorization` value, and CORS allows every origin | `src/electron/electron/server.cljs:86`, `:164` | A request with **no** header still gets 401, because `string/replace` on nil throws inside the try (`:96-103`). So the hole is "any value passes", not "no auth" |
-| `graph backup remove --src` joins its argument onto the backup directory and removes the tree, with no path check | `cli/lib/graph.ml:469-470`, `:753-758` | The ClojureScript backup code guards the same operation with `child-path!` (`db_worker/graph_backup.cljs:23-37`) |
+| Before any API token is saved, the desktop HTTP/MCP server accepts **any** `Authorization` value, and CORS allows every origin | `src/electron/electron/server.cljs:86`, `:164` | A request with **no** header still gets 401, because `string/replace` on nil throws inside the try (`:96-103`). So the hole is "any value passes", not "no auth". **Reachable (checked 2026-09-12).** The token panel persists each key as `server/<name>` (`server.cljs:53-61`), so tokens can be saved; the hole is the state before any is |
+| `graph backup remove --src` joins its argument onto the backup directory and removes the tree, with no path check | `cli/lib/graph.ml:469-470`, `:753-758` | The ClojureScript backup code guards the same operation with `child-path!` (`db_worker/graph_backup.cljs:23-37`). **Reachable (checked 2026-09-12).** `--src` reaches `remove_tree` as nothing but `String.trim opts.src` (`graph.ml:275-280`); `safe_backup_part` is applied only when building a *create* name (`:148`) |
 | Inviting a user who has never set an E2EE password to an E2EE graph creates the membership first, then fails to wrap the key | `deps/db-sync/.../sync.cljs:392-398`, `crypt.cljs:678-679` | The invitee ends up a member who cannot decrypt; the manager sees a generic error |
-| `custom.js` approval is keyed on the relative path `logseq/custom.js`, which is identical for every DB graph | `src/main/frontend/handler/ui.cljs:131-136`, `src/main/frontend/config.cljs:374-379` | Approving one graph's script approves every graph's for 7 days. Cancel stores `false` permanently with no UI to undo (`ui.cljs:139-140`, `:153-154`) |
+| `custom.js` approval is keyed on the relative path `logseq/custom.js`, which is identical for every DB graph | `src/main/frontend/handler/ui.cljs:131-136`, `src/main/frontend/config.cljs:374-379` | Approving one graph's script approves every graph's for 7 days. Cancel stores `false` permanently with no UI to undo (`ui.cljs:139-140`, `:153-154`). **Reachable (checked 2026-09-12).** For a DB graph `get-custom-js-path` returns `logseq/custom.js` with no repo segment (`config.cljs:374-379`), and the installer runs on desktop (`plugins.cljs:1790-1793`) |
 
 ## Data loss and recovery
 
 | What looks wrong | Where | Notes |
 |---|---|---|
-| Recycle promises deleted **blocks** can be restored, but deleting a block retracts it outright | `src/resources/dicts/en.edn:1824`; `deps/outliner/src/logseq/outliner/core.cljs:440-442` | `recycle-blocks-tx-data` (`recycle.cljs:127`) has only test callers |
-| A pending sync transaction whose rebase fails or becomes a no-op is marked non-pending and never uploaded | `src/main/frontend/worker/sync/apply_txs.cljs:1704-1710` | Only `:block/title` is conflict-tracked (`:1130-1131`), so edits to other attributes may be lost without a conflict entry |
-| "Remove the file too" deletes only the asset block; the file stays in `assets/` | `src/main/frontend/handler/editor.cljs:1741-1753`; checkbox text `en.edn:97` | The platform function `:asset-delete!` exists in both adapters but has no callers |
+| Recycle promises deleted **blocks** can be restored, but deleting a block retracts it outright | `src/resources/dicts/en.edn:1824`; `deps/outliner/src/logseq/outliner/core.cljs:440-442` | `recycle-blocks-tx-data` (`recycle.cljs:127`) has only test callers. **Reachable (checked 2026-09-12).** **Sharper than written:** the Recycle list renders entities carrying `:logseq.property/deleted-at`, and only that test-only fn would set it on a block, so the block branch of `components/recycle.cljs:40-58` — its "deleted at" label and Restore button — never runs |
+| A pending sync transaction whose rebase fails or becomes a no-op is marked non-pending and never uploaded | `src/main/frontend/worker/sync/apply_txs.cljs:1704-1710` | Only `:block/title` is conflict-tracked (`:1130-1131`), so edits to other attributes may be lost without a conflict entry. **Reachable (checked 2026-09-12).** The call sits in the rebase path (`:1710`), and title conflicts do surface a popup (`components/block.cljs:3375-3406`), so it is the non-title edits that vanish quietly |
+| "Remove the file too" deletes only the asset block; the file stays in `assets/` | `src/main/frontend/handler/editor.cljs:1741-1753`; checkbox text `en.edn:97` | The platform function `:asset-delete!` exists in both adapters but has no callers. **Reachable (checked 2026-09-12).** Repo-wide, `asset-delete!` appears only as its definition and adapter registration in `worker/platform/{browser,node}.cljs`; nothing invokes it |
 | Deleted assets are never removed from the sync server | `src/main/frontend/worker/sync/asset_db_listener.cljs:11-25` | Only `:update-asset` ops are generated, though `:remove-asset` is handled server-side |
 | The sync client refuses asset uploads over 100 MiB even for E2EE graphs, whose server limit is 200 MiB | `src/main/frontend/worker/sync/assets.cljs:246-255`; server `deps/db-sync/.../handler/assets.cljs:9-10` | The larger allowance is unreachable from the app |
 
@@ -147,6 +147,24 @@ Severity is not assigned here. What matters for triage is whether the path is re
   arrays. A source comment suggesting otherwise looks stale. Not reproduced either way.
 - **A crash when cycling a task's status.** Raised by an agent in wave 3 and rejected: the `case`
   has a trailing default.
+
+## Revalidation log
+
+**2026-09-12 — reachability pass, 6 entries.** For the security and data-loss tables above, checked
+whether a user-facing path reaches the cited line: who writes the config a check reads, whether an
+argument is sanitised before use, and whether the function has a non-test caller. Results are folded
+into those rows. One entry got sharper (Recycle: the block branch is unreachable, not merely
+unhelpful); none was withdrawn.
+
+**Not yet done for any entry:**
+
+- **Re-read at current master.** This worktree's `origin/master` is pinned at `be800f1711` and is
+  deliberately not fetched, because every audited page is stamped against it. Revalidation against a
+  newer master needs a fetch, which should be a deliberate step.
+- **Blind live reproduction.** Nothing here has been run in the app.
+
+Both remain required before filing ([[feedback-revalidate-own-findings]] in session memory; the rule
+is that 7 of 11 findings changed verdict the last time this was done properly).
 
 ## Related
 
