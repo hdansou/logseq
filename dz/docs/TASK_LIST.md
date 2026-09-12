@@ -1,6 +1,6 @@
 # Documentation status
 
-Generated 2026-09-11 by
+Generated 2026-09-12 by
 `dz/support-engineering/script/doc-inventory/gen_task_list.py`. Do not edit by hand —
 every field comes from each document's frontmatter.
 
@@ -60,7 +60,6 @@ Older date, or none. Highest priority.
 | `explanation/concepts/file-organization.md` | 2026-09-10 | `be800f1711` |
 | `explanation/concepts/plugin-architecture.md` | 2026-09-10 | `be800f1711` |
 | `how-to/content/view-types.md` | 2026-09-10 | `be800f1711` |
-| `how-to/optimization/performance-optimization.md` | 2026-09-10 | `be800f1711` |
 | `how-to/organization/import-export.md` | 2026-09-10 | `be800f1711` |
 | `how-to/workflows/daily-workflows.md` | 2026-09-10 | `be800f1711` |
 | `how-to/workflows/meeting-notes-workflow.md` | 2026-09-10 | `be800f1711` |
@@ -121,6 +120,7 @@ Older date, or none. Highest priority.
 | `tutorials/knowledge-management/flashcards-basics.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/task-management/project-planning.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/task-management/todo-basics.md` | 2026-09-11 | `be800f1711` |
+| `how-to/optimization/performance-optimization.md` | 2026-09-12 | `be800f1711` |
 
 ## Merged this pass — needs a line-by-line audit
 
