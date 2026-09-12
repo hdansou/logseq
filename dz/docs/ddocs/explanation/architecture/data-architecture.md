@@ -527,7 +527,7 @@ routes to 13 branches: `:property`, `:class`, `:hidden`, `:normal-page`, `:react
 
 - **Schema Details**: [schema-overview.md](../../reference/database/schema-overview.md)
 - **File vs DB**: [file-vs-db.md](../concepts/file-vs-db.md)
-- **Query System**: [query-dsl.md](../../reference/syntax/query-dsl.md)
+- **Query System**: [Query System Reference](../../reference/advanced/query-system.md)
 
 ---
 

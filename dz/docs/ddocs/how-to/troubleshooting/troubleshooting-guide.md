@@ -752,7 +752,7 @@ Labels are at [`en.edn:632-635`](../../../../../src/resources/dicts/en.edn), [`:
 3. Select a zip containing db.sqlite and an assets folder
 ```
 
-The import option is at [`header.cljs:233`](../../../../../src/main/frontend/components/header.cljs) and [`imports.cljs:587-588`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:950-951`](../../../../../src/resources/dicts/en.edn). A zip without `db.sqlite` fails with "Zip missing db.sqlite. Please check the archive structure." ([`en.edn:960`](../../../../../src/resources/dicts/en.edn)). For restoring an automatic backup's `db.sqlite` in place, see [Backup and Restore](../backup/backup-restore.md).
+The import option is at [`header.cljs:233`](../../../../../src/main/frontend/components/header.cljs) and [`imports.cljs:587-588`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:950-951`](../../../../../src/resources/dicts/en.edn). A zip without `db.sqlite` fails with "Zip missing db.sqlite. Please check the archive structure." ([`en.edn:960`](../../../../../src/resources/dicts/en.edn)). For restoring an automatic backup's `db.sqlite` in place, see [Backup and Recovery Strategies](../organization/backup-strategies.md).
 
 > **Not live-tested:** zipping an automatic backup's `db.sqlite` together with the graph's `assets/` folder and importing it this way.
 

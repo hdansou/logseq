@@ -10,7 +10,7 @@ reviewStatus: audited
 related-docs:
   - '[Plugin API Reference](../../reference/api/plugin-api.md)'
   - '[Plugin Security](../../explanation/architecture/plugin-security.md)'
-  - '[Database Properties](../development/db-properties.md)'
+  - '[Properties Reference](../../reference/data/properties-reference.md)'
 tags: ['plugin', 'development', 'javascript', 'typescript', 'tutorial']
 ---
 
@@ -317,8 +317,6 @@ This starts Parcel in development mode with hot reloading. Output will be in `di
 
 The toggle is `developer-mode-row` (`src/main/frontend/components/settings.cljs:568-575`), hidden on native mobile (`:926`). Its description string reads "Developer mode helps contributors and extension developers test their integrations with Logseq more efficiently." (`src/resources/dicts/en.edn:1702-1703`).
 
-![Developer Mode Setting](./assets/dev-mode-setting.png)
-
 ### Step 2: Load Unpacked Plugin
 
 1. Press `t p` (or **... menu** → **Plugins**)
@@ -327,16 +325,12 @@ The toggle is `developer-mode-row` (`src/main/frontend/components/settings.cljs:
 
 `t p` is the binding for `:ui/goto-plugins` (`src/main/frontend/modules/shortcut/config.cljs:464-466`). The **Load unpacked plugin** button is rendered at `src/main/frontend/components/plugins.cljs:833-837` from the string `:plugin/load-unpacked` (`src/resources/dicts/en.edn:1264`).
 
-![Load Unpacked Plugin](./assets/load-unpacked.png)
-
 ### Step 3: Test the Command
 
 1. Create a new block or edit an existing one
 2. Type `/` to open the slash command menu
 3. Type `quick note` and press Enter
 4. You should see a timestamped block inserted!
-
-![Quick Note Command](./assets/quick-note-demo.gif)
 
 ### Step 4: Debug with DevTools
 
@@ -455,8 +449,6 @@ Reload your plugin and:
 4. Configure your preferences
 
 The panel is the `plugin-settings-modal` dialog (`src/main/frontend/components/plugins.css:967`), rendered from the schema you registered. A plugin can also open it itself with `logseq.showSettingsUI()` (`libs/src/LSPlugin.ts:1217`).
-
-![Plugin Settings](./assets/plugin-settings.png)
 
 ### Step 3: Listen for Settings Changes
 
@@ -849,7 +841,7 @@ logseq.DB.onChanged(debouncedProcess)
 
 1. **[Plugin API Reference](../../reference/api/plugin-api.md)** - Complete API documentation
 2. **[Plugin Security](../../explanation/architecture/plugin-security.md)** - Security best practices
-3. **[Database Properties](../development/db-properties.md)** - Working with DB graphs
+3. **[Properties Reference](../../reference/data/properties-reference.md)** - Built-in and user properties in DB graphs
 4. **[Official Plugin Samples](https://github.com/logseq/logseq-plugin-samples)** - Example plugins
 
 ### Explore Advanced Topics:

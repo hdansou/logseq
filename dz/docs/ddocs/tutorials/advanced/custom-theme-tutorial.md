@@ -9,7 +9,7 @@ verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 related-docs:
   - '[Custom CSS Guide](../../how-to/integrations/custom-css.md)'
-  - '[Theme Development](../../developer/theme-development.md)'
+  - '[Create a Theme](../../how-to/integrations/create-theme.md)'
   - '[CSS Variables Reference](../../reference/configuration/css-variables.md)'
 tags: ['themes', 'CSS', 'customization', 'design']
 ---
@@ -1336,7 +1336,6 @@ html[data-theme='dark'] {
   --primary: 199 89% 48%;
 }
 ```
-````
 
 ## Compatibility
 
@@ -1626,7 +1625,7 @@ You've created a complete custom theme! 🎉
 - [Logseq Theme Gallery](https://github.com/logseq/awesome-logseq#themes)
 - [CSS Variables Reference](../../reference/configuration/css-variables.md)
 - [Logseq Discord #themes Channel](https://discord.gg/logseq)
-- [Theme Development Guide](../../developer/theme-development.md)
+- [Create a Theme](../../how-to/integrations/create-theme.md)
 
 **In-repo sources of truth** (read these at the revision you are targeting):
 

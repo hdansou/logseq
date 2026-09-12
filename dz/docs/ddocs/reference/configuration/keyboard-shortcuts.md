@@ -13,7 +13,7 @@ relatedDocs:
   reference:
     - '[config.edn Reference](config-edn.md)'
   howTo:
-    - '[Customizing Shortcuts](../../how-to/integrations/custom-shortcuts.md)'
+    - '[config.edn: Keyboard shortcuts](config-edn.md#4-keyboard-shortcuts)'
 ---
 
 # Keyboard Shortcuts Reference

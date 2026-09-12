@@ -10,7 +10,7 @@ platform: 'Desktop + Mobile'
 related-docs:
   - '[Schema System](./schema-system.md)'
   - '[Block Editor Architecture](./block-editor.md)'
-  - '[RTC Collaboration](../../tutorials/collaboration/rtc-setup.md)'
+  - '[Real-Time Collaboration](../../tutorials/collaboration/real-time-sync.md)'
 tags: ['integrity', 'validation', 'database', 'transactions', 'malli']
 ---
 
@@ -768,7 +768,7 @@ Integrity machinery that exists on `be800f1711` and was not described on this pa
 
 1. **[Schema System](./schema-system.md)** - Data model details
 2. **[Block Editor Architecture](./block-editor.md)** - Transaction flow
-3. **[RTC Collaboration](../../tutorials/collaboration/rtc-setup.md)** - Multi-client validation
+3. **[Real-Time Collaboration](../../tutorials/collaboration/real-time-sync.md)** - Multi-client validation
 4. **[Complete Investigation Reports](../../../../../dz/docs/07-investigations/schema-integrity-08-index.md)** - 8-part deep dive
 
 **For Contributors:**

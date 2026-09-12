@@ -9,8 +9,8 @@ verifiedAgainst: 'be800f1711'
 verifiedScope: 'Full audit 2026-09-09. The 2026-09-11 date covers only the no-tokens authentication note (Host / authentication section).'
 reviewStatus: audited
 related-docs:
-  - '[CLI Development Guide](../../reference/tools/cli-reference.md)'
-  - '[Database Properties](../development/db-properties.md)'
+  - '[CLI Basics](../../how-to/integrations/cli-basic.md)'
+  - '[Properties Reference](../../reference/data/properties-reference.md)'
   - '[Plugin Development](../plugins/first-plugin.md)'
 tags: ['mcp', 'ai', 'claude', 'integration', 'api']
 ---
@@ -595,8 +595,8 @@ You now have an AI client talking to your live Logseq graph.
 
 ### Continue Learning:
 
-1. **[CLI Development Guide](../../reference/tools/cli-reference.md)** - The OCaml CLI (separate from MCP)
-2. **[Database Properties](../development/db-properties.md)** - DB schema behind `upsertNodes`
+1. **[CLI Basics](../../how-to/integrations/cli-basic.md)** - The OCaml CLI (separate from MCP)
+2. **[Properties Reference](../../reference/data/properties-reference.md)** - DB schema behind `upsertNodes`
 3. **[Plugin Development](../plugins/first-plugin.md)** - Build in-app integrations
 4. **[MCP Specification](https://modelcontextprotocol.io)** - Official MCP docs
 

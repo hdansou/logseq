@@ -8,7 +8,7 @@ review-status: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
 related-docs:
-  - '[Database Properties Guide](../../tutorials/development/db-properties.md)'
+  - '[Properties Reference](../../reference/data/properties-reference.md)'
   - '[Schema Reference](../../../../../dz/docs/03-features/database-graphs/schema-reference.md)'
   - '[Query System](../../reference/advanced/query-system.md)'
 tags:
@@ -875,7 +875,7 @@ necessarily the `:title` strings in `property.cljs`.
 
 **Continue Learning:**
 
-1. **[Database Properties Guide](../../tutorials/development/db-properties.md)** - Plugin API for properties
+1. **[Properties Reference](../../reference/data/properties-reference.md)** - Built-in and user properties
    (> **Unverified:** this target does not exist in the repo at audit time; no file named
    `db-properties.md` was found anywhere under `dz/docs/ddocs`. The same path is referenced from
    this page's `related-docs` frontmatter.)

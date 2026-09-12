@@ -32,6 +32,25 @@ pages and merged two duplicate pairs: `config-edn-db.md` into `config-edn.md`, a
 replaced or dropped dead related-doc links on almost every page they touched. What remains is
 mostly links to pages that were never written. The groups below have not been recounted.
 
+## Closed 2026-09-12: 0 broken links
+
+`check_links.py dz/docs/ddocs` reports **0** broken links out of 3359 resolved. The last 21 were
+handled as follows.
+
+- **19 retargets**, each to the audited page covering the subject: `db-properties.md` (6) to
+  `properties-reference.md`, `cli-reference.md` (2) to `cli-basic.md`, `theme-development.md` (2) to
+  `create-theme.md`, `rtc-setup.md` (2) to `real-time-sync.md`, `query-dsl.md` to `query-system.md`,
+  `custom-shortcuts.md` to `config-edn.md#4-keyboard-shortcuts`, and one leftover `backup-restore.md`
+  link in the troubleshooting guide's body.
+- **4 screenshots** in `first-plugin.md` that were never committed: the image lines are removed, and
+  the surrounding steps already describe the UI in text.
+- **2 apparent links** in `custom-theme-tutorial.md` were not link rot. A stray ```` fence split the
+  sample README in two, so its middle rendered as page prose. Removing it restored one block.
+  `check_links.py` also now closes fences by marker length, so a ``` block nested in a ```` block no
+  longer reopens scanning.
+
+Group 1 and Group 2 above are historical: every link in them has since been retargeted or dropped.
+
 ## Where the count went
 
 | | Then | Now | What happened |
