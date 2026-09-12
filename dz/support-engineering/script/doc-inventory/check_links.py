@@ -10,17 +10,29 @@ _templates/ is skipped: its links are deliberate placeholders, not rot.
 """
 import sys, os, re, argparse
 
-FENCE = re.compile(r"^\s*(```|~~~)")
+FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
 INLINE = re.compile(r"`[^`\n]*`")
 LINK = re.compile(r"\]\((?!https?:|#|mailto:|data:|assets:|logseq:|lsp:|file:)([^)\s]+?)(?:\s+\"[^\"]*\")?\)")
 
 def links(path):
-    """Yield (lineno, target) for links outside fenced/inline code."""
-    out, fenced = [], False
+    """Yield (lineno, target) for links outside fenced/inline code.
+
+    A fence closes only on the same character, at least as long as the opener
+    (CommonMark). Otherwise a ``` block nested in a ```` block reopens scanning
+    and reports its links -- which is how a sample README's [LICENSE] leaked out.
+    """
+    out, open_fence = [], None
     for i, line in enumerate(open(path, encoding="utf-8"), 1):
-        if FENCE.match(line):
-            fenced = not fenced; continue
-        if fenced:
+        m = FENCE.match(line)
+        if m:
+            marker = m.group(1)
+            if open_fence is None:
+                open_fence = marker
+                continue
+            if marker[0] == open_fence[0] and len(marker) >= len(open_fence):
+                open_fence = None
+            continue
+        if open_fence is not None:
             continue
         for m in LINK.finditer(INLINE.sub("``", line)):
             t = m.group(1).split("#")[0]
