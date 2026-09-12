@@ -52,7 +52,7 @@ Severity is not assigned here. What matters for triage is whether the path is re
 | `onGraphAfterIndexed` is declared, but nothing emits it | `libs/src/LSPlugin.ts:561` | |
 | `upsertBlockProperty`'s `schema` option never reaches the property | `src/main/logseq/api/db_based.cljs:190-193` | The parameter is `key'`, but the map is built `{key schema}`, keyed by `cljs.core/key` |
 | `registerPageMenuItem`, `registerBlockContextMenuItem` and `registerHighlightContextMenuItem` return `undefined` instead of an unregister function | `libs/src/LSPlugin.user.ts:502`, `:607`, `:631` | |
-| `:thread-api/get-version` is undefined | — | Found in wave 4; re-locate before filing |
+| `:thread-api/get-version` is named but never defined | `src/main/frontend/worker/db_worker_node.cljs:210` | **Checked 2026-09-12.** **Downgraded.** The keyword appears exactly once, in a list of method names; there is no `def-thread-api` for it anywhere and no caller. So it is an unused name, not a call that fails. Not worth filing unless that list is meant to be exhaustive |
 
 ## MCP server and CLI
 
@@ -74,9 +74,9 @@ Severity is not assigned here. What matters for triage is whether the path is re
 | Choosing a slash command compares against hard-coded English names, and `"Upload an image"` matches no label | `src/main/frontend/components/editor.cljs:133`, `:137`; label is `en.edn:568` | Also breaks in other languages |
 | In a standalone `/Query`, `<% current page %>` resolves to today's journal | `src/main/frontend/worker/query_dsl.cljs:90` | `current-page-title` is set only for the journal default queries |
 | A repeating task's "When" falls back to `status.done` when the checked property has no checkbox choice | `src/main/frontend/worker/commands.cljs:44-54` | The panel still shows "is: Done" |
-| `mod+shift+h` inserts `==` while the rest of the app uses `^^` | — | Found in wave 3; re-locate before filing |
-| `get-timestamp-property` nils `(between deadline …)` | — | Found in wave 3; re-locate before filing |
-| EDN export ignores its options | — | Found in wave 3; re-locate before filing |
+| `mod+shift+h` inserts `==` while the rest of the app uses `^^` | `src/main/frontend/config.cljs:236-241` | **Checked 2026-09-12.** **Confirmed.** `:editor/highlight` (`shortcut/config.cljs:125`) calls `highlight-format!` (`handler/editor.cljs:171-174`), which wraps with `(config/get-highlight :markdown)` = `"=="`. Typing `^` twice inserts `^^` (`handler/editor.cljs:3424-3426`), and the shortcut help advertises `^^` (`components/shortcut_help.cljs:47`). One feature, two marks |
+| `(between deadline …)` silently drops the clause instead of filtering | `src/main/frontend/worker/query_dsl.cljs:300-310`; `deps/db/src/logseq/db/frontend/query_dsl.cljs:55-71` | **Checked 2026-09-12.** **Confirmed, with the mechanism.** The DSL's bare `deadline` becomes the unnamespaced `:deadline`. `property?` requires a namespace (`property.cljs:789-797`), and the fallback `case` maps only `created-at`/`updated-at`, so `get-timestamp-property` returns nil. The builder wraps everything in `when-let` (`:302`), so the whole clause returns nil. The built-in ident is `:logseq.property/deadline` (`property.cljs:340`) |
+| The Export screen's DB EDN export drops the options it passes | `deps/db/src/logseq/db/sqlite/export.cljs:1116-1119`, `:933-934` | **Checked 2026-09-12.** **Confirmed but narrower than written.** `export-repo-as-db-edn!` sends `{:export-type :graph :graph-options {:include-timestamps? true}}` (`handler/db_based/export.cljs:87-90`). `:graph` dispatches to `build-graph-datoms-export`, whose arity is `[db]` — no options. Only `:graph-human` passes `:graph-options` on. `:graph-options` is still read for `:catch-validation-errors?` (`:1122`), so it is not ignored wholesale |
 | The Linked references **count** skips refs from the page's own blocks, but the **list** does not | `initial_data.cljs:235` vs `deps/db/src/logseq/db/common/reference.cljs:248-259` | A page referenced only by its own blocks hides the section |
 | Whether the Unlinked references section appears is decided by the top 100 search hits, while its list scans every title | `src/main/frontend/worker/handler/block.cljs:524-534` vs `reference.cljs:309-326` | A stale index can hide real matches, or the section can render empty |
 | The search group labelled "Recently updated" lists **visited** pages | `en.edn:259`; `src/main/frontend/components/cmdk/core.cljs:234-239`, `:300-311` | |
@@ -149,6 +149,12 @@ Severity is not assigned here. What matters for triage is whether the path is re
   has a trailing default.
 
 ## Revalidation log
+
+**2026-09-12 — four "re-locate before filing" entries resolved.** The wave-3 and wave-4 entries that
+had no citation were tracked down: the highlight-mark mismatch and the `(between deadline …)` clause
+are confirmed, with the mechanism now written down; the EDN export entry is narrowed to the `:graph`
+export type; `:thread-api/get-version` is downgraded to an unused name, since nothing defines or
+calls it. Details are in the rows above.
 
 **2026-09-12 — reachability pass, 6 entries.** For the security and data-loss tables above, checked
 whether a user-facing path reaches the cited line: who writes the config a check reads, whether an
