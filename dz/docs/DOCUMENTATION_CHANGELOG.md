@@ -10,6 +10,19 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-09-12 — Review pass closed: every ddocs page audited, 0 broken links
+
+- [2026-09-12] `ddocs/` — **audited**: waves 5-7 finished the pass. `TASK_LIST.md` now reports 103 documents — 87 audited line by line against `be800f1711`, 10 authored from source, 1 generated, and 5 `_templates/` placeholders. No page is left `merged-not-fully-audited`.
+- [2026-09-12] `ddocs/reference/configuration/config-edn-db.md` — **deleted**, merged into `config-edn.md` (`70e069f46d`). One config.edn reference for DB graphs; every key checked for a reader, and keys nothing reads (`:feature/enable-journals?`, `:ref/linkable-built-in-properties`, `:dwim/settings`) listed as having no effect.
+- [2026-09-12] `ddocs/how-to/backup/backup-restore.md` — **deleted**, merged into `how-to/organization/backup-strategies.md` (`1d606a0099`). Also corrected the CLI command to `logseq` (`@logseq/cli`), not `logseq-cli.js`.
+- [2026-09-12] `ddocs/explanation/concepts/file-vs-database.md` — **deleted**, merged into `file-vs-db.md` (`0c56fcdcd9`); added the desktop Markdown Mirror, which neither page documented.
+- [2026-09-12] `ddocs/reference/api/plugin-api.md` — **updated**: every method traced to its host export. `getUserInfo`, the six template methods, `logseq.Git.*`, `App.execGitCommand`, `onGraphAfterIndexed` and the namespace-page methods are marked not implemented, with the commit that removed each.
+- [2026-09-12] `ddocs/` (tasks, flashcards, PDF, Zotero, assets, getting-started) — **updated**: file-graph syntax replaced throughout — `((uuid))` block refs became `[[uuid]]`, `{{query}}` became bare `/Query` forms, `key:: value` became `/Add property`, and `TODO`/`[#A]`/`SCHEDULED:` became the Task tag with its closed-value status and priority.
+- [2026-09-12] `ddocs/` — **fixed**: the last 21 broken links (`91966c5542`). 19 retargeted to the audited page covering the subject, 4 never-committed screenshots removed from `first-plugin.md`, and a stray ```` fence in `custom-theme-tutorial.md` that had split a sample README so its middle rendered as page prose. `check_links.py` now closes fences by marker length (`d6120daaa2`). The tree resolves 3362 links with none broken; `LINK_TRIAGE.md` records the close.
+- [2026-09-12] `07-investigations/029-upstream-defects-from-ddocs-review.md` — **added**: about 60 findings from the pass that look like product defects rather than doc errors, grouped by area, each with the source lines it was read at. All are source reads, not reproductions, and the page says to revalidate before filing.
+- [2026-09-12] `ddocs/how-to/workflows/zettelkasten-method.md` — **decision**: note types stay as the four tags `Fleeting`, `Literature`, `Permanent` and `Hub`, rather than a single note-type property. A tag is a class, so per-type properties (Confidence on Permanent, Source type on Literature) appear only where they belong, and queries read `(tags Permanent)`. Not to be "simplified" back in a later audit.
+- [2026-09-12] `ddocs/how-to/optimization/performance-optimization.md` — **corrected**: Settings → Features → Plugins is a web-only row (`settings.cljs:1154-1155`); HTTP server and Markdown Mirror are Electron-only. No build shows all five Features rows.
+
 ### 2026-09-10 — New investigation
 
 - [2026-09-10] `07-investigations/027-login-and-account-features.md` — **added**: why Logseq has a login when graphs are local, what each account-gated feature needs (sync, collaboration, encryption, publish, early access), and how far the plan limits are really enforced.
