@@ -1,8 +1,10 @@
 # Upstream Defects Found During the ddocs Review Pass
 
 > **Last revised:** 2026-09-12
-> **Verified against:** `origin/master` @ `be800f1711`. **Source read only.** Nothing here was
-> reproduced in a running app unless the entry says so.
+> **Verified against:** `master` @ `be800f1711`, which is still current master on 2026-09-13 —
+> both `origin` (the `hdansou/logseq` fork) and `upstream` (`logseq/logseq`) resolve
+> `refs/heads/master` to that commit. **Source read only.** Nothing here was reproduced in a
+> running app unless the entry says so.
 > **Context:** waves 1–7 of the documentation review audited every page in `dz/docs/ddocs` against
 > source. Along the way the audits found behaviour that looks like a product defect rather than a
 > documentation error. They were recorded in commit messages and session memory; this page collects
@@ -162,14 +164,19 @@ argument is sanitised before use, and whether the function has a non-test caller
 into those rows. One entry got sharper (Recycle: the block branch is unreachable, not merely
 unhelpful); none was withdrawn.
 
-**Not yet done for any entry:**
+**2026-09-13 — "current master" step satisfied, not pending.** `git fetch origin` brought nothing
+new, and a direct remote query returns `be800f1711` for `refs/heads/master` on both `origin` (the
+`hdansou/logseq` fork) and `upstream` (`logseq/logseq`, head dated 2026-09-08). Every line cited on
+this page was therefore read at what is still the newest code. Repeat this check when upstream
+advances: a defect fixed upstream should be struck from the list, not filed.
 
-- **Re-read at current master.** This worktree's `origin/master` is pinned at `be800f1711` and is
-  deliberately not fetched, because every audited page is stamped against it. Revalidation against a
-  newer master needs a fetch, which should be a deliberate step.
-- **Blind live reproduction.** Nothing here has been run in the app.
+**Still not done for any entry:**
 
-Both remain required before filing ([[feedback-revalidate-own-findings]] in session memory; the rule
+- **Blind live reproduction.** Nothing here has been run in the app. Several entries involve
+  deleting data (Recycle, asset removal, `graph backup remove`), so reproduce them against a scratch
+  graph, never a real one.
+
+Live reproduction remains required before filing ([[feedback-revalidate-own-findings]] in session memory; the rule
 is that 7 of 11 findings changed verdict the last time this was done properly).
 
 ## Related
