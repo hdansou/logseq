@@ -10,6 +10,10 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-09-12 — Correction: typed `key:: value` saves normally
+
+- [2026-09-12] `ddocs/reference/syntax/paste-and-type-syntax.md` — **corrected**: withdrew "typing `key:: value` breaks saving the block". The owner typed `status:: draft` in the app and it saved as text. The probe had called `wrap-parse-block` with no current repo, so `gp-mldoc/get-default-config` (`mldoc.cljc:338-349`) used file-graph options with property drawers on, and the property then threw. With a DB repo set the line stays plain text; the probe now sets it. Other typed rows and all paste rows were rerun and are unchanged.
+
 ### 2026-09-12 — Paste and type syntax cheatsheet
 
 - [2026-09-12] `ddocs/reference/syntax/paste-and-type-syntax.md` — **added**: what to paste (Markdown or rich HTML) or type so a DB graph gets real headings, nested blocks, code and math blocks, and what stays text (tasks, priorities, properties, tags). Paste rows were run through the real paste handler, outliner insert and Markdown Mirror at `be800f1711` (`dz/scripts/markdown-mirror-probe/paste_syntax_probe_test.cljs`); typed rows through `wrap-parse-block`; HTML rows through `html-parser/hiccup->doc`.

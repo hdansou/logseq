@@ -193,6 +193,8 @@
          (doseq [t typing-cases]
            (reset! *notices [])
            (let [r (with-redefs [state/get-state (constantly nil)
+                                 ;; mldoc picks DB parse options from the current repo
+                                 state/get-current-repo (constantly test-repo)
                                  notification/show! (fn [msg & _] (swap! *notices conj (str msg)))
                                  state/pub-event! (fn [e] (swap! *notices conj (str "event " (first e) " " (some-> e second :error ex-message))))]
                      (try (db-editor-handler/wrap-parse-block {:block/title t})

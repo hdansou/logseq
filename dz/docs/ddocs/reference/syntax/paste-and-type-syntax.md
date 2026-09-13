@@ -48,7 +48,8 @@ and links, not just text that looks right.
 5. **Tasks, priorities, dates, properties and tags are not syntax in DB graphs.** Paste the text
    without them, then select the blocks and use shortcuts: **Cmd/Ctrl+Enter** (Todo → Doing → Done),
    `p t` (tags), `p p` (priority), `p d` (deadline), `p s` (status), `t n` (numbered list).
-6. **Avoid** `#tag` (it becomes a plain page link), `[#A]`, `key:: value` and `((uuid))`.
+6. **Avoid** `#tag` (it becomes a plain page link), `[#A]` and `((uuid))`. `key:: value` lines are
+   harmless but stay text.
 
 **The Markdown Mirror format is the best paste format.** For everything marked ✅ below,
 the mirror writes exactly what you would paste.
@@ -243,7 +244,7 @@ Markdown"), or paste with **Cmd/Ctrl+Shift+V** and fix it by hand.
 | `((` | Shows "To reference a node, please use `[[]]`" | — |
 | `^^`, `==`, `**`, `~~` | Autopair | — |
 | `TODO text`, `[#A]`, `SCHEDULED: <…>` | Text only | ⚠️ |
-| `key:: value` on any line | See [Known issues](#known-issues) | ❌ |
+| `key:: value` on any line | Text; not a property. Use `;;` instead. | ⚠️ |
 
 ### Keyboard shortcuts
 
@@ -298,15 +299,9 @@ Source: [`shortcut/config.cljs`](../../../../../src/main/frontend/modules/shortc
 
 Found while verifying this page at `be800f1711`.
 
-1. **Typing `key:: value` breaks saving the block.** When a block's text contains a line like
-   `status:: draft` (first line or later), the save parser throws "Don't know how to save
-   graph-parser property :status". The error-catching wrapper is lazy, so the throw escapes it
-   ([`format/block.cljs:48-73`](../../../../../src/main/frontend/format/block.cljs)). The same code is
-   in desktop 2.0.1. Reproduced in the save code, not yet in the running app. Pasting the same
-   text does not throw; it stays as text.
-2. **Pasted `#tag` becomes a page link, not a tag** ([`paste.cljs:59-66`](../../../../../src/main/frontend/handler/paste.cljs)).
-3. **Pasted `[#A]` is mangled** to `[[[A]]]` and creates a page `A]`.
-4. **Pasting `((uuid))` for a block not in the graph fails the whole paste.**
-5. **HTML with `<figure>`, `<aside>`, `<header>`, `<footer>`, `<center>` or `<fieldset>` falls back
+1. **Pasted `#tag` becomes a page link, not a tag** ([`paste.cljs:59-66`](../../../../../src/main/frontend/handler/paste.cljs)).
+2. **Pasted `[#A]` is mangled** to `[[[A]]]` and creates a page `A]`.
+3. **Pasting `((uuid))` for a block not in the graph fails the whole paste.**
+4. **HTML with `<figure>`, `<aside>`, `<header>`, `<footer>`, `<center>` or `<fieldset>` falls back
    to plain text.** Code block languages, numbered lists, checkboxes, underline, sub/superscript
    and quoted paragraphs are also lost, and table divider rows get three columns.
