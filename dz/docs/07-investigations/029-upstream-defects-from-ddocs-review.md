@@ -8,7 +8,8 @@
 > **Context:** waves 1–7 of the documentation review audited every page in `dz/docs/ddocs` against
 > source. Along the way the audits found behaviour that looks like a product defect rather than a
 > documentation error. They were recorded in commit messages and session memory; this page collects
-> them so they can be triaged in one place.
+> them so they can be triaged in one place. A separate session's Markdown Mirror and paste
+> findings are folded in below, marked with their stronger evidence.
 
 ## How to use this list
 
@@ -142,6 +143,25 @@ Severity is not assigned here. What matters for triage is whether the path is re
 | The import page still renders "First you need to choose a folder…", which no longer matches DB graphs | `src/main/frontend/components/imports.cljs:564`; `onboarding/setups.cljs:19` |
 | Opening a non-PDF Zotero attachment may silently do nothing on macOS/Linux | `src/electron/electron/window.cljs:134-165` |
 
+## Markdown Mirror and paste
+
+Found by a separate session while writing `ddocs/reference/syntax/markdown-mirror-syntax.md` and
+`paste-and-type-syntax.md` (`22b3d5966c`, `0f2363985f`). **These carry better evidence than the rest
+of this page**: the mirror bugs were reproduced on `be800f1711` *and* on desktop 2.0.1 (`b09316a`),
+and the paste defects come from a probe run (`dz/scripts/markdown-mirror-probe/`), not from reading
+alone. Re-run that probe before filing; the pages' own "Known bugs" and "Known issues" sections carry
+the detail.
+
+| What looks wrong | Where | Evidence |
+|---|---|---|
+| A math block, or a block whose text starts with a blank line, desyncs the whole rest of the page: later blocks lose their status word, tags and `1.` numbering, and block embeds stop expanding | `src/main/frontend/worker/markdown_mirror.cljs:364-379` | **Reproduced** on `be800f1711` and desktop 2.0.1 (blank-line case on `be800f1711`). The renderer matches each written line to its block by the block's first line of text; `$$` and a trimmed blank first line both fail to match, so every later block is compared against the wrong one |
+| A tag on a code block is written inside the opening fence (```` ```js #Book ````), so other Markdown tools read it as part of the language | same page, "Known bugs" | **Reproduced** |
+| "No priority" writes an empty value block (`* Priority::` followed by an empty item) | same page, "Known bugs" | **Reproduced** |
+| Pasted `#tag` becomes a page link instead of a tag | `src/main/frontend/handler/paste.cljs:59-66` | **Probe**, not yet confirmed in the app |
+| Pasted `[#A]` is mangled to `[[[A]]]` and creates a page named `A]` | same | **Probe** |
+| Pasting `((uuid))` for a block that is not in the graph fails the entire paste | same | **Probe** |
+| HTML containing `<figure>`, `<aside>`, `<header>`, `<footer>`, `<center>` or `<fieldset>` throws and falls back to plain text, losing code-block languages, numbered lists, checkboxes and more | same | **Probe** |
+
 ## Ruled out
 
 - **`getBlockProperties` returning unconverted sets.** Raised in wave 4, withdrawn in wave 7. The
@@ -149,6 +169,11 @@ Severity is not assigned here. What matters for triage is whether the path is re
   arrays. A source comment suggesting otherwise looks stale. Not reproduced either way.
 - **A crash when cycling a task's status.** Raised by an agent in wave 3 and rejected: the `case`
   has a trailing default.
+- **Typing `key:: value` breaking block saves.** Raised and withdrawn by the mirror/paste session
+  (`0f2363985f`). The probe that "found" it ran without redefining `state/get-current-repo` to a
+  `logseq_db_…` repo, so mldoc used **file-graph** parse options (drawers, markers, priorities on).
+  The owner confirmed in the app that such text simply saves as text. Worth remembering for any
+  future probe: parse options come from the current repo (`gp-mldoc/get-default-config`).
 
 ## Revalidation log
 
