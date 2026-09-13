@@ -10,6 +10,16 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-09-12 — Paste and type syntax cheatsheet
+
+- [2026-09-12] `ddocs/reference/syntax/paste-and-type-syntax.md` — **added**: what to paste (Markdown or rich HTML) or type so a DB graph gets real headings, nested blocks, code and math blocks, and what stays text (tasks, priorities, properties, tags). Paste rows were run through the real paste handler, outliner insert and Markdown Mirror at `be800f1711` (`dz/scripts/markdown-mirror-probe/paste_syntax_probe_test.cljs`); typed rows through `wrap-parse-block`; HTML rows through `html-parser/hiccup->doc`.
+- [2026-09-12] `ddocs/reference/syntax/paste-and-type-syntax.md` — **defects found**: a typed `key:: value` line makes the block save throw (lazy `map` escapes the `try` in `format/block.cljs:48-73`; same in 2.0.1, not yet reproduced in the app); pasted `#tag` becomes a page link; pasted `[#A]` becomes `[[[A]]]` and creates page `A]`; pasting `((uuid))` for an absent block fails the paste; HTML with `<figure>`/`<aside>`/`<header>`/`<footer>` falls back to plain text, and code languages, numbered lists, checkboxes, quoted paragraphs are lost.
+
+### 2026-09-12 — Markdown Mirror syntax cheatsheet
+
+- [2026-09-12] `ddocs/reference/syntax/markdown-mirror-syntax.md` — **added**: an Obsidian-style syntax cheatsheet for DB graphs. For each construct it shows how it is created, what is stored and the exact line Markdown Mirror writes, marked as faithful, lossy/ambiguous, or not written. Every example output came from running the mirror renderer at `be800f1711` (`dz/scripts/markdown-mirror-probe/`); key cases were repeated with the `logseq` CLI on the `cliworker` graph (desktop 2.0.1, `b09316a`). Adds a two-way-readiness inventory and the contract proposed by the unmerged `feat/two-way-sync-between-db-and-markdown` branch (ADR 0017/0018).
+- [2026-09-12] `ddocs/reference/syntax/markdown-mirror-syntax.md` — **defects found**: a math block, or a block starting with a blank line, stops the mirror from writing status words, tags and list numbers for every later block on the page (`markdown_mirror.cljs:364-379`, reproduced on master and 2.0.1); a tag on a code block is written into the opening fence; "No priority" writes an empty value block.
+
 ### 2026-09-12 — Review pass closed: every ddocs page audited, 0 broken links
 
 - [2026-09-12] `ddocs/` — **audited**: waves 5-7 finished the pass. `TASK_LIST.md` now reports 103 documents — 87 audited line by line against `be800f1711`, 10 authored from source, 1 generated, and 5 `_templates/` placeholders. No page is left `merged-not-fully-audited`.
