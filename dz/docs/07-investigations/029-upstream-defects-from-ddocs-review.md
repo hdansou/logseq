@@ -29,7 +29,7 @@ Severity is not assigned here. What matters for triage is whether the path is re
 | What looks wrong | Where | Notes |
 |---|---|---|
 | Before any API token is saved, the desktop HTTP/MCP server accepts **any** `Authorization` value, and CORS allows every origin | `src/electron/electron/server.cljs:86`, `:164` | A request with **no** header still gets 401, because `string/replace` on nil throws inside the try (`:96-103`). So the hole is "any value passes", not "no auth". **Reachable (checked 2026-09-12).** The token panel persists each key as `server/<name>` (`server.cljs:53-61`), so tokens can be saved; the hole is the state before any is |
-| `graph backup remove --src` joins its argument onto the backup directory and removes the tree, with no path check | `cli/lib/graph.ml:469-470`, `:753-758` | The ClojureScript backup code guards the same operation with `child-path!` (`db_worker/graph_backup.cljs:23-37`). **Reachable (checked 2026-09-12).** `--src` reaches `remove_tree` as nothing but `String.trim opts.src` (`graph.ml:275-280`); `safe_backup_part` is applied only when building a *create* name (`:148`) |
+| `graph backup remove --src` joins its argument onto the backup directory and removes the tree, with no path check | `cli/lib/graph.ml:469-470`, `:753-758` | The ClojureScript backup code guards the same operation with `child-path!` (`db_worker/graph_backup.cljs:23-37`). **Reachable (checked 2026-09-12).** `--src` reaches `remove_tree` as nothing but `String.trim opts.src` (`graph.ml:275-280`); `safe_backup_part` is applied only when building a *create* name (`:148`) **Reproduced 2026-09-13** with the installed CLI (build `f7362f07b0`, whose `cli/lib/graph.ml` and `cli_parse.ml` are byte-identical to `be800f1711`). In a throwaway graph: `--src ../does-not-exist-xyz` returns `backup not found: ../does-not-exist-xyz`, echoing the traversal verbatim with no validation; `--src ../decoy`, against a directory created beside `backup/`, printed `Removed backup ../decoy` and deleted it, leaving `db.sqlite` and the real backup intact. `--src ..` — which resolves to the graph folder itself and would take `db.sqlite` with it — was deliberately **not** run. |
 | Inviting a user who has never set an E2EE password to an E2EE graph creates the membership first, then fails to wrap the key | `deps/db-sync/.../sync.cljs:392-398`, `crypt.cljs:678-679` | The invitee ends up a member who cannot decrypt; the manager sees a generic error |
 | `custom.js` approval is keyed on the relative path `logseq/custom.js`, which is identical for every DB graph | `src/main/frontend/handler/ui.cljs:131-136`, `src/main/frontend/config.cljs:374-379` | Approving one graph's script approves every graph's for 7 days. Cancel stores `false` permanently with no UI to undo (`ui.cljs:139-140`, `:153-154`). **Reachable (checked 2026-09-12).** For a DB graph `get-custom-js-path` returns `logseq/custom.js` with no repo segment (`config.cljs:374-379`), and the installer runs on desktop (`plugins.cljs:1790-1793`) |
 
@@ -188,6 +188,12 @@ whether a user-facing path reaches the cited line: who writes the config a check
 argument is sanitised before use, and whether the function has a non-test caller. Results are folded
 into those rows. One entry got sharper (Recycle: the block branch is unreachable, not merely
 unhelpful); none was withdrawn.
+
+**2026-09-13 — destructive entry reproduced against the CLI.** The `graph backup remove --src`
+traversal is confirmed on the installed build, using a decoy directory rather than the graph itself:
+a non-existent traversal target is echoed back unvalidated, and an existing one outside `backup/` is
+deleted. The row above carries the detail. Method worth reusing: prove the dangerous half on
+something disposable created for the purpose, never on real data.
 
 **2026-09-13 — first executed evidence.** Three entries no longer rest on reading. A probe
 (`dz/scripts/query-dsl-probe/`) confirmed the `(between deadline …)` empty query, the
