@@ -1,14 +1,14 @@
 # Documentation status
 
-Generated 2026-09-12 by
+Generated 2026-09-13 by
 `dz/support-engineering/script/doc-inventory/gen_task_list.py`. Do not edit by hand —
 every field comes from each document's frontmatter.
 
 | | Count |
 |---|---|
-| Documents | 103 |
+| Documents | 105 |
 | Audited line by line this pass | 87 |
-| Authored from source — trusted | 10 |
+| Authored from source — trusted | 12 |
 | Merged this pass — base inherited, needs a line-by-line audit | 0 |
 | Generated, gated in CI | 1 |
 | Not reviewed | 5 |
@@ -141,3 +141,5 @@ Older date, or none. Highest priority.
 | `reference/features/sync-limits.md` | 2026-09-09 | `—` |
 | `reference/platforms/default-paths.md` | 2026-09-09 | `—` |
 | `reference/platforms/uri-schemes.md` | 2026-09-09 | `—` |
+| `reference/syntax/markdown-mirror-syntax.md` | 2026-09-12 | `be800f1711` |
+| `reference/syntax/paste-and-type-syntax.md` | 2026-09-12 | `be800f1711` |

@@ -187,6 +187,8 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 - 🟢 [Code Blocks Reference](reference/syntax/code-blocks.md)
 - [Dynamic Variables Reference](reference/syntax/dynamic-variables.md)
+- [Markdown Mirror Syntax](reference/syntax/markdown-mirror-syntax.md)
+- [Paste and Type Syntax](reference/syntax/paste-and-type-syntax.md)
 
 ---
 
