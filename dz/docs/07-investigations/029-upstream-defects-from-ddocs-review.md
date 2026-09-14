@@ -37,7 +37,7 @@ Severity is not assigned here. What matters for triage is whether the path is re
 
 | What looks wrong | Where | Notes |
 |---|---|---|
-| Recycle promises deleted **blocks** can be restored, but deleting a block retracts it outright | `src/resources/dicts/en.edn:1824`; `deps/outliner/src/logseq/outliner/core.cljs:440-442` | `recycle-blocks-tx-data` (`recycle.cljs:127`) has only test callers. **Reachable (checked 2026-09-12).** **Sharper than written:** the Recycle list renders entities carrying `:logseq.property/deleted-at`, and only that test-only fn would set it on a block, so the block branch of `components/recycle.cljs:40-58` — its "deleted at" label and Restore button — never runs |
+| Recycle promises deleted **blocks** can be restored, but deleting a block retracts it outright | `src/resources/dicts/en.edn:1824`; `deps/outliner/src/logseq/outliner/core.cljs:440-442` | `recycle-blocks-tx-data` (`recycle.cljs:127`) has only test callers. **Reachable (checked 2026-09-12).** **Sharper than written:** the Recycle list renders entities carrying `:logseq.property/deleted-at`, and only that test-only fn would set it on a block, so the block branch of `components/recycle.cljs:40-58` — its "deleted at" label and Restore button — never runs **Reproduced 2026-09-14** in a throwaway graph via the CLI, with a control: deleting a block left nothing carrying `:logseq.property/deleted-at` and the block was gone entirely (no entity, no title); deleting a page in the same graph produced exactly one recycled entity. So the screen offers Restore for a class of thing that can never appear in it. |
 | A pending sync transaction whose rebase fails or becomes a no-op is marked non-pending and never uploaded | `src/main/frontend/worker/sync/apply_txs.cljs:1704-1710` | Only `:block/title` is conflict-tracked (`:1130-1131`), so edits to other attributes may be lost without a conflict entry. **Reachable (checked 2026-09-12).** The call sits in the rebase path (`:1710`), and title conflicts do surface a popup (`components/block.cljs:3375-3406`), so it is the non-title edits that vanish quietly |
 | "Remove the file too" deletes only the asset block; the file stays in `assets/` | `src/main/frontend/handler/editor.cljs:1741-1753`; checkbox text `en.edn:97` | The platform function `:asset-delete!` exists in both adapters but has no callers. **Reachable (checked 2026-09-12).** Repo-wide, `asset-delete!` appears only as its definition and adapter registration in `worker/platform/{browser,node}.cljs`; nothing invokes it |
 | Deleted assets are never removed from the sync server | `src/main/frontend/worker/sync/asset_db_listener.cljs:11-25` | Only `:update-asset` ops are generated, though `:remove-asset` is handled server-side |
@@ -129,7 +129,7 @@ Severity is not assigned here. What matters for triage is whether the path is re
 | Typo: "Please reload the app to in order to see the error" | `en.edn:683` |
 | The mobile share fallback template contains a zero-width space and drops the colon | `src/main/frontend/mobile/intent.cljs:229` |
 | Handbook search presses Enter with `(nth results selected)` and no empty-result guard | `src/main/frontend/extensions/handbooks/core.cljs:394` |
-| The Assets settings panel exists but has no entry in the settings tab list | `settings.cljs:1535-1536` vs `:1476-1494` |
+| The Assets settings panel exists but has no entry in the settings tab list | `settings.cljs:1535-1536` vs `:1476-1494` **Observed 2026-09-14** in the running app: the Settings tab list has no Assets tab. |
 | Pro storage is "5GB each" in the account string but 10 GB in the settings calculation | `en.edn:52` vs `settings.cljs:951` |
 | The pending-server-changes counter carries a `FIXME` | `src/main/frontend/components/rtc/indicator.cljs:213-214` |
 | Non-managers see the invite field and get a generic error on the 403 | `deps/db-sync/.../handler/index.cljs:186-191` |
@@ -188,6 +188,13 @@ whether a user-facing path reaches the cited line: who writes the config a check
 argument is sanitised before use, and whether the function has a non-test caller. Results are folded
 into those rows. One entry got sharper (Recycle: the block branch is unreachable, not merely
 unhelpful); none was withdrawn.
+
+**2026-09-14 — two more entries verified, one in the app and one at the data level.** The Assets
+panel was confirmed unreachable by looking at the running app's Settings tabs. The Recycle entry was
+reproduced through the CLI in a throwaway graph, with a page deletion as the control: the block
+disappeared without a trace, the page became a recycled entity. Method worth reusing: prove
+data-level claims through the CLI in a graph created for the purpose, so no real graph is touched and
+no UI observation is needed.
 
 **2026-09-13 — destructive entry reproduced against the CLI.** The `graph backup remove --src`
 traversal is confirmed on the installed build, using a decoy directory rather than the graph itself:
