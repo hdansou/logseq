@@ -4,8 +4,9 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 quadrant: 'Reference'
 platform: 'Desktop + Mobile'
-lastVerified: '2026-09-10'
+lastVerified: '2026-09-14'
 verifiedAgainst: 'be800f1711'
+verifiedScope: 'Full audit 2026-09-10 (c0e4573a15). The 2026-09-14 date covers only the highlight markup: both ==text== and ^^text^^ render as <mark>, checked in the running app.'
 reviewStatus: audited
 related-docs:
   - '[Slash Commands](../interface/slash-commands.md)'
@@ -56,7 +57,7 @@ mldoc's inline emphasis kinds are exactly `Bold`, `Italic`, `Underline`, `Strike
 | Bold          | `**text**`            | `<b>`      | `mod+b`        |
 | Italic        | `*text*`              | `<i>`      | `mod+i`        |
 | Strikethrough | `~~text~~`            | `<del>`    | `mod+shift+s`  |
-| Highlight     | `^^text^^`            | `<mark>`   | `mod+shift+h` (see note) |
+| Highlight     | `^^text^^` or `==text==` | `<mark>` | `mod+shift+h` (inserts `==`) |
 | Inline code   | `` `text` ``          | `<code>`   | –              |
 | Underline     | `<ins>text</ins>`     | `<ins>`    | – (`/Underline`) |
 | Superscript   | `^{text}`             | `<sup>`    | –              |
@@ -74,7 +75,7 @@ Three corrections to folklore about these shortcuts:
 - There is **no `mod+k` for links**. `mod+k` is global search (`:go/search`, [`shortcut/config.cljs:304-305`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). The link shortcut is `mod+l` (`:editor/insert-link`, [`:241-242`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 - Highlight is `mod+shift+h`, not `mod+h`.
 
-> **Unverified:** the highlight shortcut and the highlight markup disagree in source. Typing `^` twice auto-pairs into `^^…^^` ([`handler/editor.cljs:3424-3426`](../../../../../src/main/frontend/handler/editor.cljs)), the in-app syntax help shows `^^highlight^^` ([`components/shortcut_help.cljs:47`](../../../../../src/main/frontend/components/shortcut_help.cljs)) and the file-graph importer writes `^^…^^` ([`graph_parser/exporter.cljs:1212-1213`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)) — but `highlight-format!` passes the block's format (defaulting to `:markdown`) to `config/get-highlight` ([`handler/editor.cljs:171-174`](../../../../../src/main/frontend/handler/editor.cljs)), which returns `"=="` for `:markdown` ([`frontend/config.cljs:236-240`](../../../../../src/main/frontend/config.cljs)), so `mod+shift+h` wraps the selection in `==`. Whether mldoc parses `==…==` as `Highlight` could not be confirmed from this repository. Prefer `^^…^^`, which every other in-repo producer and the syntax help agree on.
+> **Verified 2026-09-14:** the highlight shortcut and the documented markup differ, but both render. Typing `^` twice auto-pairs into `^^…^^` ([`handler/editor.cljs:3424-3426`](../../../../../src/main/frontend/handler/editor.cljs)), the in-app syntax help shows `^^highlight^^` ([`components/shortcut_help.cljs:47`](../../../../../src/main/frontend/components/shortcut_help.cljs)) and the file-graph importer writes `^^…^^` ([`graph_parser/exporter.cljs:1212-1213`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)) — but `highlight-format!` passes the block's format (defaulting to `:markdown`) to `config/get-highlight` ([`handler/editor.cljs:171-174`](../../../../../src/main/frontend/handler/editor.cljs)), which returns `"=="` for `:markdown` ([`frontend/config.cljs:236-240`](../../../../../src/main/frontend/config.cljs)), so `mod+shift+h` wraps the selection in `==`. **Both forms work:** checked in the app on 2026-09-14, `mod+shift+h` highlights the selection, and `==text==` and `^^text^^` both render as `<mark>` (see also [Markdown Mirror Syntax](../syntax/markdown-mirror-syntax.md) and [Paste and Type Syntax](../syntax/paste-and-type-syntax.md)). Nothing is broken here; only the inserted syntax differs from what the syntax help and the importer use. Either is safe to type, and `^^…^^` is the form the rest of the app presents.
 
 **Examples:**
 

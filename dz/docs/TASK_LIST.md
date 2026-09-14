@@ -1,6 +1,6 @@
 # Documentation status
 
-Generated 2026-09-13 by
+Generated 2026-09-14 by
 `dz/support-engineering/script/doc-inventory/gen_task_list.py`. Do not edit by hand —
 every field comes from each document's frontmatter.
 
@@ -67,7 +67,6 @@ Older date, or none. Highest priority.
 | `how-to/workflows/zettelkasten-method.md` | 2026-09-10 | `be800f1711` |
 | `reference/advanced/query-patterns.md` | 2026-09-10 | `be800f1711` |
 | `reference/advanced/query-system.md` | 2026-09-10 | `be800f1711` |
-| `reference/formatting/markdown-syntax.md` | 2026-09-10 | `be800f1711` |
 | `reference/interface/templates-system.md` | 2026-09-10 | `be800f1711` |
 | `reference/plugin-apis/pr-12395/01-postmate-message-channel.md` | 2026-09-10 | `be800f1711` |
 | `reference/plugin-apis/pr-12395/05-block-properties-class-defaults.md` | 2026-09-10 | `be800f1711` |
@@ -121,6 +120,7 @@ Older date, or none. Highest priority.
 | `tutorials/task-management/project-planning.md` | 2026-09-11 | `be800f1711` |
 | `tutorials/task-management/todo-basics.md` | 2026-09-11 | `be800f1711` |
 | `how-to/optimization/performance-optimization.md` | 2026-09-12 | `be800f1711` |
+| `reference/formatting/markdown-syntax.md` | 2026-09-14 | `be800f1711` |
 
 ## Merged this pass — needs a line-by-line audit
 
