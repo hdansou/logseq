@@ -2,7 +2,7 @@
 title: 'Advanced Queries'
 description: 'How to write advanced Datalog queries in Logseq'
 status: stable
-lastVerified: '2026-09-09'
+lastVerified: '2026-09-15'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 logseqVersion: '0.11.x'
@@ -17,7 +17,8 @@ relatedDocs:
 
 # Advanced Queries
 
-> **Last revised:** 2026-09-09 (verified against `be800f1711`)
+> **Last revised:** 2026-09-15 (verified against `be800f1711`; this revision
+> re-checked the pull/normalization rules only)
 > How to write powerful Datalog queries to search and analyze your graph.
 
 ## Query Basics
@@ -124,10 +125,17 @@ automatically (`src/main/frontend/worker/handler/query.cljs:185-204`).
 
 ### Pull Specific Fields
 
+A partial pull pattern **must include `:block/uuid`**:
+
 ```clojure
-[:find (pull ?b [:block/title])
+[:find (pull ?b [:block/uuid :block/title])
  :where ...]
 ```
+
+Leaving it out throws `Renderer query result map has no UUID` and the query
+block dies inside its React error boundary. See
+[Partial pulls must include `:block/uuid`](#partial-pulls-must-include-blockuuid)
+below for why. When in doubt use `[*]`, which always carries it.
 
 ### Find Collection
 
@@ -173,6 +181,41 @@ which asserts a pulled block arrives as a UUID.
 `:result-transform` is the exception: it runs in the worker on the rows *before*
 normalization, so it does see pulled maps and entities
 (`render_resource/query.cljs:181-202`). Filter and sort there; format in `:view`.
+
+### Partial pulls must include `:block/uuid`
+
+The normalizer turns a pulled map into its `:block/uuid`, so it needs one to be
+there. A map without it is a hard failure, not a silently dropped column
+(`render_resource/query.cljs:15-23`):
+
+```clojure
+(or (map? cell) (de/entity? cell))
+(common/fail! "Renderer query result map has no UUID" {:value cell})
+```
+
+The query block then renders as a React error boundary, and the console shows a
+500 from the worker invoke with `Renderer query result map has no UUID`.
+
+```clojure
+;; crashes the block — :db/id is not :block/uuid
+[:find (pull ?p [:db/id :block/title]) :where ...]
+
+;; fine
+[:find (pull ?p [:block/uuid :block/title]) :where ...]
+[:find (pull ?p [*]) :where ...]
+```
+
+This bites hardest when a query is drafted outside the app. `logseq query` on
+the CLI returns raw `d/q` output and never runs the normalizer, so a pattern
+missing `:block/uuid` prints perfectly good results there and still takes the
+block down when pasted into a graph. Verify pull patterns in the app, not only
+on the CLI.
+
+Only the top-level pulled map is checked. A map carrying `:block/uuid` returns
+that uuid immediately, so nested joins such as
+`(pull ?b [* {:logseq.property/status [:block/title]}])` are never visited by
+the normalizer and need no uuid of their own — they reach `:result-transform`
+intact and collapse to the outer uuid afterwards.
 
 ---
 

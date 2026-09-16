@@ -3,7 +3,7 @@ title: 'Managing Favorites & Recent Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'How-To'
-last-verified: '2026-09-11'
+last-verified: '2026-09-15'
 verified-against: 'be800f1711'
 review-status: audited
 graph-type: [db]
@@ -16,7 +16,8 @@ related-docs:
 
 # Managing Favorites & Recent Pages
 
-> **Last revised:** 2026-09-11
+> **Last revised:** 2026-09-15 (pull patterns re-checked for the
+> `:block/uuid` renderer requirement; rest of the page unchanged)
 
 Learn how to organize and quickly access your most important pages using Favorites and Recent Pages features.
 
@@ -199,7 +200,7 @@ DB graphs do not render `#+BEGIN_QUERY` blocks. In current source that marker ap
 > **Unverified:** that this advanced query runs as written when entered through `/Query` in a DB graph. It uses `:block/name`, `:block/title` and `:block/updated-at`, and it omits `:limit`.
 
 ```clojure
-{:query [:find (pull ?p [:block/title :block/updated-at])
+{:query [:find (pull ?p [:block/uuid :block/title :block/updated-at])
          :where
          [?p :block/name]
          [?p :block/updated-at ?t]

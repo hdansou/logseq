@@ -1,6 +1,7 @@
 # Logseq Query Inputs: Complete Guide
 
-> **Last revised:** 2026-05-29
+> **Last revised:** 2026-09-15 (pull patterns re-checked for the
+> `:block/uuid` renderer requirement; rest of the page not re-verified)
 
 **Master Advanced Queries with Dynamic Inputs for DB-Based Graphs**
 
@@ -305,7 +306,7 @@ Context inputs provide information about the current editing context.
 
 ```clojure
 {:title "Parent's Tags"
- :query [:find (pull ?parent [:block/tags])
+ :query [:find (pull ?parent [:block/uuid :block/tags])
          :in $ ?parent
          :where
          [?parent :block/tags]]
@@ -1182,7 +1183,7 @@ Then customize per page by overriding inputs.
 
 ```clojure
 {:title "This Week vs Last Week"
- :query [:find (pull ?b [:block/title :block/created-at])
+ :query [:find (pull ?b [:block/uuid :block/title :block/created-at])
          :in $ ?this-week-start ?last-week-start ?last-week-end
          :where
          (or (and [?b :block/created-at ?t]
