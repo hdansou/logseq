@@ -2,7 +2,7 @@
 title: 'Create a Flashcard Deck'
 description: 'How to organize flashcards into focused study decks'
 status: stable
-lastVerified: '2026-09-11'
+lastVerified: '2026-09-15'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 logseqVersion: '0.11.x'
@@ -17,7 +17,8 @@ relatedDocs:
 
 # Create a Flashcard Deck
 
-> **Last revised:** 2026-09-11 (verified against `be800f1711`)
+> **Last revised:** 2026-09-15 (deck-query forms and the untitled-deck UUID
+> defect verified against `be800f1711`; rest of the page unchanged)
 
 > How to organize flashcards into focused study decks for efficient learning.
 
@@ -114,6 +115,41 @@ Create cards with topic tags, then create a `Cards` object with a query for each
 Then create a `Cards` object with the query `[[chemistry]]` to study only chemistry cards. Tags count as references, so `[[chemistry]]` matches blocks tagged `#chemistry` ([pipeline.cljs:118](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs#L118), [rules.cljc:31-36](../../../../../deps/db/src/logseq/db/frontend/rules.cljc#L31-L36)).
 
 > **Removed:** The old page-based, tag-based and namespace-based deck recipes built on a `{{cards [[Some Page]]}}` macro. That macro is not registered in DB graphs. Only `{{cloze}}` is registered, and `{{cards ...}}` remains a commented-out TODO ([fsrs.cljs:477-482](../../../../../src/main/frontend/extensions/fsrs.cljs#L477-L482)). Use `Cards` objects instead. Importing a file graph turns each `{{cards <query>}}` block into a `Cards` block with that query ([exporter.cljs:1415-1427](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1415-L1427)).
+
+### Replacing `{{cards [[Some Page]]}}` from a file graph
+
+The file-graph macro has a direct DB equivalent, and the importer performs
+exactly this conversion ([exporter.cljs:1415-1427](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1415-L1427)).
+To do it by hand, anywhere in the graph:
+
+1. Add a `#Cards` tag to a block.
+2. Set its query to `[[Some Page]]`.
+3. Open **Flashcards** and click **All cards** at the top to pick the new deck.
+
+Choose the query form by what you mean by "the page's cards":
+
+| Goal                                                         | Query                  |
+| ------------------------------------------------------------ | ---------------------- |
+| Cards **written on** that page, at any depth                  | `(page "some page")`   |
+| Cards **referencing** that page, wherever they live (the file-graph macro's meaning) | `[[Some Page]]` |
+
+`(page …)` compiles to `[?b :block/page ?bp] [?bp :block/name ?page-name]`
+([query_dsl.cljs:460-465](../../../../../src/main/frontend/worker/query_dsl.cljs#L460-L465),
+[rules.cljc:89-92](../../../../../deps/db/src/logseq/db/frontend/rules.cljc#L89-L92)),
+so a book page whose cards sit under a `Questions` heading is covered by
+`(page "book title")` — nesting does not matter. The DSL has no
+descendant-of-block filter, so a single heading within a page cannot be
+targeted; tag those cards if you need to separate them from others on the same
+page.
+
+**Verified** against `be800f1711` by running the query the worker assembles
+(the `#Card` tag clause, the due-or-never-reviewed `or-join`, and the parsed
+deck query) over a probe page with a top-level card, a card nested under a
+`Questions` heading, and a card on an unrelated page. Both cards on the page
+were returned, including the nested one; the unrelated card was excluded.
+
+> **Defect (open):** the deck dropdown shows a raw UUID instead of the tag or
+> page name. See [Deck names show a UUID](#deck-names-show-a-uuid).
 
 ---
 
@@ -232,6 +268,28 @@ For multiple decks, review a different deck each day:
 2. Check for unintended tag references on card blocks
 3. Switch to **All cards** to see whether the problem comes from the query
 
+### Deck names show a UUID
+
+A deck may appear in the dropdown as `[[6aa9eab5-798f-43f3-bc8c-c65384de1b8f]]`
+or `(tags [[6aa9e51c-4a8c-4215-a234-6c77e4eb720f]])` rather than by the page or
+tag it selects.
+
+This happens when the `Cards` block itself has no title. The selector then falls
+back to the title of the block's query
+([fsrs.cljs:310-315](../../../../../src/main/frontend/extensions/fsrs.cljs#L310-L315)),
+and a DB graph stores a reference in a query as `[[<uuid>]]`, not as the node's
+name. The dropdown renders that string as plain text without resolving the
+reference ([fsrs.cljs:350-352](../../../../../src/main/frontend/extensions/fsrs.cljs#L350-L352)),
+so the raw UUID reaches the screen.
+
+**Workaround:** give the `Cards` block a title. A non-blank title is used as-is
+and the fallback never runs.
+
+**Verified** against `be800f1711` by reading two untitled `Cards` blocks out of
+a live graph: their queries stored `[[<uuid>]]` and `(tags [[<uuid>]])`, and the
+UUIDs resolved to a page named `LLM` and a tag named `AI` — neither name is
+available to the selector at render time.
+
 ### Answer Shown Before Reveal
 
 The answer is on the card block itself. Move it into a child block.
@@ -251,4 +309,4 @@ The answer is on the card block itself. Move it into a child block.
 
 ---
 
-_Last updated: 2026-09-11_
+_Last updated: 2026-09-15_

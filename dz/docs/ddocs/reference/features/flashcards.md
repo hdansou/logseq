@@ -3,7 +3,7 @@ title: 'Flashcard System'
 description: "Complete reference for Logseq's flashcard and spaced repetition system"
 type: reference
 status: stable
-lastVerified: '2026-09-11'
+lastVerified: '2026-09-15'
 verifiedAgainst: 'be800f1711'
 reviewStatus: audited
 logseqVersion: '0.11.x'
@@ -18,7 +18,8 @@ relatedDocs:
 
 # Flashcard System
 
-> **Last revised:** 2026-09-11
+> **Last revised:** 2026-09-15 (deck-query forms and the untitled-deck UUID
+> defect verified against `be800f1711`; rest of the page unchanged)
 
 > Complete reference for Logseq's flashcard and spaced repetition functionality.
 
@@ -214,6 +215,25 @@ The collection's filter is the **title of its `:logseq.property/query` block**. 
 
 On desktop, a dropdown in the review dialog switches between **All cards** and every Cards block with a non-blank title, or whose query block has a title (`fsrs.cljs:300-321`, `:341-351`). Mobile puts the same selector in the header (`src/main/mobile/components/header.cljs:147-165`).
 
+> **Defect (open, `be800f1711`):** an untitled Cards block is listed by the raw
+> text of its query, so a deck selecting a page or tag appears as
+> `[[6aa9eab5-798f-43f3-bc8c-c65384de1b8f]]` rather than by name. The fallback
+> substitutes the query block's title (`fsrs.cljs:310-315`); DB graphs store a
+> reference as `[[<uuid>]]`; and the select item renders that string as plain
+> text with no ref resolution (`fsrs.cljs:350-352`). Titling the Cards block
+> avoids it, since a non-blank title skips the fallback. Confirmed by reading
+> two untitled Cards blocks from a live graph, whose stored queries were
+> `[[<uuid>]]` and `(tags [[<uuid>]])` for a page `LLM` and a tag `AI`.
+
+### Query forms for a page's cards
+
+`(page "some page")` selects cards **written on** that page at any depth
+(`query_dsl.cljs:460-465`, `rules.cljc:89-92`), which is the replacement for a
+file graph's `{{cards [[Some Page]]}}` when the cards live on the page itself.
+`[[Some Page]]` selects cards **referencing** it, which is what the file-graph
+macro matched. The DSL has no descendant-of-block filter, so a deck cannot be
+narrowed to one heading within a page.
+
 ---
 
 ## Review Statistics
@@ -349,4 +369,4 @@ The answer is on the card block itself. Move it into a child block.
 
 ---
 
-_Last updated: 2026-09-11_
+_Last updated: 2026-09-15_
