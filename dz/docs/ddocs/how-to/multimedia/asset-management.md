@@ -21,6 +21,9 @@ related-docs:
 > moved from `be800f1711` to `5824434a74` by locating the same source text in the current
 > file. No claim on this page was re-read against the new revision.
 
+> **Resizing section revisited 2026-09-18:** the Markdown image-metadata claim was re-checked
+> against the parser (see below). No other claim on this page was re-read.
+
 This guide shows you how to add, view, resize, find, delete and back up assets in a Logseq DB graph. Assets are files you attach to a graph: images, PDFs, audio, video and any other file.
 
 In a DB graph every asset is a **block** tagged `Asset`, and its file is stored as `assets/<block uuid>.<extension>` in the graph folder. The block holds the title and metadata. The file holds the bytes.
@@ -139,7 +142,9 @@ Asset blocks for images, audio and video show the media inside the block, togeth
 - An image you have not resized displays **250 px** wide. The value is hard-coded, with no setting ([`block.cljs:1174-1185`](../../../../../src/main/frontend/components/block.cljs)).
 - Resizing is off in the native mobile app, in breadcrumbs, for images shown in a property position and in table views ([`block.cljs:421-433`](../../../../../src/main/frontend/components/block.cljs)).
 
-> Removed claim: `![Diagram](../assets/diagram.png){:width 600 :height 400}`. Not verified for DB graphs. Drag to resize instead.
+- To set an exact width, change the default for un-resized images, or cap every image, see [Set Image and Asset Width](./image-width.md).
+
+> **Updated 2026-09-18:** the Markdown metadata suffix `![Diagram](url){:width 600}` *is* parsed in a DB graph — mldoc with the DB-graph options returns it as the link's `metadata`. The rendering path from there was read in source, not observed in the app. For local assets in a DB graph the image is an asset node rather than a Markdown link, so this matters mainly for external image URLs. Details in [Set Image and Asset Width](./image-width.md#an-external-image-written-as-markdown).
 
 ### Missing files and sync progress
 

@@ -75,6 +75,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 - [CLI Basics](how-to/integrations/cli-basic.md)
 - [Create a Theme](how-to/integrations/create-theme.md)
 - [Custom CSS](how-to/integrations/custom-css.md)
+- [Use a Custom Font](how-to/integrations/custom-font.md)
 - [Custom JavaScript](how-to/integrations/custom-js.md)
 - [Build an External Vector Index of Your Graph](how-to/integrations/external-vector-index.md)
 - [Publish a Page](how-to/integrations/publishing.md)
@@ -84,6 +85,8 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 #### [Multimedia](how-to/multimedia/)
 
 - 🟢 [Asset Management in Logseq](how-to/multimedia/asset-management.md)
+- [Set Image and Asset Width](how-to/multimedia/image-width.md)
+- [Set a Default Image Size with CSS](how-to/multimedia/default-image-size.md)
 - 🟢 [Video Embedding in Logseq](how-to/multimedia/video-embed.md)
 
 #### [Optimization](how-to/optimization/)
