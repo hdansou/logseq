@@ -2,8 +2,8 @@
 title: 'Create a Flashcard Deck'
 description: 'How to organize flashcards into focused study decks'
 status: stable
-lastVerified: '2026-09-15'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
@@ -17,8 +17,9 @@ relatedDocs:
 
 # Create a Flashcard Deck
 
-> **Last revised:** 2026-09-15 (deck-query forms and the untitled-deck UUID
-> defect verified against `be800f1711`; rest of the page unchanged)
+> **Last revised:** 2026-09-18 (untitled-deck naming re-checked after #13258
+> fixed it; every source line reference on this page relocated to
+> `5824434a74`)
 
 > How to organize flashcards into focused study decks for efficient learning.
 
@@ -29,7 +30,7 @@ Logseq uses FSRS (Free Spaced Repetition Scheduler) for flashcards. In DB graphs
 - Flashcards can be opened with both `g f` and `t c`, and from the command palette as **Toggle flashcards**.
 - The mobile app has a **Cards** tab, with its own deck selector in the header.
 - The `+` button in the flashcard viewer creates a `Cards` block on today's journal page.
-- Every `Cards` block has a **Practice** button that opens review for that deck alone ([block.cljs:2539-2549](../../../../../src/main/frontend/components/block.cljs#L2539-L2549)).
+- Every `Cards` block has a **Practice** button that opens review for that deck alone ([block.cljs:2576-2586](../../../../../src/main/frontend/components/block.cljs#L2576-L2586)).
 
 ## Creating Cards
 
@@ -44,7 +45,7 @@ Add the `#Card` tag to a block to make it a flashcard. The block is the question
   - Sodium Chloride (Salt)
 ```
 
-To tag several blocks at once, select them, right-click, and choose **Make a Flashcard**. Only the top-level blocks of the selection are tagged ([fsrs.cljs:402-424](../../../../../src/main/frontend/extensions/fsrs.cljs#L402-L424)). No command-palette command does this.
+To tag several blocks at once, select them, right-click, and choose **Make a Flashcard**. Only the top-level blocks of the selection are tagged ([fsrs.cljs:404-426](../../../../../src/main/frontend/extensions/fsrs.cljs#L404-L426)). No command-palette command does this.
 
 ### Cloze Deletions
 
@@ -86,7 +87,7 @@ Logseq uses `Cards` objects (blocks tagged with the built-in `#Cards` tag, which
 2. Click the **+** button ("Add new query") next to the deck dropdown
 3. Logseq closes the viewer, creates an empty `Cards` block at the end of today's journal page, and takes you to it
 4. Enter a simple query in the block's query, for example `[[chemistry]]` to select cards that reference or are tagged with the chemistry page. Use the same form you would type after `/Query`. While the query is blank, the deck contains every due card.
-5. Give the block a title. The deck dropdown only lists `Cards` blocks with a title, or whose query has a title ([fsrs.cljs:300-321](../../../../../src/main/frontend/extensions/fsrs.cljs#L300-L321)).
+5. Give the block a title. The deck dropdown only lists `Cards` blocks with a title, or whose query has a title ([fsrs.cljs:301-322](../../../../../src/main/frontend/extensions/fsrs.cljs#L301-L322)).
 
 > **Unverified:** the exact gesture for entering the query on the new, empty block was not checked in a running app. What the source shows: Logseq gives the block a query value block ([pipeline.cljs:340-371](../../../../../src/main/frontend/worker/pipeline.cljs#L340-L371)), and the worker reads that value block's title as the deck query.
 
@@ -114,12 +115,12 @@ Create cards with topic tags, then create a `Cards` object with a query for each
 
 Then create a `Cards` object with the query `[[chemistry]]` to study only chemistry cards. Tags count as references, so `[[chemistry]]` matches blocks tagged `#chemistry` ([pipeline.cljs:118](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs#L118), [rules.cljc:31-36](../../../../../deps/db/src/logseq/db/frontend/rules.cljc#L31-L36)).
 
-> **Removed:** The old page-based, tag-based and namespace-based deck recipes built on a `{{cards [[Some Page]]}}` macro. That macro is not registered in DB graphs. Only `{{cloze}}` is registered, and `{{cards ...}}` remains a commented-out TODO ([fsrs.cljs:477-482](../../../../../src/main/frontend/extensions/fsrs.cljs#L477-L482)). Use `Cards` objects instead. Importing a file graph turns each `{{cards <query>}}` block into a `Cards` block with that query ([exporter.cljs:1415-1427](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1415-L1427)).
+> **Removed:** The old page-based, tag-based and namespace-based deck recipes built on a `{{cards [[Some Page]]}}` macro. That macro is not registered in DB graphs. Only `{{cloze}}` is registered, and `{{cards ...}}` remains a commented-out TODO ([fsrs.cljs:479-484](../../../../../src/main/frontend/extensions/fsrs.cljs#L479-L484)). Use `Cards` objects instead. Importing a file graph turns each `{{cards <query>}}` block into a `Cards` block with that query ([exporter.cljs:1436-1448](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1436-L1448)).
 
 ### Replacing `{{cards [[Some Page]]}}` from a file graph
 
 The file-graph macro has a direct DB equivalent, and the importer performs
-exactly this conversion ([exporter.cljs:1415-1427](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1415-L1427)).
+exactly this conversion ([exporter.cljs:1436-1448](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1436-L1448)).
 To do it by hand, anywhere in the graph:
 
 1. Add a `#Cards` tag to a block.
@@ -148,8 +149,9 @@ deck query) over a probe page with a top-level card, a card nested under a
 `Questions` heading, and a card on an unrelated page. Both cards on the page
 were returned, including the nested one; the unrelated card was excluded.
 
-> **Defect (open):** the deck dropdown shows a raw UUID instead of the tag or
-> page name. See [Deck names show a UUID](#deck-names-show-a-uuid).
+> **Note:** on builds older than `5824434a74`, an untitled deck shows a raw
+> UUID instead of the tag or page name. See
+> [Deck names show a UUID](#deck-names-show-a-uuid).
 
 ---
 
@@ -192,7 +194,7 @@ Logseq uses the FSRS algorithm to schedule reviews. Each card block stores its s
 
 Logseq updates these properties when you rate a card during review. You do not need to edit them. A card that has never been rated has no `due` property yet and counts as due.
 
-> **Removed:** The legacy file-based `:card-last-interval`, `:card-repeats`, `:card-ease-factor`, `:card-next-schedule`, and `:card-last-score` fields do not apply to DB flashcards. The file-graph importer drops them, along with `:card-last-reviewed` ([exporter.cljs:1048-1049](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1048-L1049)).
+> **Removed:** The legacy file-based `:card-last-interval`, `:card-repeats`, `:card-ease-factor`, `:card-next-schedule`, and `:card-last-score` fields do not apply to DB flashcards. The file-graph importer drops them, along with `:card-last-reviewed` ([exporter.cljs:1069-1070](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L1069-L1070)).
 
 ## Configuration
 
@@ -200,7 +202,7 @@ Logseq updates these properties when you rate a card during review. You do not n
 
 Settings → Features → Flashcards (on by default)
 
-> **Removed:** Legacy `:srs/learning-fraction` and `:srs/initial-interval` are listed as not used in DB graphs ([config.cljs:105-127](../../../../../deps/common/src/logseq/common/config.cljs#L105-L127)). This page previously also listed `:srs/new-cards-limit` and `:srs/review-limit`, but neither key appears anywhere in the source. There are no per-deck limits.
+> **Removed:** Legacy `:srs/learning-fraction` and `:srs/initial-interval` are listed as not used in DB graphs ([config.cljs:108-130](../../../../../deps/common/src/logseq/common/config.cljs#L108-L130)). This page previously also listed `:srs/new-cards-limit` and `:srs/review-limit`, but neither key appears anywhere in the source. There are no per-deck limits.
 
 ---
 
@@ -270,25 +272,35 @@ For multiple decks, review a different deck each day:
 
 ### Deck names show a UUID
 
-A deck may appear in the dropdown as `[[6aa9eab5-798f-43f3-bc8c-c65384de1b8f]]`
-or `(tags [[6aa9e51c-4a8c-4215-a234-6c77e4eb720f]])` rather than by the page or
-tag it selects.
+**Fixed in `5824434a74`** (commit `6007c8e6b5`, PR #13258). On that build and
+later, an untitled deck is listed by its query with the names resolved —
+`[[LLM]]`, or `(tags [[AI]])`. The brackets stay; only the UUID is replaced.
 
-This happens when the `Cards` block itself has no title. The selector then falls
-back to the title of the block's query
-([fsrs.cljs:310-315](../../../../../src/main/frontend/extensions/fsrs.cljs#L310-L315)),
-and a DB graph stores a reference in a query as `[[<uuid>]]`, not as the node's
-name. The dropdown renders that string as plain text without resolving the
-reference ([fsrs.cljs:350-352](../../../../../src/main/frontend/extensions/fsrs.cljs#L350-L352)),
-so the raw UUID reaches the screen.
+On an older build, a deck may appear in the dropdown as
+`[[6aa9eab5-798f-43f3-bc8c-c65384de1b8f]]` or
+`(tags [[6aa9e51c-4a8c-4215-a234-6c77e4eb720f]])` rather than by the page or tag
+it selects. This happens when the `Cards` block itself has no title: the
+selector falls back to the title of the block's query, and a DB graph stores a
+reference in a query as `[[<uuid>]]`, not as the node's name.
 
-**Workaround:** give the `Cards` block a title. A non-blank title is used as-is
-and the fallback never runs.
+**Workaround on an older build:** give the `Cards` block a title. A non-blank
+title is used as-is and the fallback never runs.
+
+The fix passes the query title through `recur-replace-uuid-in-block-title`
+before listing the deck
+([fsrs.cljs:311-316](../../../../../src/main/frontend/extensions/fsrs.cljs#L311-L316)),
+which substitutes each reference's page name
+([content.cljs:246-265](../../../../../deps/db/src/logseq/db/frontend/content.cljs#L246-L265)).
+The dropdown itself still renders the title as plain text without resolving
+references ([fsrs.cljs:352-354](../../../../../src/main/frontend/extensions/fsrs.cljs#L352-L354)) —
+the resolution now happens before the list is built.
 
 **Verified** against `be800f1711` by reading two untitled `Cards` blocks out of
 a live graph: their queries stored `[[<uuid>]]` and `(tags [[<uuid>]])`, and the
-UUIDs resolved to a page named `LLM` and a tag named `AI` — neither name is
-available to the selector at render time.
+UUIDs resolved to a page named `LLM` and a tag named `AI`. Re-checked against
+`5824434a74` by reading the fix and the e2e case upstream added with it
+([flashcards_basic_test.clj:87-113](../../../../../clj-e2e/test/logseq/e2e/flashcards_basic_test.clj#L87-L113)),
+which asserts the option reads `[[fc-tag-a]]` and that no option matches a UUID.
 
 ### Answer Shown Before Reveal
 
