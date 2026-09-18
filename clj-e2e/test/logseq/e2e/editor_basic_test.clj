@@ -1016,8 +1016,8 @@
       (b/new-block title)
       (util/exit-edit)
       (util/search title)
-      (assert/assert-is-visible
-       (loc/filter ".cp__cmdk .breadcrumb" :has-text page-name)))))
+      (let [breadcrumb (loc/filter ".cp__cmdk .breadcrumb" :has-text page-name)]
+        (util/repeat-until-visible 5 breadcrumb #(util/search title))))))
 
 (deftest comments-update-and-title-edit
   (testing "a submitted comment renders immediately and its thread title is editable"
@@ -1292,7 +1292,8 @@
           block-selector (format "#ls-block-%s" uuid)]
       (assert/assert-is-visible
        (loc/filter (str block-selector " .block-tag") :has-text "Task"))
-      (w/click (str block-selector " .block-title-wrap"))
+      (w/click (loc/filter (str block-selector " .block-title-wrap")
+                           :has-text "sample task"))
       (util/move-cursor-to-end)
       (util/input-command "Priority High")
       (util/exit-edit)
@@ -1302,7 +1303,8 @@
       (is (= "High"
              (get-in (ls-api-call! :editor.getBlock uuid)
                      [":logseq.property/priority" "title"])))
-      (w/click (str block-selector " .block-title-wrap"))
+      (w/click (loc/filter (str block-selector " .block-title-wrap")
+                           :has-text "sample task"))
       (util/move-cursor-to-end)
       (util/input-command "Scheduled")
       (w/click
@@ -1311,7 +1313,8 @@
       (assert/assert-is-visible
        (loc/filter (str block-selector " .bottom-property-pill")
                    :has-text "Scheduled"))
-      (w/click (str block-selector " .block-title-wrap"))
+      (w/click (loc/filter (str block-selector " .block-title-wrap")
+                           :has-text "sample task"))
       (util/move-cursor-to-end)
       (util/input-command "No priority")
       (util/exit-edit)
@@ -1392,6 +1395,28 @@
       (assert/assert-is-hidden ".ui__loading, .loading-graph")
       (assert/assert-is-visible
        (format ".ls-page-blocks #ls-block-%s" uuid)))))
+
+(deftest collapsed-subtree-stays-collapsed-after-bullet-zoom-back-test
+  (testing "bullet zoom-in then back keeps the parent subtree collapsed"
+    (let [page-name (p/get-page-name)
+          parent (ls-api-call! :editor.appendBlockInPage page-name "zoom collapse parent")
+          uuid (get parent "uuid")
+          child-in-parent (loc/filter (format ".ls-page-blocks #ls-block-%s" uuid)
+                                      :has-text "zoom collapse child")]
+      (is (string? uuid))
+      (ls-api-call! :editor.insertBlock uuid "zoom collapse child" {:sibling false})
+      (w/click (format ".ls-page-blocks #control-%s" uuid))
+      (assert/assert-is-hidden child-in-parent)
+      (w/click (format ".ls-page-blocks #dot-%s" uuid))
+      (assert/assert-is-visible
+       (loc/filter "#main-content-container" :has-text "zoom collapse child"))
+      (is (string/includes? (or (w/eval-js "window.location.hash") "") uuid))
+      (.goBack (w/get-page))
+      (assert/assert-is-visible
+       (loc/filter ".ls-page-blocks" :has-text "zoom collapse parent"))
+      (assert/assert-is-hidden child-in-parent)
+      (is (false? (w/visible? child-in-parent))
+          "Parent view must keep the zoomed subtree collapsed after back"))))
 
 (deftest selection-direction-and-hierarchical-select-all-test
   (testing "range and select-all remain inside the current visible container"
