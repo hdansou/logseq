@@ -98,6 +98,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 #### [Queries](how-to/queries/)
 
 - [Advanced Queries](how-to/queries/advanced-queries.md)
+- [Find Empty and Unused Nodes](how-to/queries/find-empty-and-unused-nodes.md)
 
 #### [Tasks](how-to/tasks/)
 

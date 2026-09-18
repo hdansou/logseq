@@ -10,6 +10,11 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-09-18 — Find empty and unused nodes how-to
+
+- [2026-09-18] `ddocs/how-to/queries/find-empty-and-unused-nodes.md` — **added**: queries for empty pages, empty pages nothing links to, empty blocks, unused tags and unused properties in a DB graph, with the reason for each exclusion clause. Documents the two storage shapes of an "empty" page (zero blocks vs one `:block/title ""` block) and why the usual `(not [?b :block/page ?p])` misses the second; that recycled pages keep `:logseq.class/Page` and need a `:logseq.property/deleted-at` exclusion; that journals are not tagged `Page` so they drop out already; that a property is queried as unused by binding its `:db/ident` and using it in attribute position; and that a tag can be unused yet still be a hierarchy parent, hold tag properties, or be a node-property value. Clauses cited to `class.cljs:27-32`, `property.cljs:218,657-660` and `render_resource/query.cljs:15-23` at `5824434a74`; all queries run on `cliworker` with CLI `6bf8fe7-dirty` (naive empty-page query 7 rows vs 8 with the blank-block clause; probe tag and probe property each the only row returned).
+- [2026-09-18] `ddocs/how-to/queries/find-empty-and-unused-nodes.md` — **defect noted**: `:block/refs` is not a complete index of property-value references. A CLI-created block with the text `ref probe [[Book]]` gains `Book` in `:block/refs`, but `cliworker` block 744, whose node-typed property points at page 440, has no `:block/refs` at all — so ref-based "is this used" checks under-report.
+
 ### 2026-09-12 — Correction: typed `key:: value` saves normally
 
 - [2026-09-12] `ddocs/reference/syntax/paste-and-type-syntax.md` — **corrected**: withdrew "typing `key:: value` breaks saving the block". The owner typed `status:: draft` in the app and it saved as text. The probe had called `wrap-parse-block` with no current repo, so `gp-mldoc/get-default-config` (`mldoc.cljc:338-349`) used file-graph options with property drawers on, and the property then threw. With a DB repo set the line stays plain text; the probe now sets it. Other typed rows and all paste rows were rerun and are unchanged.
