@@ -64,7 +64,7 @@ The same layout is used by the desktop app, the CLI's `db-worker-node`, and the 
 | `backups/` | app-driven SQLite backups | `sqlite.cljs:38` `get-db-backups-path` |
 | `backup/<name>/db.sqlite`, `backup/<name>/metadata.edn` | named graph backups (`logseq graph backup`) | `src/main/logseq/db_worker/graph_backup.cljs:10-12` |
 | `export/` | DB export drop location | `src/electron/electron/db.cljs:100` |
-| `db-worker.lock` | worker process lock | `worker/db_worker_node_lock.cljs:48` |
+| `db-worker.lock` | worker process lock | `worker/db_worker_node_lock.cljs:49` |
 | `db-worker-node-YYYYMMDD.log` | worker log, 7 days retained | `worker/db_worker_node.cljs:410` |
 
 ## Shared file-graph layout (legacy file graphs)
@@ -89,14 +89,14 @@ Inside a user-chosen folder. Subfolder names are configurable in `logseq/config.
 
 | What | Default | Source |
 |---|---|---|
-| DB graphs root | `~/logseq/graphs/` | `common/config.cljs:55` `default-graphs-dir`; `common/graph.cljs:114` |
+| DB graphs root | `~/logseq/graphs/` | `common/config.cljs:58` `default-graphs-dir`; `common/graph.cljs:114` |
 | Global dot-dir | `~/.logseq/` | `electron/configs.cljs:10` `dot-root` |
 | Graph registry | `~/.logseq/graphs.edn` | `configs.cljs:16` |
-| Plugins | `~/.logseq/plugins/` | `electron/core.cljs:40` `PLUGINS_ROOT` |
+| Plugins | `~/.logseq/plugins/` | `electron/core.cljs:41` `PLUGINS_ROOT` |
 | Plugin settings | `~/.logseq/settings/<plugin-id>.json` | `electron/plugin.cljs:261` |
 | App config (`configs.edn`) | `~/Library/Application Support/Logseq/configs.edn` | `configs.cljs:11-12` (`userData`); carries a `FIXME: move configs.edn` |
 | Auth tokens | `~/logseq/auth.json` | `handler/user.cljs:106` |
-| CLI config | `~/logseq/cli.edn` | `cli/lib/cli_config.ml:44` |
+| CLI config | `~/logseq/cli.edn` | `cli/lib/cli_config.ml:45` |
 | Worker registry | `~/logseq/server-list` (+ `.lock`) | `logseq/db_worker/server_list.cljs:14` |
 | Worker KV store | `~/logseq/kv-store.json` | `platform/node.cljs:660` |
 | CLI launcher | `~/.local/bin/logseq` | `electron/cli_install.cljs:15` |
@@ -120,7 +120,7 @@ Everything under **macOS** applies with these substitutions:
 | Dot-dir path fixing | `~/.logseq` with `\` separators | `electron/utils.cljs:118-126` `fix-win-path!` |
 | E2EE keys | Windows Credential Manager, service `Logseq E2EE` | keytar |
 
-`~` expands via `os.homedir()` on every platform (`graph.cljs:116`, `db_worker_node_lock.cljs:16`), so `~/logseq/graphs` is `C:\Users\<you>\logseq\graphs\`.
+`~` expands via `os.homedir()` on every platform (`graph.cljs:116`, `db_worker_node_lock.cljs:17`), so `~/logseq/graphs` is `C:\Users\<you>\logseq\graphs\`.
 
 ## Linux
 
@@ -186,7 +186,7 @@ No vector index exists in the browser (`platform/browser.cljs` has no `:vector` 
 | Worker registry | `<root>/server-list` | — |
 | Worker script | bundled | `LOGSEQ_DB_WORKER_NODE_SCRIPT` |
 
-Sources: `cli/lib/cli_config.ml:42-44,123-131`; `cli/lib/auth_state.ml:31-36`; `cli/lib/server_runtime.ml:50`.
+Sources: `cli/lib/cli_config.ml:43-45,123-131`; `cli/lib/auth_state.ml:38-43`; `cli/lib/server_runtime.ml:50`.
 
 ## Self-hosted sync server (Node)
 
@@ -205,8 +205,8 @@ Sources: `deps/db-sync/src/logseq/db_sync/node/config.cljs:14-19`; `node/storage
 | Variable | Affects | Source |
 |---|---|---|
 | `LOGSEQ_GRAPHS_DIR` | desktop + worker graphs root (default `~/logseq/graphs`) | `common/graph.cljs:114` |
-| `LOGSEQ_CLI_ROOT_DIR` | CLI root | `cli_config.ml:124` |
-| `LOGSEQ_CLI_CONFIG` | CLI config file | `cli_config.ml:125` |
+| `LOGSEQ_CLI_ROOT_DIR` | CLI root | `cli_config.ml:125` |
+| `LOGSEQ_CLI_CONFIG` | CLI config file | `cli_config.ml:126` |
 | `LOGSEQ_DB_WORKER_NODE_SCRIPT` | worker bundle the CLI spawns | `server_runtime.ml:50` |
 | `LOGSEQ_EMBEDDINGS_URL` | embedding endpoint; required for a vector index | `platform/node.cljs:231` |
 | `LOGSEQ_EMBEDDINGS_PYTHON` | interpreter used to build the sidecar venv | `embedding_server.cljs:83` |
@@ -283,7 +283,7 @@ Backup is an explicit export to a user-picked directory handle: `<picked>/<graph
 
 | Store | Scope | Location | What lives there | Source |
 |---|---|---|---|---|
-| `configs.edn` | this machine, Electron main process | `<userData>/configs.edn` | `:spell-check`, `:auto-update`, `:window/native-titlebar?`, `:feature/enable-semantic-search?`, `:feature/enable-automatic-chmod?`, `:settings/agent`, `:server/host` `:server/port` `:server/tokens` `:server/autostart` `:server/mcp-enabled?` | `electron/configs.cljs:12`; written via the `:userAppCfgs` IPC (`electron/handler.cljs:332`) |
+| `configs.edn` | this machine, Electron main process | `<userData>/configs.edn` | `:spell-check`, `:auto-update`, `:window/native-titlebar?`, `:feature/enable-semantic-search?`, `:feature/enable-automatic-chmod?`, `:settings/agent`, `:server/host` `:server/port` `:server/tokens` `:server/autostart` `:server/mcp-enabled?` | `electron/configs.cljs:12`; written via the `:userAppCfgs` IPC (`electron/handler.cljs:354`) |
 | `localStorage` | this browser profile / WebView, all platforms | origin storage | theme (`:ui/theme`, `:ui/system-theme`, `:ui/custom-theme`, `:ui/radix-color`), `:ui/editor-font`, `:ui/wide-mode`, `:zoom-level`, `:preferred-language`, sidebar state (`:ls-left-sidebar-open`, `:ls-left-sidebar-width`), `:ls-shortcuts`, `:ui/recent-pages`, `:document/mode`, `:git/current-repo`, `:logseq-sync-enabled`, `:db-worker-client-id`, auth tokens (`id-token`, `access-token`, `refresh-token`), ~35 keys in all | `frontend/storage.cljs` (EDN-encoded values); `handler/user.cljs:95-101` |
 | Graph `config.edn` | one graph | see [config.edn](#configedn--three-different-things) | everything in the in-app config editor: journals, shortcuts overrides, default templates, property visibility, … | `handler/repo_config.cljs` |
 | Global `config.edn` | all graphs on this desktop | `~/.logseq/config/config.edn` | same keys as a graph config; graph config wins on conflict | `handler/global_config.cljs:27` |
@@ -301,7 +301,7 @@ Logging out clears every `localStorage` key (`handler/user.cljs:131-141`), so br
 
 | What | Path | Source |
 |---|---|---|
-| Installed plugins | `~/.logseq/plugins/<plugin-id>/` (marketplace) | `electron/core.cljs:40`; `electron/plugin.cljs:227,260` |
+| Installed plugins | `~/.logseq/plugins/<plugin-id>/` (marketplace) | `electron/core.cljs:41`; `electron/plugin.cljs:227,260` |
 | Plugin settings | `~/.logseq/settings/<plugin-id>.json` | `electron/plugin.cljs:261` |
 | `logseq.FileStorage` (default) | `~/.logseq/storages/<plugin-id>/<key>` | `api/plugin.cljs:82-90,123` |
 | `logseq.FileStorage({assets: true})` | `<graph-dir>/assets/storages/<plugin-id>/<key>` | `api/plugin.cljs:82-90`; `write_assetsdir_file` |
@@ -326,6 +326,6 @@ File names have `<>:"|?*\/` and control characters replaced by `_` (`markdown_mi
 
 - **`configs.edn` lives in `<userData>` while everything else lives in `~/.logseq`.** The code says so itself: `configs.cljs:9` carries `FIXME: move configs.edn to where it should be`.
 - **`auth.json` is in `~/logseq/`, not `~/.logseq/`** — alongside graphs, not alongside the registry. It is plaintext JSON containing id, access, and refresh tokens (`handler/user.cljs:109-113`).
-- **The client-ops directory has a trailing hyphen**: `client-ops-/db.sqlite` (`db_core.cljs:445`), while `client-ops-repo-path` at `:133` spells it `client-ops/db.sqlite`. Both strings exist; `:846-856` handles the migration between them.
+- **The client-ops directory has a trailing hyphen**: `client-ops-/db.sqlite` (`db_core.cljs:445`), while `client-ops-repo-path` at `:133` spells it `client-ops/db.sqlite`. Both strings exist; `:851-861` handles the migration between them.
 - **Mobile DB graphs are not files you can browse.** They live in the WebView's OPFS. The native Documents/iCloud paths only matter for file graphs, the folder picker, and exports.
 - **Graph directory names are URL-encoded.** `My Graph` becomes `My Graph`, but `a/b` becomes `a~2Fb`.

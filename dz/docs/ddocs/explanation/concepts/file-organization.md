@@ -2,8 +2,8 @@
 title: 'File Organization and Namespaces'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
@@ -15,6 +15,10 @@ tags: ['organization', 'namespaces', 'structure', 'file-system']
 ---
 
 # File Organization and Namespaces
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This document explains how a Logseq DB graph organizes your content — the logical structure (page hierarchies, tags) and the physical structure (one database file per graph, plus assets). Understanding both helps you build a knowledge base that stays manageable as it grows.
 
@@ -34,7 +38,7 @@ This document explains how a Logseq DB graph organizes your content — the logi
 > **File graphs cannot be opened in this build.** The graph list keeps only DB
 > graphs (`src/main/frontend/components/repo.cljs:318-323`). A file-based graph
 > folder can still be brought in with **File to DB graph**, which imports it into
-> a new DB graph (`src/main/frontend/components/imports.cljs:601`;
+> a new DB graph (`src/main/frontend/components/imports.cljs:605`;
 > `src/resources/dicts/en.edn:926-927`). Everything below describes DB graphs.
 
 ---
@@ -70,7 +74,7 @@ This document explains how a Logseq DB graph organizes your content — the logi
 ### Physical Organization (Disk)
 
 On desktop, every DB graph is a folder under `~/logseq/graphs`
-(`deps/common/src/logseq/common/config.cljs:55`;
+(`deps/common/src/logseq/common/config.cljs:58`;
 `deps/common/src/logseq/common/graph.cljs:123-126`;
 `src/electron/electron/db.cljs:24-39`):
 
@@ -83,8 +87,8 @@ On desktop, every DB graph is a folder under `~/logseq/graphs`
 ```
 
 - `db.sqlite` holds the graph (`deps/db/src/logseq/db/common/sqlite.cljs:29-33`).
-- `assets/` sits next to it (`deps/common/src/logseq/common/config.cljs:56`;
-  `src/main/frontend/handler/assets.cljs:283-294`).
+- `assets/` sits next to it (`deps/common/src/logseq/common/config.cljs:59`;
+  `src/main/frontend/handler/assets.cljs:314-325`).
 - `backup/` is described under [Backups](#backups).
 
 **Key Insight:** Logical hierarchy ≠ folder hierarchy. The hierarchy lives inside `db.sqlite`.
@@ -95,7 +99,7 @@ On desktop, every DB graph is a folder under `~/logseq/graphs`
 
 ### What are Namespaces?
 
-A page title containing `/` is a **namespace** title. When such a page is created, Logseq splits the title into one page per segment and chains them with `:block/parent` (`deps/outliner/src/logseq/outliner/page.cljs:237-300, 385-388`):
+A page title containing `/` is a **namespace** title. When such a page is created, Logseq splits the title into one page per segment and chains them with `:block/parent` (`deps/outliner/src/logseq/outliner/page.cljs:318-381, 385-388`):
 
 ```markdown
 [[Projects]]                  # one page
@@ -104,7 +108,7 @@ A page title containing `/` is a **namespace** title. When such a page is create
 [[Projects/Personal/Website]] # pages Projects → Personal → Website
 ```
 
-The page you get back is the **leaf**, and its title is only the last segment — `Alpha`, not `Projects/Work/Alpha` (`deps/outliner/test/logseq/outliner/page_test.cljs:33-49`). Segments are trimmed and empty segments are dropped (`page.cljs:245-247`).
+The page you get back is the **leaf**, and its title is only the last segment — `Alpha`, not `Projects/Work/Alpha` (`deps/outliner/test/logseq/outliner/page_test.cljs:35-51`). Segments are trimmed and empty segments are dropped (`page.cljs:245-247`).
 
 **Visual Hierarchy:**
 
@@ -124,7 +128,7 @@ A title is **not** split when it is a URL or starts with `./` or `../`
 journal page (`page.cljs:385`).
 
 The old `{{namespace}}` macro is deprecated and renders a warning that points to
-the **Library** instead (`src/main/frontend/components/block.cljs:1876-1877`;
+the **Library** instead (`src/main/frontend/components/block.cljs:1893-1894`;
 `src/resources/dicts/en.edn:158, 1008`).
 
 ### Creating Namespaces
@@ -142,12 +146,12 @@ Automatically creates:
 - `NewProject`, as a child of `Work` (your page)
 
 Existing parent pages are reused (`page.cljs:251-254`;
-`page_test.cljs:36, 45-46`). Pages created from the editor are split this way by
-default (`src/main/frontend/handler/common/page.cljs:147-149`;
+`page_test.cljs:38, 45-46`). Pages created from the editor are split this way by
+default (`src/main/frontend/handler/common/page.cljs:146-148`;
 `src/main/frontend/handler/page.cljs:279-281`).
 
 The top segment is filed under the built-in **Library** page
-(`page.cljs:227-235`; `page_test.cljs:43-44`). If any segment already exists as
+(`page.cljs:227-235`; `page_test.cljs:45-46`). If any segment already exists as
 something other than an ordinary page, creation stops with "Cannot create this
 page unless all parents are pages." (`page.cljs:262-267`).
 
@@ -241,11 +245,11 @@ my-graph/
 
 Uploading a file (`/Upload an asset`, `src/main/frontend/commands.cljs:335-338`)
 creates an asset node tagged `Asset` and writes the file to `assets/` as
-`<asset uuid>.<extension>` (`src/main/frontend/handler/editor.cljs:1780-1802`).
+`<asset uuid>.<extension>` (`src/main/frontend/handler/editor.cljs:1813-1835`).
 The node's title comes from the original file name; a pasted file named `image`
-gets a date-time title instead (`editor.cljs:1763-1769`). A file whose checksum
-matches an existing asset is refused with a warning (`editor.cljs:1770-1778`),
-and files over 100 MB are rejected (`editor.cljs:1785-1789`).
+gets a date-time title instead (`editor.cljs:1796-1802`). A file whose checksum
+matches an existing asset is refused with a warning (`editor.cljs:1803-1811`),
+and files over 100 MB are rejected (`editor.cljs:1818-1822`).
 
 Because files are named by UUID, sorting them into your own subfolders of
 `assets/` is not a supported way to organize them. Organize the asset **nodes**
@@ -623,9 +627,9 @@ at the top).
 
 **Asset files too large:**
 
-- Files over 100 MB are rejected (`editor.cljs:1785-1789`)
+- Files over 100 MB are rejected (`editor.cljs:1818-1822`)
 - Store large files externally and link to them by URL; an asset node can carry
-  an external URL (`editor.cljs:1763-1764, 1797`)
+  an external URL (`editor.cljs:1796-1797, 1797`)
 - Compress images before adding
 
 ---

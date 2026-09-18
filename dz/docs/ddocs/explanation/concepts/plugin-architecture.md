@@ -2,8 +2,8 @@
 title: 'Plugin Architecture'
 status: 🟡 Active Development
 version: '@logseq/libs v0.3.4'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: '🟠 Desktop Only'
@@ -15,6 +15,10 @@ tags: ['plugins', 'architecture', 'extensibility', 'SDK']
 ---
 
 # Plugin Architecture
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This page explains how Logseq's plugin system works: where plugin code runs, how it reaches the
 host, what the SDK exposes, and which extension points exist.
@@ -589,7 +593,7 @@ the full treatment, with the code behind each claim.
   (`src/electron/electron/window.cljs:50-60`): `nodeIntegration false`,
   `nodeIntegrationInWorker false`, `sandbox false`, `webSecurity (not dev?)`,
   `contextIsolation true`. Same-origin policy is therefore off in development builds.
-- The `lsp://` scheme is registered with `:bypassCSP true` (`src/electron/electron/core.cljs:465-476`).
+- The `lsp://` scheme is registered with `:bypassCSP true` (`src/electron/electron/core.cljs:474-485`).
   `disableXFrameOptions` deletes `X-Frame-Options` **and `Content-Security-Policy`** response
   headers in the window's session (`src/electron/electron/utils.js:9-29`).
 

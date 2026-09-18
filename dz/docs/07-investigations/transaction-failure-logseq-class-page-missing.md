@@ -118,7 +118,7 @@ Error: Nothing found for entity id :logseq.class/Page
 
 #### Class Definition
 
-**File:** [deps/db/src/logseq/db/frontend/class.cljs](../../../deps/db/src/logseq/db/frontend/class.cljs#L17-L106)
+**File:** [deps/db/src/logseq/db/frontend/class.cljs](../../../deps/db/src/logseq/db/frontend/class.cljs#L16-L105)
 
 ```clojure
 (def ^:large-vars/data-var built-in-classes

@@ -2,8 +2,8 @@
 title: 'Data Architecture'
 description: 'Understanding how Logseq stores and manages knowledge graph data'
 status: stable
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '0.11.x'
 category: architecture
@@ -16,6 +16,10 @@ relatedDocs:
 ---
 
 # Data Architecture
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-09 (audited against `be800f1711`)
 
@@ -44,7 +48,7 @@ In Logseq, all data is represented as entities:
 | **Class**    | Category/tag         | extends, properties       |
 | **Asset**    | Attached file        | `:logseq.property.asset/type`, `/size`, `/checksum` |
 
-Source: `deps/db/src/logseq/db/frontend/class.cljs:68-74` (`:logseq.class/Asset` declares these three as
+Source: `deps/db/src/logseq/db/frontend/class.cljs:67-73` (`:logseq.class/Asset` declares these three as
 both `:properties` and `:required-properties`).
 
 ### Entity-Attribute-Value (EAV)
@@ -203,7 +207,7 @@ Classes categorize entities and define schemas:
  :logseq.property.class/extends :logseq.class/Root}
 ```
 
-Source: `deps/db/src/logseq/db/frontend/class.cljs:40-42` (Task's declared schema properties) and
+Source: `deps/db/src/logseq/db/frontend/class.cljs:39-41` (Task's declared schema properties) and
 `deps/db/src/logseq/db/sqlite/create_graph.cljs:145-167` (`build-initial-classes*`, which turns
 `:schema {:properties [...]}` into `:logseq.property.class/properties`).
 
@@ -218,7 +222,7 @@ Note: **every** class — user-created and built-in alike — is created through
 Classes can extend other classes:
 
 ```
-Built-in classes (all are tagged :logseq.class/Tag; source: class.cljs:17-101):
+Built-in classes (all are tagged :logseq.class/Tag; source: class.cljs:16-100):
   Root            (top-level; every other class extends this unless it declares its own extends)
   Tag
   Property
@@ -298,7 +302,7 @@ Files are parsed on load, building the in-memory database.
 ```
 
 Source: `deps/db/src/logseq/db/common/sqlite.cljs:30-33` (`db.sqlite` path) and
-`src/main/frontend/worker/db_core.cljs:547-551` (the worker opens `/db.sqlite` and
+`src/main/frontend/worker/db_core.cljs:552-556` (the worker opens `/db.sqlite` and
 `/search-db.sqlite`).
 
 The main DB is not a relational block table: `db.sqlite` holds a single
@@ -309,7 +313,7 @@ For database graphs, runtime state is held in a DataScript connection in the db 
 SQLite as the durable backing store.
 
 > **Removed:** `search.sqlite` — the search index file is `search-db.sqlite`
-> (`src/main/frontend/worker/db_core.cljs:551`). `db.sqlite-wal` was also removed: no WAL sidecar
+> (`src/main/frontend/worker/db_core.cljs:556`). `db.sqlite-wal` was also removed: no WAL sidecar
 > file is named anywhere in the source; the worker's storage layer is the datascript `kvs` table.
 
 ### Storage Flow (DB graphs)
@@ -392,7 +396,7 @@ Schema-defined indexes and identities (from `logseq.db.frontend.schema/schema`,
 ```
 
 `:outliner-op` is attached by `logseq.outliner.core/op-transact!`
-(`deps/outliner/src/logseq/outliner/core.cljs:1282-1298`). The set of legal ops is the 30-entry
+(`deps/outliner/src/logseq/outliner/core.cljs:1336-1352`). The set of legal ops is the 30-entry
 malli `op-schema` in `deps/outliner/src/logseq/outliner/op.cljs:20-155`; `apply-ops!` asserts
 against it before anything is transacted (`op.cljs:427-429`).
 
@@ -496,7 +500,7 @@ routes to 13 branches: `:property`, `:class`, `:hidden`, `:normal-page`, `:react
 - Added built-in property type `:asset` for asset-node references in DB graphs
   (`deps/db/src/logseq/db/frontend/property/type.cljs:19-21`).
 - Built-in class set now includes `:logseq.class/Comments` and `:logseq.class/Comment`
-  (`deps/db/src/logseq/db/frontend/class.cljs:44-52`), plus `:logseq.class/Card`,
+  (`deps/db/src/logseq/db/frontend/class.cljs:43-51`), plus `:logseq.class/Card`,
   `:logseq.class/Cards`, `:logseq.class/Template` and the block-kind classes
   `Code-block`, `Quote-block`, `Math-block`, `Pdf-annotation`.
 - **Vector / semantic search index.** The db worker opens a per-graph vector index at
@@ -515,7 +519,7 @@ routes to 13 branches: `:property`, `:class`, `:hidden`, `:normal-page`, `:react
   into `:property-history-block` entities (`malli_schema.cljs:450-469`;
   `property.cljs:319-322`).
 - **Markdown mirror.** DB graphs can mirror to markdown on disk, toggled per graph
-  (`src/main/frontend/persist_db.cljs:216-246`).
+  (`src/main/frontend/persist_db.cljs:279-309`).
 - Validation/fix tooling in worker DB paths includes targeted repair routines — extends
   cardinality, wrong-typed icons, non-closed values, num-prefixed `:db/ident`s, and a
   validate-and-fix loop over invalid blocks

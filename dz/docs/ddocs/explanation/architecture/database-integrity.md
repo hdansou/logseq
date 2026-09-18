@@ -2,8 +2,8 @@
 title: 'Database Integrity & Validation'
 status: 🟢 Stable
 version: 'Schema v65.33'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
@@ -15,6 +15,10 @@ tags: ['integrity', 'validation', 'database', 'transactions', 'malli']
 ---
 
 # Database Integrity & Validation
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This document explains Logseq's database integrity system—the validation mechanisms ensuring data consistency, preventing corruption, and maintaining schema compliance. Understanding this system is essential for contributors and developers working with database graphs.
 
@@ -190,7 +194,7 @@ Two consequences worth internalising:
 > `src/main/frontend/handler/db_based/editor.cljs:250-280`. No such function exists. That file is
 > 178 lines long and contains `wrap-parse-block`, `save-file!` and `batch-set-heading!` only; there
 > is no `validate/validate-entity` anywhere in the tree. Block insertion goes through the outliner
-> op pipeline in the worker (`deps/outliner/src/logseq/outliner/core.cljs:1309-1316`), not a
+> op pipeline in the worker (`deps/outliner/src/logseq/outliner/core.cljs:1363-1370`), not a
 > validate-then-`d/transact!` call in a frontend handler.
 
 ### Transaction Validation Rules
@@ -236,7 +240,7 @@ value must additionally be the `:db/id` of one of `(:property/closed-values prop
 
 > **Removed:** every example on this page that used `:logseq.property.task/due-date`. That ident does
 > not exist. The task date properties are `:logseq.property/deadline` and
-> `:logseq.property/scheduled` (`deps/db/src/logseq/db/frontend/class.cljs:40-42`,
+> `:logseq.property/scheduled` (`deps/db/src/logseq/db/frontend/class.cljs:39-41`,
 > `deps/db/src/logseq/db/frontend/property.cljs:340`).
 
 > **Removed:** `{:logseq.property/status "pending"}` as an example of a valid `:default` string.
@@ -455,7 +459,7 @@ in `validate.cljs`.
 
 Note the failure mode: a cycle-forming move is a **silent no-op**, not an exception. The same guard
 clause also refuses a move whose target is one of the blocks being moved
-(`(not (contains? (set (map :db/id blocks)) (:db/id target-block)))`, `core.cljs:1166`).
+(`(not (contains? (set (map :db/id blocks)) (:db/id target-block)))`, `core.cljs:1220`).
 
 > **Removed:** `validate-no-circular-refs` and `ancestor?` in
 > `deps/outliner/src/logseq/outliner/validate.cljs`. Neither symbol exists. That namespace is about
@@ -472,7 +476,7 @@ extending its own descendant (`deps/outliner/src/logseq/outliner/validate.cljs:2
 **Built-in node protection** is the other hard guard: `save-block`, `move-blocks` and
 `delete-blocks` each call `outliner-validate/built-in-entity?` and throw a `:notification`-typed
 `ex-info` — "Built-in nodes can't be modified" / "can't be deleted"
-(`core.cljs:526-536, 1028-1033, 1138-1144`).
+(`core.cljs:548-558, 1028-1033, 1138-1144`).
 
 **Example (Prevented):**
 
@@ -658,14 +662,14 @@ the only supported way to surface a user-facing validation error from the worker
 
 Several outliner validators also carry `:i18n-key` / `:i18n-args` in the payload so the UI can
 localise the message (e.g. `:node/built-in-cant-delete-error`,
-`deps/outliner/src/logseq/outliner/core.cljs:1029-1033`).
+`deps/outliner/src/logseq/outliner/core.cljs:1083-1087`).
 
 > **Removed:** the `validate-task-block` example ("Task must have due-date or priority", "High
 > priority tasks must have due-date"). No such business rule exists, and the code shown was also
 > broken Clojure — it `conj`ed onto an immutable local and discarded the result. Task properties are
 > not required: `:logseq.class/Task` declares `:properties` but no `:required-properties`
-> (`deps/db/src/logseq/db/frontend/class.cljs:40-42`). Only `:logseq.class/Asset` and
-> `:logseq.class/Pdf-annotation` declare `:required-properties` (`class.cljs:68-97`).
+> (`deps/db/src/logseq/db/frontend/class.cljs:39-41`). Only `:logseq.class/Asset` and
+> `:logseq.class/Pdf-annotation` declare `:required-properties` (`class.cljs:67-96`).
 
 ### Plugin API for Validation
 

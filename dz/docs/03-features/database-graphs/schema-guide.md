@@ -608,7 +608,7 @@ graph TB
 
 Classes (also called "tags" in the UI) provide **object-oriented classification** with inheritance.
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:16-105`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs:15-104`
 
 ```clojure
 (def ^:large-vars/data-var built-in-classes
@@ -645,7 +645,7 @@ Classes (also called "tags" in the UI) provide **object-oriented classification*
 
 Classes support **multiple inheritance** through the `:logseq.property.class/extends` property:
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:167-176`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs:184-193`
 
 ```clojure
 (defn get-class-extends
@@ -666,7 +666,7 @@ Classes support **multiple inheritance** through the `:logseq.property.class/ext
 
 Classes can define **required properties** for their instances:
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:56-62`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs:55-61`
 
 ```clojure
 :logseq.class/Asset
@@ -1609,7 +1609,7 @@ sequenceDiagram
 
 ### 5. 🔍 **Class Inheritance**
 
-**Evidence**: `deps/db/src/logseq/db/frontend/class.cljs:137-146`
+**Evidence**: `deps/db/src/logseq/db/frontend/class.cljs:154-163`
 
 **Finding**: Classes support **multiple inheritance** via `:logseq.property.class/extends`.
 
@@ -2723,7 +2723,7 @@ Uncomment this line to see validation details:
 
 ### 2. 🆕 **New Class Category Sets: `block-kind-tags`, `disallowed-inline-tags`, `extends-hidden-tags`**
 
-**Evidence**: `deps/db/src/logseq/db/frontend/class.cljs:130-148`
+**Evidence**: `deps/db/src/logseq/db/frontend/class.cljs:147-165`
 
 **Finding**: Three new top-level set vars have been added to `class.cljs`:
 

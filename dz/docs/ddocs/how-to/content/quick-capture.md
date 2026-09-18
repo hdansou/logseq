@@ -2,8 +2,8 @@
 title: 'Quick Capture'
 description: 'How to quickly capture content to Logseq from anywhere'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop, mobile]
@@ -18,6 +18,10 @@ relatedDocs:
 
 # Quick Capture
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > **Last revised:** 2026-09-11 (verified against `be800f1711`)
 
 > Logseq has two capture paths. **Quick capture** takes content from outside the app (a desktop `logseq://` URL or a mobile share) and inserts it into the current graph. **Quick add** is an in-app scratch page you fill first and then move into today's journal.
@@ -26,7 +30,7 @@ relatedDocs:
 
 Quick capture starts outside the app.
 
-- **Desktop:** the `logseq://x-callback-url/quickCapture` URL. The Electron main process parses it (`src/electron/electron/url.cljs:72-80`) and sends it to the focused window, or to the main window if none is focused (`src/electron/electron/utils.cljs:307-312`). The renderer then publishes `[:editor/quick-capture args]` (`src/main/electron/listener.cljs:90-92`).
+- **Desktop:** the `logseq://x-callback-url/quickCapture` URL. The Electron main process parses it (`src/electron/electron/url.cljs:72-80`) and sends it to the focused window, or to the main window if none is focused (`src/electron/electron/utils.cljs:307-312`). The renderer then publishes `[:editor/quick-capture args]` (`src/main/electron/listener.cljs:96-98`).
 - **Android:** text shared to Logseq publishes the same event (`src/main/frontend/mobile/intent.cljs:108-112`).
 
 That event calls `quick-capture` in `src/main/frontend/quick_capture.cljs` (`src/main/frontend/handler/events.cljs:303-304`). Other mobile shares take separate paths; see [Mobile Quick Capture](#mobile-quick-capture).
@@ -125,7 +129,7 @@ See: [X-Callback-URL Guide](../integrations/x-callback-url.md)
 
 ### From Command Line
 
-The desktop app registers itself as the `logseq` protocol handler (`src/electron/electron/core.cljs:65-77`). Hand the URL to the OS:
+The desktop app registers itself as the `logseq` protocol handler (`src/electron/electron/core.cljs:66-78`). Hand the URL to the OS:
 
 **macOS:**
 
@@ -170,13 +174,13 @@ logseq://x-callback-url/quickCapture?content={query}
 
 ## Quick Add (In-App)
 
-Every DB graph has a built-in hidden page named **Quick add** (`deps/common/src/logseq/common/config.cljs:62`). It is one of the built-in pages created with a new graph (`deps/db/src/logseq/db/sqlite/create_graph.cljs:130-133`) and is marked `:logseq.property/hide? true` (`deps/db/src/logseq/db/sqlite/util.cljs:111-112`). Graphs created before schema 65.7 get it from a migration (`src/main/frontend/worker/db/migrate.cljs:22-26`, `:127`).
+Every DB graph has a built-in hidden page named **Quick add** (`deps/common/src/logseq/common/config.cljs:65`). It is one of the built-in pages created with a new graph (`deps/db/src/logseq/db/sqlite/create_graph.cljs:130-133`) and is marked `:logseq.property/hide? true` (`deps/db/src/logseq/db/sqlite/util.cljs:111-112`). Graphs created before schema 65.7 get it from a migration (`src/main/frontend/worker/db/migrate.cljs:22-26`, `:127`).
 
 ### Desktop and Web
 
-1. Press **Cmd+E** on macOS or **Ctrl+Alt+E** elsewhere (`:editor/quick-add`, `src/main/frontend/modules/shortcut/config.cljs:444-446`). The shortcut is inactive in published sites. A dialog opens showing the Quick add page, with an empty block ready if you have none (`src/main/frontend/handler/editor.cljs:4397-4422`).
+1. Press **Cmd+E** on macOS or **Ctrl+Alt+E** elsewhere (`:editor/quick-add`, `src/main/frontend/modules/shortcut/config.cljs:444-446`). The shortcut is inactive in published sites. A dialog opens showing the Quick add page, with an empty block ready if you have none (`src/main/frontend/handler/editor.cljs:4456-4481`).
 2. Type your blocks.
-3. Press the shortcut again, or click **Add to today**. All blocks on the Quick add page move to the end of today's journal, and you see "Blocks added to today!" (`editor.cljs:4424-4449`; `src/main/frontend/components/quick_add.cljs:57-65`).
+3. Press the shortcut again, or click **Add to today**. All blocks on the Quick add page move to the end of today's journal, and you see "Blocks added to today!" (`editor.cljs:4483-4508`; `src/main/frontend/components/quick_add.cljs:57-65`).
 
 Esc does not close this dialog (`src/main/frontend/handler/events/ui.cljs:533-540`).
 

@@ -5,8 +5,8 @@ version: 'Beta (app 2.0.1)'
 quadrant: 'Tutorial'
 platform: 'Desktop (macOS/Windows/Linux)'
 graphType: [db]
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '../../explanation/security/e2ee-encryption.md'
@@ -16,6 +16,10 @@ related-docs:
 ---
 
 # Getting Started with Real-Time Collaboration
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -40,14 +44,14 @@ Sync is in beta. The app's own menu label is **Use Logseq Sync (Beta testing)** 
 Every sync entry point is gated by `rtc-group?` ([user.cljs:357-362](../../../../../src/main/frontend/handler/user.cljs#L357-L362)), which is true when **any** of these holds:
 
 - the app is a development build
-- a custom **Sync Server URL** is set in **Settings → Advanced** ([config.cljs:51-56](../../../../../src/main/frontend/config.cljs#L51-L56), [settings.cljs:927](../../../../../src/main/frontend/components/settings.cljs#L927))
+- a custom **Sync Server URL** is set in **Settings → Advanced** ([config.cljs:51-56](../../../../../src/main/frontend/config.cljs#L51-L56), [settings.cljs:939](../../../../../src/main/frontend/components/settings.cljs#L939))
 - your account is in the user group `team` or `rtc_2025_07_10`
 
-If `rtc-group?` is false you do not get the sync checkboxes when creating a graph ([repo.cljs:700-723](../../../../../src/main/frontend/components/repo.cljs#L700-L723)), the upload menu item or header cloud button ([repo.cljs:40-47](../../../../../src/main/frontend/components/repo.cljs#L40-L47), [repo.cljs:248-257](../../../../../src/main/frontend/components/repo.cljs#L248-L257)), the remote-graph lists ([repo.cljs:350-374](../../../../../src/main/frontend/components/repo.cljs#L350-L374)), or the header sync indicator ([header.cljs:98-108](../../../../../src/main/frontend/components/header.cljs#L98-L108)). The same gate applies to your collaborators: an invited account without sync access does not see the shared graph in its graph list.
+If `rtc-group?` is false you do not get the sync checkboxes when creating a graph ([repo.cljs:700-723](../../../../../src/main/frontend/components/repo.cljs#L700-L723)), the upload menu item or header cloud button ([repo.cljs:40-47](../../../../../src/main/frontend/components/repo.cljs#L40-L47), [repo.cljs:248-257](../../../../../src/main/frontend/components/repo.cljs#L248-L257)), the remote-graph lists ([repo.cljs:350-374](../../../../../src/main/frontend/components/repo.cljs#L350-L374)), or the header sync indicator ([header.cljs:99-109](../../../../../src/main/frontend/components/header.cljs#L99-L109)). The same gate applies to your collaborators: an invited account without sync access does not see the shared graph in its graph list.
 
 > **Unverified:** how accounts are added to those groups, and which plan, price or "Pro" tier (if any) grants access. Group membership comes from the account server, outside this repository.
 
-Note that **Settings → Collaboration** is shown to every logged-in user, whether or not they have sync access ([settings.cljs:1487-1488](../../../../../src/main/frontend/components/settings.cljs#L1487-L1488)).
+Note that **Settings → Collaboration** is shown to every logged-in user, whether or not they have sync access ([settings.cljs:1499-1500](../../../../../src/main/frontend/components/settings.cljs#L1499-L1500)).
 
 ## What is Real-Time Collaboration?
 
@@ -80,7 +84,7 @@ The hosted server is a Cloudflare Worker built on Durable Objects ([worker.cljs:
 If you are not signed in yet:
 
 1. Open Logseq Desktop
-2. Open the **⋯** menu at the top right of the header and choose **Login**. The item only appears while you are logged out ([header.cljs:242-244](../../../../../src/main/frontend/components/header.cljs#L242-L244), [:273](../../../../../src/main/frontend/components/header.cljs#L273); [en.edn:1884](../../../../../src/resources/dicts/en.edn#L1884))
+2. Open the **⋯** menu at the top right of the header and choose **Login**. The item only appears while you are logged out ([header.cljs:243-245](../../../../../src/main/frontend/components/header.cljs#L243-L245), [:274](../../../../../src/main/frontend/components/header.cljs#L274); [en.edn:1885](../../../../../src/resources/dicts/en.edn#L1885))
 3. Enter your email and password and click **Sign In**. If you have no account yet, choose **Sign up** and then **Create Account** ([login.cljs:136-145](../../../../../src/main/frontend/components/user/login.cljs#L136-L145), [:186](../../../../../src/main/frontend/components/user/login.cljs#L186))
 
 ### 1.2 Put a Graph on the Server
@@ -90,8 +94,8 @@ You have two options.
 **Option A: Upload an Existing Local Graph**
 
 1. Open the local DB graph. It must be the current graph.
-2. Click the **cloud** button in the header (tooltip **Use Logseq Sync (Beta testing)**, [header.cljs:111-118](../../../../../src/main/frontend/components/header.cljs#L111-L118), [:589-590](../../../../../src/main/frontend/components/header.cljs#L589-L590)). Or open **All graphs**, open that graph's menu, and choose **Use Logseq Sync (Beta testing)** ([repo.cljs:248-257](../../../../../src/main/frontend/components/repo.cljs#L248-L257)).
-3. In the **Upload graph "<name>" to Logseq Server?** dialog, click **Confirm** ([repo.cljs:78-84](../../../../../src/main/frontend/components/repo.cljs#L78-L84); [en.edn:784](../../../../../src/resources/dicts/en.edn#L784), [:1863](../../../../../src/resources/dicts/en.edn#L1863))
+2. Click the **cloud** button in the header (tooltip **Use Logseq Sync (Beta testing)**, [header.cljs:112-119](../../../../../src/main/frontend/components/header.cljs#L112-L119), [:595-596](../../../../../src/main/frontend/components/header.cljs#L595-L596)). Or open **All graphs**, open that graph's menu, and choose **Use Logseq Sync (Beta testing)** ([repo.cljs:248-257](../../../../../src/main/frontend/components/repo.cljs#L248-L257)).
+3. In the **Upload graph "<name>" to Logseq Server?** dialog, click **Confirm** ([repo.cljs:78-84](../../../../../src/main/frontend/components/repo.cljs#L78-L84); [en.edn:784](../../../../../src/resources/dicts/en.edn#L784), [:1864](../../../../../src/resources/dicts/en.edn#L1864))
 
 This flow has no encryption checkbox. For the current graph, the upload counts as encrypted unless the graph's stored E2EE flag is `false`. A graph that has never been synced has no flag, and that also counts as encrypted ([repo.cljs:59-70](../../../../../src/main/frontend/components/repo.cljs#L59-L70)).
 
@@ -146,15 +150,15 @@ The first time you work with an encrypted graph and have no E2EE key pair yet, L
 
 Only the graph's **manager** can invite. The manager is the account that created the remote graph ([handler/index.cljs:134](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/index.cljs#L134)).
 
-1. Click the **user-plus** button in the header, which opens a **Members:** dialog ([header.cljs:127-132](../../../../../src/main/frontend/components/header.cljs#L127-L132)). Or open **Settings → Collaboration**.
+1. Click the **user-plus** button in the header, which opens a **Members:** dialog ([header.cljs:128-133](../../../../../src/main/frontend/components/header.cljs#L128-L133)). Or open **Settings → Collaboration**.
 2. Type your collaborator's address into **Email address**
-3. Click **Invite**, or press Enter ([settings.cljs:1197-1273](../../../../../src/main/frontend/components/settings.cljs#L1197-L1273); [en.edn:274-277](../../../../../src/resources/dicts/en.edn#L274-L277))
+3. Click **Invite**, or press Enter ([settings.cljs:1209-1285](../../../../../src/main/frontend/components/settings.cljs#L1209-L1285); [en.edn:274-277](../../../../../src/resources/dicts/en.edn#L274-L277))
 
-On success you see **Invitation sent!** ([en.edn:1837](../../../../../src/resources/dicts/en.edn#L1837)). What actually happens ([sync.cljs:378-414](../../../../../src/main/frontend/handler/db_based/sync.cljs#L378-L414)):
+On success you see **Invitation sent!** ([en.edn:1838](../../../../../src/resources/dicts/en.edn#L1838)). What actually happens ([sync.cljs:378-414](../../../../../src/main/frontend/handler/db_based/sync.cljs#L378-L414)):
 
 - The server looks up an **existing** Logseq account by that email and adds it to the graph with the role `member` ([sync.cljs:385-387](../../../../../src/main/frontend/handler/db_based/sync.cljs#L385-L387), [handler/index.cljs:162-195](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/index.cljs#L162-L195)). That handler only writes the membership. It sends no email, creates no share link, and sets no expiry.
 - If no account uses the address, you see **User doesn't exist yet.** ([handler/index.cljs:193](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/index.cljs#L193), [sync.cljs:401-403](../../../../../src/main/frontend/handler/db_based/sync.cljs#L401-L403)). Ask your collaborator to sign up first, then invite them again.
-- The invite field is shown to every member, but the server refuses invites from non-managers with 403 ([handler/index.cljs:186-191](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/index.cljs#L186-L191)). The app then shows the generic **Something wrong, please try again.** ([sync.cljs:404-409](../../../../../src/main/frontend/handler/db_based/sync.cljs#L404-L409); [en.edn:1849](../../../../../src/resources/dicts/en.edn#L1849)).
+- The invite field is shown to every member, but the server refuses invites from non-managers with 403 ([handler/index.cljs:186-191](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/index.cljs#L186-L191)). The app then shows the generic **Something wrong, please try again.** ([sync.cljs:404-409](../../../../../src/main/frontend/handler/db_based/sync.cljs#L404-L409); [en.edn:1850](../../../../../src/resources/dicts/en.edn#L1850)).
 - For an **encrypted** graph, your client also wraps the graph's AES key with the invitee's RSA public key ([sync.cljs:113-118](../../../../../src/main/frontend/handler/db_based/sync.cljs#L113-L118), [crypt.cljs:666-695](../../../../../src/main/frontend/worker/sync/crypt.cljs#L666-L695)). If the invitee has never set an E2EE password, they have no public key and that step fails ([crypt.cljs:678-679](../../../../../src/main/frontend/worker/sync/crypt.cljs#L678-L679)), so you see **Something wrong, please try again.** The membership was already created by the earlier request, though ([sync.cljs:392-398](../../../../../src/main/frontend/handler/db_based/sync.cljs#L392-L398)). Have the invitee set their E2EE password first, then invite again.
 
 ### 2.2 Roles
@@ -172,7 +176,7 @@ The server has an endpoint for changing a member's role ([handler/index.cljs:197
 
 ### 2.3 Remove a Collaborator
 
-As manager, open the Members panel, click the **⋯** button next to a member, and choose **Remove access** ([settings.cljs:1233-1265](../../../../../src/main/frontend/components/settings.cljs#L1233-L1265); [en.edn:277](../../../../../src/resources/dicts/en.edn#L277)). The button only appears next to members, and only when you are a manager.
+As manager, open the Members panel, click the **⋯** button next to a member, and choose **Remove access** ([settings.cljs:1245-1277](../../../../../src/main/frontend/components/settings.cljs#L1245-L1277); [en.edn:277](../../../../../src/resources/dicts/en.edn#L277)). The button only appears next to members, and only when you are a manager.
 
 > **Unverified:** what happens to the copy of the graph already on the removed person's device. No code that deletes it was found. Removing someone does not rotate an encrypted graph's AES key; see [E2EE Encryption Explanation](../../explanation/security/e2ee-encryption.md#password-rotation-and-reset).
 
@@ -227,8 +231,8 @@ Let's practice real-time editing together.
 
 **What you'll see**:
 
-- Everyone online appears as an initials avatar in the header, next to the user-plus button ([header.cljs:135-149](../../../../../src/main/frontend/components/header.cljs#L135-L149)). Hovering an avatar shows that person's email, masked by default ([header.cljs:146](../../../../../src/main/frontend/components/header.cljs#L146), [util/email.cljs:28-35](../../../../../src/main/frontend/util/email.cljs#L28-L35)).
-- While someone edits a block, a small avatar with their initials appears in that block's bullet area ([block.cljs:2234-2244](../../../../../src/main/frontend/components/block.cljs#L2234-L2244), [:2284-2285](../../../../../src/main/frontend/components/block.cljs#L2284-L2285)). You never see your own, and each block shows only one editor ([events.cljs:425-434](../../../../../src/main/frontend/handler/events.cljs#L425-L434)).
+- Everyone online appears as an initials avatar in the header, next to the user-plus button ([header.cljs:136-150](../../../../../src/main/frontend/components/header.cljs#L136-L150)). Hovering an avatar shows that person's email, masked by default ([header.cljs:147](../../../../../src/main/frontend/components/header.cljs#L147), [util/email.cljs:28-35](../../../../../src/main/frontend/util/email.cljs#L28-L35)).
+- While someone edits a block, a small avatar with their initials appears in that block's bullet area ([block.cljs:2251-2261](../../../../../src/main/frontend/components/block.cljs#L2251-L2261), [:2301-2302](../../../../../src/main/frontend/components/block.cljs#L2301-L2302)). You never see your own, and each block shows only one editor ([events.cljs:425-434](../../../../../src/main/frontend/handler/events.cljs#L425-L434)).
 - Editing different blocks never produces a conflict entry. Only concurrent changes to the same block's text are tracked ([apply_txs.cljs:1130-1131](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L1130-L1131)).
 
 Presence is block-level. There are no shared cursors or selections.
@@ -277,10 +281,10 @@ This sequence is in `apply-remote-tx-with-local-changes!` ([apply_txs.cljs:1673-
 
 ### 4.2 Resolve It
 
-1. Click the ⚠ button on the block (tooltip **Show sync conflicts**, [block.cljs:3389-3416](../../../../../src/main/frontend/components/block.cljs#L3389-L3416))
-2. The **Sync conflicts** popup says: "These server versions conflicted with local edits. Copy the text you want and edit the block manually." ([block.cljs:3375-3387](../../../../../src/main/frontend/components/block.cljs#L3375-L3387); [en.edn:1831-1832](../../../../../src/resources/dicts/en.edn#L1831-L1832))
-3. Use **Copy** on the server version you want ([block.cljs:3359-3373](../../../../../src/main/frontend/components/block.cljs#L3359-L3373)) and edit the block by hand
-4. Click **Mark resolved** ([en.edn:1839](../../../../../src/resources/dicts/en.edn#L1839)). This clears the stored conflicts for that block.
+1. Click the ⚠ button on the block (tooltip **Show sync conflicts**, [block.cljs:3438-3465](../../../../../src/main/frontend/components/block.cljs#L3438-L3465))
+2. The **Sync conflicts** popup says: "These server versions conflicted with local edits. Copy the text you want and edit the block manually." ([block.cljs:3424-3436](../../../../../src/main/frontend/components/block.cljs#L3424-L3436); [en.edn:1832-1833](../../../../../src/resources/dicts/en.edn#L1832-L1833))
+3. Use **Copy** on the server version you want ([block.cljs:3408-3422](../../../../../src/main/frontend/components/block.cljs#L3408-L3422)) and edit the block by hand
+4. Click **Mark resolved** ([en.edn:1840](../../../../../src/resources/dicts/en.edn#L1840)). This clears the stored conflicts for that block.
 
 Conflicts are kept in a local `sync_conflicts` SQLite table ([client_op.cljs:63-74](../../../../../src/main/frontend/worker/sync/client_op.cljs#L63-L74)), so each device keeps its own.
 
@@ -319,7 +323,7 @@ When you start editing a block, the app sends your `editing-block-uuid` to the s
 **When you go offline**:
 
 1. You can keep editing. Changes go into your local graph.
-2. The indicator details show **Offline**, and the **pending local changes** count grows ([indicator.cljs:207-208](../../../../../src/main/frontend/components/rtc/indicator.cljs#L207-L208); [en.edn:1843](../../../../../src/resources/dicts/en.edn#L1843), [:1846](../../../../../src/resources/dicts/en.edn#L1846))
+2. The indicator details show **Offline**, and the **pending local changes** count grows ([indicator.cljs:207-208](../../../../../src/main/frontend/components/rtc/indicator.cljs#L207-L208); [en.edn:1844](../../../../../src/resources/dicts/en.edn#L1844), [:1847](../../../../../src/resources/dicts/en.edn#L1847))
 
 **When you reconnect**:
 
@@ -342,7 +346,7 @@ When you add images or files:
 - The desktop app refuses to add a file over 100 MB ([handler/assets.cljs:14-17](../../../../../src/main/frontend/handler/assets.cljs#L14-L17))
 - The sync client drops any asset upload over 100 MiB, in every graph ([assets.cljs:19](../../../../../src/main/frontend/worker/sync/assets.cljs#L19), [:246-255](../../../../../src/main/frontend/worker/sync/assets.cljs#L246-L255)), even though the server would accept up to 200 MiB for E2EE graphs ([handler/assets.cljs:9-10](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs#L9-L10))
 - Deleting an asset does not delete it from the server: only `:update-asset` operations are ever generated ([asset_db_listener.cljs:11-25](../../../../../src/main/frontend/worker/sync/asset_db_listener.cljs#L11-L25))
-- The indicator lists pending asset uploads, uploading and downloading counts, and missing asset files ([indicator.cljs:84-96](../../../../../src/main/frontend/components/rtc/indicator.cljs#L84-L96); [en.edn:1827-1830](../../../../../src/resources/dicts/en.edn#L1827-L1830), [:1840-1841](../../../../../src/resources/dicts/en.edn#L1840-L1841), [:1845](../../../../../src/resources/dicts/en.edn#L1845))
+- The indicator lists pending asset uploads, uploading and downloading counts, and missing asset files ([indicator.cljs:84-96](../../../../../src/main/frontend/components/rtc/indicator.cljs#L84-L96); [en.edn:1828-1831](../../../../../src/resources/dicts/en.edn#L1828-L1831), [:1841-1842](../../../../../src/resources/dicts/en.edn#L1841-L1842), [:1846](../../../../../src/resources/dicts/en.edn#L1846))
 
 See [Sync Limits](../../reference/features/sync-limits.md) for every limit.
 
@@ -457,7 +461,7 @@ Cloud indicator -> details popup
 
 **Solution**:
 
-- ⚠️ **No recovery is possible**, only a destructive reset. Open **Settings → Encryption**, choose **Reset password**, then **Forgot password?**, set a new password, and click **Force reset password** ([settings.cljs:1280-1306](../../../../../src/main/frontend/components/settings.cljs#L1280-L1306), [:1336](../../../../../src/main/frontend/components/settings.cljs#L1336); [en.edn:609](../../../../../src/resources/dicts/en.edn#L609), [:612](../../../../../src/resources/dicts/en.edn#L612), [:619](../../../../../src/resources/dicts/en.edn#L619)). The app warns: "this will make all currently encrypted graph data stored on the server permanently unreadable. After resetting, you'll need to re-upload your graphs from the client." ([en.edn:613](../../../../../src/resources/dicts/en.edn#L613))
+- ⚠️ **No recovery is possible**, only a destructive reset. Open **Settings → Encryption**, choose **Reset password**, then **Forgot password?**, set a new password, and click **Force reset password** ([settings.cljs:1292-1318](../../../../../src/main/frontend/components/settings.cljs#L1292-L1318), [:1348](../../../../../src/main/frontend/components/settings.cljs#L1348); [en.edn:609](../../../../../src/resources/dicts/en.edn#L609), [:612](../../../../../src/resources/dicts/en.edn#L612), [:619](../../../../../src/resources/dicts/en.edn#L619)). The app warns: "this will make all currently encrypted graph data stored on the server permanently unreadable. After resetting, you'll need to re-upload your graphs from the client." ([en.edn:613](../../../../../src/resources/dicts/en.edn#L613))
 - Your **local** copy of the graph stays usable ([en.edn:600](../../../../../src/resources/dicts/en.edn#L600))
 - See [E2EE Encryption Guide](../../explanation/security/e2ee-encryption.md#what-happens-if-you-forget) for details
 
@@ -465,7 +469,7 @@ Cloud indicator -> details popup
 
 **Problem**: A notification says **Sync graph count exceed limit** or **Sync storage exceed limit**
 
-**Cause**: The server refused the request for your account ([user.cljs:453-476](../../../../../src/main/frontend/handler/user.cljs#L453-L476), [events/rtc.cljs:61-65](../../../../../src/main/frontend/handler/events/rtc.cljs#L61-L65); [en.edn:1836](../../../../../src/resources/dicts/en.edn#L1836), [:1851](../../../../../src/resources/dicts/en.edn#L1851)). See [Sync Limits](../../reference/features/sync-limits.md).
+**Cause**: The server refused the request for your account ([user.cljs:453-476](../../../../../src/main/frontend/handler/user.cljs#L453-L476), [events/rtc.cljs:61-65](../../../../../src/main/frontend/handler/events/rtc.cljs#L61-L65); [en.edn:1837](../../../../../src/resources/dicts/en.edn#L1837), [:1852](../../../../../src/resources/dicts/en.edn#L1852)). See [Sync Limits](../../reference/features/sync-limits.md).
 
 ### Performance Degradation
 
@@ -474,7 +478,7 @@ Cloud indicator -> details popup
 **Check**:
 
 1. **Indicator details**: a large, growing **pending local changes** count means uploads are not keeping up
-2. **Developer console**: check for errors under **View → Toggle Developer Tools** (Electron's standard View menu, [core.cljs:243](../../../../../src/electron/electron/core.cljs#L243))
+2. **Developer console**: check for errors under **View → Toggle Developer Tools** (Electron's standard View menu, [core.cljs:246](../../../../../src/electron/electron/core.cljs#L246))
 
 ## What You've Learned
 

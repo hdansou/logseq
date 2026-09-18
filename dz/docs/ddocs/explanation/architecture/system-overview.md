@@ -2,8 +2,8 @@
 title: 'Logseq System Overview'
 description: "High-level overview of Logseq's architecture, value propositions, and design principles"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 category: architecture
@@ -17,6 +17,10 @@ relatedDocs:
 ---
 
 # Logseq System Overview
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11 — verified against `be800f1711`
 
@@ -32,7 +36,7 @@ Logseq is an **open-source, local-first knowledge management app**. It combines 
 
 ### 🔒 Local-First
 
-- **Local storage**: a graph is a single SQLite file, `db.sqlite`, under `~/logseq/graphs` by default ([`sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs#L29-L33), [`config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs#L55)). On the web, the same database is kept in the browser's OPFS ([`platform/browser.cljs:74`](../../../../../src/main/frontend/worker/platform/browser.cljs#L74)).
+- **Local storage**: a graph is a single SQLite file, `db.sqlite`, under `~/logseq/graphs` by default ([`sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs#L29-L33), [`config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs#L58)). On the web, the same database is kept in the browser's OPFS ([`platform/browser.cljs:74`](../../../../../src/main/frontend/worker/platform/browser.cljs#L74)).
 - **Export paths**:
   - The Export screen offers a SQLite DB, a zip, an EDN file, standard Markdown (with no block properties) and a debug transit file ([`export.cljs:125-151`](../../../../../src/main/frontend/components/export.cljs#L125-L151)).
   - Desktop also writes automatic backups to `<graph>/backup/` ([`graph_backup.cljs:10`](../../../../../src/main/logseq/db_worker/graph_backup.cljs#L10)).
@@ -43,7 +47,7 @@ Logseq is an **open-source, local-first knowledge management app**. It combines 
 ### 🧠 Knowledge Graph Approach
 
 - **Bi-directional linking**: `[[Page]]` references create backlinks.
-- **Block-level references**: a block ref is `[[<block-uuid>]]` ([`util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs#L5-L7)). The file-graph form `((uuid))` renders as literal text ([`block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs#L1556-L1557)).
+- **Block-level references**: a block ref is `[[<block-uuid>]]` ([`util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs#L5-L7)). The file-graph form `((uuid))` renders as literal text ([`block.cljs:1573-1574`](../../../../../src/main/frontend/components/block.cljs#L1573-L1574)).
 - **Visual exploration**: the graph view renders with `pixi.js` ([`extensions/graph/pixi.cljs`](../../../../../src/main/frontend/extensions/graph/pixi.cljs)).
 
 ### 🔧 Extensibility
@@ -97,16 +101,16 @@ Only **database graphs** can be opened today. The graph list keeps only DB graph
 └────────────────────────────┘ └────────────────────────────┘
 ```
 
-The two runtimes share the same core ([`db_worker.cljs:5`](../../../../../src/main/frontend/worker/db_worker.cljs#L5) and [`db_worker_node.cljs:5`](../../../../../src/main/frontend/worker/db_worker_node.cljs#L5) both require `frontend.worker.db-core`). They differ in how the UI reaches them and where SQLite lives:
+The two runtimes share the same core ([`db_worker.cljs:5`](../../../../../src/main/frontend/worker/db_worker.cljs#L5) and [`db_worker_node.cljs:6`](../../../../../src/main/frontend/worker/db_worker_node.cljs#L6) both require `frontend.worker.db-core`). They differ in how the UI reaches them and where SQLite lives:
 
 - **Web and mobile**:
   - `persist-db` starts a `js/Worker` and wraps it with Comlink ([`persist_db/browser.cljs:202-208`](../../../../../src/main/frontend/persist_db/browser.cljs#L202-L208)).
   - The worker loads `@sqlite.org/sqlite-wasm` and installs an OPFS pool ([`platform/browser.cljs:4`](../../../../../src/main/frontend/worker/platform/browser.cljs#L4), [`:74`](../../../../../src/main/frontend/worker/platform/browser.cljs#L74)).
 - **Desktop**:
-  - `<start-runtime!` does **not** start a Web Worker. It asks the Electron main process for a db-worker runtime ([`persist_db.cljs:352-361`](../../../../../src/main/frontend/persist_db.cljs#L352-L361); handler at [`electron/handler.cljs:239`](../../../../../src/electron/electron/handler.cljs#L239)).
+  - `<start-runtime!` does **not** start a Web Worker. It asks the Electron main process for a db-worker runtime ([`persist_db.cljs:422-431`](../../../../../src/main/frontend/persist_db.cljs#L422-L431); handler at [`electron/handler.cljs:239`](../../../../../src/electron/electron/handler.cljs#L239)).
   - The main process spawns `db-worker-node` as a child Node process ([`db_worker/daemon.cljs:226`](../../../../../src/main/logseq/db_worker/daemon.cljs#L226), [`:248`](../../../../../src/main/logseq/db_worker/daemon.cljs#L248)).
   - The renderer talks to it over "db-worker-node HTTP and SSE" ([`persist_db/remote.cljs:2`](../../../../../src/main/frontend/persist_db/remote.cljs#L2)).
-  - The Node platform opens SQLite with `node:sqlite`'s `DatabaseSync` ([`platform/node.cljs:5`](../../../../../src/main/frontend/worker/platform/node.cljs#L5), [`:20`](../../../../../src/main/frontend/worker/platform/node.cljs#L20)).
+  - The Node platform opens SQLite with `node:sqlite`'s `DatabaseSync` ([`platform/node.cljs:6`](../../../../../src/main/frontend/worker/platform/node.cljs#L6), [`:21`](../../../../../src/main/frontend/worker/platform/node.cljs#L21)).
 
 > **Corrected:** the previous diagram showed one Web Worker for every platform, a "File System (Markdown)" storage branch, and `better-sqlite3` on desktop. At `be800f1711`:
 > - Desktop runs a separate Node process.
@@ -130,7 +134,7 @@ The two runtimes share the same core ([`db_worker.cljs:5`](../../../../../src/ma
 - **Responsibilities**:
   - DataScript transactions and queries, and SQLite persistence
   - db-sync ([`worker/sync.cljs`](../../../../../src/main/frontend/worker/sync.cljs))
-  - Full-text, fuzzy and vector search ([`worker/search.cljs:2`](../../../../../src/main/frontend/worker/search.cljs#L2), [`:931`](../../../../../src/main/frontend/worker/search.cljs#L931))
+  - Full-text, fuzzy and vector search ([`worker/search.cljs:2`](../../../../../src/main/frontend/worker/search.cljs#L2), [`:904`](../../../../../src/main/frontend/worker/search.cljs#L904))
   - Undo/redo
 
 ### 2. Editor System
@@ -168,7 +172,7 @@ Compared with earlier versions of this overview, source now includes:
 - **CLI sync with E2EE bootstrap.**
   - The `logseq` CLI is an OCaml/Melange program under `cli/`. It reuses the ClojureScript `db-worker-node` server (`cli/AGENTS.md`).
   - `sync start`, `sync upload` and `sync download` accept `--e2ee-password` ([`cli/lib/cli_parse.ml:310-313`](../../../../../cli/lib/cli_parse.ml#L310-L313)).
-- **Node-runtime secret persistence.** `db-worker-node` stores the E2EE password secret through `keytar` under the service `"Logseq E2EE"`. If the keychain call fails, it falls back to the worker's KV store ([`platform/node.cljs:601-619`](../../../../../src/main/frontend/worker/platform/node.cljs#L601-L619)). The browser runtime uses IndexedDB (see [e2ee-encryption.md](../security/e2ee-encryption.md)).
+- **Node-runtime secret persistence.** `db-worker-node` stores the E2EE password secret through `keytar` under the service `"Logseq E2EE"`. If the keychain call fails, it falls back to the worker's KV store ([`platform/node.cljs:607-625`](../../../../../src/main/frontend/worker/platform/node.cljs#L607-L625)). The browser runtime uses IndexedDB (see [e2ee-encryption.md](../security/e2ee-encryption.md)).
 - **Sync backend.** `deps/db-sync` runs on Cloudflare Workers with a `SyncDO` Durable Object ([`wrangler.toml:21-23`](../../../../../deps/db-sync/worker/wrangler.toml#L21-L23)). It also ships a Node.js adapter "for self-hosting" ([`deps/db-sync/README.md:4`](../../../../../deps/db-sync/README.md#L4)).
 
 > **Corrected:** "node runtime file-backed storage" became "`keytar` with KV fallback".
@@ -197,7 +201,7 @@ Compared with earlier versions of this overview, source now includes:
 
 ## Who Uses Logseq?
 
-> **Unverified:** the audience lists below (knowledge workers, development teams, personal users) are positioning, not something source can confirm. The one concrete feature they mentioned, spaced repetition, does exist: DB graphs have `Card`/`Cards` classes with FSRS state properties ([`class.cljs:58-64`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L58-L64)).
+> **Unverified:** the audience lists below (knowledge workers, development teams, personal users) are positioning, not something source can confirm. The one concrete feature they mentioned, spaced repetition, does exist: DB graphs have `Card`/`Cards` classes with FSRS state properties ([`class.cljs:57-63`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L57-L63)).
 
 ### Knowledge Workers
 

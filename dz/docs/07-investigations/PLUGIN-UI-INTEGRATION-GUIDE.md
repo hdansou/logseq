@@ -277,7 +277,7 @@ pluginLocal.on(_('style'), (style: StyleString | StyleOptions) => {
 **Toolbar Slot**
 
 - **Location:** Top of the application, right side
-- **Component:** [src/main/frontend/components/header.cljs](../../../src/main/frontend/components/header.cljs#L451)
+- **Component:** [src/main/frontend/components/header.cljs](../../../src/main/frontend/components/header.cljs#L452)
 - **Hook:** `hook-ui-items :toolbar`
 - **CSS Container:** `.ui-items-container[data-type="toolbar"]`
 
@@ -291,7 +291,7 @@ pluginLocal.on(_('style'), (style: StyleString | StyleOptions) => {
 **Page Head Actions Slot**
 
 - **Hook:** `onPageHeadActionsSlotted`
-- **Component:** [src/main/frontend/components/page.cljs](../../../src/main/frontend/components/page.cljs#L555)
+- **Component:** [src/main/frontend/components/page.cljs](../../../src/main/frontend/components/page.cljs#L602)
 - **Purpose:** Add custom actions to page headers
 
 ```typescript
@@ -308,7 +308,7 @@ logseq.App.onPageHeadActionsSlotted(({ slot }) => {
 **Macro Renderer Slot**
 
 - **Hook:** `onMacroRendererSlotted`
-- **Component:** [src/main/frontend/components/block.cljs](../../../src/main/frontend/components/block.cljs#L1955)
+- **Component:** [src/main/frontend/components/block.cljs](../../../src/main/frontend/components/block.cljs#L1972)
 - **Purpose:** Render custom UI for `{{renderer ...}}` macros
 
 ```typescript
@@ -595,7 +595,7 @@ html[data-theme='dark'] .my-plugin-card {
 </div>
 ```
 
-**Injection Point:** [components/header.cljs:451](../../../src/main/frontend/components/header.cljs#L451)
+**Injection Point:** [components/header.cljs:452](../../../src/main/frontend/components/header.cljs#L452)
 
 ---
 
@@ -1026,7 +1026,7 @@ Handler Executes
 Logseq Header Component Renders
     |
     v
-(plugins/hook-ui-items :toolbar) (header.cljs:451)
+(plugins/hook-ui-items :toolbar) (header.cljs:452)
     |
     v
 hook-ui-items Component (plugins.cljs:1284-1306)
@@ -1240,8 +1240,8 @@ logseq.App.onMacroRendererSlotted(({ slot, payload }) => {
 | --------------------------------------------------------------------------------------------------- | --------------------- | --------------------------------------------------- |
 | [src/main/frontend/components/plugins.cljs](../../../src/main/frontend/components/plugins.cljs)     | Plugin UI components  | `hook-ui-slot`, `hook-ui-items`, `ui-item-renderer` |
 | [src/main/frontend/handler/plugin.cljs](../../../src/main/frontend/handler/plugin.cljs)             | Plugin event handlers | `hook-plugin-app`, `hook-plugin-block-slot`         |
-| [src/main/frontend/components/header.cljs](../../../src/main/frontend/components/header.cljs#L451)  | Toolbar integration   | Toolbar `hook-ui-items`                             |
-| [src/main/frontend/components/page.cljs](../../../src/main/frontend/components/page.cljs#L555-L556) | Pagebar integration   | Pagebar `hook-ui-items`                             |
+| [src/main/frontend/components/header.cljs](../../../src/main/frontend/components/header.cljs#L452)  | Toolbar integration   | Toolbar `hook-ui-items`                             |
+| [src/main/frontend/components/page.cljs](../../../src/main/frontend/components/page.cljs#L602-L603) | Pagebar integration   | Pagebar `hook-ui-items`                             |
 
 ---
 

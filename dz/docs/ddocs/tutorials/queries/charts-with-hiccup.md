@@ -4,8 +4,8 @@ description: 'Learn to render ASCII bar charts and full SVG line charts directly
 status: draft
 difficulty: intermediate
 timeToComplete: '45 minutes'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (bb0da36ad6). The 2026-09-10 date covers only the :result-transform vs :view note (bfcaeb03e7).'
 reviewStatus: audited
 logseqVersion: '0.11.x (DB graphs only)'
@@ -20,6 +20,10 @@ relatedDocs:
 ---
 
 # Build ASCII and SVG Charts in Logseq Queries with Hiccup
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-09 (verified against `be800f1711`)
 > **What you'll learn**: How to use the `:view` function in advanced queries to render aggregation results as ASCII bar charts and SVG line charts, and how to register reusable chart templates in `config.edn`.
@@ -55,7 +59,7 @@ When you write an advanced query, the result is passed to a renderer. By default
 > ⚠️ **What `r` actually contains.** Queries run in the DB worker and every row is passed through `normalize-query-row` before it reaches your `:view` (`src/main/frontend/worker/handler/render_resource/query.cljs:40-46,195-202`). Two consequences:
 >
 > - **Block cells become UUIDs, not entity maps.** A `(pull ?b [*])` row arrives in `:view` as a bare `:block/uuid`, so `(:block/title r)` is `nil` there. If you need block fields inside `:view`, `:find` them as explicit scalar columns instead of pulling.
-> - **Multi-column rows stay as tuples.** A 2-column `:find` yields a vector of 2-element vectors. See the test `query-resource-preserves-scalar-tuples-test` (`src/test/frontend/worker/handler/render_resource_test.cljs:2021-2038`), which asserts `{:rows [["Jan 1st, 2020" 20200101]]}`. A single-column `:find` is unwrapped to the bare value.
+> - **Multi-column rows stay as tuples.** A 2-column `:find` yields a vector of 2-element vectors. See the test `query-resource-preserves-scalar-tuples-test` (`src/test/frontend/worker/handler/render_resource_test.cljs:2265-2282`), which asserts `{:rows [["Jan 1st, 2020" 20200101]]}`. A single-column `:find` is unwrapped to the bare value.
 
 ## Step 1: Render the Raw Result
 
@@ -211,7 +215,7 @@ For this step you need a tagged page with some numeric properties. If you don't 
   ```
 ````
 
-> ⚠️ **Never hardcode a user ident.** Every user-created property *and class* ident gets an 8-character random suffix when it is created — `"-"` plus one letter plus a 7-character nano-id (`deps/db/src/logseq/db/frontend/db_ident.cljc:82-90`, reached via `create-user-property-ident-from-name` at `deps/db/src/logseq/db/frontend/property.cljs:854-859` and `create-user-class-ident-from-name` at `deps/db/src/logseq/db/frontend/class.cljs:178-186`). So your habit-tracker tag is `:user.class/habit-tracker-a3Kf9Qz1`, **not** `:user.class/habit-tracker`. Matching a class by `[?t :block/title "habit-tracker"]` — as above — is portable; matching by `:db/ident` is not. Replace `:user.property/running` / `:user.property/walking` with your graph's real idents, which you can list with:
+> ⚠️ **Never hardcode a user ident.** Every user-created property *and class* ident gets an 8-character random suffix when it is created — `"-"` plus one letter plus a 7-character nano-id (`deps/db/src/logseq/db/frontend/db_ident.cljc:82-90`, reached via `create-user-property-ident-from-name` at `deps/db/src/logseq/db/frontend/property.cljs:854-859` and `create-user-class-ident-from-name` at `deps/db/src/logseq/db/frontend/class.cljs:195-203`). So your habit-tracker tag is `:user.class/habit-tracker-a3Kf9Qz1`, **not** `:user.class/habit-tracker`. Matching a class by `[?t :block/title "habit-tracker"]` — as above — is portable; matching by `:db/ident` is not. Replace `:user.property/running` / `:user.property/walking` with your graph's real idents, which you can list with:
 >
 > ```clojure
 > [:find ?ident :where [?p :db/ident ?ident]
@@ -354,7 +358,7 @@ In this tutorial, you:
 
 ### `:title` key is ignored
 
-**Problem**: for regular advanced query blocks, the top-level `:title "..."` key is never rendered. The title header is drawn only on *built-in* queries (`src/main/frontend/components/query.cljs:166-177`); ordinary query blocks take the `[:div.bd …]` branch, which has no title. File-graph queries that carried a `:title` had it hoisted into the block's own `:block/title` on import, and the key stripped from the map (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1159-1167,1406-1410`).
+**Problem**: for regular advanced query blocks, the top-level `:title "..."` key is never rendered. The title header is drawn only on *built-in* queries (`src/main/frontend/components/query.cljs:166-177`); ordinary query blocks take the `[:div.bd …]` branch, which has no title. File-graph queries that carried a `:title` had it hoisted into the block's own `:block/title` on import, and the key stripped from the map (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1201-1209,1406-1410`).
 
 **Solution**: put your heading inside `:view` as `[:h3 "..."]` or `[:text {:x ... :y ...} "..."]` for SVG, or as ordinary text in the query block itself.
 

@@ -3,8 +3,8 @@ title: 'How Publishing Works'
 description: 'Understanding Logseq\'s current page publishing pipeline and customization hooks'
 type: explanation
 status: stable
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.x'
 relatedDocs:
@@ -13,6 +13,10 @@ relatedDocs:
     - '[Custom CSS](../../how-to/integrations/custom-css.md)'
     - '[Custom JavaScript](../../how-to/integrations/custom-js.md)'
 ---
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-09 (verified against `be800f1711`)
 
@@ -28,7 +32,7 @@ When you publish a page, Logseq:
 2. Uploads referenced assets.
 3. Uploads optional custom publish CSS and JavaScript.
 4. Sends the page snapshot to the publish service.
-5. Stores the returned public URL on the page as `Published URL` (prefers the returned `short_url` when available, falling back to `/page/:graph-uuid/:page-uuid` — [handler/publish.cljs:387-397](../../../../../src/main/frontend/handler/publish.cljs#L387-L397)).
+5. Stores the returned public URL on the page as `Published URL` (prefers the returned `short_url` when available, falling back to `/page/:graph-uuid/:page-uuid` — [handler/publish.cljs:388-398](../../../../../src/main/frontend/handler/publish.cljs#L388-L398)).
 
 When someone opens that URL, the publish worker:
 
@@ -67,9 +71,9 @@ The publish dialog is `publish-page-dialog` in [src/main/frontend/components/pag
 
 > **Removed:** The previous claim that the shortcut binding itself is handled in `src/main/frontend/handler/events/ui.cljs` is stale. That namespace handles the event, but the keybinding is defined in shortcut config.
 
-The dialog lets the user optionally set a password before publishing. It is trimmed, dropped if blank, and sent as `:page-password` in the metadata alongside the page snapshot ([handler/publish.cljs:324-335](../../../../../src/main/frontend/handler/publish.cljs#L324-L335)). The worker never stores it — it stores a PBKDF2 hash (see [Findings](#findings-new-capabilities)).
+The dialog lets the user optionally set a password before publishing. It is trimmed, dropped if blank, and sent as `:page-password` in the metadata alongside the page snapshot ([handler/publish.cljs:325-336](../../../../../src/main/frontend/handler/publish.cljs#L325-L336)). The worker never stores it — it stores a PBKDF2 hash (see [Findings](#findings-new-capabilities)).
 
-After a successful publish, Logseq stores the returned public URL in the built-in property `:logseq.property.publish/published-url`, titled `Published URL`, defined in [deps/db/src/logseq/db/frontend/property.cljs:420-424](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L420-L424). It is a `:url` property with `:view-context :page` and `:public? true`. That property also exposes the `Unpublish` action in [src/main/frontend/components/property/value.cljs:1642-1643](../../../../../src/main/frontend/components/property/value.cljs#L1642-L1643).
+After a successful publish, Logseq stores the returned public URL in the built-in property `:logseq.property.publish/published-url`, titled `Published URL`, defined in [deps/db/src/logseq/db/frontend/property.cljs:420-424](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L420-L424). It is a `:url` property with `:view-context :page` and `:public? true`. That property also exposes the `Unpublish` action in [src/main/frontend/components/property/value.cljs:1930-1931](../../../../../src/main/frontend/components/property/value.cljs#L1930-L1931).
 
 ## What Gets Uploaded
 
@@ -100,10 +104,10 @@ The upload coordinator lives in [src/main/frontend/handler/publish.cljs](../../.
 Before posting the page snapshot, Logseq uploads:
 
 - page assets such as images, audio, video, and documents
-- responsive image variants at widths `1024` and `1600`, at quality `0.9`, for `png`, `jpg`, `jpeg` and `webp` only ([handler/publish.cljs:69-76](../../../../../src/main/frontend/handler/publish.cljs#L69-L76)); a variant is stored under the asset UUID with an `@<width>` suffix ([handler/publish.cljs:94-98](../../../../../src/main/frontend/handler/publish.cljs#L94-L98))
+- responsive image variants at widths `1024` and `1600`, at quality `0.9`, for `png`, `jpg`, `jpeg` and `webp` only ([handler/publish.cljs:70-77](../../../../../src/main/frontend/handler/publish.cljs#L70-L77)); a variant is stored under the asset UUID with an `@<width>` suffix ([handler/publish.cljs:95-99](../../../../../src/main/frontend/handler/publish.cljs#L95-L99))
 - custom publish assets from `logseq/publish.css` and `logseq/publish.js`
 
-Those custom publish files are declared in `custom-publish-assets` in [handler/publish.cljs:78-88](../../../../../src/main/frontend/handler/publish.cljs#L78-L88). Their SHA-256 hashes are added to publish metadata as `custom_publish_css_hash` and `custom_publish_js_hash` ([handler/publish.cljs:352-355](../../../../../src/main/frontend/handler/publish.cljs#L352-L355)), then read later by the renderer and used as the `?v=` cache-busting value on the generated `<link>` and `<script>` tags.
+Those custom publish files are declared in `custom-publish-assets` in [handler/publish.cljs:79-89](../../../../../src/main/frontend/handler/publish.cljs#L79-L89). Their SHA-256 hashes are added to publish metadata as `custom_publish_css_hash` and `custom_publish_js_hash` ([handler/publish.cljs:353-356](../../../../../src/main/frontend/handler/publish.cljs#L353-L356)), then read later by the renderer and used as the `?v=` cache-busting value on the generated `<link>` and `<script>` tags.
 
 ## Where Published Data Lives
 
@@ -293,7 +297,7 @@ Compared with this doc's previous revision, current source shows these notable c
 - Short-link entry points are supported via both `/p/<short-id>` and `/s/<short-id>`, both resolved through the index DO and then rendered as the canonical `/page/<graph-uuid>/<page-uuid>` page by an internal request rewrite ([routes.cljs:719-741](../../../../../deps/publish/src/logseq/publish/routes.cljs#L719-L741)).
 - Public graph search is wired end-to-end: worker endpoint `/search/<graph-uuid>?q=...` ([routes.cljs:332-343](../../../../../deps/publish/src/logseq/publish/routes.cljs#L332-L343)) plus browser UI and the `Cmd/Ctrl+K` shortcut in `publish.js`.
 - Publish payload generation explicitly excludes the comments area and comment blocks — instances of `:logseq.class/Comments` and `:logseq.class/Comment`, plus any direct child of a comments area — from exported page content ([worker/publish.cljs:37-52](../../../../../src/main/frontend/worker/publish.cljs#L37-L52)).
-- Image publishing includes responsive variant generation (`@1024`, `@1600`) for `png`/`jpg`/`jpeg`/`webp`, with a SHA-256 checksum per upload ([handler/publish.cljs:69-76](../../../../../src/main/frontend/handler/publish.cljs#L69-L76), [:100-112](../../../../../src/main/frontend/handler/publish.cljs#L100-L112)).
+- Image publishing includes responsive variant generation (`@1024`, `@1600`) for `png`/`jpg`/`jpeg`/`webp`, with a SHA-256 checksum per upload ([handler/publish.cljs:70-77](../../../../../src/main/frontend/handler/publish.cljs#L70-L77), [:101-113](../../../../../src/main/frontend/handler/publish.cljs#L101-L113)).
 - Page password storage on the publish worker is hash-based, not plaintext: `pbkdf2$sha256$90000$<base64url-salt>$<base64url-hash>`, with a 16-byte random salt, SHA-256, 256 derived bits, and iterations clamped to `password-kdf-max-iterations` ([common.cljs:124-125](../../../../../deps/publish/src/logseq/publish/common.cljs#L124-L125), [:135-160](../../../../../deps/publish/src/logseq/publish/common.cljs#L135-L160)). Verification rejects any stored hash claiming more than 90,000 iterations rather than honouring it ([common.cljs:175-184](../../../../../deps/publish/src/logseq/publish/common.cljs#L175-L184)).
 
 ## A Bug Worth Knowing About

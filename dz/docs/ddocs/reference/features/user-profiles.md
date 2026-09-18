@@ -4,8 +4,8 @@ status: 'Active Development'
 quadrant: 'Reference'
 platform: 'Desktop (macOS/Windows/Linux)'
 graphType: [db]
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '../../tutorials/collaboration/real-time-sync.md'
@@ -15,6 +15,10 @@ related-docs:
 > **Last revised:** 2026-09-11
 
 # User Profiles Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 ## Overview
 
@@ -146,19 +150,19 @@ The hook does **not** check whether the graph is synced. Any DB graph edited whi
 
 ### Online Users in the Header
 
-In a synced graph, the `rtc-collaborators` component shows a user-plus button (opens the Members dialog) and one avatar per online user ([header.cljs:120-149](../../../../../src/main/frontend/components/header.cljs#L120-L149)).
+In a synced graph, the `rtc-collaborators` component shows a user-plus button (opens the Members dialog) and one avatar per online user ([header.cljs:121-150](../../../../../src/main/frontend/components/header.cljs#L121-L150)).
 
 - **Where the data comes from**: the sync server builds each online user from JWT claims: `sub`, `email`, `preferred_username` / `cognito:username` / `username`, and `name` ([presence.cljs:6-19](../../../../../deps/db-sync/src/logseq/db_sync/worker/presence.cljs#L6-L19)). The client turns them into `:user/uuid`, `:user/name` (username, else name, else user id) and `:user/email` ([presence.cljs:61-71](../../../../../src/main/frontend/worker/sync/presence.cljs#L61-L71)). Graph properties are not consulted.
-- **Rendering**: `avatar/user-avatar` at `w-5 h-5`, with no image source, so always initials ([header.cljs:143-148](../../../../../src/main/frontend/components/header.cljs#L143-L148))
-- **Tooltip**: the user's email through `display-email`, which is masked by default ([header.cljs:146](../../../../../src/main/frontend/components/header.cljs#L146))
+- **Rendering**: `avatar/user-avatar` at `w-5 h-5`, with no image source, so always initials ([header.cljs:144-149](../../../../../src/main/frontend/components/header.cljs#L144-L149))
+- **Tooltip**: the user's email through `display-email`, which is masked by default ([header.cljs:147](../../../../../src/main/frontend/components/header.cljs#L147))
 
 ### Block Editing Indicators
 
-While another user edits a block, their initials avatar (`w-4 h-4`) appears in that block's control area ([block.cljs:2234-2244](../../../../../src/main/frontend/components/block.cljs#L2234-L2244)). Your own editing is never shown, and only the first editor per block is kept ([events.cljs:425-434](../../../../../src/main/frontend/handler/events.cljs#L425-L434)).
+While another user edits a block, their initials avatar (`w-4 h-4`) appears in that block's control area ([block.cljs:2251-2261](../../../../../src/main/frontend/components/block.cljs#L2251-L2261)). Your own editing is never shown, and only the first editor per block is kept ([events.cljs:425-434](../../../../../src/main/frontend/handler/events.cljs#L425-L434)).
 
 ### Members List
 
-**Settings → Collaboration**, or the header's user-plus dialog, lists members with name, email and role ([settings.cljs:1197-1273](../../../../../src/main/frontend/components/settings.cljs#L1197-L1273)). That data comes from the server's members endpoint. The name shown is the username, else the email, else the user id ([sync.cljs:251-282](../../../../../src/main/frontend/handler/db_based/sync.cljs#L251-L282)).
+**Settings → Collaboration**, or the header's user-plus dialog, lists members with name, email and role ([settings.cljs:1209-1285](../../../../../src/main/frontend/components/settings.cljs#L1209-L1285)). That data comes from the server's members endpoint. The name shown is the username, else the email, else the user id ([sync.cljs:251-282](../../../../../src/main/frontend/handler/db_based/sync.cljs#L251-L282)).
 
 ### Avatar Appearance
 
@@ -171,7 +175,7 @@ While another user edits a block, their initials avatar (`w-4 h-4`) appears in t
 
 Emails in the header tooltip and the members list are masked by default. `:ui/mask-email?` defaults to `true` ([state.cljs:464](../../../../../src/main/frontend/state.cljs#L464)), and `mask-email?` treats anything except `false` as "mask" ([util/email.cljs:28-30](../../../../../src/main/frontend/util/email.cljs#L28-L30)). In the members list, an eye button with the tooltip **Show email address** / **Hide email address** reveals one address ([components/email.cljs:36-56](../../../../../src/main/frontend/components/email.cljs#L36-L56); [en.edn:38](../../../../../src/resources/dicts/en.edn#L38), [:57](../../../../../src/resources/dicts/en.edn#L57)). The header tooltip has no reveal.
 
-> **Known defect:** setting `:ui/mask-email? false` in `config.edn` does not unmask emails. Both call sites pass the whole `[:config]` subscription ([components/email.cljs:25-26](../../../../../src/main/frontend/components/email.cljs#L25-L26), [header.cljs:124](../../../../../src/main/frontend/components/header.cljs#L124)). That state is keyed by repo ([state.cljs:491](../../../../../src/main/frontend/state.cljs#L491)), so `(:ui/mask-email? config)` finds no value and masking stays on.
+> **Known defect:** setting `:ui/mask-email? false` in `config.edn` does not unmask emails. Both call sites pass the whole `[:config]` subscription ([components/email.cljs:25-26](../../../../../src/main/frontend/components/email.cljs#L25-L26), [header.cljs:125](../../../../../src/main/frontend/components/header.cljs#L125)). That state is keyed by repo ([state.cljs:491](../../../../../src/main/frontend/state.cljs#L491)), so `(:ui/mask-email? config)` finds no value and masking stays on.
 
 ---
 

@@ -2,8 +2,8 @@
 title: 'Local-First Architecture'
 status: 🟢 Stable
 version: 'Logseq 2.0.1'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Web + Mobile'
@@ -16,6 +16,10 @@ tags: ['architecture', 'local-first', 'privacy', 'offline', 'sync']
 ---
 
 # Local-First Architecture
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11 — verified against `be800f1711`
 
@@ -131,7 +135,7 @@ Local-first action:
 User types → Local DB worker transacts → Update UI
 ```
 
-In Logseq, edits and queries go to a DB worker on the same machine: a Web Worker on web and mobile, or a `db-worker-node` child process on desktop. They never go to a remote server ([`persist_db.cljs:352-361`](../../../../../src/main/frontend/persist_db.cljs#L352-L361)).
+In Logseq, edits and queries go to a DB worker on the same machine: a Web Worker on web and mobile, or a `db-worker-node` child process on desktop. They never go to a remote server ([`persist_db.cljs:422-431`](../../../../../src/main/frontend/persist_db.cljs#L422-L431)).
 
 > **Unverified:** the earlier performance table ("Load app <1s", "Search 10k notes <100ms", "Edit block <5ms", and cloud-first figures) was removed. Source contains no benchmarks that back those numbers.
 
@@ -214,9 +218,9 @@ Benefits:
 ```
 
 Sources for the layout:
-- **Graphs directory**: `~/logseq/graphs` ([`common/config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs#L55)).
+- **Graphs directory**: `~/logseq/graphs` ([`common/config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs#L58)).
 - **Database file**: `db.sqlite` ([`sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs#L29-L33)).
-- **Assets directory**: `assets` ([`common/config.cljs:56`](../../../../../deps/common/src/logseq/common/config.cljs#L56)).
+- **Assets directory**: `assets` ([`common/config.cljs:59`](../../../../../deps/common/src/logseq/common/config.cljs#L59)).
 - **Backup directory**: `backup` ([`graph_backup.cljs:10-11`](../../../../../src/main/logseq/db_worker/graph_backup.cljs#L10-L11)).
 
 > **Corrected:** the old layout showed `logseq.db` and `version-files/*.transit` exports. The file is `db.sqlite`. `version-files` appears at master only as a file-graph path to ignore ([`deps/common/.../graph.cljs:84`](../../../../../deps/common/src/logseq/common/graph.cljs#L84)); DB graphs never write it.
@@ -226,10 +230,10 @@ Sources for the layout:
 Each platform runs the same worker core (`frontend.worker.db-core`) on a different SQLite binding.
 
 **Desktop (Electron):**
-- The renderer does not touch SQLite. On desktop, `<start-runtime!` asks the main process for a db-worker runtime ([`persist_db.cljs:352-357`](../../../../../src/main/frontend/persist_db.cljs#L352-L357)).
+- The renderer does not touch SQLite. On desktop, `<start-runtime!` asks the main process for a db-worker runtime ([`persist_db.cljs:422-427`](../../../../../src/main/frontend/persist_db.cljs#L422-L427)).
 - The main process spawns `db-worker-node` as a child process ([`daemon.cljs:226`](../../../../../src/main/logseq/db_worker/daemon.cljs#L226), [`:248`](../../../../../src/main/logseq/db_worker/daemon.cljs#L248)).
 - The renderer talks to it over HTTP and SSE ([`persist_db/remote.cljs:2`](../../../../../src/main/frontend/persist_db/remote.cljs#L2)).
-- The worker opens the database with Node's built-in `node:sqlite` `DatabaseSync` ([`platform/node.cljs:5`](../../../../../src/main/frontend/worker/platform/node.cljs#L5), [`:20`](../../../../../src/main/frontend/worker/platform/node.cljs#L20)).
+- The worker opens the database with Node's built-in `node:sqlite` `DatabaseSync` ([`platform/node.cljs:6`](../../../../../src/main/frontend/worker/platform/node.cljs#L6), [`:21`](../../../../../src/main/frontend/worker/platform/node.cljs#L21)).
 
 **Web and Mobile (Capacitor):**
 - The app starts a Web Worker and wraps it with Comlink ([`persist_db/browser.cljs:202-208`](../../../../../src/main/frontend/persist_db/browser.cljs#L202-L208)).
@@ -260,7 +264,7 @@ Each platform runs the same worker core (`frontend.worker.db-core`) on a differe
 
 Sources: [`sqlite.cljs:13`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs#L13) for the `kvs` table. Task status is a closed-value ref with six values: `backlog`, `todo`, `doing`, `in-review`, `done`, `canceled` ([`property.cljs:313-318`](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L313-L318)).
 
-Full-text search uses a **separate** SQLite database per graph (`"search" + repo-path`, [`db_core.cljs:526`](../../../../../src/main/frontend/worker/db_core.cljs#L526)). It holds an FTS5 trigram table ([`search.cljs:57`](../../../../../src/main/frontend/worker/search.cljs#L57)).
+Full-text search uses a **separate** SQLite database per graph (`"search" + repo-path`, [`db_core.cljs:531`](../../../../../src/main/frontend/worker/db_core.cljs#L531)). It holds an FTS5 trigram table ([`search.cljs:57`](../../../../../src/main/frontend/worker/search.cljs#L57)).
 
 > **Removed:** the SQL example `SELECT * FROM blocks WHERE marker = 'TODO' AND deadline < date('now')`. The graph database has no `blocks` table, and `marker` is a file-graph attribute.
 
@@ -361,8 +365,8 @@ Sources for the challenges and the steps above:
 
 The db-sync server can be self-hosted:
 - `deps/db-sync` ships "a Node.js adapter for self-hosting" alongside its Cloudflare Worker ([`deps/db-sync/README.md:4`](../../../../../deps/db-sync/README.md#L4), [`:104`](../../../../../deps/db-sync/README.md#L104)).
-- The app has a **Sync Server URL** setting under Settings → Advanced ([`settings.cljs:927`](../../../../../src/main/frontend/components/settings.cljs#L927)). It is stored in `localStorage` as `sync-server-url` ([`config.cljs:51-56`](../../../../../src/main/frontend/config.cljs#L51-L56)) and replaces the default WebSocket URL ([`:88-93`](../../../../../src/main/frontend/config.cljs#L88-L93)).
-- The setting's own warning reads: "Your Logseq authentication tokens will be sent to this server, so only use a trusted URL" ([`en.edn:1774`](../../../../../src/resources/dicts/en.edn#L1774)).
+- The app has a **Sync Server URL** setting under Settings → Advanced ([`settings.cljs:939`](../../../../../src/main/frontend/components/settings.cljs#L939)). It is stored in `localStorage` as `sync-server-url` ([`config.cljs:51-56`](../../../../../src/main/frontend/config.cljs#L51-L56)) and replaces the default WebSocket URL ([`:88-93`](../../../../../src/main/frontend/config.cljs#L88-L93)).
+- The setting's own warning reads: "Your Logseq authentication tokens will be sent to this server, so only use a trusted URL" ([`en.edn:1775`](../../../../../src/resources/dicts/en.edn#L1775)).
 - Setting a custom URL also turns on the sync option in the new-graph dialog ([`user.cljs:361`](../../../../../src/main/frontend/handler/user.cljs#L361)).
 
 > **Removed:** "Syncthing / rsync (file-based)" and "CRDTs (database): self-host sync server". The first two are file-graph workflows; the third named a mechanism that does not exist.
@@ -406,7 +410,7 @@ Sources:
 The analytics are real, and they are opt-out:
 - Instrumentation starts unless `:instrument/disabled?` is set ([`instrumentation/core.cljs:7-11`](../../../../../src/main/frontend/modules/instrumentation/core.cljs#L7-L11)).
 - That flag is read from local storage key `instrument-disabled`, which is empty on a fresh install ([`state.cljs:114`](../../../../../src/main/frontend/state.cljs#L114)).
-- The toggle reads "Send usage data and diagnostics to Logseq". Its description says: "Logseq will never collect your local graph database or sell your data." ([`en.edn:1704-1705`](../../../../../src/resources/dicts/en.edn#L1704-L1705); row at [`settings.cljs:549-555`](../../../../../src/main/frontend/components/settings.cljs#L549-L555)).
+- The toggle reads "Send usage data and diagnostics to Logseq". Its description says: "Logseq will never collect your local graph database or sell your data." ([`en.edn:1705-1706`](../../../../../src/resources/dicts/en.edn#L1705-L1706); row at [`settings.cljs:561-567`](../../../../../src/main/frontend/components/settings.cljs#L561-L567)).
 - PostHog is off in dev builds and is configured with `autocapture false`, `disable_session_recording true`, `mask_all_text true` and `mask_all_element_attributes true` ([`posthog.cljs:32-42`](../../../../../src/main/frontend/modules/instrumentation/posthog.cljs#L32-L42)).
 
 **With Logseq Sync (db-sync):**
@@ -504,7 +508,7 @@ Challenge: db.sqlite is not human-readable or diff-friendly
 
 **❌ Mobile**
 
-> **Unverified:** the old claims about iOS and Android file-access limits and background-sync battery drain. On mobile, the graph lives in the Web Worker's OPFS database, not in the device file system ([`persist_db.cljs:352-361`](../../../../../src/main/frontend/persist_db.cljs#L352-L361) chooses the browser worker for every non-Electron runtime). Source says nothing about battery use.
+> **Unverified:** the old claims about iOS and Android file-access limits and background-sync battery drain. On mobile, the graph lives in the Web Worker's OPFS database, not in the device file system ([`persist_db.cljs:422-431`](../../../../../src/main/frontend/persist_db.cljs#L422-L431) chooses the browser worker for every non-Electron runtime). Source says nothing about battery use.
 
 **❌ Backup Responsibility**
 

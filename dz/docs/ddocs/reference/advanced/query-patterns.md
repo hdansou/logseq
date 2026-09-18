@@ -2,8 +2,8 @@
 title: 'Query Patterns Reference'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (1be80c82a1, 03ae5276c6). The 2026-09-10 date covers only the :block/properties note on :result-transform (bfcaeb03e7).'
 reviewStatus: audited
 quadrant: 'Reference'
@@ -16,6 +16,10 @@ tags: ['queries', 'datalog', 'advanced', 'reference', 'patterns']
 ---
 
 # Query Patterns Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Reference of common query patterns for Logseq **database (DB) graphs**. Copy a pattern, adapt it,
 test it. Both simple (DSL) and advanced (Datalog) forms are covered.
@@ -56,7 +60,7 @@ Use the **`/Advanced Query`** slash command. It tags the block with `:logseq.cla
 you a Clojure editor for the `:logseq.property/query` property
 (`src/main/frontend/commands.cljs:125-132`). What you type is read as EDN: a **map** is an advanced
 Datalog query, anything else is a simple DSL query string
-(`src/main/frontend/components/block.cljs:4090-4103`).
+(`src/main/frontend/components/block.cljs:4139-4152`).
 
 **Advanced query template:**
 
@@ -110,7 +114,7 @@ Status and priority arguments are capitalised before matching, so `(task todo do
 
 Tasks are blocks tagged `:logseq.class/Task`. The Task class carries exactly four properties —
 `:logseq.property/status`, `:logseq.property/priority`, `:logseq.property/deadline`,
-`:logseq.property/scheduled` (`deps/db/src/logseq/db/frontend/class.cljs:42`).
+`:logseq.property/scheduled` (`deps/db/src/logseq/db/frontend/class.cljs:41`).
 
 **Status and priority are refs.** They are `:default`-typed properties with closed values
 (`deps/db/src/logseq/db/frontend/property.cljs:300-338`), so the stored value is a reference to a

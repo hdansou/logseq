@@ -4,8 +4,8 @@ status: 🟢 Stable
 version: 'Logseq 2.0.1'
 quadrant: 'How-To'
 platform: 'All Platforms'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '[Performance Optimization Guide](../optimization/performance-optimization.md)'
@@ -17,6 +17,10 @@ tags: ['troubleshooting', 'debugging', 'errors', 'problems']
 ---
 
 # Troubleshooting Guide
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Diagnose and fix common Logseq problems in **DB graphs**. This guide covers startup issues, sync problems, performance, data integrity, plugins and platform quirks.
 
@@ -81,17 +85,17 @@ Diagnose and fix common Logseq problems in **DB graphs**. This guide covers star
 
 Where each of these comes from:
 
-- **Version and updates.** The General tab has a version row with the updater ([`settings.cljs:563-565`](../../../../../src/main/frontend/components/settings.cljs), used at [`:877`](../../../../../src/main/frontend/components/settings.cljs); label "Check for updates" at [`en.edn:1747`](../../../../../src/resources/dicts/en.edn)). The desktop app menu has "About Logseq" in Help on Windows/Linux ([`src/electron/electron/core.cljs:264-269`](../../../../../src/electron/electron/core.cljs), label [`en.edn:572`](../../../../../src/resources/dicts/en.edn)). On macOS it uses the standard `about` role in the app menu ([`core.cljs:218-219`](../../../../../src/electron/electron/core.cljs)). Settings → Advanced has an "Auto updater" row on macOS and Windows desktop only ([`settings.cljs:924`](../../../../../src/main/frontend/components/settings.cljs)).
-- **Developer tools.** Logseq has no menu item or command of its own for DevTools. The desktop menu includes Electron's standard `viewMenu` role ([`core.cljs:243`](../../../../../src/electron/electron/core.cljs)), and Electron fills that menu with Reload, Force Reload and Toggle Developer Tools. The web app uses the browser's own DevTools.
+- **Version and updates.** The General tab has a version row with the updater ([`settings.cljs:575-577`](../../../../../src/main/frontend/components/settings.cljs), used at [`:889`](../../../../../src/main/frontend/components/settings.cljs); label "Check for updates" at [`en.edn:1748`](../../../../../src/resources/dicts/en.edn)). The desktop app menu has "About Logseq" in Help on Windows/Linux ([`src/electron/electron/core.cljs:267-272`](../../../../../src/electron/electron/core.cljs), label [`en.edn:572`](../../../../../src/resources/dicts/en.edn)). On macOS it uses the standard `about` role in the app menu ([`core.cljs:221-222`](../../../../../src/electron/electron/core.cljs)). Settings → Advanced has an "Auto updater" row on macOS and Windows desktop only ([`settings.cljs:936`](../../../../../src/main/frontend/components/settings.cljs)).
+- **Developer tools.** Logseq has no menu item or command of its own for DevTools. The desktop menu includes Electron's standard `viewMenu` role ([`core.cljs:246`](../../../../../src/electron/electron/core.cljs)), and Electron fills that menu with Reload, Force Reload and Toggle Developer Tools. The web app uses the browser's own DevTools.
 - **Worker log.** See [Log files](#log-files) below.
 
-> **Removed:** "Help → Developer tools". The desktop Help menu has only "Official Documentation" and, on Windows/Linux, "About Logseq" ([`core.cljs:259-269`](../../../../../src/electron/electron/core.cljs)).
+> **Removed:** "Help → Developer tools". The desktop Help menu has only "Official Documentation" and, on Windows/Linux, "About Logseq" ([`core.cljs:262-272`](../../../../../src/electron/electron/core.cljs)).
 >
 > **Removed:** system requirements "4GB+ RAM, iOS 14+, Android 8+, 500MB free". No RAM or disk figure exists in source. The iOS app target (`com.logseq.logseq`) requires iOS 16.6 ([`ios/App/App.xcodeproj/project.pbxproj:674`](../../../../../ios/App/App.xcodeproj/project.pbxproj), [`:707`](../../../../../ios/App/App.xcodeproj/project.pbxproj)). The project-level default of 15.0 at `:596` and `:650` is overridden by that target. Android sets `minSdkVersion = 24` ([`android/variables.gradle:2`](../../../../../android/variables.gradle)).
 
 ### Isolate Plugins (there is no Safe Mode)
 
-> **Removed:** "Settings → Advanced → Safe mode". No safe mode exists. `safe-mode` and "safe mode" match nothing in `src/` or `deps/`. The Advanced tab rows are: Auto updater, usage diagnostics, Developer mode, Sync Server URL, Publish Server URL, Network proxy, and "Automatically change file permissions" ([`settings.cljs:918-931`](../../../../../src/main/frontend/components/settings.cljs)).
+> **Removed:** "Settings → Advanced → Safe mode". No safe mode exists. `safe-mode` and "safe mode" match nothing in `src/` or `deps/`. The Advanced tab rows are: Auto updater, usage diagnostics, Developer mode, Sync Server URL, Publish Server URL, Network proxy, and "Automatically change file permissions" ([`settings.cljs:930-943`](../../../../../src/main/frontend/components/settings.cljs)).
 
 **Test without plugins instead:**
 
@@ -112,15 +116,15 @@ Where each of these comes from:
    - Continue troubleshooting below
 ```
 
-- **Per-plugin toggle.** The Plugins dashboard is in the header ⋯ menu ([`header.cljs:214-215`](../../../../../src/main/frontend/components/header.cljs)). Each plugin card has an on/off toggle ([`plugins.cljs:324-328`](../../../../../src/main/frontend/components/plugins.cljs)).
-- **Whole plugin system (web only).** The "Plugins" switch in Settings → Features appears only when `web-platform?` is true ([`settings.cljs:1154-1155`](../../../../../src/main/frontend/components/settings.cljs)). That flag is false on desktop and on native mobile ([`src/main/frontend/util.cljc:128-130`](../../../../../src/main/frontend/util.cljc)).
-- **Custom CSS.** The General tab row "Custom theme" opens "Edit custom.css" ([`settings.cljs:217-223`](../../../../../src/main/frontend/components/settings.cljs), labels [`en.edn:1752`](../../../../../src/resources/dicts/en.edn), [`:1754`](../../../../../src/resources/dicts/en.edn)).
+- **Per-plugin toggle.** The Plugins dashboard is in the header ⋯ menu ([`header.cljs:215-216`](../../../../../src/main/frontend/components/header.cljs)). Each plugin card has an on/off toggle ([`plugins.cljs:324-328`](../../../../../src/main/frontend/components/plugins.cljs)).
+- **Whole plugin system (web only).** The "Plugins" switch in Settings → Features appears only when `web-platform?` is true ([`settings.cljs:1166-1167`](../../../../../src/main/frontend/components/settings.cljs)). That flag is false on desktop and on native mobile ([`src/main/frontend/util.cljc:128-130`](../../../../../src/main/frontend/util.cljc)).
+- **Custom CSS.** The General tab row "Custom theme" opens "Edit custom.css" ([`settings.cljs:217-223`](../../../../../src/main/frontend/components/settings.cljs), labels [`en.edn:1753`](../../../../../src/resources/dicts/en.edn), [`:1755`](../../../../../src/resources/dicts/en.edn)).
 - **Desktop check.** No Logseq setting to disable all plugins at once on desktop was found.
 
 ### Log Files
 
-- **Desktop graph worker.** On desktop the graph database runs in a separate db-worker process. It writes `db-worker-node-YYYYMMDD.log` into the graph's own folder ([`src/main/logseq/db_worker/log.cljs:37-47`](../../../../../src/main/logseq/db_worker/log.cljs)). It keeps the newest 7 files ([`log.cljs:57-62`](../../../../../src/main/logseq/db_worker/log.cljs)). The log is installed when the worker starts ([`src/main/frontend/worker/db_worker_node.cljs:572-574`](../../../../../src/main/frontend/worker/db_worker_node.cljs)). With the default root, the graph folder is `~/logseq/graphs/<graph>/` ([`src/main/frontend/worker/db_worker_node_lock.cljs:21-25`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)).
-- **Electron main process.** `electron.logger` sends messages to `electron-log` and configures no file location ([`src/electron/electron/logger.cljs:1-4`](../../../../../src/electron/electron/logger.cljs), [`:31-40`](../../../../../src/electron/electron/logger.cljs)), so electron-log's defaults apply. The pinned version is `5.4.3` ([`resources/package.json:32`](../../../../../resources/package.json)). That version writes `main.log` under Electron's `app.getPath('logs')`.
+- **Desktop graph worker.** On desktop the graph database runs in a separate db-worker process. It writes `db-worker-node-YYYYMMDD.log` into the graph's own folder ([`src/main/logseq/db_worker/log.cljs:36-46`](../../../../../src/main/logseq/db_worker/log.cljs)). It keeps the newest 7 files ([`log.cljs:56-61`](../../../../../src/main/logseq/db_worker/log.cljs)). The log is installed when the worker starts ([`src/main/frontend/worker/db_worker_node.cljs:572-574`](../../../../../src/main/frontend/worker/db_worker_node.cljs)). With the default root, the graph folder is `~/logseq/graphs/<graph>/` ([`src/main/frontend/worker/db_worker_node_lock.cljs:22-26`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)).
+- **Electron main process.** `electron.logger` sends messages to `electron-log` and configures no file location ([`src/electron/electron/logger.cljs:1-4`](../../../../../src/electron/electron/logger.cljs), [`:31-40`](../../../../../src/electron/electron/logger.cljs)), so electron-log's defaults apply. The pinned version is `5.4.3` ([`resources/package.json:33`](../../../../../resources/package.json)). That version writes `main.log` under Electron's `app.getPath('logs')`.
   > **Unverified:** the exact folder. It comes from the electron-log library and Electron, not Logseq source. On macOS it is normally `~/Library/Logs/Logseq/`.
 - **Plugins.** Each plugin card's menu has "View logs" ([`plugins.cljs:278`](../../../../../src/main/frontend/components/plugins.cljs), label [`en.edn:1278`](../../../../../src/resources/dicts/en.edn)).
 - **Sync.** The sync indicator in the header has a "More debug info" link ([`src/main/frontend/components/rtc/indicator.cljs:221-222`](../../../../../src/main/frontend/components/rtc/indicator.cljs)).
@@ -141,7 +145,7 @@ Where each of these comes from:
 - [ ] Started after: **\_**
 ```
 
-The bug report link fills in App Version, Git Revision, Platform, Language and installed Plugins for you ([`header.cljs:161-172`](../../../../../src/main/frontend/components/header.cljs)).
+The bug report link fills in App Version, Git Revision, Platform, Language and installed Plugins for you ([`header.cljs:162-173`](../../../../../src/main/frontend/components/header.cljs)).
 
 ---
 
@@ -153,11 +157,11 @@ Know what lives where before you delete anything:
 
 | What                            | Where                                                                                      | Source                                                                                                                                                                                         |
 | ------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Graphs (one folder per graph)   | `~/logseq/graphs/<graph>/db.sqlite`                                                        | [`deps/common/src/logseq/common/config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs), [`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs) |
+| Graphs (one folder per graph)   | `~/logseq/graphs/<graph>/db.sqlite`                                                        | [`deps/common/src/logseq/common/config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs), [`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs) |
 | Graphs dir override             | `LOGSEQ_GRAPHS_DIR` environment variable                                                   | [`deps/common/src/logseq/common/graph.cljs:111-114`](../../../../../deps/common/src/logseq/common/graph.cljs)                                                                                  |
 | Automatic backups               | `~/logseq/graphs/<graph>/backup/`                                                          | [`src/main/logseq/db_worker/graph_backup.cljs:10`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)                                                                                 |
-| Graph assets                    | `assets/` in the graph folder                                                              | [`config.cljs:56`](../../../../../deps/common/src/logseq/common/config.cljs)                                                                                                                   |
-| Graph lock                      | `db-worker.lock` in the graph folder                                                       | [`db_worker_node_lock.cljs:46-48`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)                                                                                          |
+| Graph assets                    | `assets/` in the graph folder                                                              | [`config.cljs:59`](../../../../../deps/common/src/logseq/common/config.cljs)                                                                                                                   |
+| Graph lock                      | `db-worker.lock` in the graph folder                                                       | [`db_worker_node_lock.cljs:47-49`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)                                                                                          |
 | Graph registry, plugins         | `~/.logseq/graphs.edn`, `~/.logseq/plugins/`                                               | [`src/electron/electron/configs.cljs:10`](../../../../../src/electron/electron/configs.cljs), [`:14-16`](../../../../../src/electron/electron/configs.cljs), [`src/electron/electron/utils.cljs:129-133`](../../../../../src/electron/electron/utils.cljs) |
 | App configs                     | `configs.edn` in Electron's `userData` directory                                           | [`configs.cljs:11-12`](../../../../../src/electron/electron/configs.cljs)                                                                                                                      |
 | `config.edn`, `custom.css`, `custom.js` | **Inside the database**, not on disk                                               | [`deps/db/src/logseq/db/sqlite/create_graph.cljs:205-217`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)                                                                     |
@@ -170,7 +174,7 @@ A DB graph has no `pages/`, `journals/`, `logseq/bak` or `.recycle` folders.
 
 **Solution 1: Intel build on Apple Silicon (macOS)**
 
-On an Apple Silicon Mac, if the Intel build is running through Rosetta, Logseq shows the warning "You are using the Intel (x64) release on Apple Silicon." ([`en.edn:598`](../../../../../src/resources/dicts/en.edn)). The detail says: "This release runs through Rosetta and can be very slow. Download the Apple Silicon (arm64) release first." ([`en.edn:597`](../../../../../src/resources/dicts/en.edn)). The check is in [`src/electron/electron/release_warning.cljs:9-13`](../../../../../src/electron/electron/release_warning.cljs) and runs at startup ([`core.cljs:298-300`](../../../../../src/electron/electron/core.cljs), [`:408`](../../../../../src/electron/electron/core.cljs)). Install the arm64 build.
+On an Apple Silicon Mac, if the Intel build is running through Rosetta, Logseq shows the warning "You are using the Intel (x64) release on Apple Silicon." ([`en.edn:598`](../../../../../src/resources/dicts/en.edn)). The detail says: "This release runs through Rosetta and can be very slow. Download the Apple Silicon (arm64) release first." ([`en.edn:597`](../../../../../src/resources/dicts/en.edn)). The check is in [`src/electron/electron/release_warning.cljs:9-13`](../../../../../src/electron/electron/release_warning.cljs) and runs at startup ([`core.cljs:301-303`](../../../../../src/electron/electron/core.cljs), [`:408`](../../../../../src/electron/electron/core.cljs)). Install the arm64 build.
 
 **Solution 2: Reset app settings (graphs are not stored there)**
 
@@ -191,11 +195,11 @@ Electron's `userData` directory holds Logseq's `configs.edn` ([`configs.cljs:11-
 
 > **Unverified:** the download URL. `https://logseq.com/downloads` does not appear in source.
 >
-> **Removed:** "Re-add graphs: Open existing graph folder". File graphs cannot be opened ([`repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)). To bring a file graph in, use Import → "File to DB graph" ([`en.edn:926-927`](../../../../../src/resources/dicts/en.edn), [`src/main/frontend/components/imports.cljs:601`](../../../../../src/main/frontend/components/imports.cljs)).
+> **Removed:** "Re-add graphs: Open existing graph folder". File graphs cannot be opened ([`repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)). To bring a file graph in, use Import → "File to DB graph" ([`en.edn:926-927`](../../../../../src/resources/dicts/en.edn), [`src/main/frontend/components/imports.cljs:605`](../../../../../src/main/frontend/components/imports.cljs)).
 
 **Solution 4: Check permissions**
 
-Logseq must be able to write to `~/logseq/graphs` and `~/.logseq`. On desktop, Settings → Advanced has "Automatically change file permissions" ([`settings.cljs:844-856`](../../../../../src/main/frontend/components/settings.cljs), [`:930`](../../../../../src/main/frontend/components/settings.cljs)). Its description is "Disable to allow editing by multiple users with permissions granted by group membership." ([`en.edn:1699-1700`](../../../../../src/resources/dicts/en.edn)).
+Logseq must be able to write to `~/logseq/graphs` and `~/.logseq`. On desktop, Settings → Advanced has "Automatically change file permissions" ([`settings.cljs:856-868`](../../../../../src/main/frontend/components/settings.cljs), [`:942`](../../../../../src/main/frontend/components/settings.cljs)). Its description is "Disable to allow editing by multiple users with permissions granted by group membership." ([`en.edn:1700-1701`](../../../../../src/resources/dicts/en.edn)).
 
 > **Unverified:** OS commands such as `sudo chown -R $(whoami) ~/logseq ~/.logseq`. They are standard ownership fixes and were not tied to a specific Logseq error.
 
@@ -210,9 +214,9 @@ Logseq must be able to write to `~/logseq/graphs` and `~/.logseq`. On desktop, S
 - Web: reload the browser tab
 ```
 
-View → Reload comes from Electron's standard View menu ([`core.cljs:243`](../../../../../src/electron/electron/core.cljs)).
+View → Reload comes from Electron's standard View menu ([`core.cljs:246`](../../../../../src/electron/electron/core.cljs)).
 
-> **Removed:** "Help → Reload". The Help menu has no reload item ([`core.cljs:259-269`](../../../../../src/electron/electron/core.cljs)).
+> **Removed:** "Help → Reload". The Help menu has no reload item ([`core.cljs:262-272`](../../../../../src/electron/electron/core.cljs)).
 
 **Solution 2: Rule out custom CSS and plugins**
 
@@ -222,7 +226,7 @@ A bad `custom.css` rule can hide the UI. Edit it inside Logseq (Settings → Gen
 
 > **Unverified:** `--disable-gpu` is a Chromium command-line switch. Logseq does not add or read it: there is no `appendSwitch` or `disableHardwareAcceleration` in `src/electron/`.
 >
-> **Removed:** "Settings → Advanced → Disable GPU acceleration". There is no such row ([`settings.cljs:918-931`](../../../../../src/main/frontend/components/settings.cljs)).
+> **Removed:** "Settings → Advanced → Disable GPU acceleration". There is no such row ([`settings.cljs:930-943`](../../../../../src/main/frontend/components/settings.cljs)).
 >
 > **Removed:** "Reset Database: delete `.logseq/` and reindex". That was file-graph advice. A DB graph has no `.logseq/` cache folder to delete.
 
@@ -232,10 +236,10 @@ A bad `custom.css` rule can hide the UI. Edit it inside Logseq (Settings → Gen
 
 **Solution 1: Another process holds the graph**
 
-On desktop, a graph is served by one db-worker process that holds `db-worker.lock` in the graph folder ([`db_worker_node_lock.cljs:46-48`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)):
+On desktop, a graph is served by one db-worker process that holds `db-worker.lock` in the graph folder ([`db_worker_node_lock.cljs:47-49`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)):
 
-- **Live holder.** If the lock's process is still alive, opening fails with `graph already locked` ([`db_worker_node_lock.cljs:100-101`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)).
-- **Stale lock.** If that process no longer exists, the lock is removed automatically ([`:102-103`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)). You do not need to delete it by hand.
+- **Live holder.** If the lock's process is still alive, opening fails with `graph already locked` ([`db_worker_node_lock.cljs:102-103`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)).
+- **Stale lock.** If that process no longer exists, the lock is removed automatically ([`:104-105`](../../../../../src/main/frontend/worker/db_worker_node_lock.cljs)). You do not need to delete it by hand.
 - **Detached servers.** Workers not owned by the desktop app are started detached, for example by the Logseq CLI ([`src/main/logseq/db_worker/daemon.cljs:226-229`](../../../../../src/main/logseq/db_worker/daemon.cljs)), so they can outlive a window.
 
 ```markdown
@@ -247,7 +251,7 @@ On desktop, a graph is served by one db-worker process that holds `db-worker.loc
 
 **Solution 2: Invalid config.edn**
 
-If `logseq/config.edn` is not valid EDN, Logseq shows: "The file 'logseq/config.edn' is invalid. Please reload the app to in order to see the error and fix it." ([`en.edn:683`](../../../../../src/resources/dicts/en.edn), raised in [`src/main/frontend/handler/repo_config.cljs:20-28`](../../../../../src/main/frontend/handler/repo_config.cljs)). In a DB graph, `config.edn` is stored in the database. Fix it inside Logseq with Settings → General → "Edit config.edn" ([`settings.cljs:204-205`](../../../../../src/main/frontend/components/settings.cljs), label [`en.edn:1753`](../../../../../src/resources/dicts/en.edn)). There is no file on disk to delete.
+If `logseq/config.edn` is not valid EDN, Logseq shows: "The file 'logseq/config.edn' is invalid. Please reload the app to in order to see the error and fix it." ([`en.edn:683`](../../../../../src/resources/dicts/en.edn), raised in [`src/main/frontend/handler/repo_config.cljs:20-28`](../../../../../src/main/frontend/handler/repo_config.cljs)). In a DB graph, `config.edn` is stored in the database. Fix it inside Logseq with Settings → General → "Edit config.edn" ([`settings.cljs:204-205`](../../../../../src/main/frontend/components/settings.cljs), label [`en.edn:1754`](../../../../../src/resources/dicts/en.edn)). There is no file on disk to delete.
 
 **Solution 3: Validate the graph (Developer mode)**
 
@@ -258,7 +262,7 @@ If `logseq/config.edn` is not valid EDN, Logseq shows: "The file 'logseq/config.
 4. Read the notification; run it again after it tries to fix blocks
 ```
 
-- **Developer mode.** The row is in Settings → Advanced ([`settings.cljs:568-575`](../../../../../src/main/frontend/components/settings.cljs), label [`en.edn:1702`](../../../../../src/resources/dicts/en.edn)). It is hidden on native mobile ([`settings.cljs:926`](../../../../../src/main/frontend/components/settings.cljs)).
+- **Developer mode.** The row is in Settings → Advanced ([`settings.cljs:580-587`](../../../../../src/main/frontend/components/settings.cljs), label [`en.edn:1703`](../../../../../src/resources/dicts/en.edn)). It is hidden on native mobile ([`settings.cljs:938`](../../../../../src/main/frontend/components/settings.cljs)).
 - **The command.** `:dev/validate-db` is active only in developer mode ([`src/main/frontend/modules/shortcut/config.cljs:522-525`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). The command palette is `mod+shift+p` ([`config.cljs:310-311`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 - **What it reports.** It reports "Your graph is valid!" or "Validation detected N invalid block(s). These blocks may be buggy." It also attempts a fix ([`src/main/frontend/worker/db/validate.cljs:317-325`](../../../../../src/main/frontend/worker/db/validate.cljs)).
 - **More detail.** See [Database Integrity](../../explanation/architecture/database-integrity.md).
@@ -285,7 +289,7 @@ Logseq Sync is **db-sync**, the only cloud sync. File Sync was removed in `bcc47
 
 **Solution 1: Read the sync indicator**
 
-The sync indicator appears in the header only when three things are true: you are logged in, your account has sync access (`rtc-group?`), and the current graph is a remote graph ([`header.cljs:98-108`](../../../../../src/main/frontend/components/header.cljs), [`:570-581`](../../../../../src/main/frontend/components/header.cljs)). If it is missing, check those three first. Its details panel ([`rtc/indicator.cljs:191-245`](../../../../../src/main/frontend/components/rtc/indicator.cljs)) shows:
+The sync indicator appears in the header only when three things are true: you are logged in, your account has sync access (`rtc-group?`), and the current graph is a remote graph ([`header.cljs:99-109`](../../../../../src/main/frontend/components/header.cljs), [`:576-587`](../../../../../src/main/frontend/components/header.cljs)). If it is missing, check those three first. Its details panel ([`rtc/indicator.cljs:191-245`](../../../../../src/main/frontend/components/rtc/indicator.cljs)) shows:
 
 ```markdown
 - Online / Offline
@@ -307,7 +311,7 @@ The sync indicator appears in the header only when three things are true: you ar
 3. DevTools → Network tab: look for failed requests
 ```
 
-The "Network proxy" row is desktop-only ([`settings.cljs:839-842`](../../../../../src/main/frontend/components/settings.cljs), [`:929`](../../../../../src/main/frontend/components/settings.cljs); label [`en.edn:1706`](../../../../../src/resources/dicts/en.edn)).
+The "Network proxy" row is desktop-only ([`settings.cljs:851-854`](../../../../../src/main/frontend/components/settings.cljs), [`:941`](../../../../../src/main/frontend/components/settings.cljs); label [`en.edn:1707`](../../../../../src/resources/dicts/en.edn)).
 
 > **Removed:** `https://status.logseq.com`. No status page URL appears in source.
 
@@ -320,24 +324,24 @@ The "Network proxy" row is desktop-only ([`settings.cljs:839-842`](../../../../.
 4. Open the graph and check the sync indicator
 ```
 
-"Login" and "Logout" are in the header ⋯ menu ([`header.cljs:242-245`](../../../../../src/main/frontend/components/header.cljs), [`:259-266`](../../../../../src/main/frontend/components/header.cljs); labels [`en.edn:1884-1885`](../../../../../src/resources/dicts/en.edn)).
+"Login" and "Logout" are in the header ⋯ menu ([`header.cljs:243-246`](../../../../../src/main/frontend/components/header.cljs), [`:260-267`](../../../../../src/main/frontend/components/header.cljs); labels [`en.edn:1885-1886`](../../../../../src/resources/dicts/en.edn)).
 
-> **Removed:** "Settings → Sync → Sign out / Sign in / Advanced / Clear sync cache / Force sync". Settings has no Sync tab. The tabs are General, Editor, Keymap, AI (desktop), Advanced, Features, Collaboration and Encryption (when logged in), and plugin settings ([`settings.cljs:1476-1494`](../../../../../src/main/frontend/components/settings.cljs)). No "Clear sync cache" or "Force sync" action was found.
+> **Removed:** "Settings → Sync → Sign out / Sign in / Advanced / Clear sync cache / Force sync". Settings has no Sync tab. The tabs are General, Editor, Keymap, AI (desktop), Advanced, Features, Collaboration and Encryption (when logged in), and plugin settings ([`settings.cljs:1488-1506`](../../../../../src/main/frontend/components/settings.cljs)). No "Clear sync cache" or "Force sync" action was found.
 
 **Solution 4: Self-hosted sync server**
 
-If you set Settings → Advanced → "Sync Server URL", make sure it is right, or use "Reset to default" ([`settings.cljs:927`](../../../../../src/main/frontend/components/settings.cljs), [`en.edn:1771-1775`](../../../../../src/resources/dicts/en.edn)). The URL must start with `https://` or `http://`. Your Logseq authentication tokens are sent to that server ([`en.edn:1774`](../../../../../src/resources/dicts/en.edn)).
+If you set Settings → Advanced → "Sync Server URL", make sure it is right, or use "Reset to default" ([`settings.cljs:939`](../../../../../src/main/frontend/components/settings.cljs), [`en.edn:1772-1776`](../../../../../src/resources/dicts/en.edn)). The URL must start with `https://` or `http://`. Your Logseq authentication tokens are sent to that server ([`en.edn:1775`](../../../../../src/resources/dicts/en.edn)).
 
 **Solution 5: Limits**
 
-- **Asset size.** The db-sync server rejects an asset larger than 100 MB with "asset too large", or 200 MB for encrypted graphs ([`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9-10`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs), [`:105-106`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs), [`:229`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs)).
-- **Account limits.** Hitting a limit shows "Sync graph count exceed limit" or "Sync storage exceed limit" ([`en.edn:1836`](../../../../../src/resources/dicts/en.edn), [`:1851`](../../../../../src/resources/dicts/en.edn)).
+- **Asset size.** The db-sync server rejects an asset larger than 100 MB with "asset too large", or 200 MB for encrypted graphs ([`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9-10`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs), [`:106-107`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs), [`:230`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs)).
+- **Account limits.** Hitting a limit shows "Sync graph count exceed limit" or "Sync storage exceed limit" ([`en.edn:1837`](../../../../../src/resources/dicts/en.edn), [`:1852`](../../../../../src/resources/dicts/en.edn)).
 
 Remove or shrink very large assets.
 
 **Solution 6: Forgotten encryption password**
 
-For an end-to-end encrypted graph, Settings → Encryption (shown when logged in) has "Forgot password?" → "Force reset password" ([`settings.cljs:1284-1304`](../../../../../src/main/frontend/components/settings.cljs)). **This makes all currently encrypted graph data stored on the server permanently unreadable.** Afterwards you must re-upload your graphs from the client ([`en.edn:613`](../../../../../src/resources/dicts/en.edn)).
+For an end-to-end encrypted graph, Settings → Encryption (shown when logged in) has "Forgot password?" → "Force reset password" ([`settings.cljs:1296-1316`](../../../../../src/main/frontend/components/settings.cljs)). **This makes all currently encrypted graph data stored on the server permanently unreadable.** Afterwards you must re-upload your graphs from the client ([`en.edn:613`](../../../../../src/resources/dicts/en.edn)).
 
 ### Sync Conflicts
 
@@ -361,9 +365,9 @@ For an end-to-end encrypted graph, Settings → Encryption (shown when logged in
 4. Click "Mark resolved"
 ```
 
-The popup and button are in [`block.cljs:3375-3417`](../../../../../src/main/frontend/components/block.cljs). The description reads "These server versions conflicted with local edits. Copy the text you want and edit the block manually." ([`en.edn:1831`](../../../../../src/resources/dicts/en.edn)). "Mark resolved" clears the block's recorded conflicts ([`block.cljs:3408-3413`](../../../../../src/main/frontend/components/block.cljs)). Only `:block/title` conflicts are recorded ([RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md)).
+The popup and button are in [`block.cljs:3424-3466`](../../../../../src/main/frontend/components/block.cljs). The description reads "These server versions conflicted with local edits. Copy the text you want and edit the block manually." ([`en.edn:1832`](../../../../../src/resources/dicts/en.edn)). "Mark resolved" clears the block's recorded conflicts ([`block.cljs:3457-3462`](../../../../../src/main/frontend/components/block.cljs)). Only `:block/title` conflicts are recorded ([RTC vs File Sync](../../explanation/comparisons/rtc-vs-file-sync.md)).
 
-> **Removed:** "Search: `{{query (page "conflict-resolution")}}`". No such page exists, and `{{query}}` is deprecated. In a DB graph it renders only the warning "{{query}} is deprecated. Use '/Query' command instead." ([`block.cljs:1870-1871`](../../../../../src/main/frontend/components/block.cljs), [`en.edn:159`](../../../../../src/resources/dicts/en.edn)).
+> **Removed:** "Search: `{{query (page "conflict-resolution")}}`". No such page exists, and `{{query}}` is deprecated. In a DB graph it renders only the warning "{{query}} is deprecated. Use '/Query' command instead." ([`block.cljs:1887-1888`](../../../../../src/main/frontend/components/block.cljs), [`en.edn:159`](../../../../../src/resources/dicts/en.edn)).
 >
 > **Removed:** "Conflict blocks marked with timestamp, both versions preserved" and "Remove conflict marker". db-sync writes no conflict blocks or markers.
 >
@@ -410,7 +414,7 @@ See the audited [Performance Optimization Guide](../optimization/performance-opt
 ```
 
 - **Large block warning.** The text is at [`en.edn:129`](../../../../../src/resources/dicts/en.edn).
-- **`{{embed}}`.** It renders only a deprecation warning ([`block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
+- **`{{embed}}`.** It renders only a deprecation warning ([`block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs)).
 
 > **Removed:** "Large graphs (>10,000 blocks) may slow down" and "Limit results with :limit". Source sets no block-count threshold, and `:limit` is not a supported way to cap query results.
 
@@ -425,7 +429,7 @@ Run "Rebuild search index" (`mod+c mod+s`) ([`config.cljs:337-338`](../../../../
 > **Removed:**
 >
 > - **Invented settings.** "Settings → Auto-sync", "Settings → Real-time collaboration" and "Settings → Auto-save frequency" do not exist.
-> - **No such Advanced rows.** "Settings → Advanced → Disable GPU", "Optimize database", "Re-index" and "Clear cache" are not in Settings → Advanced ([`settings.cljs:918-931`](../../../../../src/main/frontend/components/settings.cljs)). A "clear cache" row exists only as commented-out code ([`settings.cljs:557-561`](../../../../../src/main/frontend/components/settings.cljs), [`:931`](../../../../../src/main/frontend/components/settings.cljs)).
+> - **No such Advanced rows.** "Settings → Advanced → Disable GPU", "Optimize database", "Re-index" and "Clear cache" are not in Settings → Advanced ([`settings.cljs:930-943`](../../../../../src/main/frontend/components/settings.cljs)). A "clear cache" row exists only as commented-out code ([`settings.cljs:569-573`](../../../../../src/main/frontend/components/settings.cljs), [`:943`](../../../../../src/main/frontend/components/settings.cljs)).
 > - **"Increase RAM allocation".** This was generic and had no Logseq-specific steps.
 
 **Solution 4: Hardware**
@@ -443,7 +447,7 @@ Run "Rebuild search index" (`mod+c mod+s`) ([`config.cljs:337-338`](../../../../
 4. Restart Logseq
 ```
 
-> **Removed:** "Settings → Advanced → Clear cache". The row is commented out ([`settings.cljs:931`](../../../../../src/main/frontend/components/settings.cljs)).
+> **Removed:** "Settings → Advanced → Clear cache". The row is commented out ([`settings.cljs:943`](../../../../../src/main/frontend/components/settings.cljs)).
 
 ### Slow Sync
 
@@ -459,7 +463,7 @@ See [Sync Slow or Stalled](#sync-slow-or-stalled) above.
 
 **Solution 1: Check Recycle**
 
-Deleted pages and blocks go to the **Recycle** page. "Deleted pages and blocks stay here until restored or automatically garbage collected after 30 days." ([`en.edn:1824`](../../../../../src/resources/dicts/en.edn)).
+Deleted pages and blocks go to the **Recycle** page. "Deleted pages and blocks stay here until restored or automatically garbage collected after 30 days." ([`en.edn:1825`](../../../../../src/resources/dicts/en.edn)).
 
 ```markdown
 1. Header ⋯ menu → Recycle
@@ -467,8 +471,8 @@ Deleted pages and blocks go to the **Recycle** page. "Deleted pages and blocks s
 3. Click "Restore"
 ```
 
-- **Menu entry.** "Recycle" appears in the header ⋯ menu once the Recycle page exists ([`header.cljs:222-225`](../../../../../src/main/frontend/components/header.cljs), [`:332-334`](../../../../../src/main/frontend/components/header.cljs); [`src/main/frontend/handler/page.cljs:45-49`](../../../../../src/main/frontend/handler/page.cljs)).
-- **Restore.** The button is rendered in [`src/main/frontend/components/recycle.cljs:58`](../../../../../src/main/frontend/components/recycle.cljs), with labels at [`en.edn:1819-1825`](../../../../../src/resources/dicts/en.edn).
+- **Menu entry.** "Recycle" appears in the header ⋯ menu once the Recycle page exists ([`header.cljs:223-226`](../../../../../src/main/frontend/components/header.cljs), [`:333-335`](../../../../../src/main/frontend/components/header.cljs); [`src/main/frontend/handler/page.cljs:45-49`](../../../../../src/main/frontend/handler/page.cljs)).
+- **Restore.** The button is rendered in [`src/main/frontend/components/recycle.cljs:58`](../../../../../src/main/frontend/components/recycle.cljs), with labels at [`en.edn:1820-1826`](../../../../../src/resources/dicts/en.edn).
 
 **Solution 2: Search thoroughly**
 
@@ -643,7 +647,7 @@ You are probably running the Intel build through Rosetta. See [Logseq Won't Star
 
 **Symptom: Graph in iCloud Drive or another file-sync folder**
 
-DB graphs live in `~/logseq/graphs` ([`config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)), unless you set `LOGSEQ_GRAPHS_DIR` ([`graph.cljs:111-114`](../../../../../deps/common/src/logseq/common/graph.cljs)). Use Logseq Sync (db-sync) to share a graph between devices.
+DB graphs live in `~/logseq/graphs` ([`config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs)), unless you set `LOGSEQ_GRAPHS_DIR` ([`graph.cljs:111-114`](../../../../../deps/common/src/logseq/common/graph.cljs)). Use Logseq Sync (db-sync) to share a graph between devices.
 
 > **Unverified:** syncing a live `db.sqlite` through iCloud, Dropbox or OneDrive can corrupt it. This is general SQLite guidance and was not tested with Logseq.
 
@@ -660,11 +664,11 @@ DB graphs live in `~/logseq/graphs` ([`config.cljs:55`](../../../../../deps/comm
 2. If you are behind a proxy: Settings → Advanced → Network proxy
 ```
 
-> **Unverified:** the firewall steps are OS-level. The proxy row is verified ([`settings.cljs:929`](../../../../../src/main/frontend/components/settings.cljs)).
+> **Unverified:** the firewall steps are OS-level. The proxy row is verified ([`settings.cljs:941`](../../../../../src/main/frontend/components/settings.cljs)).
 
 **Symptom: Path Too Long**
 
-> **Unverified:** Windows' 260-character path limit. Graph folders are created under `~/logseq/graphs` rather than a folder you pick ([`config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)), so "move the graph folder closer to the drive root" does not apply unless you use `LOGSEQ_GRAPHS_DIR`. Enabling Win32 long paths through Group Policy is an OS setting and was not tested.
+> **Unverified:** Windows' 260-character path limit. Graph folders are created under `~/logseq/graphs` rather than a folder you pick ([`config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs)), so "move the graph folder closer to the drive root" does not apply unless you use `LOGSEQ_GRAPHS_DIR`. Enabling Win32 long paths through Group Policy is an OS setting and was not tested.
 
 **Symptom: OneDrive conflicts**
 
@@ -672,7 +676,7 @@ See the file-sync note under macOS. Use Logseq Sync instead of OneDrive for the 
 
 ### Linux Issues
 
-Desktop releases include an AppImage ([`.github/workflows/build-desktop-release.yml:266`](../../../../../.github/workflows/build-desktop-release.yml), [`:324`](../../../../../.github/workflows/build-desktop-release.yml)). The in-app "Auto updater" row is not shown on Linux ([`settings.cljs:924`](../../../../../src/main/frontend/components/settings.cljs)).
+Desktop releases include an AppImage ([`.github/workflows/build-desktop-release.yml:268`](../../../../../.github/workflows/build-desktop-release.yml), [`:326`](../../../../../.github/workflows/build-desktop-release.yml)). The in-app "Auto updater" row is not shown on Linux ([`settings.cljs:936`](../../../../../src/main/frontend/components/settings.cljs)).
 
 **Symptom: AppImage won't run**
 
@@ -696,7 +700,7 @@ Desktop releases include an AppImage ([`.github/workflows/build-desktop-release.
 
 - **Platforms.** The iOS app requires iOS 16.6 or later, and Android requires `minSdkVersion` 24 (see [Quick Diagnostics](#first-steps)).
 - **Plugins.** Plugins are not available on native mobile ([`util.cljc:131`](../../../../../src/main/frontend/util.cljc)).
-- **Developer mode.** The row is hidden on native mobile ([`settings.cljs:926`](../../../../../src/main/frontend/components/settings.cljs)).
+- **Developer mode.** The row is hidden on native mobile ([`settings.cljs:938`](../../../../../src/main/frontend/components/settings.cljs)).
 - **Backups.** Automatic hourly backups are a desktop feature ([`src/electron/electron/db.cljs:15-18`](../../../../../src/electron/electron/db.cljs)).
 
 **Symptom: App crashes**
@@ -731,7 +735,7 @@ Desktop releases include an AppImage ([`.github/workflows/build-desktop-release.
 - **Location.** Backups go to `~/logseq/graphs/<graph>/backup/` ([`graph_backup.cljs:10`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)).
 - **Contents.** Each backup is a directory holding `db.sqlite` and `metadata.edn` ([`graph_backup.cljs:11-12`](../../../../../src/main/logseq/db_worker/graph_backup.cljs), [`:61-69`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)).
 
-**Manual export (all platforms):** open the header ⋯ menu → "Export graph" ([`header.cljs:228`](../../../../../src/main/frontend/components/header.cljs)). The Export dialog offers these options ([`src/main/frontend/components/export.cljs:119-154`](../../../../../src/main/frontend/components/export.cljs)):
+**Manual export (all platforms):** open the header ⋯ menu → "Export graph" ([`header.cljs:229`](../../../../../src/main/frontend/components/header.cljs)). The Export dialog offers these options ([`src/main/frontend/components/export.cljs:119-154`](../../../../../src/main/frontend/components/export.cljs)):
 
 | Option                                               | Notes                                                              |
 | ---------------------------------------------------- | ------------------------------------------------------------------ |
@@ -752,7 +756,7 @@ Labels are at [`en.edn:632-635`](../../../../../src/resources/dicts/en.edn), [`:
 3. Select a zip containing db.sqlite and an assets folder
 ```
 
-The import option is at [`header.cljs:233`](../../../../../src/main/frontend/components/header.cljs) and [`imports.cljs:587-588`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:950-951`](../../../../../src/resources/dicts/en.edn). A zip without `db.sqlite` fails with "Zip missing db.sqlite. Please check the archive structure." ([`en.edn:960`](../../../../../src/resources/dicts/en.edn)). For restoring an automatic backup's `db.sqlite` in place, see [Backup and Recovery Strategies](../organization/backup-strategies.md).
+The import option is at [`header.cljs:234`](../../../../../src/main/frontend/components/header.cljs) and [`imports.cljs:591-592`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:950-951`](../../../../../src/resources/dicts/en.edn). A zip without `db.sqlite` fails with "Zip missing db.sqlite. Please check the archive structure." ([`en.edn:960`](../../../../../src/resources/dicts/en.edn)). For restoring an automatic backup's `db.sqlite` in place, see [Backup and Recovery Strategies](../organization/backup-strategies.md).
 
 > **Not live-tested:** zipping an automatic backup's `db.sqlite` together with the graph's `assets/` folder and importing it this way.
 
@@ -822,7 +826,7 @@ The import option is at [`header.cljs:233`](../../../../../src/main/frontend/com
 
 - **Help menu items.** [`src/main/frontend/components/container.cljs:244-256`](../../../../../src/main/frontend/components/container.cljs). The Discord item opens `https://discord.com/invite/KpN4eHY` ([`:253`](../../../../../src/main/frontend/components/container.cljs)).
 - **Bug report page.** It offers a clipboard helper and "Submit a bug report" ([`src/main/frontend/components/bug_report.cljs:108-127`](../../../../../src/main/frontend/components/bug_report.cljs), [`en.edn:170-190`](../../../../../src/resources/dicts/en.edn)).
-- **Where the report goes.** "Submit a bug report" opens a prefilled issue at `https://github.com/logseq/db-test/issues/new` ([`header.cljs:172`](../../../../../src/main/frontend/components/header.cljs)).
+- **Where the report goes.** "Submit a bug report" opens a prefilled issue at `https://github.com/logseq/db-test/issues/new` ([`header.cljs:173`](../../../../../src/main/frontend/components/header.cljs)).
 
 > **Removed:** "Help → Export logs" (no such command exists) and `support@logseq.com` (not in source). The old Discord link `https://discord.gg/logseq` was replaced with the invite URL the app uses.
 
@@ -893,7 +897,7 @@ The import option is at [`header.cljs:233`](../../../../../src/main/frontend/com
 
 **Resources:**
 
-- [Official Documentation](https://docs.logseq.com/) ([`core.cljs:266`](../../../../../src/electron/electron/core.cljs))
+- [Official Documentation](https://docs.logseq.com/) ([`core.cljs:269`](../../../../../src/electron/electron/core.cljs))
 - [Logseq Discord](https://discord.com/invite/KpN4eHY) ([`container.cljs:253`](../../../../../src/main/frontend/components/container.cljs))
 - [Support Forum](https://discuss.logseq.com/) ([`container.cljs:254`](../../../../../src/main/frontend/components/container.cljs))
 - [GitHub Issues](https://github.com/logseq/logseq/issues)

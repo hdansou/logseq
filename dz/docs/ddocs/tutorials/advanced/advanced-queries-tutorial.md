@@ -2,8 +2,8 @@
 title: 'Advanced Queries Tutorial'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Tutorial'
 platform: 'Desktop + Mobile (Database graphs only)'
@@ -15,6 +15,10 @@ tags: ['queries', 'datalog', 'tutorial', 'advanced']
 ---
 
 # Advanced Queries Tutorial
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Learn to write Datalog queries in a Logseq **database (DB) graph**. This hands-on tutorial takes you
 from your first query to custom dashboards, one step at a time.
@@ -119,7 +123,7 @@ Variables get bound (assigned values) while the query runs.
 Run the **`/Advanced Query`** slash command. Logseq tags the block with `:logseq.class/Query`, adds
 the `:logseq.property/query` property and opens a Clojure editor for it
 (`src/main/frontend/commands.cljs:125-132`). What you type is read as EDN — if it reads as a **map**
-it is treated as an advanced Datalog query (`src/main/frontend/components/block.cljs:4090-4103`).
+it is treated as an advanced Datalog query (`src/main/frontend/components/block.cljs:4139-4152`).
 
 ### Your First Query
 

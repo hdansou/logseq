@@ -3,8 +3,8 @@ title: 'Linking Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 platform: 'All'
 related-docs:
@@ -16,6 +16,10 @@ related-docs:
 > **Last revised:** 2026-09-11
 
 # Linking Pages
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Learn how to connect your notes through links, tags, and references to build a knowledge graph.
 
@@ -49,7 +53,7 @@ The most common way to connect notes:
 - Links are clickable to navigate
 - Pages show backlinks to sources that mention them
 
-**Keyboard shortcut:** Type `[[`. Logseq adds the closing `]]` and opens a search ([`src/main/frontend/handler/editor.cljs:1943-1947`](../../../../../src/main/frontend/handler/editor.cljs)). Keep typing: the popup lists matching pages, plus a **New page** item when no page has that exact name ([`src/main/frontend/components/editor.cljs:174-190`](../../../../../src/main/frontend/components/editor.cljs)).
+**Keyboard shortcut:** Type `[[`. Logseq adds the closing `]]` and opens a search ([`src/main/frontend/handler/editor.cljs:1976-1980`](../../../../../src/main/frontend/handler/editor.cljs)). Keep typing: the popup lists matching pages, plus a **New page** item when no page has that exact name ([`src/main/frontend/components/editor.cljs:174-190`](../../../../../src/main/frontend/components/editor.cljs)).
 
 ### Tags: `#tag-name`
 
@@ -73,7 +77,7 @@ Reference specific blocks. A block reference uses page-link brackets with the bl
 
 **Create:**
 
-1. Right-click the target block's bullet and choose **Copy block ref** ([`src/main/frontend/components/content.cljs:288-292`](../../../../../src/main/frontend/components/content.cljs)). Or, while editing that block with no text selected, press `Ctrl/Cmd + C` ([`src/main/frontend/handler/editor.cljs:3662-3666`](../../../../../src/main/frontend/handler/editor.cljs))
+1. Right-click the target block's bullet and choose **Copy block ref** ([`src/main/frontend/components/content.cljs:288-292`](../../../../../src/main/frontend/components/content.cljs)). Or, while editing that block with no text selected, press `Ctrl/Cmd + C` ([`src/main/frontend/handler/editor.cljs:3695-3699`](../../../../../src/main/frontend/handler/editor.cljs))
 2. Click into the block where the reference should go
 3. Paste
 
@@ -85,9 +89,9 @@ Reference specific blocks. A block reference uses page-link brackets with the bl
   - Logseq resolves the UUID to the original block
 ```
 
-Logseq resolves the UUID inside `[[...]]` to the referenced block ([`src/main/frontend/components/block.cljs:1320-1337`](../../../../../src/main/frontend/components/block.cljs)).
+Logseq resolves the UUID inside `[[...]]` to the referenced block ([`src/main/frontend/components/block.cljs:1337-1354`](../../../../../src/main/frontend/components/block.cljs)).
 
-> **Removed:** `((block-id))` block references. Typing `((` shows the warning "To reference a node, please use `[[]]`." ([`src/main/frontend/handler/editor.cljs:1949-1952`](../../../../../src/main/frontend/handler/editor.cljs)), and `((uuid))` text renders literally ([`src/main/frontend/components/block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs)).
+> **Removed:** `((block-id))` block references. Typing `((` shows the warning "To reference a node, please use `[[]]`." ([`src/main/frontend/handler/editor.cljs:1982-1985`](../../../../../src/main/frontend/handler/editor.cljs)), and `((uuid))` text renders literally ([`src/main/frontend/components/block.cljs:1573-1574`](../../../../../src/main/frontend/components/block.cljs)).
 
 **Use cases:**
 
@@ -104,7 +108,7 @@ Shows a block in place, as a block of its own:
 
 `Ctrl/Cmd + Shift + E` copies the block you're editing as an embed. Pasting it into another block creates the embed ([`src/main/frontend/handler/paste.cljs:219-232`](../../../../../src/main/frontend/handler/paste.cljs)).
 
-> **Removed:** `{{embed ((block-id))}}`. The `{{embed}}` macro now renders "{{embed}} is deprecated. Use '/Node embed' command instead." ([`src/main/frontend/components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
+> **Removed:** `{{embed ((block-id))}}`. The `{{embed}}` macro now renders "{{embed}} is deprecated. Use '/Node embed' command instead." ([`src/main/frontend/components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs)).
 
 > **Unverified:** That an embed shows the embedded block's children.
 
@@ -136,7 +140,7 @@ The magic of Logseq: **links work both ways**.
 
 ### Viewing Backlinks
 
-**Linked references appear at the bottom of the page** ([`src/main/frontend/components/page.cljs:521-529`](../../../../../src/main/frontend/components/page.cljs); label `en.edn:1920`):
+**Linked references appear at the bottom of the page** ([`src/main/frontend/components/page.cljs:521-529`](../../../../../src/main/frontend/components/page.cljs); label `en.edn:1921`):
 
 1. Navigate to the page you want to explore
 2. Scroll down past the page content
@@ -152,7 +156,7 @@ Linked references:
   - "My knowledge management tool is [[Logseq]]"
 ```
 
-To narrow a long list, use the section's **Page filter** button to include or exclude source pages ([`src/main/frontend/components/reference.cljs:14-44`](../../../../../src/main/frontend/components/reference.cljs); `en.edn:1633`).
+To narrow a long list, use the section's **Page filter** button to include or exclude source pages ([`src/main/frontend/components/reference.cljs:14-44`](../../../../../src/main/frontend/components/reference.cljs); `en.edn:1634`).
 
 ## Link Types Compared
 
@@ -262,7 +266,7 @@ Use `/` for hierarchical grouping:
 - [[Projects/2026/Website Redesign]]
 ```
 
-Type `[[`, then the full title, then pick **New page**. Logseq splits the title into one page per segment (`Books`, `Fiction`, `The Great Gatsby`) and organizes them under **Library** ([`src/main/frontend/handler/page.cljs:281`](../../../../../src/main/frontend/handler/page.cljs) passes `:split-namespace? true`; [`deps/outliner/src/logseq/outliner/page.cljs:385-388`](../../../../../deps/outliner/src/logseq/outliner/page.cljs), with the Library parent at `:227-235`).
+Type `[[`, then the full title, then pick **New page**. Logseq splits the title into one page per segment (`Books`, `Fiction`, `The Great Gatsby`) and organizes them under **Library** ([`src/main/frontend/handler/page.cljs:281`](../../../../../src/main/frontend/handler/page.cljs) passes `:split-namespace? true`; [`deps/outliner/src/logseq/outliner/page.cljs:464-467`](../../../../../deps/outliner/src/logseq/outliner/page.cljs), with the Library parent at `:308-316`).
 
 > **Removed:** "In DB graphs, creating new page names with `/` is no longer supported." The outliner splits `/` titles into per-segment pages, as cited above.
 
@@ -283,7 +287,7 @@ Show different text for a page link:
 - Also known as [James Clear's habit book]([[Atomic Habits]])
 ```
 
-**Syntax:** `[Display Text]([[Actual Page]])`. It renders a link labelled with your text that points to the page ([`src/main/frontend/components/block.cljs:1559-1563`](../../../../../src/main/frontend/components/block.cljs)).
+**Syntax:** `[Display Text]([[Actual Page]])`. It renders a link labelled with your text that points to the page ([`src/main/frontend/components/block.cljs:1576-1580`](../../../../../src/main/frontend/components/block.cljs)).
 
 ### Aliases
 
@@ -329,8 +333,8 @@ See connections for a single page:
 **In right sidebar:**
 
 1. Open any page
-2. Click **Page graph** in the right sidebar top bar ([`src/main/frontend/components/right_sidebar.cljs:519-526`](../../../../../src/main/frontend/components/right_sidebar.cljs))
-3. A **Page graph** panel for the current page appears in the sidebar ([`src/main/frontend/components/right_sidebar.cljs:126-128`](../../../../../src/main/frontend/components/right_sidebar.cljs))
+2. Click **Page graph** in the right sidebar top bar ([`src/main/frontend/components/right_sidebar.cljs:530-537`](../../../../../src/main/frontend/components/right_sidebar.cljs))
+3. A **Page graph** panel for the current page appears in the sidebar ([`src/main/frontend/components/right_sidebar.cljs:137-139`](../../../../../src/main/frontend/components/right_sidebar.cljs))
 
 ## Practical Exercise
 
@@ -381,7 +385,7 @@ When you rename a page, every link to it shows the new name:
 3. Edit the name
 4. Click outside the title to save
 
-Saving a changed page title updates the page's name ([`deps/outliner/src/logseq/outliner/core.cljs:362-372`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). Links are stored as `[[<page-uuid>]]` rather than `[[page name]]` ([`deps/db/src/logseq/db/frontend/content.cljs:129-130`](../../../../../deps/db/src/logseq/db/frontend/content.cljs)), so nothing needs rewriting.
+Saving a changed page title updates the page's name ([`deps/outliner/src/logseq/outliner/core.cljs:384-394`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). Links are stored as `[[<page-uuid>]]` rather than `[[page name]]` ([`deps/db/src/logseq/db/frontend/content.cljs:129-130`](../../../../../deps/db/src/logseq/db/frontend/content.cljs)), so nothing needs rewriting.
 
 > **Removed:** "All `[[old name]]` links become `[[new name]]` throughout your graph." Links are stored by UUID, not rewritten as text.
 
@@ -448,9 +452,9 @@ Build links naturally as you write. Don't force it.
 ## Findings: New Capabilities
 
 - **Linked reference filters:** The Linked references section has a **Page filter** that includes or excludes source pages ([`src/main/frontend/components/reference.cljs:14-44`](../../../../../src/main/frontend/components/reference.cljs)).
-- **Dedicated Page Graph panel:** You can add a per-page graph from the right sidebar top bar using **Page graph** ([`src/main/frontend/components/right_sidebar.cljs:519-526`](../../../../../src/main/frontend/components/right_sidebar.cljs)).
+- **Dedicated Page Graph panel:** You can add a per-page graph from the right sidebar top bar using **Page graph** ([`src/main/frontend/components/right_sidebar.cljs:530-537`](../../../../../src/main/frontend/components/right_sidebar.cljs)).
 - **Tags are classes:** `#tag` creates a tag class and tags the block ([`deps/outliner/src/logseq/outliner/core.cljs:199-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
-- **Namespace titles split into pages under Library** ([`deps/outliner/src/logseq/outliner/page.cljs:385-388`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
+- **Namespace titles split into pages under Library** ([`deps/outliner/src/logseq/outliner/page.cljs:464-467`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
 
 ## Next Steps
 

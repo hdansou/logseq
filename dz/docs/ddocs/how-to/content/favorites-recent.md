@@ -3,8 +3,8 @@ title: 'Managing Favorites & Recent Pages'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'How-To'
-last-verified: '2026-09-15'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 graph-type: [db]
 platform: 'All'
@@ -15,6 +15,10 @@ related-docs:
 ---
 
 # Managing Favorites & Recent Pages
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-15 (pull patterns re-checked for the
 > `:block/uuid` renderer requirement; rest of the page unchanged)
@@ -30,7 +34,7 @@ Logseq provides two navigation features to access pages quickly:
 - **Favorites**: Pin important pages for permanent quick access. Favorites are stored in the graph.
 - **Recent Pages**: A per-graph history of recently visited pages, stored on this device.
 
-Both appear in the left sidebar under **Favorites** and **Recent** ([`src/resources/dicts/en.edn:1796`](../../../../../src/resources/dicts/en.edn), [`:1798`](../../../../../src/resources/dicts/en.edn)). On mobile, both appear together on the **Go To** tab ([`src/main/mobile/components/app.cljs:275`](../../../../../src/main/mobile/components/app.cljs), [`src/main/mobile/components/favorites.cljs:6-12`](../../../../../src/main/mobile/components/favorites.cljs)).
+Both appear in the left sidebar under **Favorites** and **Recent** ([`src/resources/dicts/en.edn:1797`](../../../../../src/resources/dicts/en.edn), [`:1799`](../../../../../src/resources/dicts/en.edn)). On mobile, both appear together on the **Go To** tab ([`src/main/mobile/components/app.cljs:275`](../../../../../src/main/mobile/components/app.cljs), [`src/main/mobile/components/favorites.cljs:6-12`](../../../../../src/main/mobile/components/favorites.cljs)).
 
 ## Favorites
 
@@ -43,7 +47,7 @@ Both appear in the left sidebar under **Favorites** and **Recent** ([`src/resour
 3. Select **"Add to Favorites"**
 4. The page appears in the left sidebar under "Favorites"
 
-The menu item is labeled "Add to Favorites", or "Unfavorite page" when the page is already a favorite ([`src/main/frontend/components/page_menu.cljs:116-119`](../../../../../src/main/frontend/components/page_menu.cljs), [`src/main/frontend/components/header.cljs:184-195`](../../../../../src/main/frontend/components/header.cljs), [`src/resources/dicts/en.edn:1106`](../../../../../src/resources/dicts/en.edn), [`:1146`](../../../../../src/resources/dicts/en.edn)).
+The menu item is labeled "Add to Favorites", or "Unfavorite page" when the page is already a favorite ([`src/main/frontend/components/page_menu.cljs:116-119`](../../../../../src/main/frontend/components/page_menu.cljs), [`src/main/frontend/components/header.cljs:185-196`](../../../../../src/main/frontend/components/header.cljs), [`src/resources/dicts/en.edn:1106`](../../../../../src/resources/dicts/en.edn), [`:1146`](../../../../../src/resources/dicts/en.edn)).
 
 **Method 2: Keyboard Shortcut**
 
@@ -92,7 +96,7 @@ To group favorite pages yourself, add properties to them in the property UI. Typ
 
 ### Where favorites are stored
 
-Favorites are stored in the graph database, not in `config.edn`. Each graph has a hidden built-in page named `$$$favorites` ([`deps/common/src/logseq/common/config.cljs:59`](../../../../../deps/common/src/logseq/common/config.cljs), [`deps/db/src/logseq/db/sqlite/create_graph.cljs:198-203`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)). Adding a favorite inserts a child block on that page whose `:block/link` points to the favorited page ([`deps/db/src/logseq/db/frontend/db.cljs:36-40`](../../../../../deps/db/src/logseq/db/frontend/db.cljs), [`src/main/frontend/worker/handler/graph.cljs:81-90`](../../../../../src/main/frontend/worker/handler/graph.cljs)). The sidebar lists those links in block order and skips pages that are in the Recycle bin ([`src/main/frontend/worker/handler/graph.cljs:34-44`](../../../../../src/main/frontend/worker/handler/graph.cljs)).
+Favorites are stored in the graph database, not in `config.edn`. Each graph has a hidden built-in page named `$$$favorites` ([`deps/common/src/logseq/common/config.cljs:62`](../../../../../deps/common/src/logseq/common/config.cljs), [`deps/db/src/logseq/db/sqlite/create_graph.cljs:198-203`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)). Adding a favorite inserts a child block on that page whose `:block/link` points to the favorited page ([`deps/db/src/logseq/db/frontend/db.cljs:36-40`](../../../../../deps/db/src/logseq/db/frontend/db.cljs), [`src/main/frontend/worker/handler/graph.cljs:81-90`](../../../../../src/main/frontend/worker/handler/graph.cljs)). The sidebar lists those links in block order and skips pages that are in the Recycle bin ([`src/main/frontend/worker/handler/graph.cljs:34-44`](../../../../../src/main/frontend/worker/handler/graph.cljs)).
 
 Pages have no favorite attribute, so no boolean property marks a favorite. Favorites are reachable only through the `$$$favorites` page's child blocks and their `:block/link`.
 
@@ -112,7 +116,7 @@ Plugins can read both lists with `getCurrentGraphFavorites()` and `getCurrentGra
 
 ### How Recent Pages Work
 
-When Logseq navigates to a page through its page-redirect handler, it records the page ([`src/main/frontend/handler/route.cljs:123`](../../../../../src/main/frontend/handler/route.cljs), [`:140`](../../../../../src/main/frontend/handler/route.cljs)). That handler is also used when you open a page from search ([`src/main/frontend/components/cmdk/core.cljs:599`](../../../../../src/main/frontend/components/cmdk/core.cljs)). Nothing is recorded while a graph is still restoring.
+When Logseq navigates to a page through its page-redirect handler, it records the page ([`src/main/frontend/handler/route.cljs:123`](../../../../../src/main/frontend/handler/route.cljs), [`:140`](../../../../../src/main/frontend/handler/route.cljs)). That handler is also used when you open a page from search ([`src/main/frontend/components/cmdk/core.cljs:611`](../../../../../src/main/frontend/components/cmdk/core.cljs)). Nothing is recorded while a graph is still restoring.
 
 A newly visited page goes to the top of the list. Reopening a page that is already in the list does not move it ([`src/main/frontend/handler/db_based/recent.cljs:5-12`](../../../../../src/main/frontend/handler/db_based/recent.cljs)).
 
@@ -122,7 +126,7 @@ The list is kept per graph in app state and saved to the browser's `localStorage
 
 Logseq keeps the **last 15 unique recent pages** in the stored list ([`src/main/frontend/handler/db_based/recent.cljs:11`](../../../../../src/main/frontend/handler/db_based/recent.cljs)).
 
-The sidebar may show fewer. It skips entries that are not pages, hidden pages, hidden properties and pages with a blank title ([`src/main/frontend/worker/handler/render_resource/basic.cljs:65-82`](../../../../../src/main/frontend/worker/handler/render_resource/basic.cljs)).
+The sidebar may show fewer. It skips entries that are not pages, hidden pages, hidden properties and pages with a blank title ([`src/main/frontend/worker/handler/render_resource/basic.cljs:66-83`](../../../../../src/main/frontend/worker/handler/render_resource/basic.cljs)).
 
 ### Clearing Recent Pages
 
@@ -187,7 +191,7 @@ Favorites:
 
 ### Favorites Dashboard
 
-Create a dashboard page that embeds your key pages. In a DB graph, use the **/Node embed** command. The old `{{embed [[...]]}}` macro only shows a deprecation warning ([`src/main/frontend/components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs), [`src/resources/dicts/en.edn:157`](../../../../../src/resources/dicts/en.edn), [`:549`](../../../../../src/resources/dicts/en.edn)).
+Create a dashboard page that embeds your key pages. In a DB graph, use the **/Node embed** command. The old `{{embed [[...]]}}` macro only shows a deprecation warning ([`src/main/frontend/components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs), [`src/resources/dicts/en.edn:157`](../../../../../src/resources/dicts/en.edn), [`:549`](../../../../../src/resources/dicts/en.edn)).
 
 1. Create a page such as `My Dashboard`.
 2. In a block, type `/Node embed` and pick the page to embed.
@@ -195,7 +199,7 @@ Create a dashboard page that embeds your key pages. In a DB graph, use the **/No
 
 ### Finding Recently Updated Pages
 
-DB graphs do not render `#+BEGIN_QUERY` blocks. In current source that marker appears only in the file-graph importer ([`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1410`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)). Use the **/Query** command instead.
+DB graphs do not render `#+BEGIN_QUERY` blocks. In current source that marker appears only in the file-graph importer ([`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1452`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)). Use the **/Query** command instead.
 
 > **Unverified:** that this advanced query runs as written when entered through `/Query` in a DB graph. It uses `:block/name`, `:block/title` and `:block/updated-at`, and it omits `:limit`.
 
@@ -333,7 +337,7 @@ Monthly review:
 
 ### With Search
 
-Use `Ctrl/Cmd + K` to open search. Before you type, it shows a **Recently updated** group. Despite the label, that group lists your Recent Pages, the same visited-pages history as the sidebar, not pages sorted by update time ([`src/main/frontend/components/cmdk/core.cljs:234-239`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:300-311`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`src/resources/dicts/en.edn:259`](../../../../../src/resources/dicts/en.edn)). As you type, that group narrows to matching recent pages, and search also finds other pages and blocks. Favorites get no special priority in search results.
+Use `Ctrl/Cmd + K` to open search. Before you type, it shows a **Recently updated** group. Despite the label, that group lists your Recent Pages, the same visited-pages history as the sidebar, not pages sorted by update time ([`src/main/frontend/components/cmdk/core.cljs:234-239`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:305-316`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`src/resources/dicts/en.edn:259`](../../../../../src/resources/dicts/en.edn)). As you type, that group narrows to matching recent pages, and search also finds other pages and blocks. Favorites get no special priority in search results.
 
 ### With Command Palette
 

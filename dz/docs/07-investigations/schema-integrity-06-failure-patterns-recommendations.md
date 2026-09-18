@@ -192,7 +192,7 @@ Retry/reconnect required
 
 **Evidence:**
 
-- [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs#L468-L559)
+- [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs#L466-L557)
 - [src/main/frontend/worker/sync/apply_txs.cljs](../../../src/main/frontend/worker/sync/apply_txs.cljs)
 
 **Risk Level:** 🟡 MEDIUM
@@ -751,7 +751,7 @@ Retry/reconnect required
 
 4. **Dedicated graph download bootstrap pipeline for sync recovery**
    - Snapshot-based download/import path exists for recovery/bootstrap instead of older RTC migration-file assumptions.
-   - Evidence: [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs#L468-L559)
+   - Evidence: [src/main/frontend/worker/sync/download.cljs](../../../src/main/frontend/worker/sync/download.cljs#L466-L557)
 
 ### Key Metrics to Monitor
 

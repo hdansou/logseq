@@ -2,8 +2,8 @@
 title: 'Linked References and Backlinks'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
@@ -15,6 +15,10 @@ tags: ['links', 'backlinks', 'references', 'bidirectional', 'graph']
 ---
 
 # Linked References and Backlinks
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This document explains how linked references and backlinks work in Logseq, why bidirectional linking matters, and how to leverage this powerful feature for knowledge management.
 
@@ -110,13 +114,13 @@ Both sections sit below the page content ([`src/main/frontend/components/page.cl
 [Display Text]([[Page Name]]) → Links with custom text
 ```
 
-The labelled form renders your text as a link to the page ([`src/main/frontend/components/block.cljs:1559-1563`](../../../../../src/main/frontend/components/block.cljs)).
+The labelled form renders your text as a link to the page ([`src/main/frontend/components/block.cljs:1576-1580`](../../../../../src/main/frontend/components/block.cljs)).
 
 > **Removed:** `[[Page Name|Display Text]]`. No handling for a `|` label inside `[[...]]` was found in the source; the labelled form above is the one the renderer handles.
 
-Page names are matched without regard to case: `[[project alpha]]` finds the existing "Project Alpha" page, because the lookup lower-cases the name ([`deps/outliner/src/logseq/outliner/core.cljs:201`](../../../../../deps/outliner/src/logseq/outliner/core.cljs), [`deps/db/src/logseq/db/frontend/entity_util.cljs:107-109`](../../../../../deps/db/src/logseq/db/frontend/entity_util.cljs)). A link to a page that doesn't exist yet creates it when the block is saved ([`deps/outliner/src/logseq/outliner/core.cljs:197-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
+Page names are matched without regard to case: `[[project alpha]]` finds the existing "Project Alpha" page, because the lookup lower-cases the name ([`deps/outliner/src/logseq/outliner/core.cljs:221`](../../../../../deps/outliner/src/logseq/outliner/core.cljs), [`deps/db/src/logseq/db/frontend/entity_util.cljs:107-109`](../../../../../deps/db/src/logseq/db/frontend/entity_util.cljs)). A link to a page that doesn't exist yet creates it when the block is saved ([`deps/outliner/src/logseq/outliner/core.cljs:197-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
 
-A title with `/`, such as `Projects/Work/Alpha`, is split into one page per segment under **Library** when you create it with **New page** ([`deps/outliner/src/logseq/outliner/page.cljs:385-388`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
+A title with `/`, such as `Projects/Work/Alpha`, is split into one page per segment under **Library** when you create it with **New page** ([`deps/outliner/src/logseq/outliner/page.cljs:464-467`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
 
 > **Unverified:** What a `/` link does when the block is saved without picking **New page**. That save path creates the page without asking for the split ([`deps/outliner/src/logseq/outliner/core.cljs:205-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
 
@@ -135,7 +139,7 @@ A title with `/`, such as `Projects/Work/Alpha`, is split into one page per segm
 3. Sarah
 4. John
 
-Logseq stores each link by the target's UUID, so the saved text is `[[<uuid>]]` rather than `[[Project Alpha]]` ([`deps/db/src/logseq/db/frontend/content.cljs:129-130`](../../../../../deps/db/src/logseq/db/frontend/content.cljs)). That is why renaming a page doesn't break its links: saving a new page title only changes the page's own name ([`deps/outliner/src/logseq/outliner/core.cljs:362-372`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
+Logseq stores each link by the target's UUID, so the saved text is `[[<uuid>]]` rather than `[[Project Alpha]]` ([`deps/db/src/logseq/db/frontend/content.cljs:129-130`](../../../../../deps/db/src/logseq/db/frontend/content.cljs)). That is why renaming a page doesn't break its links: saving a new page title only changes the page's own name ([`deps/outliner/src/logseq/outliner/core.cljs:384-394`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
 
 ### Block References
 
@@ -160,7 +164,7 @@ Reference in project plan (pasted after Copy block ref):
   ↑ Resolves to the original block
 ```
 
-> **Removed:** `((block-uuid))`, `((block-uuid Display))` and custom `id:: db-decision` block ids. Typing `((` shows the warning "To reference a node, please use `[[]]`." ([`src/main/frontend/handler/editor.cljs:1949-1952`](../../../../../src/main/frontend/handler/editor.cljs)), and `((uuid))` text renders literally ([`src/main/frontend/components/block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs)). `id:: value` typed into a block is text, not a property.
+> **Removed:** `((block-uuid))`, `((block-uuid Display))` and custom `id:: db-decision` block ids. Typing `((` shows the warning "To reference a node, please use `[[]]`." ([`src/main/frontend/handler/editor.cljs:1982-1985`](../../../../../src/main/frontend/handler/editor.cljs)), and `((uuid))` text renders literally ([`src/main/frontend/components/block.cljs:1573-1574`](../../../../../src/main/frontend/components/block.cljs)). `id:: value` typed into a block is text, not a property.
 
 ### Embeds
 
@@ -172,7 +176,7 @@ Reference in project plan (pasted after Copy block ref):
 
 `/Node embed` inserts a new sibling block whose `:block/link` points at the chosen node ([`src/main/frontend/components/editor.cljs:289-306`](../../../../../src/main/frontend/components/editor.cljs)). The link counts as a reference: `:block/link` is added to the embedding block's `:block/refs` ([`deps/outliner/src/logseq/outliner/pipeline.cljs:118-121`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)).
 
-> **Removed:** `{{embed ((block-uuid))}}` and `{{embed [[Page Name]]}}`. The macro now renders "{{embed}} is deprecated. Use '/Node embed' command instead." ([`src/main/frontend/components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
+> **Removed:** `{{embed ((block-uuid))}}` and `{{embed [[Page Name]]}}`. The macro now renders "{{embed}} is deprecated. Use '/Node embed' command instead." ([`src/main/frontend/components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs)).
 
 > **Unverified:** Whether `/Node embed` can embed a whole page, and whether an embed shows the embedded block's children.
 
@@ -213,7 +217,7 @@ Journal pages are titled `MMM do, yyyy` by default ([`deps/common/src/logseq/com
 
 ### Finding Backlinks
 
-**Location:** Below the page content ([`src/main/frontend/components/page.cljs:521-529`](../../../../../src/main/frontend/components/page.cljs); label "Linked references", `en.edn:1920`). The section only appears when the page has at least one reference ([`src/main/frontend/components/reference.cljs:51-62`](../../../../../src/main/frontend/components/reference.cljs)).
+**Location:** Below the page content ([`src/main/frontend/components/page.cljs:521-529`](../../../../../src/main/frontend/components/page.cljs); label "Linked references", `en.edn:1921`). The section only appears when the page has at least one reference ([`src/main/frontend/components/reference.cljs:51-62`](../../../../../src/main/frontend/components/reference.cljs)).
 
 ```markdown
 Page: [[Project Alpha]]
@@ -233,11 +237,11 @@ Unlinked references          ← mentions without links
 - Email Archive
 ```
 
-The number next to the heading counts referencing blocks, not pages ([`deps/db/src/logseq/db/common/view.cljs:560-562`](../../../../../deps/db/src/logseq/db/common/view.cljs); [`src/main/frontend/components/views.cljs:2695-2702`](../../../../../src/main/frontend/components/views.cljs)). The blocks are grouped under the page they live on ([`src/main/frontend/components/views.cljs:2598-2607`](../../../../../src/main/frontend/components/views.cljs); [`deps/db/src/logseq/db/common/view.cljs:544-545`](../../../../../deps/db/src/logseq/db/common/view.cljs)).
+The number next to the heading counts referencing blocks, not pages ([`deps/db/src/logseq/db/common/view.cljs:1089-1091`](../../../../../deps/db/src/logseq/db/common/view.cljs); [`src/main/frontend/components/views.cljs:2695-2702`](../../../../../src/main/frontend/components/views.cljs)). The blocks are grouped under the page they live on ([`src/main/frontend/components/views.cljs:3323-3332`](../../../../../src/main/frontend/components/views.cljs); [`deps/db/src/logseq/db/common/view.cljs:1073-1074`](../../../../../deps/db/src/logseq/db/common/view.cljs)).
 
-Linked references also show when a page is open in the right sidebar, which renders the same page component with `:sidebar? true` ([`src/main/frontend/components/right_sidebar.cljs:58-63`](../../../../../src/main/frontend/components/right_sidebar.cljs)). Unlinked references do not show in the sidebar, on the home view, or on tag and property pages ([`src/main/frontend/components/page.cljs:531-537`](../../../../../src/main/frontend/components/page.cljs)).
+Linked references also show when a page is open in the right sidebar, which renders the same page component with `:sidebar? true` ([`src/main/frontend/components/right_sidebar.cljs:59-64`](../../../../../src/main/frontend/components/right_sidebar.cljs)). Unlinked references do not show in the sidebar, on the home view, or on tag and property pages ([`src/main/frontend/components/page.cljs:531-537`](../../../../../src/main/frontend/components/page.cljs)).
 
-On a tag page, blocks tagged with that tag (or one of its child tags) are left out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs), `:281-283`). They are listed on the page's **Tagged nodes** tab instead ([`src/main/frontend/components/page.cljs:392-395`](../../../../../src/main/frontend/components/page.cljs); `en.edn:195`).
+On a tag page, blocks tagged with that tag (or one of its child tags) are left out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs), `:281-283`). They are listed on the page's **Tagged nodes** tab instead ([`src/main/frontend/components/page.cljs:393-396`](../../../../../src/main/frontend/components/page.cljs); `en.edn:195`).
 
 ### Backlink Context
 
@@ -258,13 +262,13 @@ Example backlink display:
 └────────────────────────────────┘
 ```
 
-Referencing blocks that share a parent are shown together under one breadcrumb of that parent chain ([`deps/db/src/logseq/db/common/view.cljs:546-558`](../../../../../deps/db/src/logseq/db/common/view.cljs); [`src/main/frontend/components/views.cljs:2193-2202`](../../../../../src/main/frontend/components/views.cljs)). Each one is rendered with the normal block component, not as a text snippet ([`src/main/frontend/components/views.cljs:2161-2174`](../../../../../src/main/frontend/components/views.cljs)).
+Referencing blocks that share a parent are shown together under one breadcrumb of that parent chain ([`deps/db/src/logseq/db/common/view.cljs:1075-1087`](../../../../../deps/db/src/logseq/db/common/view.cljs); [`src/main/frontend/components/views.cljs:2844-2853`](../../../../../src/main/frontend/components/views.cljs)). Each one is rendered with the normal block component, not as a text snippet ([`src/main/frontend/components/views.cljs:2161-2174`](../../../../../src/main/frontend/components/views.cljs)).
 
 > **Removed:** "The link (highlighted)" and "Surrounding context" in the display. Only the Unlinked references view passes a highlight term ([`src/main/frontend/components/reference.cljs:69`](../../../../../src/main/frontend/components/reference.cljs)).
 
 ### Filtering Backlinks
 
-The section's **Page filter** button opens a list of other pages connected to the referencing blocks, each with a count. The list draws on pages those blocks, their parents and their children link to, plus the pages the blocks sit on ([`src/main/frontend/components/reference.cljs:14-44`](../../../../../src/main/frontend/components/reference.cljs); [`deps/db/src/logseq/db/common/reference.cljs:49-64`](../../../../../deps/db/src/logseq/db/common/reference.cljs); `en.edn:1633`). "Click to include and shift-click to exclude. Click again to remove." (`en.edn:1637`). Includes must all match; any exclude removes a block ([`deps/db/src/logseq/db/common/reference.cljs:122-130`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
+The section's **Page filter** button opens a list of other pages connected to the referencing blocks, each with a count. The list draws on pages those blocks, their parents and their children link to, plus the pages the blocks sit on ([`src/main/frontend/components/reference.cljs:14-44`](../../../../../src/main/frontend/components/reference.cljs); [`deps/db/src/logseq/db/common/reference.cljs:49-64`](../../../../../deps/db/src/logseq/db/common/reference.cljs); `en.edn:1634`). "Click to include and shift-click to exclude. Click again to remove." (`en.edn:1638`). Includes must all match; any exclude removes a block ([`deps/db/src/logseq/db/common/reference.cljs:122-130`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
 
 The choices are saved on the page as the **Included references** and **Excluded references** properties, so they persist ([`deps/db/src/logseq/db/frontend/property.cljs:253-258`](../../../../../deps/db/src/logseq/db/frontend/property.cljs); [`deps/db/src/logseq/db/common/reference.cljs:240-246`](../../../../../deps/db/src/logseq/db/common/reference.cljs)). The filter icon takes the success colour with only includes, the error colour with only excludes, and the warning colour with both ([`src/main/frontend/components/reference.cljs:28-39`](../../../../../src/main/frontend/components/reference.cljs)).
 
@@ -468,7 +472,7 @@ Syntax: [[<block-uuid>]]
 Shows on: the referenced block itself, as a reference count
 ```
 
-A referenced block shows a small count button beside its content ([`src/main/frontend/components/block.cljs:3502-3518`](../../../../../src/main/frontend/components/block.cljs); tooltip "Open block references", `en.edn:132`). Clicking it toggles the block's own linked references underneath it ([`src/main/frontend/components/block.cljs:3520-3526`](../../../../../src/main/frontend/components/block.cljs), `:4606-4608`); shift-click opens them in the right sidebar (`:3512-3516`). The list starts hidden unless the `:ui/auto-expand-block-refs?` config option expands it (`:4265-4268`; [`src/main/frontend/state.cljs:736-738`](../../../../../src/main/frontend/state.cljs)).
+A referenced block shows a small count button beside its content ([`src/main/frontend/components/block.cljs:3551-3567`](../../../../../src/main/frontend/components/block.cljs); tooltip "Open block references", `en.edn:132`). Clicking it toggles the block's own linked references underneath it ([`src/main/frontend/components/block.cljs:3569-3575`](../../../../../src/main/frontend/components/block.cljs), `:4655-4657`); shift-click opens them in the right sidebar (`:3561-3565`). The list starts hidden unless the `:ui/auto-expand-block-refs?` config option expands it (`:4314-4317`; [`src/main/frontend/state.cljs:736-738`](../../../../../src/main/frontend/state.cljs)).
 
 A block reference does not appear in the Linked references of the page that holds the block. That list follows references to the page itself ([`deps/db/src/logseq/db/common/reference.cljs:251`](../../../../../deps/db/src/logseq/db/common/reference.cljs)).
 
@@ -498,7 +502,7 @@ Syntax: #tag
 Shows on: Tag page's "Tagged nodes" tab
 ```
 
-`#tag` does more than link. It tags the block, and a new tag is created as a class ([`deps/graph-parser/src/logseq/graph_parser/block.cljs:534-537`](../../../../../deps/graph-parser/src/logseq/graph_parser/block.cljs); [`deps/outliner/src/logseq/outliner/core.cljs:197-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). The tag is also added to the block's references ([`deps/outliner/src/logseq/outliner/pipeline.cljs:118`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)), so queries and the graph see it. The tag page, however, lists tagged blocks under **Tagged nodes** and leaves them out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs); [`src/main/frontend/components/page.cljs:392-395`](../../../../../src/main/frontend/components/page.cljs)).
+`#tag` does more than link. It tags the block, and a new tag is created as a class ([`deps/graph-parser/src/logseq/graph_parser/block.cljs:534-537`](../../../../../deps/graph-parser/src/logseq/graph_parser/block.cljs); [`deps/outliner/src/logseq/outliner/core.cljs:197-208`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). The tag is also added to the block's references ([`deps/outliner/src/logseq/outliner/pipeline.cljs:118`](../../../../../deps/outliner/src/logseq/outliner/pipeline.cljs)), so queries and the graph see it. The tag page, however, lists tagged blocks under **Tagged nodes** and leaves them out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs); [`src/main/frontend/components/page.cljs:393-396`](../../../../../src/main/frontend/components/page.cljs)).
 
 A plain `[[Meeting]]` link to the same page doesn't tag the block, so that block does appear in Linked references.
 
@@ -950,7 +954,7 @@ Solutions:
 - Rebuild the search index (see below)
 ```
 
-Whether the section appears at all is decided by a full-text search: Logseq takes up to 100 search hits for the page title and shows the section if one of them contains the title and doesn't already link the page ([`src/main/frontend/worker/handler/block.cljs:524-534`](../../../../../src/main/frontend/worker/handler/block.cljs)). A stale search index can therefore hide the section. **Rebuild search index** (`en.edn:414`; shortcut `mod+c mod+s`, [`src/main/frontend/modules/shortcut/config.cljs:337-338`](../../../../../src/main/frontend/modules/shortcut/config.cljs)) refreshes it.
+Whether the section appears at all is decided by a full-text search: Logseq takes up to 100 search hits for the page title and shows the section if one of them contains the title and doesn't already link the page ([`src/main/frontend/worker/handler/block.cljs:620-630`](../../../../../src/main/frontend/worker/handler/block.cljs)). A stale search index can therefore hide the section. **Rebuild search index** (`en.edn:414`; shortcut `mod+c mod+s`, [`src/main/frontend/modules/shortcut/config.cljs:337-338`](../../../../../src/main/frontend/modules/shortcut/config.cljs)) refreshes it.
 
 > **Removed:** "Special characters in name", "Very short names (<3 chars)" and "Re-index graph". Matching is a plain substring test with no length rule ([`deps/db/src/logseq/db/common/reference.cljs:313-317`](../../../../../deps/db/src/logseq/db/common/reference.cljs)), and the only re-index command found rebuilds the search index.
 

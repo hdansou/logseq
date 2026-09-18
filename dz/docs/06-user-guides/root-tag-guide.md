@@ -37,7 +37,7 @@
 
 ### Location in Codebase
 
-**File**: `deps/db/src/logseq/db/frontend/class.cljs:17`
+**File**: `deps/db/src/logseq/db/frontend/class.cljs:16`
 
 ```clojure
 (def ^:large-vars/data-var built-in-classes
@@ -69,7 +69,7 @@ Think of Root Tag as similar to `Object` in Java or `object` in Python - it's th
 
 ### Example from Tests
 
-**File**: `deps/outliner/test/logseq/outliner/page_test.cljs:52`
+**File**: `deps/outliner/test/logseq/outliner/page_test.cljs:54`
 
 ```clojure
 (is (= #{"Root Tag" "c1"}

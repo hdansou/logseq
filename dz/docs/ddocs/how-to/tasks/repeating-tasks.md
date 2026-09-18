@@ -3,8 +3,8 @@ title: 'Setting Up Repeating Tasks'
 status: 🟢
 since-version: 'v65.0'
 quadrant: 'How-To'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 reviewStatus: audited
 platform: 'All'
 related-docs:
@@ -15,11 +15,15 @@ related-docs:
 
 # Setting Up Repeating Tasks
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > **Last revised:** 2026-09-11 (verified against `be800f1711`)
 
 This guide shows how to make a task in a Logseq **DB graph** repeat. When you mark it Done, Logseq moves its date forward and sets it back to Todo. It suits recurring activities, habits and regular reviews.
 
-> **File-graph syntax does not apply.** Org repeater cookies such as `SCHEDULED: <2026-01-11 Sun .+1d>`, `TODO`/`DONE` text markers, and `key:: value` lines such as `repeat/recur-unit:: day` are file-graph syntax. A DB graph reads none of them. Repeating is stored in hidden built-in properties that the date picker sets for you ([property.cljs:354-399](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399)). Importing a file graph converts its `.+`, `+` and `++` repeaters into those properties ([exporter.cljs:558-585](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L558-L585)).
+> **File-graph syntax does not apply.** Org repeater cookies such as `SCHEDULED: <2026-01-11 Sun .+1d>`, `TODO`/`DONE` text markers, and `key:: value` lines such as `repeat/recur-unit:: day` are file-graph syntax. A DB graph reads none of them. Repeating is stored in hidden built-in properties that the date picker sets for you ([property.cljs:354-399](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L354-L399)). Importing a file graph converts its `.+`, `+` and `++` repeaters into those properties ([exporter.cljs:579-606](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L579-L606)).
 
 ## Overview
 
@@ -42,8 +46,8 @@ This is ideal for:
 - Repeat type is a first-class setting with three behaviors. **Advance from completion** (`dotted-plus`) counts from the moment you complete the task. **Advance from scheduled** (`plus`) counts once from the current date. **Advance from scheduled, skip to future** (`double-plus`) counts from the current date in whole steps until the result is in the future ([commands.cljs:111-155](../../../../../src/main/frontend/worker/commands.cljs#L111-L155)).
 - The repeat type defaults to `double-plus`, both as the property's default value ([property.cljs:392](../../../../../deps/db/src/logseq/db/frontend/property.cljs#L392)) and as the runtime fallback when the property is absent ([commands.cljs:201-202](../../../../../src/main/frontend/worker/commands.cljs#L201-L202)).
 - The **When** setting (`repeat/checked-property`) lets a repeating task use a property other than Status as its completion toggle ([commands.cljs:33-67](../../../../../src/main/frontend/worker/commands.cljs#L33-L67)).
-- Any date or datetime property can repeat, not only Scheduled and Deadline. The repeat panel appears in every date property's picker, where it is labelled "Repeat date" or "Repeat datetime" ([value.cljs:388-392](../../../../../src/main/frontend/components/property/value.cljs#L388-L392), [:539](../../../../../src/main/frontend/components/property/value.cljs#L539)). A `:date` property advances to a journal page ([commands.cljs:204-217](../../../../../src/main/frontend/worker/commands.cljs#L204-L217)).
-- Importing a file graph converts its org repeaters into these properties ([exporter.cljs:566-585](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L566-L585)).
+- Any date or datetime property can repeat, not only Scheduled and Deadline. The repeat panel appears in every date property's picker, where it is labelled "Repeat date" or "Repeat datetime" ([value.cljs:722-726](../../../../../src/main/frontend/components/property/value.cljs#L722-L726), [:827](../../../../../src/main/frontend/components/property/value.cljs#L827)). A `:date` property advances to a journal page ([commands.cljs:204-217](../../../../../src/main/frontend/worker/commands.cljs#L204-L217)).
+- Importing a file graph converts its org repeaters into these properties ([exporter.cljs:587-606](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs#L587-L606)).
 
 > **Corrected:** an earlier version said repeat properties are "preserved by the graph parser/exporter round-trip". The code converts in one direction only: file-graph repeaters become DB repeat properties on import.
 
@@ -56,16 +60,16 @@ This is ideal for:
 3. Pick a date, and a time if you want one.
 4. In the panel beside the calendar, check **Repeat task**. This turns on the task's repeat flag and records the property you opened as the date to advance ([value.cljs:379-392](../../../../../src/main/frontend/components/property/value.cljs#L379-L392)).
 5. Under **Every**, enter `3` and choose **Day** ([value.cljs:393-399](../../../../../src/main/frontend/components/property/value.cljs#L393-L399)).
-6. Under **Next date**, keep **Advance from scheduled, skip to future** ([value.cljs:400-403](../../../../../src/main/frontend/components/property/value.cljs#L400-L403)).
+6. Under **Next date**, keep **Advance from scheduled, skip to future** ([value.cljs:728-731](../../../../../src/main/frontend/components/property/value.cljs#L728-L731)).
 7. Leave **When** set to Status. The panel shows **is: Done** ([value.cljs:404-443](../../../../../src/main/frontend/components/property/value.cljs#L404-L443)).
 
 **What this does:**
 
 - The task repeats every 3 days.
 - When you mark it Done, the Scheduled date advances according to the repeat type, and Status goes back to Todo.
-- A repeating task shows a repeat icon next to its date ([value.cljs:672-673](../../../../../src/main/frontend/components/property/value.cljs#L672-L673)).
+- A repeating task shows a repeat icon next to its date ([value.cljs:960-961](../../../../../src/main/frontend/components/property/value.cljs#L960-L961)).
 
-> **Note:** the repeat panel has the classes `hidden sm:flex` ([value.cljs:375](../../../../../src/main/frontend/components/property/value.cljs#L375)), so it is not shown on narrow screens.
+> **Note:** the repeat panel has the classes `hidden sm:flex` ([value.cljs:701](../../../../../src/main/frontend/components/property/value.cljs#L701)), so it is not shown on narrow screens.
 
 > **Removed:** the `repeat/repeated?:: true`, `repeat/recur-frequency:: 3` … text blocks. In a DB graph that text is ordinary block content, not properties, and it makes nothing repeat.
 
@@ -79,7 +83,7 @@ These are hidden built-in properties. You set them through the panel, not by typ
 | -------------- | ------------- | ---- | ------------------ |
 | `:logseq.property.repeat/repeated?` | **Repeat task** checkbox | Checkbox | true/false |
 | `:logseq.property.repeat/recur-frequency` | **Every** number | Number | Default `1` |
-| `:logseq.property.repeat/recur-unit` | **Every** unit | Closed values | Minute, Hour, Day, Week, Month, Year. Default Day. Minute and Hour are not offered for a `:date` property ([value.cljs:1246-1255](../../../../../src/main/frontend/components/property/value.cljs#L1246-L1255)) |
+| `:logseq.property.repeat/recur-unit` | **Every** unit | Closed values | Minute, Hour, Day, Week, Month, Year. Default Day. Minute and Hour are not offered for a `:date` property ([value.cljs:1533-1542](../../../../../src/main/frontend/components/property/value.cljs#L1533-L1542)) |
 | `:logseq.property.repeat/repeat-type` | **Next date** | Closed values | Advance from completion, Advance from scheduled, Advance from scheduled, skip to future (default) |
 | `:logseq.property.repeat/temporal-property` | Set when you check **Repeat task** | Property | The date property whose picker you opened. Removed when you uncheck **Repeat task** ([value.cljs:381-387](../../../../../src/main/frontend/components/property/value.cljs#L381-L387)) |
 | `:logseq.property.repeat/checked-property` | **When** | Property | Unset means Status ([commands.cljs:33-39](../../../../../src/main/frontend/worker/commands.cljs#L33-L39)). The choices are Status plus any non-built-in property on the block with at least two closed values ([value.cljs:404-409](../../../../../src/main/frontend/components/property/value.cljs#L404-L409)) |
@@ -324,7 +328,7 @@ Combine them for flexible scheduling: give the task both a Scheduled and a Deadl
 
 When `temporal-property` is Scheduled, Scheduled is the primary date advanced, and Deadline is also rescheduled when present. If `temporal-property` is not set, every date property present on the task (Scheduled and/or Deadline) is advanced ([commands.cljs:231-246](../../../../../src/main/frontend/worker/commands.cljs#L231-L246)).
 
-While a task is not Done or Canceled, today's journal lists it in **Scheduled and Deadline** whenever its date falls within the next 7 days ([property.cljs:859-871](../../../../../src/main/frontend/worker/handler/property.cljs#L859-L871)).
+While a task is not Done or Canceled, today's journal lists it in **Scheduled and Deadline** whenever its date falls within the next 7 days ([property.cljs:921-933](../../../../../src/main/frontend/worker/handler/property.cljs#L921-L933)).
 
 ### With Task Properties
 

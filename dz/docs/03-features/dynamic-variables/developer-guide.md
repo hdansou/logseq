@@ -407,7 +407,7 @@ sequenceDiagram
 
 ### The Investigation
 
-**Location**: `src/main/frontend/handler/editor.cljs:2136-2161`
+**Location**: `src/main/frontend/handler/editor.cljs:2169-2194`
 
 ```clojure
 (defn insert-template!
@@ -634,7 +634,7 @@ The `resolve-dynamic-template!` function has **zero conditional logic** for DB v
 
 ### Finding #2: Pre-Processing Strategy ✅
 
-**Evidence**: All query-DSL call sites (query_dsl.cljs:699, 704, 748); template insertion now via outliner layer (editor.cljs:2154)
+**Evidence**: All query-DSL call sites (query_dsl.cljs:699, 704, 748); template insertion now via outliner layer (editor.cljs:2187)
 
 Template resolution happens **before** content enters any domain-specific pipeline (parsing, rendering, insertion).
 
@@ -668,7 +668,7 @@ If variable not found and NLP parsing fails, the **original text is returned unc
 
 **Evidence**: `src/main/frontend/db/query_dsl.cljs:699` (`parse-query`), `:704` (`pre-transform-query`), `:748` (`custom-query`)
 
-**Every query string** through `parse-query` / `pre-transform-query` / `custom-query` automatically gets template resolution before parsing. Exception: `query-dsl/parse` (used directly in `fsrs.cljs:96`) does **not** call `resolve-dynamic-template!`.
+**Every query string** through `parse-query` / `pre-transform-query` / `custom-query` automatically gets template resolution before parsing. Exception: `query-dsl/parse` (used directly in `fsrs.cljs:97`) does **not** call `resolve-dynamic-template!`.
 
 **Impact**: Users can use dynamic variables in queries without any special syntax.
 
@@ -694,7 +694,7 @@ There's **no way to escape** `<% %>` syntax if you want it literally in text.
 
 ### Finding #10: SRS Card Support ⚠️ CHANGED
 
-> **Changed (2026-05-28):** `src/main/frontend/extensions/srs.cljs` was split. Core logic is now in `frontend.extensions.fsrs` (`fsrs.cljs`). The FSRS query at `fsrs.cljs:96` calls `query-dsl/parse` directly — which does **not** invoke `resolve-dynamic-template!`. Dynamic variables in FSRS card queries are **not** resolved automatically.
+> **Changed (2026-05-28):** `src/main/frontend/extensions/srs.cljs` was split. Core logic is now in `frontend.extensions.fsrs` (`fsrs.cljs`). The FSRS query at `fsrs.cljs:97` calls `query-dsl/parse` directly — which does **not** invoke `resolve-dynamic-template!`. Dynamic variables in FSRS card queries are **not** resolved automatically.
 
 **Impact**: Flashcard queries using `<% today %>` syntax will **not** be expanded.
 

@@ -94,7 +94,7 @@ Each row was parsed with the shipped mldoc build; `url` is the AST node the rend
 One predicate gates every embed:
 
 ```clojure
-;; src/main/frontend/components/block.cljs:1417
+;; src/main/frontend/components/block.cljs:1434
 (defn- show-link?
   [s full-text]
   (let [media-formats (set (map name config/media-formats))]
@@ -130,10 +130,10 @@ so `https://host/pic.png?w=100` still embeds.
 
 This is the only form that is portable across desktop, browser, and mobile, and the only one that survives the graph directory being moved or renamed.
 
-`local-relative-asset?` (`deps/common/src/logseq/common/config.cljs:65`) matches it — no `://`, and the path matches `^[./]*assets` — which routes it into `asset-link` and then `<make-asset-url`:
+`local-relative-asset?` (`deps/common/src/logseq/common/config.cljs:68`) matches it — no `://`, and the path matches `^[./]*assets` — which routes it into `asset-link` and then `<make-asset-url`:
 
 ```clojure
-;; src/main/frontend/handler/assets.cljs:148
+;; src/main/frontend/handler/assets.cljs:179
 (util/electron?)
 (let [full-path (if local-asset?
                   (path/path-join repo-dir path) path)]
@@ -162,10 +162,10 @@ The graph root is joined in at render time, so:
 Not a convention — a privileged Electron protocol, registered before the app window opens:
 
 ```clojure
-;; src/electron/electron/core.cljs:33
+;; src/electron/electron/core.cljs:34
 (defonce FILE_ASSETS_SCHEME "assets")
 
-;; src/electron/electron/core.cljs:470
+;; src/electron/electron/core.cljs:479
 (let [privileges {:standard true :secure true :bypassCSP true
                   :corsEnabled true :supportFetchAPI true}]
   (.registerSchemesAsPrivileged
@@ -178,7 +178,7 @@ Not a convention — a privileged Electron protocol, registered before the app w
 and served by a file-protocol handler:
 
 ```clojure
-;; src/electron/electron/core.cljs:80
+;; src/electron/electron/core.cljs:81
 (.registerFileProtocol
  protocol FILE_ASSETS_SCHEME
  (fn [^js request callback]
@@ -224,12 +224,12 @@ Both `file:///Users/…` and a bare `/Users/…` reach the same place, because `
                     (if (= protocol "file") link (str protocol "://" link)))))
 ```
 
-**Without `!` — works.** Both fall through to an Electron branch that renders a file icon and an `openPath` handler (`block.cljs:1594` for the `file:` protocol, `block.cljs:1544` via `search-link-cp` for the bare path). `openPath` resolves `~` and calls `shell.openPath` (`resources/js/preload.js:92`), i.e. hands the file to the OS default application. It does not display it in Logseq.
+**Without `!` — works.** Both fall through to an Electron branch that renders a file icon and an `openPath` handler (`block.cljs:1611` for the `file:` protocol, `block.cljs:1561` via `search-link-cp` for the bare path). `openPath` resolves `~` and calls `shell.openPath` (`resources/js/preload.js:92`), i.e. hands the file to the OS default application. It does not display it in Logseq.
 
-**With `!` — does not render.** Neither is graph-relative, so `image-link` (`block.cljs:641`) skips `<make-asset-url` entirely and the raw path reaches `asset-container`, which prefixes `file://` and nothing else:
+**With `!` — does not render.** Neither is graph-relative, so `image-link` (`block.cljs:652`) skips `<make-asset-url` entirely and the raw path reaches `asset-container`, which prefixes `file://` and nothing else:
 
 ```clojure
-;; src/main/frontend/components/block.cljs:247
+;; src/main/frontend/components/block.cljs:252
 src' (if (and (seq src)
               (or (string/starts-with? src "/")
                   (string/starts-with? src "~")))
@@ -240,7 +240,7 @@ src' (if (and (seq src)
 The DOM gets `<img src="file:///Users/…">`. The packaged app loads its page from `lsp://logseq.com/index.html` (`src/electron/electron/window.cljs:25`) with `:webSecurity (not dev?)` — **on** in production (`window.cljs:55`) — so Chromium refuses a `file://` subresource from an `lsp://` origin. The codebase says the same about itself:
 
 ```clojure
-;; src/main/frontend/components/block.cljs:274
+;; src/main/frontend/components/block.cljs:284
 ;; Electron renderer cannot fetch file:// URLs; read the
 ;; file via IPC and copy the blob directly.
 ```
@@ -251,10 +251,10 @@ The DOM gets `<img src="file:///Users/…">`. The packaged app loads its page fr
 
 ## Remote http(s) URLs
 
-No protocol rewriting happens: the URL passes through `image-link` (`block.cljs:651`, the `starts-with? href "http"` branch) untouched and lands in the `src` attribute. What varies is *which component* renders it, decided by extension in `media-link`:
+No protocol rewriting happens: the URL passes through `image-link` (`block.cljs:662`, the `starts-with? href "http"` branch) untouched and lands in the `src` attribute. What varies is *which component* renders it, decided by extension in `media-link`:
 
 ```clojure
-;; src/main/frontend/components/block.cljs:1472
+;; src/main/frontend/components/block.cljs:1489
 (defn- media-link
   [config url s label metadata full_text]
   (let [ext (keyword (util/get-file-ext s))]
@@ -281,7 +281,7 @@ Remote URLs also do not touch the asset pipeline at all — no file is downloade
 ```
 mldoc "Link" node
    │
-   ├─ url = ["Search" s]  ──────────────► search-link-cp   (block.cljs:1495)
+   ├─ url = ["Search" s]  ──────────────► search-link-cp   (block.cljs:1512)
    │                                        │
    │                                        ├─ show-link? ──► media-link
    │                                        └─ else       ──► openPath link
@@ -290,9 +290,9 @@ mldoc "Link" node
    │
    └─ url = ["Complex" {other protocol}] ──► show-link? ? media-link : external <a>
 
-media-link (block.cljs:1472)  ──► audio-link | asset-link | image-link | asset-reference
+media-link (block.cljs:1489)  ──► audio-link | asset-link | image-link | asset-reference
                                                               │
-image-link (block.cljs:641) ── local-relative-asset? ─ yes ──► asset-link ──► <make-asset-url
+image-link (block.cljs:652) ── local-relative-asset? ─ yes ──► asset-link ──► <make-asset-url
                                                     └─ no ───► asset-container (raw src)
 ```
 
@@ -329,7 +329,7 @@ The extension is derived from the filename and stored verbatim:
 That string becomes `:logseq.property.asset/type` and is never compared against a set of known types. The single check is that it is non-empty:
 
 ```clojure
-;; src/main/frontend/handler/editor.cljs:1781
+;; src/main/frontend/handler/editor.cljs:1814
 ext (when file-name (db-asset/asset-path->type file-name))
 _ (when (string/blank? ext)
     (throw (ex-info "File doesn't have a valid ext." {:file-name file-name})))
@@ -352,10 +352,10 @@ Node's `path.extname` decides, so:
 | Layer | Source | Filters by extension? |
 |---|---|---|
 | File picker | `src/main/frontend/components/editor.cljs:495` | No — the `<input type="file">` has no `accept` attribute |
-| Ingest / asset block creation | `src/main/frontend/handler/editor.cljs:1760` `new-asset-block` | Non-blank extension only |
+| Ingest / asset block creation | `src/main/frontend/handler/editor.cljs:1793` `new-asset-block` | Non-blank extension only |
 | Sync op generation | `src/main/frontend/worker/sync/asset_db_listener.cljs:20` | No — keys off the `checksum` datom, not the type |
 | Client upload | `src/main/frontend/worker/sync/assets.cljs:145` `upload-remote-asset!` | Non-blank only |
-| Server `PUT /assets/…` | `deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:209` | Non-blank only (path must parse) |
+| Server `PUT /assets/…` | `deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:210` | Non-blank only (path must parse) |
 | Object storage | `deps/db-sync/src/logseq/db_sync/node/assets.cljs` | None — writes bytes |
 | Client download | `src/main/frontend/worker/sync/assets.cljs:351` | Non-blank only |
 | Graph import (file → DB) | `deps/graph-parser/script/db_import.cljs:399` | None |
@@ -384,7 +384,7 @@ The format sets govern **rendering**, not sync. They decide whether an asset get
 
 | Set | Members | Source |
 |---|---|---|
-| `common-config/img-formats` | `gif svg jpeg ico png jpg bmp webp avif cr2` | `deps/common/src/logseq/common/config.cljs:96` |
+| `common-config/img-formats` | `gif svg jpeg ico png jpg bmp webp avif cr2` | `deps/common/src/logseq/common/config.cljs:99` |
 | `config/image-formats` | `png jpg jpeg bmp gif webp svg heic avif cr2` | `src/main/frontend/config.cljs:177` |
 | `config/audio-formats` | `mp3 ogg mpeg wav m4a flac wma aac` | `config.cljs:180` |
 | `config/video-formats` | `mp4 webm mov flv avi mkv` | `config.cljs:183` |
@@ -394,7 +394,7 @@ The format sets govern **rendering**, not sync. They decide whether an asset get
 The inline-player decision for an asset **block**:
 
 ```clojure
-;; src/main/frontend/components/block.cljs:1213
+;; src/main/frontend/components/block.cljs:1230
 (defn- img-audio-video? [block]
   (let [asset-type (some-> (:logseq.property.asset/type block) keyword)]
     (or (contains? (common-config/img-formats) asset-type)
@@ -426,14 +426,14 @@ The mobile share sheet is the only place a file is refused because of its type. 
 An asset syncs when, and only when, a **block entity** exists for it carrying all three required properties.
 
 ```clojure
-;; deps/db/src/logseq/db/frontend/class.cljs:73-74
+;; deps/db/src/logseq/db/frontend/class.cljs:72-73
 :schema {:properties          [:logseq.property.asset/type :logseq.property.asset/size :logseq.property.asset/checksum]
          :required-properties [:logseq.property.asset/type :logseq.property.asset/size :logseq.property.asset/checksum]}
 ```
 
 | Requirement | Property | Set by |
 |---|---|---|
-| Tagged `:logseq.class/Asset` | `:block/tags` | `new-asset-block` (`handler/editor.cljs:1760`) |
+| Tagged `:logseq.class/Asset` | `:block/tags` | `new-asset-block` (`handler/editor.cljs:1793`) |
 | Extension | `:logseq.property.asset/type` | `asset-path->type` on the original filename |
 | Byte size | `:logseq.property.asset/size` | `File.size` |
 | SHA-256 | `:logseq.property.asset/checksum` | `assets-handler/get-file-checksum` |
@@ -468,7 +468,7 @@ It does nothing at all. Three independent reasons:
 
 1. **No transaction is produced.** Writing to the filesystem does not touch DataScript, so `asset_db_listener` never fires.
 2. **The remote key is UUID-derived, not name-derived.** Storage keys are `<graph-id>/<asset-uuid>.<type>` (`worker/sync/assets.cljs:35`, `db-sync/…/handler/assets.cljs:193` `parse-asset-path`). A file named `report.pdf` has no block UUID and therefore no addressable key.
-3. **Nothing scans the directory.** The only `readdir` over the assets root is `assets-handler/<get-all-assets` (`src/main/frontend/handler/assets.cljs:269`), whose sole non-test caller is graph export to zip (`handler/export.cljs:98`).
+3. **Nothing scans the directory.** The only `readdir` over the assets root is `assets-handler/<get-all-assets` (`src/main/frontend/handler/assets.cljs:300`), whose sole non-test caller is graph export to zip (`handler/export.cljs:98`).
 
 Sync moves in the other direction: `download-remote-assets-if-missing!` (`worker/sync/assets.cljs:449`) walks asset **entities** and fetches any whose local file is absent. It never reconciles unknown local files upward.
 
@@ -479,7 +479,7 @@ Sync moves in the other direction: `download-remote-assets-if-missing!` (`worker
 `new-asset-block` looks the checksum up before creating anything:
 
 ```clojure
-;; src/main/frontend/handler/editor.cljs:1772
+;; src/main/frontend/handler/editor.cljs:1805
 existing-asset (some->> checksum (db-async/<get-asset-with-checksum repo))
 ```
 

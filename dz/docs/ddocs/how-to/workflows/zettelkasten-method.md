@@ -2,8 +2,8 @@
 title: 'Zettelkasten Method in Logseq'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
@@ -15,6 +15,10 @@ tags: ['zettelkasten', 'knowledge-management', 'note-taking', 'workflow']
 ---
 
 # Zettelkasten Method in Logseq
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Learn how to implement the Zettelkasten ("slip box") knowledge management method in Logseq. This proven system helps you build a network of interconnected ideas for research, writing, and learning.
 
@@ -54,30 +58,30 @@ the same structure is built in a DB graph:
 - **`A/B/C` page names are split into a page hierarchy.**
   `[[Zettelkasten/Permanent/Concept-Name]]` creates the pages `Zettelkasten`,
   `Permanent` and `Concept-Name`, chained by `:block/parent`; the note's title is
-  `Concept-Name` (`deps/outliner/src/logseq/outliner/page.cljs:385-388`;
-  `deps/outliner/test/logseq/outliner/page_test.cljs:33-49`).
+  `Concept-Name` (`deps/outliner/src/logseq/outliner/page.cljs:464-467`;
+  `deps/outliner/test/logseq/outliner/page_test.cljs:35-51`).
 - **Block refs are `[[<uuid>]]`.** "Copy block ref" in a block's context menu copies the
   block's UUID wrapped as a node reference, e.g. `[[0195b1cb-6b1f-7d70-94b8-6f1b2e4dbb31]]`
   (`src/main/frontend/components/content.cljs:289-291`, via
   `src/main/frontend/util/ref.cljs:5-7`). Typing `((` does not start a block search; it only
   shows "To reference a node, please use `[[]]`."
-  (`src/main/frontend/handler/editor.cljs:1949-1952`). Named ids like `id:: key-point-1` do
+  (`src/main/frontend/handler/editor.cljs:1982-1985`). Named ids like `id:: key-point-1` do
   not exist in a DB graph. Below, `[[…]]` stands for a copied block ref.
 - **Checkboxes are tasks.** `- [ ]` items below have become tasks: `/Todo` sets a
   block's status, which also tags it `#Task`
   (`deps/outliner/src/logseq/outliner/property.cljs:108-116, 205-206`).
 - **Queries are blocks, not wrappers.** `#+BEGIN_QUERY` renders a deprecation
-  warning (`src/main/frontend/components/block.cljs:5057-5058`), and so does
+  warning (`src/main/frontend/components/block.cljs:5107-5108`), and so does
   `{{query …}}` (`block.cljs:1870-1871`; `src/resources/dicts/en.edn:159`). Use
   `/Query` for a simple query or `/Advanced Query` for a query map
   (`src/main/frontend/commands.cljs:110-117, 125-132, 325-326`). `/Query` turns
-  the **whole block text** into the query (`src/main/frontend/handler/editor.cljs:4377-4395`),
+  the **whole block text** into the query (`src/main/frontend/handler/editor.cljs:4436-4454`),
   so put any label in a parent block and the query in a child block.
 - **Embeds are a slash command.** `{{embed …}}` renders a deprecation warning
   (`block.cljs:1917-1918`; `en.edn:157`); use `/Node embed`
   (`commands.cljs:233-236`; `en.edn:549`).
 - **Journal pages are titled like `Jan 22nd, 2026`** by default
-  (`deps/db/src/logseq/db/frontend/class.cljs:30-33`), so a link to a day is
+  (`deps/db/src/logseq/db/frontend/class.cljs:29-32`), so a link to a day is
   `[[Jan 22nd, 2026]]`.
 
 ---
@@ -228,7 +232,7 @@ of the types whose cardinality can be switched to multiple (`type.cljs:34-36`).
 (`deps/graph-parser/src/logseq/graph_parser/block.cljs:380-383`;
 `deps/outliner/src/logseq/outliner/core.cljs:122-123`), and blocks inserted from a
 template get fresh timestamps rather than the template's
-(`core.cljs:818, 859-862`; `deps/outliner/src/logseq/outliner/op.cljs:283-287`).
+(`core.cljs:872, 859-862`; `deps/outliner/src/logseq/outliner/op.cljs:283-287`).
 
 ### Namespace Structure
 
@@ -258,12 +262,12 @@ is what the queries below use to tell note types apart.
 ### Templates
 
 **How templates work in a DB graph.** A template is a **block tagged
-`Template`** (`deps/db/src/logseq/db/frontend/class.cljs:100-102`). There is no
+`Template`** (`deps/db/src/logseq/db/frontend/class.cljs:99-101`). There is no
 `template::` property and no `{{title}}` placeholder.
 
 1. Write the block tree you want to reuse under one top block.
 2. Tag the top block `Template` from its tag control. An inline `#Template`
-   typed into the text is stripped (`class.cljs:130-140`).
+   typed into the text is stripped (`class.cljs:147-157`).
 3. To use it: create the note page, tag the page (`Permanent`, say), and type
    `/Template` on the page (`src/main/frontend/commands.cljs:339-343`). Only the
    blocks **under** the template block are inserted

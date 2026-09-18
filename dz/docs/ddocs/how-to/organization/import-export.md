@@ -4,8 +4,8 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '[Backup Strategies](./backup-strategies.md)'
@@ -14,6 +14,10 @@ tags: ['import', 'export', 'migration', 'data-portability', 'backup']
 ---
 
 # Import and Export Guide
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This guide shows you how to get data into a Logseq DB graph and export it back out. A DB graph is a single `db.sqlite` file plus an `assets/` folder, not a folder of Markdown files ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs)), so export and import work on that database.
 
@@ -42,7 +46,7 @@ This guide shows you how to get data into a Logseq DB graph and export it back o
 
 ### Export Options
 
-**Access:** Click **⋯ (More)** → **Export graph**. The menu item opens the `export` dialog ([`components/header.cljs:227-230`](../../../../../src/main/frontend/components/header.cljs); dialog at [`components/export.cljs:119`](../../../../../src/main/frontend/components/export.cljs)).
+**Access:** Click **⋯ (More)** → **Export graph**. The menu item opens the `export` dialog ([`components/header.cljs:228-231`](../../../../../src/main/frontend/components/header.cljs); dialog at [`components/export.cljs:119`](../../../../../src/main/frontend/components/export.cljs)).
 
 The dialog lists exactly these entries ([`components/export.cljs:125-153`](../../../../../src/main/frontend/components/export.cljs); labels at [`src/resources/dicts/en.edn:632-680`](../../../../../src/resources/dicts/en.edn)):
 
@@ -97,15 +101,15 @@ Four commands have no default key binding and are registered in the shortcut con
 
 ### Supported Import Sources
 
-**Access:** Click **⋯ (More)** → **Import** (shown only when editing is enabled, [`components/header.cljs:232-235`](../../../../../src/main/frontend/components/header.cljs)), or **Import existing notes** on the graphs screen ([`components/repo.cljs:433-438`](../../../../../src/main/frontend/components/repo.cljs)). Both open the `importer` page, which offers exactly five sources ([`components/imports.cljs:558-635`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:911-956`](../../../../../src/resources/dicts/en.edn)):
+**Access:** Click **⋯ (More)** → **Import** (shown only when editing is enabled, [`components/header.cljs:233-236`](../../../../../src/main/frontend/components/header.cljs)), or **Import existing notes** on the graphs screen ([`components/repo.cljs:433-438`](../../../../../src/main/frontend/components/repo.cljs)). Both open the `importer` page, which offers exactly five sources ([`components/imports.cljs:562-639`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:911-956`](../../../../../src/resources/dicts/en.edn)):
 
 | Entry                       | Input                                              | Source |
 | --------------------------- | -------------------------------------------------- | ------ |
-| **SQLite**                  | a SQLite DB export of a Logseq graph               | [`imports.cljs:572-582`](../../../../../src/main/frontend/components/imports.cljs) → [`handler/db_based/import.cljs:104`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
-| **SQLite + assets (.zip)**  | a zip containing `db.sqlite` and an assets folder  | [`imports.cljs:584-595`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:123`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
-| **File to DB graph**        | a file-based Logseq graph folder (not on mobile)   | [`imports.cljs:597-611`](../../../../../src/main/frontend/components/imports.cljs) → [`:477-510`](../../../../../src/main/frontend/components/imports.cljs) |
-| **Debug Transit**           | a debug transit file                               | [`imports.cljs:613-623`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:180`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
-| **EDN to DB graph**         | a DB graph's EDN export                            | [`imports.cljs:625-635`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:192-231`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+| **SQLite**                  | a SQLite DB export of a Logseq graph               | [`imports.cljs:576-586`](../../../../../src/main/frontend/components/imports.cljs) → [`handler/db_based/import.cljs:104`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+| **SQLite + assets (.zip)**  | a zip containing `db.sqlite` and an assets folder  | [`imports.cljs:588-599`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:123`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+| **File to DB graph**        | a file-based Logseq graph folder (not on mobile)   | [`imports.cljs:601-615`](../../../../../src/main/frontend/components/imports.cljs) → [`:477-510`](../../../../../src/main/frontend/components/imports.cljs) |
+| **Debug Transit**           | a debug transit file                               | [`imports.cljs:617-627`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:180`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
+| **EDN to DB graph**         | a DB graph's EDN export                            | [`imports.cljs:629-639`](../../../../../src/main/frontend/components/imports.cljs) → [`import.cljs:192-231`](../../../../../src/main/frontend/handler/db_based/import.cljs) |
 
 **Every import creates a new DB graph.** Each entry first asks for a graph name and rejects an empty name or one that already exists ([`imports.cljs:74-145`](../../../../../src/main/frontend/components/imports.cljs), [`:500-510`](../../../../../src/main/frontend/components/imports.cljs)); there is no "import into the current graph" option on this page.
 
@@ -129,7 +133,7 @@ Four commands have no default key binding and are registered in the shortcut con
 
 > **Unverified:** whether a folder of Markdown from another app converts usefully once it is laid out as a Logseq file graph with a `logseq/config.edn` was not tested.
 
-> Removed claim: earlier revisions gave step-by-step Roam, Notion, Obsidian and Evernote procedures, including `sed` scripts that rewrite Obsidian `![[Page]]` embeds to `{{embed [[Page]]}}`. Besides depending on importers that do not exist, `{{embed}}` is deprecated in DB graphs and renders a warning ([`components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
+> Removed claim: earlier revisions gave step-by-step Roam, Notion, Obsidian and Evernote procedures, including `sed` scripts that rewrite Obsidian `![[Page]]` embeds to `{{embed [[Page]]}}`. Besides depending on importers that do not exist, `{{embed}}` is deprecated in DB graphs and renders a warning ([`components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs)).
 
 ### From a Logseq file graph (File to DB)
 
@@ -139,7 +143,7 @@ File graphs cannot be opened directly ([`components/repo.cljs:320-323`](../../..
 
 1. **⋯ (More)** → **Import**
 2. Choose **File to DB graph** ("Import a file-based Logseq graph folder into a new DB graph", [`en.edn:926-927`](../../../../../src/resources/dicts/en.edn))
-3. Select the graph's root folder (the picker is a directory input, [`imports.cljs:605-611`](../../../../../src/main/frontend/components/imports.cljs))
+3. Select the graph's root folder (the picker is a directory input, [`imports.cljs:609-615`](../../../../../src/main/frontend/components/imports.cljs))
 
 **Step 2: Set options**
 
@@ -148,18 +152,18 @@ The `import-file-graph-dialog` ([`imports.cljs:171-267`](../../../../../src/main
 | Field (label) | Form key | Effect | Reader |
 | ------------- | -------- | ------ | ------ |
 | New graph name | `graph-name` | Name of the new DB graph; defaults to the folder name | [`imports.cljs:481-483`](../../../../../src/main/frontend/components/imports.cljs) |
-| Extract inline code snippets as child blocks | `extract-code-snippets?` | A block with code fences becomes a Code node; with this on, multiple fences are extracted into child blocks in order | [`graph_parser/exporter.cljs:2106-2113`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Extract inline code snippets as child blocks | `extract-code-snippets?` | A block with code fences becomes a Code node; with this on, multiple fences are extracted into child blocks in order | [`graph_parser/exporter.cljs:2127-2134`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
 | Import all tags | `convert-all-tags?` | Converts every tag to a tag class | [`exporter.cljs:257-261`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
 | Import specific tags | `tag-classes` | Converts only the listed tags ("Tags are case insensitive"); `card` always converts | [`exporter.cljs:257-261`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
 | Remove inline tags ("Default behavior for DB graphs") | `remove-inline-tags?` | Strips converted `#tags` from block titles instead of rewriting them as refs | [`exporter.cljs:408-425`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
-| Import additional tags from property values | `property-classes` | Treats values of the listed properties as tags | [`exporter.cljs:1083-1093`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
-| Import tag parents from property values | `property-parent-classes` | Uses values of the listed properties as tag parents | [`exporter.cljs:1129`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Import additional tags from property values | `property-classes` | Treats values of the listed properties as tags | [`exporter.cljs:1104-1114`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
+| Import tag parents from property values | `property-parent-classes` | Uses values of the listed properties as tag parents | [`exporter.cljs:1150`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs) |
 
 (Form fields at [`imports.cljs:197-265`](../../../../../src/main/frontend/components/imports.cljs); labels at [`en.edn:911`, `:922`, `:924`, `:942`, `:945-947`, `:949`, `:955`](../../../../../src/resources/dicts/en.edn).)
 
 **Step 3: Wait for the import**
 
-`import-file-graph` creates the new graph with `repo-handler/new-db!` and hands the files to the worker ([`imports.cljs:444-476`](../../../../../src/main/frontend/components/imports.cljs)), where `:thread-api/import-file-graph` runs `gp-exporter/export-file-graph` ([`worker/db_core.cljs:1005-1007`, `:420`](../../../../../src/main/frontend/worker/db_core.cljs)).
+`import-file-graph` creates the new graph with `repo-handler/new-db!` and hands the files to the worker ([`imports.cljs:444-476`](../../../../../src/main/frontend/components/imports.cljs)), where `:thread-api/import-file-graph` runs `gp-exporter/export-file-graph` ([`worker/db_core.cljs:1004-1006`, `:420`](../../../../../src/main/frontend/worker/db_core.cljs)).
 
 **What gets read:**
 
@@ -300,8 +304,8 @@ The `cli/` package (installed as `logseq-cli.js`, [`cli/bin/dune`](../../../../.
 
 | Command | Options | Source |
 | ------- | ------- | ------ |
-| `graph export` | `--type edn\|sqlite` (required), `--file`, `--edn-options`, `--pretty-print` | [`cli/lib/cli_parse.ml:188-189`, `:872-891`](../../../../../cli/lib/cli_parse.ml) |
-| `graph import` | `--type edn\|sqlite` (required), `--input` (required) | [`cli_parse.ml:190`, `:893-902`](../../../../../cli/lib/cli_parse.ml) |
+| `graph export` | `--type edn\|sqlite` (required), `--file`, `--edn-options`, `--pretty-print` | [`cli/lib/cli_parse.ml:188-189`, `:868-887`](../../../../../cli/lib/cli_parse.ml) |
+| `graph import` | `--type edn\|sqlite` (required), `--input` (required) | [`cli_parse.ml:190`, `:889-898`](../../../../../cli/lib/cli_parse.ml) |
 | `graph backup create` / `restore` / `remove` | `--name` / `--src --dst` / `--src` | [`cli_parse.ml:184-187`](../../../../../cli/lib/cli_parse.ml) |
 
 The accepted `--type` values are exactly `edn` and `sqlite` ([`cli/lib/graph.ml:85-93`](../../../../../cli/lib/graph.ml)); anything else fails with "graph export --type must be edn or sqlite". `--graph` is a global option ([`cli_parse.ml:137-140`](../../../../../cli/lib/cli_parse.ml)).

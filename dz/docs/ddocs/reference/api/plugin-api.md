@@ -2,8 +2,8 @@
 title: 'Plugin API Reference'
 description: "Reference for Logseq's Plugin SDK (@logseq/libs) as implemented by the host for DB graphs"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop]
@@ -20,6 +20,10 @@ relatedDocs:
 ---
 
 # Plugin API Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -144,7 +148,7 @@ getInfo(key?: keyof AppInfo): Promise<AppInfo | any>
 
 > `getInfo` is implemented in the JS SDK, not as a host export, so the HTTP API cannot reach it. The server
 > maps `logseq.App.getInfo` to `app@get_info` (`src/electron/electron/server.cljs:73-81`), and the renderer
-> looks that up on `window.logseq.api` (`src/main/electron/listener.cljs:113-122`), which has no `get_info`.
+> looks that up on `window.logseq.api` (`src/main/electron/listener.cljs:119-128`), which has no `get_info`.
 > Use `logseq.App.getAppInfo` there (`get_app_info`, `src/main/logseq/api.cljs:69`).
 
 #### getUserInfo
@@ -305,7 +309,7 @@ Navigate to a route (`src/main/logseq/api/app.cljs:153-162`). For `page`, the ho
 
 ```typescript
 pushState(
-  route: string,  // router name, e.g. "page", "home", "all-pages", "graph" (src/main/frontend/routes.cljs:30-50)
+  route: string,  // router name, e.g. "page", "home", "all-pages", "graph" (src/main/frontend/routes.cljs:45-65)
   params?: Record<string, any>,
   query?: Record<string, any>
 ): void
@@ -434,7 +438,7 @@ clearRightSidebarBlocks(opts?: { close: boolean }): void
   on desktop only.
 - `setFullScreen` is SDK-local (`LSPlugin.user.ts:550-560`). It calls `_callMainWin`
   (`resources/js/preload.js:136-138`, IPC channel `call-main-win` in
-  `src/electron/electron/core.cljs:167`), so it is desktop only.
+  `src/electron/electron/core.cljs:170`), so it is desktop only.
 - The sidebar methods are in `app.cljs:131-151`.
 
 > **`execGitCommand` is not implemented.** Declared as deprecated (`LSPlugin.ts:499-504`). The
@@ -494,7 +498,7 @@ logseq.App.onThemeModeChanged(({ mode }) => {
 
 Provide a UI slot for a specific block by UUID. It is SDK-local (`LSPlugin.user.ts:514-527`) and installs
 the hook `slot:<uuid>`. The block renders a slot only while such a hook exists
-(`src/main/frontend/components/block.cljs:3432`, `:2787-2792`). The callback gets `{ type, slot, payload }`
+(`src/main/frontend/components/block.cljs:3481`, `:2826-2831`). The callback gets `{ type, slot, payload }`
 merged with the block's fields (`src/main/frontend/components/plugins.cljs:1429-1431`,
 `src/main/frontend/handler/plugin.cljs:975-978`).
 
@@ -520,7 +524,7 @@ logseq.App.onBlockRendererSlotted(blockUuid, ({ slot }) => {
 #### onMacroRendererSlotted
 
 Register a custom renderer for `{{renderer arg1, arg2}}` macros. In DB graphs the host still renders the
-slot for `renderer` macros (`src/main/frontend/components/block.cljs:1920-1923`). The payload is the macro
+slot for `renderer` macros (`src/main/frontend/components/block.cljs:1937-1940`). The payload is the macro
 options, which include `arguments` (`block.cljs:1860-1862`), plus the block `uuid`.
 
 ```javascript
@@ -611,7 +615,7 @@ The host reads only `before`, `start`, `end`, `sibling`, `customUUID`, `properti
 - **Ignored options.** `isPageBlock` and `focus` are not read. The block is never opened for editing
   (`:265`).
 - **Default position.** With neither `sibling` nor `start`, the new block goes after the target's last
-  child, which appends it as the last child (`src/main/frontend/handler/editor.cljs:748-749`, `:778-779`).
+  child, which appends it as the last child (`src/main/frontend/handler/editor.cljs:754-755`, `:784-785`).
 - **`before` without `sibling`.** The block becomes the target's first child (`editor.cljs:245-256`).
 - **Custom UUID.** `customUUID` (or `properties.id`) sets the block UUID; an existing UUID throws
   (`:239-244`).
@@ -883,7 +887,7 @@ const page = await logseq.Editor.createPage(
 
 #### deletePage
 
-Delete a page by name or UUID (`editor.cljs:171-173`, `src/main/frontend/handler/common/page.cljs:190-196`).
+Delete a page by name or UUID (`editor.cljs:171-173`, `src/main/frontend/handler/common/page.cljs:189-195`).
 `restorePage` and `deleteRecycledPagePermanently` are also available; the second only acts on a recycled
 page (`editor.cljs:175-185`).
 
@@ -1245,7 +1249,7 @@ except `makeSandboxStorage`, which is SDK-local.
 ### listFilesOfCurrentGraph
 
 List files under the graph's `assets` directory (`src/main/logseq/sdk/assets.cljs:12-15`). Desktop only: it
-calls the Electron IPC handler `getAssetsFiles` (`src/electron/electron/handler.cljs:359-364`), which
+calls the Electron IPC handler `getAssetsFiles` (`src/electron/electron/handler.cljs:381-386`), which
 resolves nothing when there is no `assets` directory.
 
 ```typescript
@@ -1657,7 +1661,7 @@ Declared at `libs/src/LSPlugin.ts:561-605`:
 - `onThemeChanged` — emitted at `src/main/frontend/handler/plugin.cljs:1282`.
 - `onTodayJournalCreated` — payload `{ title }`, `src/main/frontend/handler/page.cljs:337`.
 - `onBeforeCommandInvoked` / `onAfterCommandInvoked` — `plugin.cljs:1147`, `:1150`.
-- `onPageHeadActionsSlotted` — `src/main/frontend/components/page.cljs:356`.
+- `onPageHeadActionsSlotted` — `src/main/frontend/components/page.cljs:357`.
 - `onSidebarVisibleChanged` — payload `{ visible }`, `src/main/frontend/components/theme.cljs:89`.
 - `onGraphAfterIndexed` — declared at `:561`, but **never fires**: nothing under `src/` emits
   `graph-after-indexed`.

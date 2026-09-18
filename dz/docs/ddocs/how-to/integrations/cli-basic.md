@@ -2,8 +2,8 @@
 title: 'CLI Basics'
 description: 'How to use the Logseq command-line interface for automation and scripting'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 cliVersion: 'source-backed'
@@ -16,6 +16,10 @@ relatedDocs:
 ---
 
 # CLI Basics
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -46,9 +50,9 @@ workflow input, or `alpha` by default (`.github/workflows/deps-cli.yml:195-202`)
 ## Capabilities Worth Knowing
 
 - `graph create --enable-sync` creates the graph, uploads it, and starts sync in one command
-  (`cli/lib/graph.ml:917-935`). `--e2ee-password` is only accepted together with `--enable-sync` (`:114-116`).
+  (`cli/lib/graph.ml:1024-1042`). `--e2ee-password` is only accepted together with `--enable-sync` (`:378-380`).
 - `graph backup list/create/restore/remove` manage backups (`command_id.ml`, `cli_parse.ml:180-187`).
-- `graph export --type sqlite` is supported alongside EDN export (`cli_parse.ml:885-891`).
+- `graph export --type sqlite` is supported alongside EDN export (`cli_parse.ml:881-887`).
 - `query list` lists built-in queries: `list-priority`, `list-status`, `recent-updated` and `task-search`
   (`cli/lib/query.ml:74`, `:124`, `:174`, `:263`). It also lists custom queries (`query.ml:7`).
 - `show` accepts `--page-hierarchy`, `--linked-references` and `--ref-id-footer` (`cli_parse.ml:291-301`).
@@ -57,7 +61,7 @@ workflow input, or `alpha` by default (`.github/workflows/deps-cli.yml:195-202`)
   utility commands (`command_id.ml`).
 - `doctor` runs three checks: `db-worker-script`, `root-dir` and `running-servers` (`cli/lib/doctor.ml:61-190`).
 - `graph switch` and `graph remove` are part of the graph commands.
-- `graph validate` accepts `--fix` (`cli_parse.ml:183`, `graph.ml:214`).
+- `graph validate` accepts `--fix` (`cli_parse.ml:183`, `graph.ml:475`).
 - `upsert` covers `block`, `page`, `task`, `asset`, `tag` and `property`. `remove` covers `block`, `page`,
   `tag` and `property`.
 
@@ -65,16 +69,16 @@ workflow input, or `alpha` by default (`.github/workflows/deps-cli.yml:195-202`)
 
 - Node.js 22.20.0 or higher. The package copies the repository's `engines` field (`package.json:15-17`,
   `prepare-cli-package.mjs:134`).
-- A DB graph under the CLI root directory. Graphs live in `<root-dir>/graphs` (`graph.ml:312`), and the root
-  directory defaults to `~/logseq` (`cli/lib/cli_config.ml:41-42`). That is the same folder the desktop app
+- A DB graph under the CLI root directory. Graphs live in `<root-dir>/graphs` (`graph.ml:573`), and the root
+  directory defaults to `~/logseq` (`cli/lib/cli_config.ml:42-43`). That is the same folder the desktop app
   uses by default.
 
 You do not need the desktop app running. The CLI finds and starts its own `db-worker-node.js` process
-(`cli/lib/server_runtime.ml:68-81`, `:237-247`, `:274`).
+(`cli/lib/server_runtime.ml:64-77`, `:203-213`, `:274`).
 
 > The CLI does not read `LOGSEQ_GRAPHS_DIR`; that name does not appear in `cli/lib`. If the desktop app uses
 > a different graphs folder, point the CLI at the matching root with `--root-dir` or `LOGSEQ_CLI_ROOT_DIR`
-> (`cli_config.ml:124`).
+> (`cli_config.ml:125`).
 
 ## Choosing a Graph
 
@@ -84,8 +88,8 @@ Most commands need a graph. The CLI takes it from, in order of what you would no
 - the `graph` key in `cli.edn`
 - the `LOGSEQ_CLI_GRAPH` environment variable
 
-These sources are read at `cli_config.ml:123` and `:308-315`. When none gives a graph, the CLI stops with
-"graph name is required" and the hint `Use --graph <name>` (`cli/lib/error.ml:296`).
+These sources are read at `cli_config.ml:124` and `:309-316`. When none gives a graph, the CLI stops with
+"graph name is required" and the hint `Use --graph <name>` (`cli/lib/error.ml:298`).
 
 These commands do not need a graph (`command_id.ml:166-170`): `version`, `graph list`, `server list`,
 `server cleanup`, `completion`, `login`, `logout`, `skill show`, `skill install`, `example` and
@@ -151,7 +155,7 @@ Search is scoped by entity type and takes `-c/--content` (`cli_parse.ml:285-288`
 - `show --graph my-graph --uuid 11111111-1111-1111-1111-111111111111`
 
 A boolean option on its own means `true`. It also takes an explicit `true` or `false` as the next argument
-(`cli_parse.ml:33-40`, `:59-66`). `--level` must be an integer (`:519`).
+(`cli_parse.ml:33-40`, `:60-67`). `--level` must be an integer (`:519`).
 
 ### Upsert and remove
 
@@ -199,13 +203,13 @@ for task fields: `--status`, `--priority`, `--scheduled` and `--deadline`, plus 
 
 `graph export` accepts `--type`, `--file`, `-e/--edn-options` and `-p/--pretty-print` (`cli_parse.ml:188-189`).
 `--edn-options` must be an EDN map (`:452-466`). With `--type sqlite`, `--edn-options` and `--pretty-print`
-are rejected (`graph.ml:117-122`).
+are rejected (`graph.ml:381-386`).
 
 The older flat flags `--include-timestamps`, `--exclude-built-in-pages` and `--exclude-namespaces` are not
 in the option list, so they fail with `Unknown option` (`cli_parse.ml:333-339`). Put those settings in
 `--edn-options` instead.
 
-`graph import` requires `--type edn` or `--type sqlite`, and `--input` (`cli_parse.ml:894-902`).
+`graph import` requires `--type edn` or `--type sqlite`, and `--input` (`cli_parse.ml:890-898`).
 
 ### Backups
 
@@ -215,12 +219,12 @@ in the option list, so they fail with `Unknown option` (`cli_parse.ml:333-339`).
 - `graph backup remove --graph my-graph --src <backup-name>`
 
 A backup is named `<graph>-<name>-<UTC timestamp>`, or `<graph>-<UTC timestamp>` without `--name`
-(`graph.ml:146-155`). Copy the exact name from `graph backup list`. Backups are stored in
-`<graph dir>/backup/<backup-name>` (`graph.ml:466-470`). `restore` requires both `--src` and `--dst`
-(`cli_parse.ml:851-862`). `remove` requires `--src` (`:864-871`).
+(`graph.ml:407-416`). Copy the exact name from `graph backup list`. Backups are stored in
+`<graph dir>/backup/<backup-name>` (`graph.ml:629-633`). `restore` requires both `--src` and `--dst`
+(`cli_parse.ml:847-858`). `remove` requires `--src` (`:860-867`).
 
 > **Warning:** `graph backup remove` joins `--src` onto the backup directory without checking the path, then
-> deletes that directory tree (`graph.ml:469-470`, `:753-758`). Pass only a name copied from
+> deletes that directory tree (`graph.ml:632-633`, `:893-898`). Pass only a name copied from
 > `graph backup list`, never a path.
 
 ### Server and sync
@@ -248,23 +252,23 @@ Sync options are listed at `cli_parse.ml:306-319`. `sync start` and `sync upload
 `--upload-keys`.
 
 `sync config` keys are `ws-url` and `http-base` (`sync.ml:92-95`). The key and value are positional
-arguments (`cli_parse.ml:1046-1085`). The environment variables `LOGSEQ_CLI_WS_URL` and
-`LOGSEQ_CLI_HTTP_BASE` also set them (`cli_config.ml:130-131`).
+arguments (`cli_parse.ml:1042-1081`). The environment variables `LOGSEQ_CLI_WS_URL` and
+`LOGSEQ_CLI_HTTP_BASE` also set them (`cli_config.ml:131-132`).
 
 Every `sync` command requires login, `sync config` included (`command_id.ml:172-177`).
-`login` and `logout` manage the saved cloud login in `~/logseq/auth.json` (`cli/lib/auth_state.ml:30-39`).
+`login` and `logout` manage the saved cloud login in `~/logseq/auth.json` (`cli/lib/auth_state.ml:37-46`).
 That default is under your home directory, not `--root-dir`.
 
 ## Utilities
 
-- `agent bridge --graph my-graph` (`cli_parse.ml:1103-1104`)
-- `completion zsh`, or `completion --shell bash`. Only `zsh` and `bash` are supported (`cli_parse.ml:1120-1144`).
+- `agent bridge --graph my-graph` (`cli_parse.ml:1099-1100`)
+- `completion zsh`, or `completion --shell bash`. Only `zsh` and `bash` are supported (`cli_parse.ml:1136-1160`).
 - `debug pull --uuid 11111111-1111-1111-1111-111111111111 --graph my-graph`. Also accepts `--id` or
   `--ident` (`cli_parse.ml:321-322`).
-- `doctor`, optionally with `--dev-script` (`cli_parse.ml:324`, `:1105-1109`)
+- `doctor`, optionally with `--dev-script` (`cli_parse.ml:324`, `:1101-1105`)
 - `skill show`
 - `skill install --global` (`cli_parse.ml:329`)
-- `example upsert page`. Everything after `example` selects which examples to show (`cli_parse.ml:816-821`).
+- `example upsert page`. Everything after `example` selects which examples to show (`cli_parse.ml:813-818`).
 
 ## Working Modes
 
@@ -291,7 +295,7 @@ Sync commands use the configured `ws-url` and `http-base` and require a saved lo
   - `--timeout-ms` (default `10000`)
   - `-o/--output`: `human`, `json` or `edn`, default `human` (`cli_parse.ml:445-450`)
   - `-v/--verbose`, `--profile`, `-h/--help`, `--version`
-- Environment variables (`cli_config.ml:120-131`): `LOGSEQ_CLI_GRAPH`, `LOGSEQ_CLI_ROOT_DIR`,
+- Environment variables (`cli_config.ml:121-132`): `LOGSEQ_CLI_GRAPH`, `LOGSEQ_CLI_ROOT_DIR`,
   `LOGSEQ_CLI_CONFIG`, `LOGSEQ_CLI_TIMEOUT_MS`, `LOGSEQ_CLI_OUTPUT`, `LOGSEQ_CLI_WS_URL`,
   `LOGSEQ_CLI_HTTP_BASE`, plus login and logout timeout variables.
 

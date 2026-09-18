@@ -810,7 +810,7 @@ Asset File (Binary)
       (m/? http-task))))
 ```
 
-**Location:** `src/main/frontend/handler/assets.cljs:270-294`
+**Location:** `src/main/frontend/handler/assets.cljs:301-325`
 
 ### Asset Download & Decryption
 
@@ -1552,7 +1552,7 @@ Attacker injects malicious script
 
 | Function                       | Purpose                  | Location              |
 | ------------------------------ | ------------------------ | --------------------- |
-| `new-task--rtc-upload-asset`   | Encrypt & upload asset   | `assets.cljs:270-294` |
+| `new-task--rtc-upload-asset`   | Encrypt & upload asset   | `assets.cljs:301-325` |
 | `new-task--rtc-download-asset` | Download & decrypt asset | `assets.cljs:296-333` |
 
 **File:** `src/main/frontend/handler/assets.cljs`

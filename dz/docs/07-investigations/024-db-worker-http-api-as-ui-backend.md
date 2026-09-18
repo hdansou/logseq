@@ -23,7 +23,7 @@ Can a new UI use `POST /v1/invoke` on db-worker-node as its backend? What are th
 
 ### Reactivity works for a second client
 
-`db_listener.cljs:140` broadcasts every committed transaction as `:sync-db-changes` via `shared-service/broadcast-to-clients!`. On the node runtime that becomes `platform/post-message!` → `db_worker_node.cljs handle-event!` → a write to **every** connected SSE response (`*sse-clients` is a set). Confirmed end-to-end with the client adapter against a stub that mimics the worker's `[type payload]` transit envelope.
+`db_listener.cljs:136` broadcasts every committed transaction as `:sync-db-changes` via `shared-service/broadcast-to-clients!`. On the node runtime that becomes `platform/post-message!` → `db_worker_node.cljs handle-event!` → a write to **every** connected SSE response (`*sse-clients` is a set). Confirmed end-to-end with the client adapter against a stub that mimics the worker's `[type payload]` transit envelope.
 
 The renderer-facing event contract is the `defmethod handle` set in `frontend/handler/worker.cljs` — 17 event types on master (`:sync-db-changes`, `:notification`, `:capture-error`, `:rtc-sync-state`, `:sync-conflicts-updated`, `:remote-graph-gone`, `:db-worker/ui-request`, `:thread-api/search-index-build-progress`, …).
 
@@ -45,7 +45,7 @@ The renderer-facing event contract is the `defmethod handle` set in `frontend/ha
 |---|---|
 | No authentication | `db_worker_node.cljs` never reads `Authorization`; it appears only in CORS allow-headers |
 | No method allowlist | `/v1/invoke` dispatches any registered keyword, including `:thread-api/unsafe-unlink-db` |
-| Browser tabs are blocked | `Access-Control-Allow-Origin: lsp://logseq.com` (`db_worker_node.cljs:29`) — the main window origin |
+| Browser tabs are blocked | `Access-Control-Allow-Origin: lsp://logseq.com` (`db_worker_node.cljs:33`) — the main window origin |
 | Plain-JSON `args` silently breaks options | `<invoke!` re-encodes `args` verbatim; keyword keys never materialise. Use `argsTransit`. |
 | The worker does not render | `:block/title` is markdown-ish text with `[[uuid]]` refs; parsing and the editor are renderer-side |
 | Large, internal surface | 163 methods; `db_core.cljs` had a 1,313-line diff between June and September; handlers moved into `worker/handler/*` |
@@ -57,7 +57,7 @@ The renderer-facing event contract is the `defmethod handle` set in `frontend/ha
 - `/v1/` is the only protocol marker. No `/v2`, no negotiation (`git grep` for `protocol-version`/`api-version` is empty).
 - `:thread-api/get-version` is in `non-repo-methods` but **has no definition** anywhere. Invoking it returns `No method found`.
 - `/healthz.revision` = `logseq.common.version/REVISION`, a `goog-define` set at build time; `"dev"` in dev builds.
-- Enforcement exists only in the CLI: `cli/server.cljs:106` and `cli/lib/server_runtime.ml:670` compare revisions exactly and restart mismatched workers. Electron does not (`dz/docs/10-agent-guide/db-worker/001-*.md` is a plan, CLI-only so far).
+- Enforcement exists only in the CLI: `cli/server.cljs:106` and `cli/lib/server_runtime.ml:370` compare revisions exactly and restart mismatched workers. Electron does not (`dz/docs/10-agent-guide/db-worker/001-*.md` is a plan, CLI-only so far).
 
 ### Generating the reference instead of writing it
 

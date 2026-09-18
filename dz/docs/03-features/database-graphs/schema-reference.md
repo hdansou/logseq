@@ -560,7 +560,7 @@ Other system properties.
 
 ### Class Categories
 
-**Location**: `deps/db/src/logseq/db/frontend/class.cljs:95-120`
+**Location**: `deps/db/src/logseq/db/frontend/class.cljs:94-119`
 
 | Category                  | Classes                                                                       | Purpose                                                                            |
 | ------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |

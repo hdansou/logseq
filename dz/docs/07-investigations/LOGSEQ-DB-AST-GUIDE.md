@@ -277,7 +277,7 @@ AST nodes can have position metadata attached:
 
 ### 3.3 Inline Parsing
 
-**Location:** `deps/graph-parser/src/logseq/graph_parser/mldoc.cljc:177-185`
+**Location:** `deps/graph-parser/src/logseq/graph_parser/mldoc.cljc:175-183`
 
 ```clojure
 (defn inline->edn
@@ -1421,7 +1421,7 @@ logseq.Editor.getBlock(uuid).then((block) => {
 | Function                     | Location                      | Purpose                   |
 | ---------------------------- | ----------------------------- | ------------------------- |
 | `mldoc/->edn`                | `graph_parser/mldoc.cljc:148` | Parse text → AST          |
-| `mldoc/inline->edn`          | `graph_parser/mldoc.cljc:177` | Parse inline text → AST   |
+| `mldoc/inline->edn`          | `graph_parser/mldoc.cljc:175` | Parse inline text → AST   |
 | `block/extract-blocks`       | `graph_parser/block.cljs:713` | AST → block entities      |
 | `block/parse-title-and-body` | `format/block.cljs:118`       | Parse & cache block AST   |
 | `map-inline`                 | `components/block.cljs`       | AST → hiccup              |

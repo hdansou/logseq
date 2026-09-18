@@ -4,8 +4,8 @@ status: 🟢 Stable
 version: 'Logseq DB (shui/radix token era)'
 quadrant: 'Tutorial'
 platform: 'Desktop + Mobile'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '[Custom CSS Guide](../../how-to/integrations/custom-css.md)'
@@ -15,6 +15,10 @@ tags: ['themes', 'CSS', 'customization', 'design']
 ---
 
 # Build a Custom Theme
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Create a complete custom theme for Logseq. This hands-on tutorial guides you through designing, implementing, and publishing a theme from scratch.
 
@@ -126,7 +130,7 @@ Install in Logseq:
 5. Pick your theme from the Themes list
 ```
 
-Developer mode is `developer-mode-row` (`src/main/frontend/components/settings.cljs:568-575`); `t p` is bound to `:ui/goto-plugins` (`src/main/frontend/modules/shortcut/config.cljs:464-466`); the button comes from the string `:plugin/load-unpacked` (`src/resources/dicts/en.edn:1264`, rendered at `src/main/frontend/components/plugins.cljs:833-837`). The Themes list is the `installed-themes` dialog (`src/main/frontend/components/plugins.cljs:79-124`).
+Developer mode is `developer-mode-row` (`src/main/frontend/components/settings.cljs:580-587`); `t p` is bound to `:ui/goto-plugins` (`src/main/frontend/modules/shortcut/config.cljs:464-466`); the button comes from the string `:plugin/load-unpacked` (`src/resources/dicts/en.edn:1264`, rendered at `src/main/frontend/components/plugins.cljs:833-837`). The Themes list is the `installed-themes` dialog (`src/main/frontend/components/plugins.cljs:79-124`).
 
 ---
 
@@ -424,9 +428,9 @@ Add semantic naming:
 
 **Step 3: Apply to Tasks and Checkboxes**
 
-> **DB graphs have no `TODO` / `DOING` / `DONE` markers.** Task state is the closed-value property `:logseq.property/status`, whose values are the idents `:logseq.property/status.backlog`, `.todo`, `.doing`, `.in-review`, `.done`, `.canceled` (`deps/db/src/logseq/db/frontend/property.cljs:300-318`). It is declared with `:ui-position :block-left`, so it renders through `block-positioned-properties` (`src/main/frontend/components/block.cljs:1285`), as a property value with a tabler icon — not as a text marker.
+> **DB graphs have no `TODO` / `DOING` / `DONE` markers.** Task state is the closed-value property `:logseq.property/status`, whose values are the idents `:logseq.property/status.backlog`, `.todo`, `.doing`, `.in-review`, `.done`, `.canceled` (`deps/db/src/logseq/db/frontend/property.cljs:300-318`). It is declared with `:ui-position :block-left`, so it renders through `block-positioned-properties` (`src/main/frontend/components/block.cljs:1302`), as a property value with a tabler icon — not as a text marker.
 >
-> `.block-marker` and `.marker-switch` still exist in `src/main/frontend/components/block.css:945-958`, but nothing in the ClojureScript renders them any more; they are file-graph leftovers. There is also no `data-ref="TODO"` attribute: `data-ref` is set to a page name on page references (`src/main/frontend/components/block.cljs:804`) and to a uuid-or-title on block references (`:1275`) — never to a marker keyword. Any theme rule keyed on `[data-ref='TODO']` is dead CSS.
+> `.block-marker` and `.marker-switch` still exist in `src/main/frontend/components/block.css:965-978`, but nothing in the ClojureScript renders them any more; they are file-graph leftovers. There is also no `data-ref="TODO"` attribute: `data-ref` is set to a page name on page references (`src/main/frontend/components/block.cljs:815`) and to a uuid-or-title on block references (`:1292`) — never to a marker keyword. Any theme rule keyed on `[data-ref='TODO']` is dead CSS.
 
 Style the checkbox and the property surfaces instead:
 
@@ -698,13 +702,13 @@ a.tag {
 }
 ```
 
-`.block-ref` is real (`src/main/frontend/components/block.css:826`), as is `.block-ref-no-title` and `.open-block-ref-link`.
+`.block-ref` is real (`src/main/frontend/components/block.css:846`), as is `.block-ref-no-title` and `.open-block-ref-link`.
 
-> **There is no `.block-ref-count` class.** The reference-count badge is a shui ghost button carrying Tailwind utility classes, built in `block-refs-count` (`src/main/frontend/components/block.cljs:3502-3518`). `:block-ref-count` appears in the source only as a resource key for `db-hooks/use-resource` (`src/main/frontend/components/page.cljs:560`), never as a CSS class. Style it via the button tokens (`--primary`, `--accent`) instead, and keep the hit area intact.
+> **There is no `.block-ref-count` class.** The reference-count badge is a shui ghost button carrying Tailwind utility classes, built in `block-refs-count` (`src/main/frontend/components/block.cljs:3551-3567`). `:block-ref-count` appears in the source only as a resource key for `db-hooks/use-resource` (`src/main/frontend/components/page.cljs:560`), never as a CSS class. Style it via the button tokens (`--primary`, `--accent`) instead, and keep the hit area intact.
 
 **Step 3: Block Properties**
 
-The property panel is `.ls-properties-area`, with `.ls-block-properties` added for block-level (rather than page-level) panels (`src/main/frontend/components/property.cljs:975`; styled at `src/main/frontend/components/property.css:36`, `:95`, `:110`). Rows are `.property-pair`, split into `.property-key-panel` and `.property-value-panel`, and rows carry `[data-property-type=...]`:
+The property panel is `.ls-properties-area`, with `.ls-block-properties` added for block-level (rather than page-level) panels (`src/main/frontend/components/property.cljs:998`; styled at `src/main/frontend/components/property.css:36`, `:95`, `:110`). Rows are `.property-pair`, split into `.property-key-panel` and `.property-value-panel`, and rows carry `[data-property-type=...]`:
 
 ```css
 /* Block-level property panel */
@@ -738,9 +742,9 @@ The property panel is `.ls-properties-area`, with `.ls-block-properties` added f
 }
 ```
 
-Prefer the variables first: the panel background is `--ls-block-properties-background-color` for blocks and `--ls-page-properties-background-color` for pages (`src/main/frontend/components/block.css:939-942`).
+Prefer the variables first: the panel background is `--ls-block-properties-background-color` for blocks and `--ls-page-properties-background-color` for pages (`src/main/frontend/components/block.css:959-962`).
 
-> **`.block-property`, `.block-property-key` and `.block-property-value` do not exist** in the app's CSS or ClojureScript. `.block-properties` does exist (`block.css:939`) but is the outer container only.
+> **`.block-property`, `.block-property-key` and `.block-property-value` do not exist** in the app's CSS or ClojureScript. `.block-properties` does exist (`block.css:959`) but is the outer container only.
 
 ### Sidebar
 
@@ -940,7 +944,7 @@ Button colours come from the shui tokens you set in the Color System section —
 }
 ```
 
-`#app-container` (`src/main/frontend/components/container.css:12`), `#main-content` (`:52`) and `#main-content-container` (`:57`) are all real; `#main-content-container` is also referenced from `src/main/frontend/components/block.css:1039`.
+`#app-container` (`src/main/frontend/components/container.css:12`), `#main-content` (`:52`) and `#main-content-container` (`:57`) are all real; `#main-content-container` is also referenced from `src/main/frontend/components/block.css:1059`.
 
 **Prefer the width variables over a hard-coded `max-width`.** The content column width is applied to `.cp__sidebar-main-content`, which uses `--ls-main-content-max-width` normally (`container.css:503`) and `--ls-main-content-max-width-wide` in wide mode (`:490`). Defaults are `960px` and `1440px` (`src/main/frontend/shui/vars-classic.css:6-7`). Setting a `max-width` on `#main-content` instead fights that switch:
 
@@ -956,7 +960,7 @@ html[data-theme='dark'] {
 
 **Header Styling:**
 
-Title sizing is a variable, not a font-size rule. `--ls-page-title-size` (default `32px`) and `--ls-page-title-line-height` drive `h1.title` and `.ls-page-title-container` (`src/main/frontend/common.css:334-341`); mobile overrides `--ls-page-title-size` on its own (`src/main/frontend/components/block.css:717`), so setting the variable keeps both platforms consistent.
+Title sizing is a variable, not a font-size rule. `--ls-page-title-size` (default `32px`) and `--ls-page-title-line-height` drive `h1.title` and `.ls-page-title-container` (`src/main/frontend/common.css:334-341`); mobile overrides `--ls-page-title-size` on its own (`src/main/frontend/components/block.css:737`), so setting the variable keeps both platforms consistent.
 
 ```css
 html[data-theme='light'],
@@ -976,9 +980,9 @@ a.page-title {
 }
 ```
 
-Real selectors here: `h1.title` and `.ls-page-title-container` (`common.css:334`), `.ls-page-title` (`block.css:661`), `a.page-title` and `.page-title-sizer-wrapper` (`src/main/frontend/components/page.css:80, 88`), `.ls-page-properties` (`src/main/frontend/components/property.cljs:974`, styled at `property.css:28` and `:483`), `.journal-title`, `.breadcrumb`.
+Real selectors here: `h1.title` and `.ls-page-title-container` (`common.css:334`), `.ls-page-title` (`block.css:681`), `a.page-title` and `.page-title-sizer-wrapper` (`src/main/frontend/components/page.css:80, 88`), `.ls-page-properties` (`src/main/frontend/components/property.cljs:997`, styled at `property.css:28` and `:492`), `.journal-title`, `.breadcrumb`.
 
-> **`.page-header`, `.page-properties-area` and `.page-property-item` do not exist as CSS classes.** `page-header` in `src/main/frontend/components/shortcut.cljs:242` is a local binding for `page-el.querySelector(":scope > header")`, and `page-properties-area?` in `src/main/frontend/components/property.cljs:934` is a boolean, not a class name. A bare `.page-title` rule *does* match, but only via `a.page-title`; the app has no standalone `.page-title` block element.
+> **`.page-header`, `.page-properties-area` and `.page-property-item` do not exist as CSS classes.** `page-header` in `src/main/frontend/components/shortcut.cljs:242` is a local binding for `page-el.querySelector(":scope > header")`, and `page-properties-area?` in `src/main/frontend/components/property.cljs:957` is a boolean, not a class name. A bare `.page-title` rule *does* match, but only via `a.page-title`; the app has no standalone `.page-title` block element.
 
 ### Spacing System
 

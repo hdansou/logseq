@@ -3,8 +3,8 @@ title: 'Markdown Mirror Syntax'
 description: 'Cheatsheet of how Logseq DB graph content is written to Markdown Mirror files, with the parts that are lossy or ambiguous for a future two-way mirror'
 status: stable
 quadrant: 'Reference'
-lastVerified: '2026-09-12'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: authored-from-source
 graphType: [db]
 platform: 'Desktop'
@@ -17,6 +17,10 @@ tags: ['markdown', 'mirror', 'export', 'syntax', 'reference']
 ---
 
 # Markdown Mirror Syntax
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 A DB graph keeps its content in a database. When **Markdown Mirror** is on, the desktop app also
 writes each page to a `.md` file. This page is the cheatsheet for that translation: for each thing
@@ -76,10 +80,10 @@ apart from something else is marked, so that a future two-way mirror holds no su
 
 | | |
 |---|---|
-| Where | **Settings → Features → Markdown Mirror**, with a **Regenerate full mirror** button ([`settings.cljs:793-825`](../../../../../src/main/frontend/components/settings.cljs)) |
-| Label text | "Write a derived Markdown copy of edited pages to the graph's mirror/markdown folder. Desktop only." ([`en.edn:1732`](../../../../../src/resources/dicts/en.edn)) |
+| Where | **Settings → Features → Markdown Mirror**, with a **Regenerate full mirror** button ([`settings.cljs:805-837`](../../../../../src/main/frontend/components/settings.cljs)) |
+| Label text | "Write a derived Markdown copy of edited pages to the graph's mirror/markdown folder. Desktop only." ([`en.edn:1733`](../../../../../src/resources/dicts/en.edn)) |
 | Config key | `:feature/markdown-mirror?` (off unless `true`) |
-| Platforms | Desktop only. The row is rendered only under Electron ([`settings.cljs:1158-1159`](../../../../../src/main/frontend/components/settings.cljs)); the writer runs only on a Node or Electron runtime ([`markdown_mirror.cljs:200-203`](../../../../../src/main/frontend/worker/markdown_mirror.cljs)). Web and mobile never write. |
+| Platforms | Desktop only. The row is rendered only under Electron ([`settings.cljs:1170-1171`](../../../../../src/main/frontend/components/settings.cljs)); the writer runs only on a Node or Electron runtime ([`markdown_mirror.cljs:200-203`](../../../../../src/main/frontend/worker/markdown_mirror.cljs)). Web and mobile never write. |
 | When files change | After an edit, changes are batched and written about **1 second** later ([`markdown_mirror.cljs:660-672`](../../../../../src/main/frontend/worker/markdown_mirror.cljs)). A file is rewritten only if its content changed. Renaming a page writes the new file and deletes the old one; it also rewrites pages that link to it. Deleting a page deletes its file ([`markdown_mirror.cljs:674-694`](../../../../../src/main/frontend/worker/markdown_mirror.cljs)). |
 | Direction | One way. `mirror/markdown` is on the shared ignore list, so editing those files does not change the graph ([`graph.cljs:84`](../../../../../deps/common/src/logseq/common/graph.cljs)). |
 
@@ -212,7 +216,7 @@ still round-trips as text.
 | `&nbsp;`, `&alpha;`, `:smile:` | ❌ | Shown literally |
 | `\*escaped\*` | ✅ | Backslash escapes |
 
-Sources: [`block.cljs:1931-2068`](../../../../../src/main/frontend/components/block.cljs), parsed with mldoc 1.5.9 and the DB parser settings ([`mldoc.cljc:338-349`](../../../../../deps/graph-parser/src/logseq/graph_parser/mldoc.cljc)).
+Sources: [`block.cljs:1931-2068`](../../../../../src/main/frontend/components/block.cljs), parsed with mldoc 1.5.9 and the DB parser settings ([`mldoc.cljc:344-355`](../../../../../deps/graph-parser/src/logseq/graph_parser/mldoc.cljc)).
 
 **Block background colour** (bullet menu swatch) is a hidden property and is **not written** ❌.
 Only inline `==…==` / `^^…^^` survives.
@@ -269,7 +273,7 @@ the embedded block or page. There is no `{{embed}}` macro in DB graphs.
 ## Tasks
 
 Status is a property, not text. Typing `TODO ` does **not** create a task in a DB graph; it stays
-literal text ([`mldoc.cljc:345-347`](../../../../../deps/graph-parser/src/logseq/graph_parser/mldoc.cljc)).
+literal text ([`mldoc.cljc:351-353`](../../../../../deps/graph-parser/src/logseq/graph_parser/mldoc.cljc)).
 Use `/Todo`, `/Doing`… or Cmd/Ctrl+Enter.
 
 The mirror writes the status as an upper-case word at the start of the line, with spaces turned
@@ -391,7 +395,7 @@ bullet ✅.
 | `$$ … $$` inside a block, `\begin{equation}` | ✅ | |
 | Mermaid / diagrams | ❌ | Plugin only |
 
-Sources: [`block.cljs:4745-5130`](../../../../../src/main/frontend/components/block.cljs).
+Sources: [`block.cljs:4795-5180`](../../../../../src/main/frontend/components/block.cljs).
 
 ---
 
@@ -425,7 +429,7 @@ Macros are stored and written as typed ✅.
 | `{{embed …}}`, `{{query …}}`, `{{namespace …}}` | ❌ deprecation warning |
 | `{{today}}`, `{{date}}`, `{{pdf}}`, anything else | ❌ "Unsupported macro name" |
 
-Source: [`block.cljs:1860-1929`](../../../../../src/main/frontend/components/block.cljs).
+Source: [`block.cljs:1877-1946`](../../../../../src/main/frontend/components/block.cljs).
 
 ---
 

@@ -343,7 +343,7 @@ spawn-server! (if needed)
     ↓
 db-worker-node starts
     ↓
-create-lock! (db_worker_node_lock.cljs:71)
+create-lock! (db_worker_node_lock.cljs:72)
     ↓
 openSync with "wx" flag (exclusive create)
     ↓

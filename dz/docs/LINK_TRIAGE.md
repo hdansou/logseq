@@ -102,7 +102,7 @@ No counterpart exists. Each is a decision: write the page, or drop the link.
 `develop-logseq-on-mobile.md`, `file-system-errors.md`, `CHANGELOG.md`, `CONTRIBUTING.md`.
 
 `built-in-classes.md` is the most-referenced of these and the easiest to write — the 18
-built-in classes are enumerated in `deps/db/src/logseq/db/frontend/class.cljs:18-105` at
+built-in classes are enumerated in `deps/db/src/logseq/db/frontend/class.cljs:17-104` at
 `be800f1711`.
 
 ## Recommended next steps

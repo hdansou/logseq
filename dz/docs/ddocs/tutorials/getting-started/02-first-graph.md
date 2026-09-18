@@ -3,8 +3,8 @@ title: 'Your First Graph'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 platform: 'All'
 related-docs:
@@ -14,6 +14,10 @@ related-docs:
 ---
 
 # Your First Graph
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -38,7 +42,7 @@ Open the Logseq application you installed in the previous tutorial.
 
 ### Step 2: Understand the Graph Type
 
-Every graph you create is a **DB graph** (database graph). On desktop, each graph is a single `db.sqlite` database under `~/logseq/graphs` ([`deps/common/src/logseq/common/config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs), [`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs)), not a folder of Markdown files.
+Every graph you create is a **DB graph** (database graph). On desktop, each graph is a single `db.sqlite` database under `~/logseq/graphs` ([`deps/common/src/logseq/common/config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs), [`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs)), not a folder of Markdown files.
 
 On first launch Logseq has already created a DB graph named `Demo` and opened it ([`src/main/frontend/handler.cljs:189-190`](../../../../../src/main/frontend/handler.cljs)). You can practise in `Demo`, but it's hidden from the **All graphs** list ([`src/main/frontend/components/repo.cljs:319`](../../../../../src/main/frontend/components/repo.cljs)), so create a named graph of your own for real notes.
 
@@ -60,7 +64,7 @@ On first launch Logseq has already created a DB graph named `Demo` and opened it
 1. Click the graph name at the top of the left sidebar to open the graph switcher ([`src/main/frontend/components/left_sidebar.cljs:164`](../../../../../src/main/frontend/components/left_sidebar.cljs))
 2. Click **Create db graph** at the bottom of the menu. In the web version it reads **Create a new graph** ([`src/main/frontend/components/repo.cljs:427-431`](../../../../../src/main/frontend/components/repo.cljs); labels in `src/resources/dicts/en.edn:731`, `:733`). The **All graphs** page (`g` then `Shift+G`) has the same **Create a new graph** button ([`src/main/frontend/components/repo.cljs:341-343`](../../../../../src/main/frontend/components/repo.cljs), shortcut [`src/main/frontend/modules/shortcut/config.cljs:399`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
 3. A **Create a new graph** dialog opens ([`src/main/frontend/handler/events/ui.cljs:372-376`](../../../../../src/main/frontend/handler/events/ui.cljs)). Type a name (e.g., "My Knowledge Base") in the **your graph name** field (`en.edn:760`)
-4. Press `Enter` or click **Submit** ([`src/main/frontend/components/repo.cljs:724-730`](../../../../../src/main/frontend/components/repo.cljs); `en.edn:1900`)
+4. Press `Enter` or click **Submit** ([`src/main/frontend/components/repo.cljs:724-730`](../../../../../src/main/frontend/components/repo.cljs); `en.edn:1901`)
 
 Graph names can't contain `<`, `>`, `:`, `"`, `/`, `\`, `|`, `?`, `*`, `#` or `+` ([`src/main/frontend/components/repo.cljs:600-624`](../../../../../src/main/frontend/components/repo.cljs)). If your account has sync access, the dialog also shows a **Use Logseq Sync?** checkbox ([`src/main/frontend/components/repo.cljs:700-712`](../../../../../src/main/frontend/components/repo.cljs)). Leave it unchecked for this tutorial.
 
@@ -80,8 +84,8 @@ You should now see:
 
 - **Main Content Area:** The central panel for editing. With no custom home page set, it shows your journals ([`src/main/frontend/components/container.cljs:178-180`](../../../../../src/main/frontend/components/container.cljs))
 - **Left Sidebar:** The graph switcher at the top ([`left_sidebar.cljs:164`](../../../../../src/main/frontend/components/left_sidebar.cljs)), then **Navigations** with **Journals**, **Flashcards**, **Graph view** and **Pages**, then **Favorites** and **Recent** ([`src/main/frontend/components/left_sidebar.cljs:259-386`](../../../../../src/main/frontend/components/left_sidebar.cljs))
-- **Right Sidebar:** Its top bar has **Contents**, **Page graph** and **Help** buttons, and pages or blocks you open in the sidebar appear below them ([`src/main/frontend/components/right_sidebar.cljs:514-531`](../../../../../src/main/frontend/components/right_sidebar.cljs))
-- **Header:** **Search** ([`src/main/frontend/components/header.cljs:563`](../../../../../src/main/frontend/components/header.cljs)) and a menu with **Settings**, **Plugins**, **Appearance**, **Recycle**, **Export graph** and **Import** ([`src/main/frontend/components/header.cljs:209-233`](../../../../../src/main/frontend/components/header.cljs))
+- **Right Sidebar:** Its top bar has **Contents**, **Page graph** and **Help** buttons, and pages or blocks you open in the sidebar appear below them ([`src/main/frontend/components/right_sidebar.cljs:525-542`](../../../../../src/main/frontend/components/right_sidebar.cljs))
+- **Header:** **Search** ([`src/main/frontend/components/header.cljs:569`](../../../../../src/main/frontend/components/header.cljs)) and a menu with **Settings**, **Plugins**, **Appearance**, **Recycle**, **Export graph** and **Import** ([`src/main/frontend/components/header.cljs:210-234`](../../../../../src/main/frontend/components/header.cljs))
 
 ## Understanding the Interface
 
@@ -137,10 +141,10 @@ Let's create your first content:
 ### Exercise 1: Write in Today's Journal
 
 1. Click in the main content area (you should see today's date as the title)
-2. Click the empty row under today's date to start a block ([`src/main/frontend/components/page.cljs:226`](../../../../../src/main/frontend/components/page.cljs); clicking it inserts a block, `:76-80`)
+2. Click the empty row under today's date to start a block ([`src/main/frontend/components/page.cljs:227`](../../../../../src/main/frontend/components/page.cljs); clicking it inserts a block, `:77-81`)
 3. Type: `Welcome to my knowledge base!`
 4. Press `Enter` to create a new block
-5. Type `I'm learning how to use `, then type `[[`. Logseq adds the closing `]]` and opens a page search ([`src/main/frontend/handler/editor.cljs:1943-1947`](../../../../../src/main/frontend/handler/editor.cljs))
+5. Type `I'm learning how to use `, then type `[[`. Logseq adds the closing `]]` and opens a page search ([`src/main/frontend/handler/editor.cljs:1976-1980`](../../../../../src/main/frontend/handler/editor.cljs))
 6. Type `Logseq`. If no page by that name exists, the first popup item is **New page Logseq** ([`src/main/frontend/components/editor.cljs:174-190`](../../../../../src/main/frontend/components/editor.cljs); `en.edn:499`). Press `Enter` to pick it
 7. Press `Esc` to finish editing ([`src/main/frontend/components/editor.cljs:754-757`](../../../../../src/main/frontend/components/editor.cljs))
 
@@ -163,7 +167,7 @@ Notice how "Logseq" became a clickable link? You just created a page link!
 ### Exercise 3: See the Connection
 
 1. Stay on the "Logseq" page and scroll below its content
-2. You should see a section called **Linked references** ([`src/main/frontend/components/page.cljs:521-529`](../../../../../src/main/frontend/components/page.cljs); `en.edn:1920`)
+2. You should see a section called **Linked references** ([`src/main/frontend/components/page.cljs:521-529`](../../../../../src/main/frontend/components/page.cljs); `en.edn:1921`)
 3. You'll see your journal entry that mentioned "Logseq"
 
 This is **bidirectional linking** in action! When you link to a page, that page automatically knows what links to it.
@@ -176,7 +180,7 @@ This is **bidirectional linking** in action! When you link to a page, that page 
 | ----------------------- | ---------------- |
 | **First graph creation** | A `Demo` DB graph is created automatically; you create named DB graphs from the graph switcher |
 | **Storage format**       | One `db.sqlite` per graph ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs)) |
-| **Import paths**         | SQLite, SQLite + assets (.zip), File to DB graph, Debug Transit, EDN to DB graph ([`src/main/frontend/components/imports.cljs:572-628`](../../../../../src/main/frontend/components/imports.cljs)) |
+| **Import paths**         | SQLite, SQLite + assets (.zip), File to DB graph, Debug Transit, EDN to DB graph ([`src/main/frontend/components/imports.cljs:576-632`](../../../../../src/main/frontend/components/imports.cljs)) |
 | **Migration strategy**   | Use Import/Export workflows |
 
 > **Removed:** Fixed performance thresholds like "100k+ blocks" and "50k+ blocks" in beginner guidance. Performance depends on graph shape, plugins, device, and sync conditions.
@@ -187,7 +191,7 @@ This is **bidirectional linking** in action! When you link to a page, that page 
 
 Validated against `origin/master` (`be800f1711`) on 2026-09-11:
 
-- The Import page offers five entry points: **SQLite**, **SQLite + assets (.zip)**, **File to DB graph**, **Debug Transit** and **EDN to DB graph** ([`src/main/frontend/components/imports.cljs:572-628`](../../../../../src/main/frontend/components/imports.cljs)).
+- The Import page offers five entry points: **SQLite**, **SQLite + assets (.zip)**, **File to DB graph**, **Debug Transit** and **EDN to DB graph** ([`src/main/frontend/components/imports.cljs:576-632`](../../../../../src/main/frontend/components/imports.cljs)).
 - Desktop and mobile both create graphs through the same DB-graph dialog ([`src/main/mobile/components/header.cljs:80-88`](../../../../../src/main/mobile/components/header.cljs) reuses `repo/new-db-graph`).
 - Linked and unlinked references render at the bottom of page views ([`src/main/frontend/components/page.cljs:521-537`](../../../../../src/main/frontend/components/page.cljs)).
 

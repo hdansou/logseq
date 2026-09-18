@@ -3,8 +3,8 @@ title: 'Code Blocks Reference'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Reference'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 reviewStatus: audited
 graphType: [db]
 platform: 'All'
@@ -18,6 +18,10 @@ related-docs:
 
 # Code Blocks Reference
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 Complete reference for code blocks in Logseq DB graphs. The editor is CodeMirror 5, pinned at `5.65.18` (`package.json:161`). All source paths are at `be800f1711`.
 
 ## Basic Syntax
@@ -30,11 +34,11 @@ Wrap code in single backticks:
 Use the `console.log()` function to output
 ```
 
-**Renders as:** Use the `console.log()` function to output. Inline `Code` and `Verbatim` nodes render as `<code>` (`src/main/frontend/components/block.cljs:2016-2017`).
+**Renders as:** Use the `console.log()` function to output. Inline `Code` and `Verbatim` nodes render as `<code>` (`src/main/frontend/components/block.cljs:2033-2034`).
 
 ### Code Blocks Are Nodes
 
-In a DB graph, a code block is a block whose `:logseq.property.node/display-type` is `:code`. Its language is stored in `:logseq.property.code/lang`, and its `:block/title` is the raw code with no fences. Such a block renders with the code editor (`block.cljs:2582-2583`). See [Creating Code Blocks](#creating-code-blocks).
+In a DB graph, a code block is a block whose `:logseq.property.node/display-type` is `:code`. Its language is stored in `:logseq.property.code/lang`, and its `:block/title` is the raw code with no fences. Such a block renders with the code editor (`block.cljs:2619-2620`). See [Creating Code Blocks](#creating-code-blocks).
 
 A complete fenced block can also end up inside an ordinary block's text:
 
@@ -46,7 +50,7 @@ function greet(name) {
 ```
 ````
 
-mldoc parses it as a `Src` node, and the block renders it with the same editor (`block.cljs:5116-5124`). The language picker does not change the language of such a fence. Code evaluation and plugin renderers apply only to fences like this (see [Limitations](#limitations)).
+mldoc parses it as a `Src` node, and the block renders it with the same editor (`block.cljs:5166-5174`). The language picker does not change the language of such a fence. Code evaluation and plugin renderers apply only to fences like this (see [Limitations](#limitations)).
 
 ## Creating Code Blocks
 
@@ -58,7 +62,7 @@ The slash command has no language dropdown. The block gets the **last language y
 
 ### Method 2: Triple Backticks
 
-Type three backticks in an empty block. Backticks auto-pair, so three keystrokes produce six characters (`src/main/frontend/handler/editor.cljs:3405-3407`). When the block's whole content is exactly six backticks, Logseq converts it into a code block with an empty title (`editor.cljs:3559-3563`).
+Type three backticks in an empty block. Backticks auto-pair, so three keystrokes produce six characters (`src/main/frontend/handler/editor.cljs:3438-3440`). When the block's whole content is exactly six backticks, Logseq converts it into a code block with an empty title (`editor.cljs:3592-3596`).
 
 ### Method 3: Calculator
 
@@ -66,7 +70,7 @@ Type three backticks in an empty block. Backticks auto-pair, so three keystrokes
 
 ### Display Type and the Code Tag Stay in Sync
 
-The built-in class for code blocks is `:logseq.class/Code-block`, titled "Code" (`deps/db/src/logseq/db/frontend/class.cljs:76-79`). The DB worker keeps the class and the display type in step:
+The built-in class for code blocks is `:logseq.class/Code-block`, titled "Code" (`deps/db/src/logseq/db/frontend/class.cljs:75-78`). The DB worker keeps the class and the display type in step:
 
 - Setting display type `:code` adds that tag.
 - Adding the tag sets display type `:code`. If the block has no language yet, it also applies the latest code language.
@@ -79,19 +83,19 @@ Source: `src/main/frontend/worker/pipeline.cljs:316-336`.
 
 Hovering a code block shows two buttons:
 
-- **Language button.** It shows the current language, or "Choose language" (`block.cljs:4950`, `en.edn:490`). It opens a picker listing every `CodeMirror.modeInfo` name. Choosing one does three things (`block.cljs:4882-4894`, `:4927-4948`):
+- **Language button.** It shows the current language, or "Choose language" (`block.cljs:5000`, `en.edn:490`). It opens a picker listing every `CodeMirror.modeInfo` name. Choosing one does three things (`block.cljs:4932-4944`, `:4977-4998`):
   - switches the editor mode;
   - sets `:logseq.property.code/lang` to that name, for example `Python`;
   - stores the name as `:logseq.kv/latest-code-lang`.
 
-  The picker acts only on blocks whose display type is `:code` (`block.cljs:4891-4893`).
-- **Copy.** Copies the editor's contents to the clipboard and shows a "copied" notification (`block.cljs:4952-4961`).
+  The picker acts only on blocks whose display type is `:code` (`block.cljs:4941-4943`).
+- **Copy.** Copies the editor's contents to the clipboard and shows a "copied" notification (`block.cljs:5002-5011`).
 
 ## Supported Languages
 
 A language string is resolved in two steps:
 
-1. The code block component maps `edn`, `clj`, `cljc`, `cljs` and `clojurescript` to `clojure` (`block.cljs:4915`).
+1. The code block component maps `edn`, `clj`, `cljc`, `cljs` and `clojurescript` to `clojure` (`block.cljs:4965`).
 2. `text->cm-mode` lower-cases the string and calls `CodeMirror.findModeByName` (`src/main/frontend/extensions/code.cljs:374-389`). That function matches a mode's **name or alias**, case-insensitively (`codemirror/mode/meta.js:212-220` in CodeMirror 5.65.18). If it finds one, the editor uses that mode's MIME type. If not, the lower-cased string is passed through as a mode name.
 
 So an identifier gets highlighting only if it is a CodeMirror name or alias, or exactly the name of a registered mode. `code.cljs` imports 122 `codemirror/mode/*` files.
@@ -388,7 +392,7 @@ volumes:
 
 ## Code Block with Classes
 
-Logseq tags code blocks with `:logseq.class/Code-block`. The class schema declares both properties (`class.cljs:76-79`):
+Logseq tags code blocks with `:logseq.class/Code-block`. The class schema declares both properties (`class.cljs:75-78`):
 
 - `:logseq.property.code/lang`: language identifier
 - `:logseq.property.node/display-type`: display type
@@ -405,15 +409,15 @@ Logseq tags code blocks with `:logseq.class/Code-block`. The class schema declar
 
 The value of `:logseq.property.code/lang` depends on where it came from:
 
-- The language picker stores the CodeMirror mode name, such as `JavaScript` (`block.cljs:4882-4894`).
+- The language picker stores the CodeMirror mode name, such as `JavaScript` (`block.cljs:4932-4944`).
 - The file-graph importer stores the language exactly as written on the fence.
 
 The importer handles fences this way:
 
-- A block whose text is a single fence and nothing else becomes a code block (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:2123-2130`).
-- Fences mixed with other text are moved into child code blocks only when the `:extract-code-snippets?` import option is set (`exporter.cljs:2131-2137`, children built at `:2048-2063`).
+- A block whose text is a single fence and nothing else becomes a code block (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:2165-2172`).
+- Fences mixed with other text are moved into child code blocks only when the `:extract-code-snippets?` import option is set (`exporter.cljs:2152-2158`, children built at `:2069-2084`).
 
-> **Removed:** this example previously showed `:block/title "```javascript\ncode\n```"`. In a DB graph the fences are not stored; `:block/title` holds the raw code. The importer builds exactly that shape (see above), and the editor sets `:block/title ""` when converting a block (`src/main/frontend/handler/editor.cljs:3559-3563`).
+> **Removed:** this example previously showed `:block/title "```javascript\ncode\n```"`. In a DB graph the fences are not stored; `:block/title` holds the raw code. The importer builds exactly that shape (see above), and the editor sets `:block/title ""` when converting a block (`src/main/frontend/handler/editor.cljs:3592-3596`).
 
 The class and the display type are two views of the same fact. `:code` ↔ `:logseq.class/Code-block` is a fixed mapping (`deps/db/src/logseq/db/frontend/db.cljs:113-130`), and the worker pipeline keeps the two in sync (`src/main/frontend/worker/pipeline.cljs:316-336`).
 
@@ -485,14 +489,14 @@ def fib(n, memo={}):
 A code block created with **Code block** or triple backticks is not executed. The known exceptions:
 
 - **Calculator blocks.** Blocks in `calc` mode compute a result for each line (`code.cljs:471`; see the [Calculator Reference](../features/calculator.md)).
-- **Clojure fences with `:results`.** A fence written as ```` ```clojure :results ```` inside an ordinary block's text is evaluated with SCI. The value appears under "Results:" (`block.cljs:4963-4965`, `src/main/frontend/extensions/sci.cljs:64-73`, `en.edn:1925`). mldoc 1.5.9 (`package.json:176`) parses `:results` into the fence's `options`. Code-display blocks never pass options (`block.cljs:2583`), so this does not happen for them.
+- **Clojure fences with `:results`.** A fence written as ```` ```clojure :results ```` inside an ordinary block's text is evaluated with SCI. The value appears under "Results:" (`block.cljs:5013-5015`, `src/main/frontend/extensions/sci.cljs:64-73`, `en.edn:1926`). mldoc 1.5.9 (`package.json:176`) parses `:results` into the fence's `options`. Code-display blocks never pass options (`block.cljs:2620`), so this does not happen for them.
 
   > **Unverified:** the `:results` path is read from source and the mldoc parser output; it was not reproduced in a running app.
 
 For anything else:
 
 - Copy the code to an external IDE or REPL.
-- Use a plugin. `logseq.Experiments.registerFencedCodeRenderer(lang, opts)` (`libs/src/modules/LSPlugin.Experiments.ts:105-120`) lets a plugin render its own UI for fences of a given language. It applies only to fences inside ordinary block text (`block.cljs:5120-5123`, `src/main/frontend/handler/plugin.cljs:593-596`). Plugins are off on native mobile (`src/main/frontend/util.cljc:131`).
+- Use a plugin. `logseq.Experiments.registerFencedCodeRenderer(lang, opts)` (`libs/src/modules/LSPlugin.Experiments.ts:105-120`) lets a plugin render its own UI for fences of a given language. It applies only to fences inside ordinary block text (`block.cljs:5170-5173`, `src/main/frontend/handler/plugin.cljs:593-596`). Plugins are off on native mobile (`src/main/frontend/util.cljc:131`).
 
 ### Limited Autocompletion
 
@@ -516,11 +520,11 @@ Use `Array.map()` to transform arrays, or `filter()` to select items.
 
 Verified against `be800f1711`:
 
-- **Code blocks remember your last language.** A block created with `/Code block` gets `:logseq.kv/latest-code-lang` instead of plain text (`src/main/frontend/handler/events.cljs:374-378`, `:400-406`). Choosing a language from the picker updates that entry (`block.cljs:4940-4948`).
+- **Code blocks remember your last language.** A block created with `/Code block` gets `:logseq.kv/latest-code-lang` instead of plain text (`src/main/frontend/handler/events.cljs:374-378`, `:411-417`). Choosing a language from the picker updates that entry (`block.cljs:4990-4998`).
 - **Advanced queries are themselves code blocks.** The **Advanced Query** slash command sets `:logseq.property.node/display-type :code` and `:logseq.property.code/lang "clojure"` on the query property's value block. That is why an advanced query renders with Clojure highlighting (`src/main/frontend/commands.cljs:125-132`). The plain **Query** command runs the query command instead (`commands.cljs:110-117`).
 - **`:editor/extra-codemirror-options` is a supported config escape hatch** for any CodeMirror 5 option (`src/main/frontend/extensions/code.cljs:370-372`, `:430-433`).
 - **`calc` is a special mode.** It gets `:viewportMargin js/Infinity` (`code.cljs:449-450`) and has its own **Calculator** slash command (`commands.cljs:119-123`, `:331-334`).
-- **Copy button and language picker** on every code block (`block.cljs:4927-4961`).
+- **Copy button and language picker** on every code block (`block.cljs:4977-5011`).
 
 ---
 

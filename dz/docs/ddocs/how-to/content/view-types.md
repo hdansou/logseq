@@ -2,8 +2,8 @@
 title: 'View Functions'
 description: 'How to create custom view functions for advanced query results'
 status: stable
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (58c47afdd6). The 2026-09-10 date covers only what :result-transform receives (bfcaeb03e7).'
 reviewStatus: audited
 platforms: [desktop, web, mobile]
@@ -16,6 +16,10 @@ relatedDocs:
 ---
 
 # View Functions
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-09 (verified against `be800f1711`)
 
@@ -86,7 +90,7 @@ view-f (and view-fn (sci/eval-string (pr-str view-fn)))
 ([`components/query.cljs:148-149`](../../../../../src/main/frontend/components/query.cljs) and
 [`:43-50`](../../../../../src/main/frontend/components/query.cljs)). The returned Hiccup is passed
 through `util/hiccup-keywordize`
-([`src/main/frontend/util.cljc:875-882`](../../../../../src/main/frontend/util.cljc)), which
+([`src/main/frontend/util.cljc:876-883`](../../../../../src/main/frontend/util.cljc)), which
 keywordises string tag names.
 
 ---
@@ -94,7 +98,7 @@ keywordises string tag names.
 ## Basic Syntax
 
 **A DB graph cannot run `#+BEGIN_QUERY`.** That markup renders a deprecation warning instead of a
-result set ([`src/main/frontend/components/block.cljs:5057-5058`](../../../../../src/main/frontend/components/block.cljs)).
+result set ([`src/main/frontend/components/block.cljs:5107-5108`](../../../../../src/main/frontend/components/block.cljs)).
 Create an advanced query with the `/Advanced Query` command, which tags the block
 `:logseq.class/Query` and puts your query map in the `:logseq.property/query` code block
 ([`src/main/frontend/commands.cljs:125-132`](../../../../../src/main/frontend/commands.cljs)).

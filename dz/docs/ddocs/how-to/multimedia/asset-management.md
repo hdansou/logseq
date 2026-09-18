@@ -4,8 +4,8 @@ status: '🟢 Stable'
 version: 'DB graph schema 65.33'
 quadrant: 'How-To Guide'
 platform: 'Desktop + Web + Mobile'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '../../reference/features/asset-sync.md'
@@ -16,6 +16,10 @@ related-docs:
 ---
 
 # Asset Management in Logseq
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This guide shows you how to add, view, resize, find, delete and back up assets in a Logseq DB graph. Assets are files you attach to a graph: images, PDFs, audio, video and any other file.
 
@@ -34,22 +38,22 @@ For link syntax, the full format lists and what sync replicates, see [Assets: Li
 | **Slash command** | Type `/Upload an asset` ("Upload file types like image, PDF, DOCX, etc.") and pick a file | [`en.edn:568-569`](../../../../../src/resources/dicts/en.edn); [`commands.cljs:335-338`](../../../../../src/main/frontend/commands.cljs); [`components/editor.cljs:495-504`](../../../../../src/main/frontend/components/editor.cljs) |
 | **Paste** | Paste a file or screenshot while editing a block | [`handler/paste.cljs:272-281`, `:298-300`](../../../../../src/main/frontend/handler/paste.cljs) |
 | **Drag and drop** | Drop files onto a block | [`components/block/drop.cljs:12-29`](../../../../../src/main/frontend/components/block/drop.cljs) |
-| **Asset tag page** | Open the **Asset** tag page, click its upload button, and pick files in the **Add assets** dialog | [`components/objects.cljs:79-92`](../../../../../src/main/frontend/components/objects.cljs); [`components/views.cljs:1964-1976`](../../../../../src/main/frontend/components/views.cljs); [`en.edn:69`](../../../../../src/resources/dicts/en.edn) |
+| **Asset tag page** | Open the **Asset** tag page, click its upload button, and pick files in the **Add assets** dialog | [`components/objects.cljs:79-92`](../../../../../src/main/frontend/components/objects.cljs); [`components/views.cljs:2106-2118`](../../../../../src/main/frontend/components/views.cljs); [`en.edn:69`](../../../../../src/resources/dicts/en.edn) |
 | **Mobile camera** | Tap **Photo** in the editor toolbar to take or choose a photo | [`src/main/mobile/components/editor_toolbar.cljs:141-149`](../../../../../src/main/mobile/components/editor_toolbar.cljs); [`frontend/mobile/camera.cljs:32-41`, `:61-72`](../../../../../src/main/frontend/mobile/camera.cljs); [`en.edn:1059`](../../../../../src/resources/dicts/en.edn) |
 
 The file picker has no type filter, so any file with an extension is accepted ([`components/editor.cljs:498-504`](../../../../../src/main/frontend/components/editor.cljs)).
 
 ### What happens when you add a file
 
-Every method ends in `db-based-save-assets!` → `new-asset-block` ([`src/main/frontend/handler/editor.cljs:1760-1869`](../../../../../src/main/frontend/handler/editor.cljs)):
+Every method ends in `db-based-save-assets!` → `new-asset-block` ([`src/main/frontend/handler/editor.cljs:1793-1902`](../../../../../src/main/frontend/handler/editor.cljs)):
 
-1. **Duplicate check.** Logseq computes the file's SHA-256 checksum ([`handler/assets.cljs:186-189`](../../../../../src/main/frontend/handler/assets.cljs); [`deps/db/src/logseq/db/frontend/asset.cljs:12-19`](../../../../../deps/db/src/logseq/db/frontend/asset.cljs)). If an asset with the same checksum exists, nothing is added and you see "Asset exists already, title: {1}, node reference: [[{2}]]" ([`editor.cljs:1770-1778`](../../../../../src/main/frontend/handler/editor.cljs); [`en.edn:81`](../../../../../src/resources/dicts/en.edn)). The file name does not matter.
-2. **Checks.** A file with no extension is rejected ("File doesn't have a valid ext."). A file over 100 MiB shows "Asset size shouldn't be larger than 100M" ([`editor.cljs:1781-1789`](../../../../../src/main/frontend/handler/editor.cljs); [`handler/assets.cljs:14-17`](../../../../../src/main/frontend/handler/assets.cljs); [`en.edn:109`](../../../../../src/resources/dicts/en.edn)).
-3. **File.** The bytes are written to `assets/<uuid>.<ext>` ([`editor.cljs:1790-1793`](../../../../../src/main/frontend/handler/editor.cljs)).
-4. **Block.** A block is created with the tag `Asset`, a title and the properties below ([`editor.cljs:1794-1802`](../../../../../src/main/frontend/handler/editor.cljs)). The title is the file name without its extension. A pasted file named `image` (a typical screenshot) gets the current date and time as its title instead ([`editor.cljs:1765-1769`](../../../../../src/main/frontend/handler/editor.cljs)).
-5. **Placement.** The new block goes next to the block you are editing (replacing it if it is empty), otherwise at the end of today's journal ([`editor.cljs:1819-1864`](../../../../../src/main/frontend/handler/editor.cljs)).
+1. **Duplicate check.** Logseq computes the file's SHA-256 checksum ([`handler/assets.cljs:217-220`](../../../../../src/main/frontend/handler/assets.cljs); [`deps/db/src/logseq/db/frontend/asset.cljs:12-19`](../../../../../deps/db/src/logseq/db/frontend/asset.cljs)). If an asset with the same checksum exists, nothing is added and you see "Asset exists already, title: {1}, node reference: [[{2}]]" ([`editor.cljs:1803-1811`](../../../../../src/main/frontend/handler/editor.cljs); [`en.edn:81`](../../../../../src/resources/dicts/en.edn)). The file name does not matter.
+2. **Checks.** A file with no extension is rejected ("File doesn't have a valid ext."). A file over 100 MiB shows "Asset size shouldn't be larger than 100M" ([`editor.cljs:1814-1822`](../../../../../src/main/frontend/handler/editor.cljs); [`handler/assets.cljs:14-17`](../../../../../src/main/frontend/handler/assets.cljs); [`en.edn:109`](../../../../../src/resources/dicts/en.edn)).
+3. **File.** The bytes are written to `assets/<uuid>.<ext>` ([`editor.cljs:1823-1826`](../../../../../src/main/frontend/handler/editor.cljs)).
+4. **Block.** A block is created with the tag `Asset`, a title and the properties below ([`editor.cljs:1827-1835`](../../../../../src/main/frontend/handler/editor.cljs)). The title is the file name without its extension. A pasted file named `image` (a typical screenshot) gets the current date and time as its title instead ([`editor.cljs:1798-1802`](../../../../../src/main/frontend/handler/editor.cljs)).
+5. **Placement.** The new block goes next to the block you are editing (replacing it if it is empty), otherwise at the end of today's journal ([`editor.cljs:1852-1897`](../../../../../src/main/frontend/handler/editor.cljs)).
 
-> **Note:** The extension check throws inside the upload promise and is only logged to the console ([`editor.cljs:1883-1885`](../../../../../src/main/frontend/handler/editor.cljs)). If an extensionless file seems to do nothing, that is why. Rename it with an extension.
+> **Note:** The extension check throws inside the upload promise and is only logged to the console ([`editor.cljs:1916-1918`](../../../../../src/main/frontend/handler/editor.cljs)). If an extensionless file seems to do nothing, that is why. Rename it with an extension.
 
 > Removed claim: "Markdown link inserted: `![](../assets/image.png)`". Adding a file creates an asset block, not a Markdown link. Also removed: the `/Upload an image` command (the command is **Upload an asset**) and "Spaces replaced with hyphens / `my-image_<timestamp>.png`" naming, which was file-graph behaviour.
 
@@ -61,14 +65,14 @@ Every method ends in `db-based-save-assets!` → `new-asset-block` ([`src/main/f
 
 | Platform | Location | Source |
 | -------- | -------- | ------ |
-| Desktop | `~/logseq/graphs/<graph folder>/assets/<uuid>.<ext>` | [`src/main/frontend/fs.cljs:118-126`](../../../../../src/main/frontend/fs.cljs); [`deps/common/src/logseq/common/config.cljs:55-56`](../../../../../deps/common/src/logseq/common/config.cljs) |
+| Desktop | `~/logseq/graphs/<graph folder>/assets/<uuid>.<ext>` | [`src/main/frontend/fs.cljs:118-126`](../../../../../src/main/frontend/fs.cljs); [`deps/common/src/logseq/common/config.cljs:58-59`](../../../../../deps/common/src/logseq/common/config.cljs) |
 | Browser | In-browser file storage under `memory:///<graph>/assets/` | [`src/main/frontend/worker/platform/browser.cljs:106-111`](../../../../../src/main/frontend/worker/platform/browser.cljs) |
 
 The file name comes from the block, so renaming the asset's title does not rename the file ([`src/main/frontend/components/block/asset.cljs:37-43`](../../../../../src/main/frontend/components/block/asset.cljs)).
 
 ### The asset block
 
-The `Asset` tag is defined in [`deps/db/src/logseq/db/frontend/class.cljs:68-74`](../../../../../deps/db/src/logseq/db/frontend/class.cljs):
+The `Asset` tag is defined in [`deps/db/src/logseq/db/frontend/class.cljs:67-73`](../../../../../deps/db/src/logseq/db/frontend/class.cljs):
 
 ```clojure
 :logseq.class/Asset
@@ -79,7 +83,7 @@ The `Asset` tag is defined in [`deps/db/src/logseq/db/frontend/class.cljs:68-74`
           :required-properties [:logseq.property.asset/type :logseq.property.asset/size :logseq.property.asset/checksum]}}
 ```
 
-`hide-from-node` hides the `Asset` tag chip on asset blocks ([`block.cljs:2883-2889`](../../../../../src/main/frontend/components/block.cljs)). The tag page shows its assets as a gallery by default.
+`hide-from-node` hides the `Asset` tag chip on asset blocks ([`block.cljs:2924-2930`](../../../../../src/main/frontend/components/block.cljs)). The tag page shows its assets as a gallery by default.
 
 **Properties** ([`deps/db/src/logseq/db/frontend/property.cljs:554-609`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)):
 
@@ -89,10 +93,10 @@ The `Asset` tag is defined in [`deps/db/src/logseq/db/frontend/class.cljs:68-74`
 | `:logseq.property.asset/size` | Size in bytes | Upload |
 | `:logseq.property.asset/checksum` | SHA-256 hex digest | Upload |
 | `:logseq.property.asset/external-url` | URL or path for an asset whose file is not in `assets/` | The asset form ([`components/assets.cljs:225-278`](../../../../../src/main/frontend/components/assets.cljs)) |
-| `:logseq.property.asset/external-file-name` | File name, used for Zotero PDFs | [`block.cljs:513-519`](../../../../../src/main/frontend/components/block.cljs) |
+| `:logseq.property.asset/external-file-name` | File name, used for Zotero PDFs | [`block.cljs:524-530`](../../../../../src/main/frontend/components/block.cljs) |
 | `:logseq.property.asset/width`, `…/height` | Natural image size in pixels, recorded the first time the image renders | [`block.cljs:231-243`](../../../../../src/main/frontend/components/block.cljs) |
-| `:logseq.property.asset/resize-metadata` | The width you dragged the image to | [`editor.cljs:2219-2224`](../../../../../src/main/frontend/handler/editor.cljs) |
-| `:logseq.property.asset/align` | `:left`, `:center` or `:right` | [`block.cljs:327-332`](../../../../../src/main/frontend/components/block.cljs) |
+| `:logseq.property.asset/resize-metadata` | The width you dragged the image to | [`editor.cljs:2252-2257`](../../../../../src/main/frontend/handler/editor.cljs) |
+| `:logseq.property.asset/align` | `:left`, `:center` or `:right` | [`block.cljs:338-343`](../../../../../src/main/frontend/components/block.cljs) |
 | `:logseq.property.asset/last-visit-page` | Last page viewed in a PDF (not synced) | [`property.cljs:589-593`](../../../../../deps/db/src/logseq/db/frontend/property.cljs) |
 | `:logseq.property.asset/remote-metadata` | `{:checksum … :type …}` after a successful sync upload | [`src/main/frontend/worker/sync/assets.cljs:257-266`](../../../../../src/main/frontend/worker/sync/assets.cljs) |
 
@@ -106,7 +110,7 @@ All of these are hidden properties except `external-url` ([`property.cljs:554-60
 
 ### How each type renders
 
-The asset's extension picks the renderer ([`block.cljs:581-637`](../../../../../src/main/frontend/components/block.cljs)):
+The asset's extension picks the renderer ([`block.cljs:592-648`](../../../../../src/main/frontend/components/block.cljs)):
 
 | Extension | Renders as |
 | --------- | ---------- |
@@ -116,14 +120,14 @@ The asset's extension picks the renderer ([`block.cljs:581-637`](../../../../../
 | `pdf` | A link that opens the built-in PDF viewer |
 | Anything else | Desktop: a link that opens the file in its default app. Browser: a download link. Native mobile: opens or shares the file |
 
-(Format sets: [`src/main/frontend/config.cljs:174-186`](../../../../../src/main/frontend/config.cljs); image set: [`deps/common/src/logseq/common/config.cljs:96-98`](../../../../../deps/common/src/logseq/common/config.cljs).) A `.webm` whose title starts with `Audio-` plays as audio ([`block.cljs:582-584`](../../../../../src/main/frontend/components/block.cljs)).
+(Format sets: [`src/main/frontend/config.cljs:174-186`](../../../../../src/main/frontend/config.cljs); image set: [`deps/common/src/logseq/common/config.cljs:96-98`](../../../../../deps/common/src/logseq/common/config.cljs).) A `.webm` whose title starts with `Audio-` plays as audio ([`block.cljs:593-595`](../../../../../src/main/frontend/components/block.cljs)).
 
-Asset blocks for images, audio and video show the media inside the block, together with the block's title ([`block.cljs:1213-1218`, `:3643-3650`](../../../../../src/main/frontend/components/block.cljs)). A PDF asset block shows its title as the viewer link ([`block.cljs:2574-2576`](../../../../../src/main/frontend/components/block.cljs)). `.heic` is not in the image set, so it shows as a file link.
+Asset blocks for images, audio and video show the media inside the block, together with the block's title ([`block.cljs:1230-1235`, `:3692-3699`](../../../../../src/main/frontend/components/block.cljs)). A PDF asset block shows its title as the viewer link ([`block.cljs:2611-2613`](../../../../../src/main/frontend/components/block.cljs)). `.heic` is not in the image set, so it shows as a file link.
 
 ### Image actions
 
 - **Click an image** to open it in a lightbox with the other images on screen ([`block.cljs:150-168`, `:256-259`](../../../../../src/main/frontend/components/block.cljs)).
-- **The ⋮ button** on an image asset offers ([`block.cljs:333-392`](../../../../../src/main/frontend/components/block.cljs); strings in [`en.edn:77-80`, `:84`, `:88`, `:96`, `:108`](../../../../../src/resources/dicts/en.edn)):
+- **The ⋮ button** on an image asset offers ([`block.cljs:344-403`](../../../../../src/main/frontend/components/block.cljs); strings in [`en.edn:77-80`, `:84`, `:88`, `:96`, `:108`](../../../../../src/resources/dicts/en.edn)):
   - **Align** → Align left / Align center / Align right
   - **Copy image**. In the desktop app only `png jpg jpeg gif webp bmp svg ico` can be copied. Other types show "Copy image is not supported for {1} files" ([`block.cljs:276-289`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:85`](../../../../../src/resources/dicts/en.edn)).
   - **Show file in folder** (a local asset) or **Open image in browser** (a remote one), desktop app only.
@@ -131,32 +135,32 @@ Asset blocks for images, audio and video show the media inside the block, togeth
 
 ### Resizing images
 
-- Drag the image's edge to resize it. The width is saved to the asset's `resize-metadata` ([`editor.cljs:2219-2224`](../../../../../src/main/frontend/handler/editor.cljs)), so every reference to that asset uses it.
-- An image you have not resized displays **250 px** wide. The value is hard-coded, with no setting ([`block.cljs:1157-1168`](../../../../../src/main/frontend/components/block.cljs)).
-- Resizing is off in the native mobile app, in breadcrumbs, for images shown in a property position and in table views ([`block.cljs:410-422`](../../../../../src/main/frontend/components/block.cljs)).
+- Drag the image's edge to resize it. The width is saved to the asset's `resize-metadata` ([`editor.cljs:2252-2257`](../../../../../src/main/frontend/handler/editor.cljs)), so every reference to that asset uses it.
+- An image you have not resized displays **250 px** wide. The value is hard-coded, with no setting ([`block.cljs:1174-1185`](../../../../../src/main/frontend/components/block.cljs)).
+- Resizing is off in the native mobile app, in breadcrumbs, for images shown in a property position and in table views ([`block.cljs:421-433`](../../../../../src/main/frontend/components/block.cljs)).
 
 > Removed claim: `![Diagram](../assets/diagram.png){:width 600 :height 400}`. Not verified for DB graphs. Drag to resize instead.
 
 ### Missing files and sync progress
 
-- If an asset's file is not in `assets/` and the asset has no external URL and no sync record, the block shows "Can't find file {1}." with a **Reload file** button ([`block.cljs:1118-1129`, `:1199-1203`](../../../../../src/main/frontend/components/block.cljs); [`components/block/asset.cljs:45-53`](../../../../../src/main/frontend/components/block/asset.cljs); [`en.edn:95`, `:104`](../../../../../src/resources/dicts/en.edn)).
-- In a synced graph, an asset being transferred shows "Uploading" or "Downloading" with a percentage ([`block.cljs:1141-1154`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:89`, `:112-113`](../../../../../src/resources/dicts/en.edn)).
+- If an asset's file is not in `assets/` and the asset has no external URL and no sync record, the block shows "Can't find file {1}." with a **Reload file** button ([`block.cljs:1135-1146`, `:1216-1220`](../../../../../src/main/frontend/components/block.cljs); [`components/block/asset.cljs:45-53`](../../../../../src/main/frontend/components/block/asset.cljs); [`en.edn:95`, `:104`](../../../../../src/resources/dicts/en.edn)).
+- In a synced graph, an asset being transferred shows "Uploading" or "Downloading" with a percentage ([`block.cljs:1158-1171`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:89`, `:112-113`](../../../../../src/resources/dicts/en.edn)).
 
 ### Video embeds
 
-`{{video URL}}`, `{{youtube …}}`, `{{vimeo …}}` and `{{bilibili …}}` embed remote video ([`src/main/frontend/components/block/video.cljs:6`](../../../../../src/main/frontend/components/block/video.cljs); [`block.cljs:1879-1904`](../../../../../src/main/frontend/components/block.cljs)). They do not create assets. See [Video Embedding](../multimedia/video-embed.md).
+`{{video URL}}`, `{{youtube …}}`, `{{vimeo …}}` and `{{bilibili …}}` embed remote video ([`src/main/frontend/components/block/video.cljs:6`](../../../../../src/main/frontend/components/block/video.cljs); [`block.cljs:1896-1921`](../../../../../src/main/frontend/components/block.cljs)). They do not create assets. See [Video Embedding](../multimedia/video-embed.md).
 
 ### PDFs
 
-The PDF link opens the built-in viewer ([`block.cljs:513-527`, `:592-601`](../../../../../src/main/frontend/components/block.cljs)). When you create an asset from a PDF that was opened by URL, the asset form warns: "Creating a local asset from an external one. PDF annotations require a local asset to work properly." ([`components/assets.cljs:280-299`](../../../../../src/main/frontend/components/assets.cljs); [`en.edn:86`](../../../../../src/resources/dicts/en.edn)). See [PDF Annotations](../../reference/features/pdf-annotations.md).
+The PDF link opens the built-in viewer ([`block.cljs:524-538`, `:603-612`](../../../../../src/main/frontend/components/block.cljs)). When you create an asset from a PDF that was opened by URL, the asset form warns: "Creating a local asset from an external one. PDF annotations require a local asset to work properly." ([`components/assets.cljs:280-299`](../../../../../src/main/frontend/components/assets.cljs); [`en.edn:86`](../../../../../src/resources/dicts/en.edn)). See [PDF Annotations](../../reference/features/pdf-annotations.md).
 
 ---
 
 ## Finding Assets
 
-**All assets:** open the **Asset** tag page. It lists every asset as a gallery ([`class.cljs:68-72`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
+**All assets:** open the **Asset** tag page. It lists every asset as a gallery ([`class.cljs:67-71`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
 
-**With a simple query:** `{{query …}}` does not run in a DB graph. It renders a deprecation warning ([`block.cljs:1870-1871`](../../../../../src/main/frontend/components/block.cljs)). Type `/Query` and enter the query bare:
+**With a simple query:** `{{query …}}` does not run in a DB graph. It renders a deprecation warning ([`block.cljs:1887-1888`](../../../../../src/main/frontend/components/block.cljs)). Type `/Query` and enter the query bare:
 
 ```clojure
 (and (tags Asset) (private-property :logseq.property.asset/type "png"))
@@ -176,17 +180,17 @@ The first lists PNG assets. The second lists assets you have tagged `#ui`. `asse
 
 ## Deleting Assets
 
-**⋮ → Delete image** asks "Are you sure you want to delete this image?" ([`block.cljs:300-326`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:83`](../../../../../src/resources/dicts/en.edn)). The result depends on where the image is shown ([`editor.cljs:1741-1753`](../../../../../src/main/frontend/handler/editor.cljs)):
+**⋮ → Delete image** asks "Are you sure you want to delete this image?" ([`block.cljs:311-337`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:83`](../../../../../src/resources/dicts/en.edn)). The result depends on where the image is shown ([`editor.cljs:1774-1786`](../../../../../src/main/frontend/handler/editor.cljs)):
 
 - **On the asset block itself:** the asset block is deleted.
 - **As a reference inside another block:** the reference is removed from that block's text. The dialog also shows a checkbox, **Remove the file too (notice it can't be restored)**, ticked by default ([`en.edn:97`](../../../../../src/resources/dicts/en.edn)). When it is ticked, the asset block is deleted as well.
 
-You can also select rows on the **Asset** tag page and delete them. That deletes the asset blocks ([`src/main/frontend/components/views.cljs:1208-1222`](../../../../../src/main/frontend/components/views.cljs)).
+You can also select rows on the **Asset** tag page and delete them. That deletes the asset blocks ([`src/main/frontend/components/views.cljs:1254-1268`](../../../../../src/main/frontend/components/views.cljs)).
 
 **What happens next:**
 
-- **The block does not go to Recycle.** Deleted blocks are retracted outright ([`deps/outliner/src/logseq/outliner/core.cljs:440-442`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). Undo with `mod+z` straight away.
-- **The file stays in `assets/`**, despite the checkbox label. Deletion only removes the block. The worker's platform `asset-delete!` function is never called ([`src/main/frontend/worker/platform/node.cljs:554-560`, `:730-731`](../../../../../src/main/frontend/worker/platform/node.cljs); [`browser.cljs:158`, `:219`](../../../../../src/main/frontend/worker/platform/browser.cljs)).
+- **The block does not go to Recycle.** Deleted blocks are retracted outright ([`deps/outliner/src/logseq/outliner/core.cljs:462-464`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). Undo with `mod+z` straight away.
+- **The file stays in `assets/`**, despite the checkbox label. Deletion only removes the block. The worker's platform `asset-delete!` function is never called ([`src/main/frontend/worker/platform/node.cljs:560-566`, `:736-737`](../../../../../src/main/frontend/worker/platform/node.cljs); [`browser.cljs:158`, `:219`](../../../../../src/main/frontend/worker/platform/browser.cljs)).
 - **In a synced graph, the uploaded copy is not deleted from the server.** Only `:update-asset` sync operations are ever created ([`src/main/frontend/worker/sync/asset_db_listener.cljs:17-25`](../../../../../src/main/frontend/worker/sync/asset_db_listener.cljs); [`src/main/frontend/worker/sync/client_op.cljs:607-617`](../../../../../src/main/frontend/worker/sync/client_op.cljs)). A `:remove-asset` operation is handled, but nothing produces one ([`worker/sync/assets.cljs:284-295`](../../../../../src/main/frontend/worker/sync/assets.cljs)).
 
 **To free disk space**, delete the file from `assets/` yourself after deleting its block. The file name is `<uuid>.<ext>`, where the uuid is the deleted block's.
@@ -215,7 +219,7 @@ You can also select rows on the **Asset** tag page and delete them. That deletes
 1. **E2EE graphs only:** the bytes are encrypted with the graph's AES key using AES-GCM ([`worker/sync/assets.cljs:26-33`, `:164-168`](../../../../../src/main/frontend/worker/sync/assets.cljs); [`src/main/frontend/common/crypt.cljs:194-200`](../../../../../src/main/frontend/common/crypt.cljs)). Other graphs upload the bytes as they are.
 2. After a successful upload, the asset gets `:logseq.property.asset/remote-metadata` ([`worker/sync/assets.cljs:257-266`](../../../../../src/main/frontend/worker/sync/assets.cljs)).
 
-**Download:** other devices fetch assets whose file is missing locally ([`worker/sync/assets.cljs:449`](../../../../../src/main/frontend/worker/sync/assets.cljs)), and an asset block with a missing file requests its download when it renders ([`block.cljs:1098-1108`](../../../../../src/main/frontend/components/block.cljs); [`handler/assets.cljs:301-316`](../../../../../src/main/frontend/handler/assets.cljs)).
+**Download:** other devices fetch assets whose file is missing locally ([`worker/sync/assets.cljs:449`](../../../../../src/main/frontend/worker/sync/assets.cljs)), and an asset block with a missing file requests its download when it renders ([`block.cljs:1115-1125`](../../../../../src/main/frontend/components/block.cljs); [`handler/assets.cljs:332-347`](../../../../../src/main/frontend/handler/assets.cljs)).
 
 **Size limits:**
 
@@ -223,7 +227,7 @@ You can also select rows on the **Asset** tag page and delete them. That deletes
 | ----- | ----- | ------ | ------ |
 | Adding a file | 100 MiB | Refused with a warning | [`handler/assets.cljs:14-17`](../../../../../src/main/frontend/handler/assets.cljs) |
 | Sync client | 100 MiB | The upload is **silently skipped**, and the asset stays local | [`worker/sync/assets.cljs:19`, `:246-255`](../../../../../src/main/frontend/worker/sync/assets.cljs) |
-| Sync server | 100 MiB, or 200 MiB for E2EE graphs | `413 asset too large` | [`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9-10`, `:226-231`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs) |
+| Sync server | 100 MiB, or 200 MiB for E2EE graphs | `413 asset too large` | [`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9-10`, `:227-232`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs) |
 
 The client limit applies to E2EE graphs too, so the server's 200 MiB allowance is not reached from the app. Full table in [Sync Limits](../../reference/features/sync-limits.md).
 
@@ -237,9 +241,9 @@ The client limit applies to E2EE graphs too, so the server's 200 MiB allowance i
 
 **Files outside the graph (desktop):** `![t](assets:///absolute/path.png)` shows a local file that is not an asset. See [asset-sync: Link syntax](../../reference/features/asset-sync.md#link-syntax) for which path forms work.
 
-**Data URLs:** `![](data:image/png;base64,…)` renders inline ([`block.cljs:660-661`](../../../../../src/main/frontend/components/block.cljs)). The data is stored in the block's text inside `db.sqlite`, so keep it small.
+**Data URLs:** `![](data:image/png;base64,…)` renders inline ([`block.cljs:671-672`](../../../../../src/main/frontend/components/block.cljs)). The data is stored in the block's text inside `db.sqlite`, so keep it small.
 
-> Removed section: "Asset Aliases (Desktop Only) → Settings → Assets". The Assets settings panel still exists in source ([`src/main/frontend/components/settings.cljs:1535-1536`](../../../../../src/main/frontend/components/settings.cljs)), but it is not in the Settings tab list ([`settings.cljs:1476-1494`](../../../../../src/main/frontend/components/settings.cljs)), so it cannot be opened. Aliases resolve only if the option was already on in this app's local storage ([`src/main/frontend/state.cljs:249`](../../../../../src/main/frontend/state.cljs); [`handler/assets.cljs:19-22`](../../../../../src/main/frontend/handler/assets.cljs)).
+> Removed section: "Asset Aliases (Desktop Only) → Settings → Assets". The Assets settings panel still exists in source ([`src/main/frontend/components/settings.cljs:1547-1548`](../../../../../src/main/frontend/components/settings.cljs)), but it is not in the Settings tab list ([`settings.cljs:1488-1506`](../../../../../src/main/frontend/components/settings.cljs)), so it cannot be opened. Aliases resolve only if the option was already on in this app's local storage ([`src/main/frontend/state.cljs:249`](../../../../../src/main/frontend/state.cljs); [`handler/assets.cljs:19-22`](../../../../../src/main/frontend/handler/assets.cljs)).
 
 ---
 
@@ -251,7 +255,7 @@ The client limit applies to E2EE graphs too, so the server's 200 MiB allowance i
 
 **Native mobile app:**
 
-- Image resizing is off ([`block.cljs:410-412`](../../../../../src/main/frontend/components/block.cljs)).
+- Image resizing is off ([`block.cljs:421-423`](../../../../../src/main/frontend/components/block.cljs)).
 - The **Photo** button takes or chooses a photo and also saves it to the device gallery. The `config.edn` key `:mobile/photo` accepts `:allow-editing?` and `:quality` (default 80) ([`camera.cljs:32-41`](../../../../../src/main/frontend/mobile/camera.cljs)).
 - Files shared into Logseq from another app become assets only for document and media types (`doc-formats` plus `media-formats`). Other types show an unsupported-type notice ([`src/main/frontend/mobile/intent.cljs:136-152`, `:190-202`](../../../../../src/main/frontend/mobile/intent.cljs)).
 
@@ -262,16 +266,16 @@ The client limit applies to E2EE graphs too, so the server's 200 MiB allowance i
 ## Troubleshooting
 
 **"Can't find file {1}."**
-The asset block exists but `assets/<uuid>.<ext>` is missing, for example after copying only `db.sqlite` to another machine. Restore the file from a zip export or a copy of `assets/`, then click **Reload file**. In a synced graph, click **Reload file** once the file is back in place to retry the upload ([`block.cljs:1110-1116`](../../../../../src/main/frontend/components/block.cljs)).
+The asset block exists but `assets/<uuid>.<ext>` is missing, for example after copying only `db.sqlite` to another machine. Restore the file from a zip export or a copy of `assets/`, then click **Reload file**. In a synced graph, click **Reload file** once the file is back in place to retry the upload ([`block.cljs:1127-1133`](../../../../../src/main/frontend/components/block.cljs)).
 
 **"Asset exists already, title: …, node reference: [[…]]"**
-A byte-identical file is already in the graph. Reference that asset instead ([`editor.cljs:1772-1778`](../../../../../src/main/frontend/handler/editor.cljs)).
+A byte-identical file is already in the graph. Reference that asset instead ([`editor.cljs:1805-1811`](../../../../../src/main/frontend/handler/editor.cljs)).
 
 **"Asset size shouldn't be larger than 100M"**
 The file is over 100 MiB. Shrink or split it, or link to it remotely.
 
 **Nothing happens when adding a file**
-The file probably has no extension (see the Note in [Quick Start](#quick-start)). Check the developer console: the desktop app's **View** menu uses Electron's standard `viewMenu` role ([`src/electron/electron/core.cljs:243`](../../../../../src/electron/electron/core.cljs)).
+The file probably has no extension (see the Note in [Quick Start](#quick-start)). Check the developer console: the desktop app's **View** menu uses Electron's standard `viewMenu` role ([`src/electron/electron/core.cljs:246`](../../../../../src/electron/electron/core.cljs)).
 
 **An asset shows on one device but not another (sync)**
 Check that the asset has `remote-metadata`. If the file is over 100 MiB it was never uploaded ([`worker/sync/assets.cljs:246-255`](../../../../../src/main/frontend/worker/sync/assets.cljs)). Files copied into `assets/` by hand never sync.
@@ -289,7 +293,7 @@ Deleting an asset block leaves its file behind (see [Deleting Assets](#deleting-
 ## Backups
 
 - **Automatic desktop backups and Export SQLite DB do not include assets.** Only **Export both SQLite DB and assets** bundles them ([Backup and Recovery Strategies](../organization/backup-strategies.md#method-4-export-sqlite-db-or-sqlite--assets)).
-- The zip takes every file in `assets/`, including files left behind by deleted assets ([`handler/assets.cljs:269-281`](../../../../../src/main/frontend/handler/assets.cljs); [`src/main/frontend/handler/export.cljs:88-100`](../../../../../src/main/frontend/handler/export.cljs)).
+- The zip takes every file in `assets/`, including files left behind by deleted assets ([`handler/assets.cljs:300-312`](../../../../../src/main/frontend/handler/assets.cljs); [`src/main/frontend/handler/export.cljs:88-100`](../../../../../src/main/frontend/handler/export.cljs)).
 - When you copy a graph folder yourself, copy `assets/` with it.
 
 > Removed: "Git: commit `assets/`", the `.gitignore` example, "Keep total assets < 5 GB", "Compress images (< 500 KB)", "Don't embed videos > 50 MB", the ImageOptim / TinyPNG / ffmpeg recipes and the "Asset Inventory Page" template. These are not Logseq limits or features, and the only size limit in source is 100 MiB per file.

@@ -195,7 +195,7 @@ frontend.handler.export (The Web Scheduler)
        (p/catch ...)))))
 ```
 
-**IPC Handler** (`handler.cljs:242`):
+**IPC Handler** (`handler.cljs:262`):
 
 ```clojure
 (defmethod handle :db-export [window [_ repo force-backup?]]

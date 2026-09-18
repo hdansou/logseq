@@ -2,8 +2,8 @@
 title: 'Dynamic Variables Reference'
 description: "Reference for Logseq's <% %> dynamic variables in DB-graph templates and simple queries"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, mobile, web]
@@ -15,6 +15,10 @@ relatedDocs:
 ---
 
 # Dynamic Variables Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -31,7 +35,7 @@ A dynamic variable is text of the form `<% name %>`. Typing one into an ordinary
 
 Datalog ("advanced") queries use neither. They take dates through `:inputs`. See [Advanced Queries Use `:inputs`](#advanced-queries-use-inputs-not-variables).
 
-> **Correction:** an earlier version named `frontend.template/resolve-dynamic-template!` (`src/main/frontend/template.cljs:23-37`) as the query resolver. That function still exists, but its only caller is `frontend.db.query-dsl/pre-transform-query` (`src/main/frontend/db/query_dsl.cljs:17-20`). The query builder calls it to parse a query string into its editing UI (`src/main/frontend/components/query/builder.cljs:564-567`). The query itself runs in the DB worker (`src/main/frontend/db/query_dsl.cljs:40-50`, `src/main/frontend/worker/handler/render_resource/query.cljs:137-145`), and the worker resolver above does the substitution.
+> **Correction:** an earlier version named `frontend.template/resolve-dynamic-template!` (`src/main/frontend/template.cljs:23-37`) as the query resolver. That function still exists, but its only caller is `frontend.db.query-dsl/pre-transform-query` (`src/main/frontend/db/query_dsl.cljs:17-20`). The query builder calls it to parse a query string into its editing UI (`src/main/frontend/components/query/builder.cljs:629-632`). The query itself runs in the DB worker (`src/main/frontend/db/query_dsl.cljs:40-50`, `src/main/frontend/worker/handler/render_resource/query.cljs:137-145`), and the worker resolver above does the substitution.
 
 ---
 
@@ -75,7 +79,7 @@ Don't write `[[<% today %>]]`. These variables already produce the brackets thro
 
 **In a template**: a reference to the page holding the block the template is inserted into. If the target is itself a page, that page is used. If there is no page, today's journal page is used (`template.cljs:65-72`, `:107`, `:112`).
 
-**In a simple query**: the `:current-page-title` passed with the query, or today's journal title when none is passed (`query_dsl.cljs:90`). The renderer sets `:current-page-title` only for the `:default-queries :journals` queries on today's journal page (`src/main/frontend/components/page.cljs:233-252`), and forwards it to the worker only when it is set (`src/main/frontend/components/query/result.cljs:37-38`). A `/Query` block's config does not include it (`src/main/frontend/components/block.cljs:4099-4101`). So inside an ordinary `/Query` block, `<% current page %>` resolves to today's journal, not to the page the query is on. This follows from the code and has not been reproduced in the app.
+**In a simple query**: the `:current-page-title` passed with the query, or today's journal title when none is passed (`query_dsl.cljs:90`). The renderer sets `:current-page-title` only for the `:default-queries :journals` queries on today's journal page (`src/main/frontend/components/page.cljs:234-253`), and forwards it to the worker only when it is set (`src/main/frontend/components/query/result.cljs:37-38`). A `/Query` block's config does not include it (`src/main/frontend/components/block.cljs:4148-4150`). So inside an ordinary `/Query` block, `<% current page %>` resolves to today's journal, not to the page the query is on. This follows from the code and has not been reproduced in the app.
 
 ### Blank variable
 
@@ -125,7 +129,7 @@ What the template path does:
 
 1. **Only the five built-ins are resolved.** `deps/outliner/src/logseq/outliner/template.cljs` has no chrono-node fallback.
 2. **Missing journal pages are created first** (`op.cljs:259-263`), so date references point at real pages.
-3. **Every inserted block's text is resolved.** `resolve-block` rewrites `:block/title` and `:block/raw-title` (`template.cljs:151-158`). The template is loaded with `:include-property-block? true` (`op.cljs:242-243`). That option walks every child entity, including blocks created from a property (`deps/db/src/logseq/db.cljs:376-387`; `:block/_raw-parent` keeps the children that `:block/_parent` filters out, `deps/db/src/logseq/db/common/entity_plus.cljc:171-178`), and a `/Query` block's query (`db.cljs:384`). A `/Query` inside a template is therefore resolved once, at insertion, and stops moving with the calendar.
+3. **Every inserted block's text is resolved.** `resolve-block` rewrites `:block/title` and `:block/raw-title` (`template.cljs:151-158`). The template is loaded with `:include-property-block? true` (`op.cljs:242-243`). That option walks every child entity, including blocks created from a property (`deps/db/src/logseq/db.cljs:378-389`; `:block/_raw-parent` keeps the children that `:block/_parent` filters out, `deps/db/src/logseq/db/common/entity_plus.cljc:171-178`), and a `/Query` block's query (`db.cljs:386`). A `/Query` inside a template is therefore resolved once, at insertion, and stops moving with the calendar.
    > **Unverified:** a variable inside a text property's value block goes through the same rewrite. Whether the resolved text then appears correctly as the property value after insertion was not checked.
 4. `resolve-block` also rewrites `:block/properties-text-values` (`template.cljs:160-161`). That attribute is not in the DB-graph schema (`deps/db/src/logseq/db/frontend/schema.cljs` has no such attribute), so this branch does nothing in a DB graph.
 
@@ -189,7 +193,7 @@ Natural-language dates work here:
 (between <% 2 weeks ago %> <% today %>)
 ```
 
-> **`{{query …}}` does not work in a DB graph.** Typed into a block, it renders only the warning "{{query}} is deprecated. Use '/Query' command instead." (`block.cljs:1870-1871`, `src/resources/dicts/en.edn:159`). `/Query` moves the block's whole title into the query (`src/main/frontend/handler/editor.cljs:4377-4395`), so enter only the bare form. Put a label in a parent block.
+> **`{{query …}}` does not work in a DB graph.** Typed into a block, it renders only the warning "{{query}} is deprecated. Use '/Query' command instead." (`block.cljs:1887-1888`, `src/resources/dicts/en.edn:159`). `/Query` moves the block's whole title into the query (`src/main/frontend/handler/editor.cljs:4436-4454`), so enter only the bare form. Put a label in a parent block.
 
 > **Possible defect (from reading the source, not reproduced):** the query resolver always writes `MMM do, yyyy` titles. A date variable used as a bare page-reference filter, such as `(and <% today %> (task todo))`, looks the page up by exactly that name (`build-page-ref`, `query_dsl.cljs:467-474`). If your journal titles use a different format, no page is found, `build-page-ref` returns nothing, and that filter is silently left out of the query. `between` is not affected, because it parses the title against all built-in formats.
 
@@ -197,7 +201,7 @@ Natural-language dates work here:
 
 ### Advanced Queries Use `:inputs`, Not Variables
 
-Create an advanced query with `/Advanced Query` (`commands.cljs:125-132`, `:326`) and write a bare EDN map (`block.cljs:4094-4096`). A Datalog query is executed by `execute-custom-query` (`src/main/frontend/worker/handler/query.cljs:243-261`), which does no `<% %>` substitution. Each `:inputs` keyword is resolved by `resolve-custom-query-input` (`handler/query.cljs:158-183`) through `logseq.db.frontend.inputs` (`deps/db/src/logseq/db/frontend/inputs.cljs:69-82`).
+Create an advanced query with `/Advanced Query` (`commands.cljs:125-132`, `:326`) and write a bare EDN map (`block.cljs:4143-4145`). A Datalog query is executed by `execute-custom-query` (`src/main/frontend/worker/handler/query.cljs:243-261`), which does no `<% %>` substitution. Each `:inputs` keyword is resolved by `resolve-custom-query-input` (`handler/query.cljs:158-183`) through `logseq.db.frontend.inputs` (`deps/db/src/logseq/db/frontend/inputs.cljs:69-82`).
 
 ```clojure
 {:query [:find (pull ?b [*])
@@ -209,7 +213,7 @@ Create an advanced query with `/Advanced Query` (`commands.cljs:125-132`, `:326`
  :inputs [:start-of-today-ms :end-of-today-ms]}
 ```
 
-`:datetime` values are stored as numbers, not as refs. `:datetime` is not one of the value-ref property types (`deps/db/src/logseq/db/frontend/property/type.cljs:58-61`), and Logseq's own scheduled/deadline query compares the attribute directly in the same way (`src/main/frontend/worker/handler/property.cljs:864-867`).
+`:datetime` values are stored as numbers, not as refs. `:datetime` is not one of the value-ref property types (`deps/db/src/logseq/db/frontend/property/type.cljs:58-61`), and Logseq's own scheduled/deadline query compares the attribute directly in the same way (`src/main/frontend/worker/handler/property.cljs:926-929`).
 
 > **Removed:** the earlier example wrapped the map in `#+BEGIN_QUERY` / `#+END_QUERY` and set `:title`. In a DB graph, `#+BEGIN_QUERY` is deprecated in favour of `/Advanced Query` (`en.edn:120`), and `:title` is not a query key.
 
@@ -235,7 +239,7 @@ Variable names are **case-insensitive**. Both resolvers trim and lower-case the 
 - **Templates** store `[[<uuid>]]` references (`template.cljs:74-79`), which display as the journal page's title.
 - **Simple queries** always receive `[[MMM do, yyyy]]` titles such as `[[Jan 29th, 2026]]` (`query_dsl.cljs:61-66`).
 
-**Settings → Editor → Preferred date format** (`src/main/frontend/components/settings.cljs:448-471`, shown in the Editor tab at `:888-903`; label at `en.edn:1713`) sets the Journal tag's Title Format (`settings.cljs:460-466`), which decides how journal pages are titled. The simple-query resolver ignores this setting.
+**Settings → Editor → Preferred date format** (`src/main/frontend/components/settings.cljs:460-483`, shown in the Editor tab at `:900-915`; label at `en.edn:1714`) sets the Journal tag's Title Format (`settings.cljs:472-478`), which decides how journal pages are titled. The simple-query resolver ignores this setting.
 
 ---
 

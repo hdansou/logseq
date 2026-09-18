@@ -2,8 +2,8 @@
 title: 'Research Workflow'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (ccc03ab0aa). Later point fixes only: simple-query examples and <% %> variables (4a37d8997b) and the :result-transform note (bfcaeb03e7) on 2026-09-10; block-reference and embed syntax on 2026-09-11.'
 reviewStatus: audited
 quadrant: 'How-To'
@@ -16,6 +16,10 @@ tags: ['research', 'workflow', 'academic', 'literature-review']
 ---
 
 # Research Workflow
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Learn how to conduct academic and professional research in Logseq. This workflow takes you from literature discovery to synthesis and publication, maintaining full traceability throughout.
 
@@ -52,8 +56,8 @@ things to know about how the same structure is actually built in a DB graph:
   `[[Research/Papers/Smith-2025]]` creates three pages — `Research`, `Papers`,
   `Smith-2025` — linked by `:block/parent`, with the top page filed under the
   built-in **Library** page. The leaf page's title is `Smith-2025`, not the full
-  path (`deps/outliner/src/logseq/outliner/page.cljs:385-388`;
-  `deps/outliner/test/logseq/outliner/page_test.cljs:32-49`). The old
+  path (`deps/outliner/src/logseq/outliner/page.cljs:464-467`;
+  `deps/outliner/test/logseq/outliner/page_test.cljs:34-51`). The old
   `:block/namespace` attribute no longer exists.
 
 ---
@@ -134,11 +138,11 @@ things to know about how the same structure is actually built in a DB graph:
 
 Creating a page whose title contains `/` splits it into one page per segment,
 linked by `:block/parent`, with the topmost segment filed under the built-in
-**Library** page (`deps/outliner/src/logseq/outliner/page.cljs:385-388`). So the
+**Library** page (`deps/outliner/src/logseq/outliner/page.cljs:464-467`). So the
 tree below is what you get in the sidebar; the individual page titles are the
 leaf names (`Papers`, `Algorithmic-Bias`, …), and two leaves may share a name if
 they sit under different parents
-(`deps/outliner/test/logseq/outliner/page_test.cljs:64-72`).
+(`deps/outliner/test/logseq/outliner/page_test.cljs:66-74`).
 
 **Research Structure:**
 
@@ -180,10 +184,10 @@ Research/
 
 Create a template by writing the block tree you want, then adding the built-in
 **Template** tag (`:logseq.class/Template`,
-`deps/db/src/logseq/db/frontend/class.cljs:100-102`) to its top block. Use the
+`deps/db/src/logseq/db/frontend/class.cljs:99-101`) to its top block. Use the
 block's tag control — an inline `#Template` will not stick, because `Template`
 is one of the "block kind" tags and inline tags in that set are stripped on save
-(`class.cljs:130-140`; `deps/outliner/src/logseq/outliner/core.cljs:275-291`).
+(`class.cljs:147-157`; `deps/outliner/src/logseq/outliner/core.cljs:297-313`).
 Insert a saved template later with `/Template`
 (`src/main/frontend/commands.cljs:339-343`).
 
@@ -441,10 +445,10 @@ Type `/Query`, then enter:
 ```
 
 > **`{{query …}}` does not work in a DB graph.** Typed into a block it renders only a
-> deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Entered as the query
+> deprecation warning (`src/main/frontend/components/block.cljs:1887-1888`). Entered as the query
 > of a `/Query` block it becomes a full-text search for that literal text, because `sanitize-q`
 > quotes anything that does not start with `(`, `"`, a page ref or `[?`
-> (`src/main/frontend/components/query/builder.cljs:543-552`). Every simple query in this guide is
+> (`src/main/frontend/components/query/builder.cljs:608-617`). Every simple query in this guide is
 > therefore shown as the bare form you enter after typing `/Query`; in an outline, a line marked
 > `← /Query block` is its own `/Query` block.
 
@@ -463,7 +467,7 @@ single token.
 ```markdown
 1. Add the PDF with the /Upload an asset slash command
    (src/main/frontend/commands.cljs:335-338). The file is copied into the
-   graph's assets/ directory (deps/common/src/logseq/common/config.cljs:56)
+   graph's assets/ directory (deps/common/src/logseq/common/config.cljs:59)
    and a node tagged #Asset is created for it.
 
 2. Open the PDF by clicking that asset node.
@@ -494,11 +498,11 @@ single token.
 Block references in a DB graph are UUIDs written as page references —
 `[[0b3c6e9a-…-…]]` — which is what **Copy block ref** produces
 (`src/main/frontend/util/ref.cljs:5-7`, `deps/common/src/logseq/common/util/block_ref.cljs:9`).
-`((uuid))` renders as literal text (`src/main/frontend/components/block.cljs:1556-1557`).
+`((uuid))` renders as literal text (`src/main/frontend/components/block.cljs:1573-1574`).
 There is no `id::` property for naming a block, and the readable names used in the examples
 below (`[[bias-testing-stat]]` and friends) are placeholders for the UUID you get from
 **Copy block ref**, not literal text you can type. The drafts cite evidence inline with a block
-reference: `{{embed …}}` renders only a deprecation warning (`block.cljs:1917-1918`), and
+reference: `{{embed …}}` renders only a deprecation warning (`block.cljs:1934-1935`), and
 `/Node embed` inserts the whole block as a separate sibling block instead
 (`src/main/frontend/components/editor.cljs:289-306`).
 
@@ -1244,7 +1248,7 @@ Type `/Query`, then enter:
 and `focus` are properties you create. Use the built-in **Deadline**
 (`/Deadline`) rather than a `due` property of your own — it is the one the Task
 tag's schema knows about
-(`deps/db/src/logseq/db/frontend/class.cljs:42`), and it stores a **datetime**
+(`deps/db/src/logseq/db/frontend/class.cljs:41`), and it stores a **datetime**
 (epoch milliseconds), not a journal page reference
 (`deps/db/src/logseq/db/frontend/property.cljs:340-346`).
 

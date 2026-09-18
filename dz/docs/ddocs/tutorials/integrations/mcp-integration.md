@@ -4,8 +4,8 @@ status: 🟡 Active Development
 version: 'Desktop MCP server added 2025-09-17 (a16c89b986)'
 quadrant: 'Tutorial'
 platform: 'Desktop (Electron)'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09. The 2026-09-11 date covers only the no-tokens authentication note (Host / authentication section).'
 reviewStatus: audited
 related-docs:
@@ -16,6 +16,10 @@ tags: ['mcp', 'ai', 'claude', 'integration', 'api']
 ---
 
 # Model Context Protocol (MCP) Integration
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This tutorial explains how to connect an AI assistant to Logseq using the Model Context Protocol (MCP). Logseq Desktop ships an MCP server as an optional set of routes on its built-in HTTP API server, so any MCP client that speaks the **Streamable HTTP** transport can read, search, and modify the graph you currently have open.
 
@@ -29,7 +33,7 @@ This tutorial explains how to connect an AI assistant to Logseq using the Model 
 
 **Prerequisites:**
 
-- **Logseq Desktop (Electron).** The MCP server lives in the Electron main process (`src/electron/electron/mcp_server.cljs`) and is registered only `(when (util/electron?) ...)` in the settings UI (`src/main/frontend/components/settings.cljs:1442-1446`). There is no web or mobile equivalent.
+- **Logseq Desktop (Electron).** The MCP server lives in the Electron main process (`src/electron/electron/mcp_server.cljs`) and is registered only `(when (util/electron?) ...)` in the settings UI (`src/main/frontend/components/settings.cljs:1454-1458`). There is no web or mobile equivalent.
 - A **DB graph** open in the app. Every tool is routed to the db-worker thread API (`src/main/frontend/worker/handler/cli.cljs:33-56`).
 - An MCP client that supports the Streamable HTTP transport.
 
@@ -125,7 +129,7 @@ There is a single operating mode. The MCP routes are mounted on the app's existi
 
 Consequences worth internalising:
 
-- **The app must be running.** Tools reach the graph through the renderer (`server.cljs:105-113` sends `invokeLogseqAPI` to the window; `src/main/electron/listener.cljs:104-128` dispatches it onto `window.logseq.api`).
+- **The app must be running.** Tools reach the graph through the renderer (`server.cljs:105-113` sends `invokeLogseqAPI` to the window; `src/main/electron/listener.cljs:110-134` dispatches it onto `window.logseq.api`).
 - **The graph is whatever is open.** No tool takes a graph path or name; every call resolves against `(state/get-current-repo)` (`src/main/logseq/api/db_based/cli.cljs:27-32`).
 - **Writes land live.** `upsertNodes` transacts through the outliner and calls `ui-handler/re-render-root!` (`src/main/logseq/api/db_based/cli.cljs:42-54`), so changes appear in the UI immediately.
 
@@ -147,9 +151,9 @@ MCP is off by default. It is a UI toggle, not a config-file edit:
 1. Open **Settings → AI**.
 2. Enable **MCP Server**.
 
-The setting's own description reads: *"Enable MCP Server to allow commmunication with local AI applications. MCP Server depends on HTTP API server."* (`src/resources/dicts/en.edn:1708-1709` — the typo is in the source string).
+The setting's own description reads: *"Enable MCP Server to allow commmunication with local AI applications. MCP Server depends on HTTP API server."* (`src/resources/dicts/en.edn:1709-1710` — the typo is in the source string).
 
-Toggling it on also flips the HTTP API server on for you if it was off, then restarts the server if it was already running (`src/main/frontend/components/settings.cljs:1421-1440`). The flag is persisted as the config item `:server/mcp-enabled?` (`src/electron/electron/server.cljs:40`).
+Toggling it on also flips the HTTP API server on for you if it was off, then restarts the server if it was already running (`src/main/frontend/components/settings.cljs:1433-1452`). The flag is persisted as the config item `:server/mcp-enabled?` (`src/electron/electron/server.cljs:40`).
 
 ### Find the URL
 

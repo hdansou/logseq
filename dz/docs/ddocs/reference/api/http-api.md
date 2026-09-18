@@ -2,8 +2,8 @@
 title: 'HTTP API Reference'
 description: "Reference for the Logseq desktop app's HTTP API server for external application integration"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop]
@@ -19,6 +19,10 @@ relatedDocs:
 ---
 
 # HTTP API Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -36,7 +40,7 @@ plugin API method and sends the result back. You can use it to:
 - **Connect AI clients**: through the `/mcp` endpoint (see [MCP Server](mcp-server.md))
 
 It exists only in the desktop app. The settings row is rendered only `(when (util/electron?) ...)`
-(`src/main/frontend/components/settings.cljs:1156-1157`).
+(`src/main/frontend/components/settings.cljs:1168-1169`).
 
 > This is not the HTTP API of the db worker. The desktop renderer also talks to its database worker
 > process over HTTP/SSE. That internal interface is documented separately in
@@ -71,21 +75,21 @@ Other server settings, from `start!` (`server.cljs:160-164`):
 
 ### Enable the Server
 
-1. Open **Settings → Features** and turn on **HTTP API server** (`settings.cljs:783-786`, `:1129`,
-   `:1156-1157`; labels `src/resources/dicts/en.edn:1663`, `:1691`). The switch saves a local-storage flag and
-   shows a **Restart** button that relaunches the app (`settings.cljs:617-630`).
-2. After the restart, an API icon appears in the header (`src/main/frontend/components/header.cljs:601-602`).
+1. Open **Settings → Features** and turn on **HTTP API server** (`settings.cljs:795-798`, `:1141`,
+   `:1156-1157`; labels `src/resources/dicts/en.edn:1664`, `:1692`). The switch saves a local-storage flag and
+   shows a **Restart** button that relaunches the app (`settings.cljs:629-642`).
+2. After the restart, an API icon appears in the header (`src/main/frontend/components/header.cljs:607-608`).
 3. Click the icon, then **Start server** (`src/main/frontend/components/server.cljs:171-174`). While the server
    runs, the menu shows its URL (`:189-195`).
 
 > **The MCP Server setting does not start the server.** Turning on **Settings → AI → MCP Server** sets the
-> same "HTTP API server" flag if it was off (`settings.cljs:1426-1428`). It restarts the server only if the
+> same "HTTP API server" flag if it was off (`settings.cljs:1438-1440`). It restarts the server only if the
 > server is already running (`:1429-1433`). You still have to start the server from the header icon.
 
 ### Configuration
 
 Open it from the API icon → **Server configurations** (`src/main/frontend/components/server.cljs:182-186`;
-label `en.edn:1669`).
+label `en.edn:1670`).
 
 | Setting    | Config key          | Default     | Description                                                   |
 | ---------- | ------------------- | ----------- | ------------------------------------------------------------- |
@@ -130,7 +134,7 @@ was read from source, not run.
 ### Managing Tokens
 
 1. Click the API icon → **Authorization tokens** (`src/main/frontend/components/server.cljs:176-180`).
-2. Click **+ Add new token** (`:54-56`; label `en.edn:1678`).
+2. Click **+ Add new token** (`:54-56`; label `en.edn:1679`).
 3. Enter a name and a token value. The refresh button next to a row fills in a generated value
    (`util/unique-id`, `:41-47`).
 4. Click **Save** (`:57-62`).
@@ -179,7 +183,7 @@ All API calls use `POST /api` with a JSON body (`server.cljs:115-130`):
 
 - `method` is required. Without it the server responds `400` with `:method of body is missing!` (`:127-129`).
 - `args` is optional. The renderer spreads it as positional arguments (`apply js-invoke`,
-  `src/main/electron/listener.cljs:122`).
+  `src/main/electron/listener.cljs:128`).
 
 ### Example
 
@@ -198,7 +202,7 @@ curl -X POST http://127.0.0.1:12315/api \
 
 The response body is the method's return value itself, with **no** wrapper object. The server sends
 whatever the renderer returns (`server.cljs:119-125`), and the renderer returns the method's resolved value
-(`listener.cljs:122-123`).
+(`listener.cljs:128-129`).
 
 ```json
 { "uuid": "…", "title": "My Page", "…": "…" }
@@ -210,7 +214,7 @@ whatever the renderer returns (`server.cljs:119-125`), and the renderer returns 
 ### Error
 
 If the method throws or its promise rejects, the renderer returns an object with an `error` key
-(`listener.cljs:124-129`). The server then sets status `500` (`server.cljs:121-124`):
+(`listener.cljs:130-135`). The server then sets status `500` (`server.cljs:121-124`):
 
 ```json
 { "error": "Error description" }
@@ -228,12 +232,12 @@ If the method throws or its promise rejects, the renderer returns an object with
 2. It joins them as `<namespace>@<method>` and snake-cases the result with `csk/->snake_case` (`:80`). So
    `logseq.Editor.getBlock` becomes `editor@get_block`.
 
-The renderer then looks the method up (`src/main/electron/listener.cljs:104-129`):
+The renderer then looks the method up (`src/main/electron/listener.cljs:110-135`):
 
 - Namespaces `app`, `editor`, `db` and `cli` all resolve against the **flat** `window.logseq.api` object,
-  which holds the `^:export` defs in `src/main/logseq/api.cljs` (`listener.cljs:113-119`). The namespace is
+  which holds the `^:export` defs in `src/main/logseq/api.cljs` (`listener.cljs:119-125`). The namespace is
   not used for the lookup, so `logseq.App.getBlock` finds the same function as `logseq.Editor.getBlock`.
-- Any other namespace resolves against `window.logseq.sdk.<namespace>` (`listener.cljs:115`, `:119`). That is
+- Any other namespace resolves against `window.logseq.sdk.<namespace>` (`listener.cljs:121`, `:125`). That is
   where the `^:export` fns of `src/main/logseq/sdk/ui.cljs` and `src/main/logseq/sdk/assets.cljs` live. If no
   such namespace object exists, the error is `MethodNotExist: <namespace>@<method>` (`:120-121`).
 
@@ -255,9 +259,9 @@ The HTTP API can only call functions the host exports. It cannot call:
 What you get back for an unreachable method depends on the namespace:
 
 - `logseq.Git.*` has no `window.logseq.sdk.git` object, so it returns
-  `{"error": "MethodNotExist: git@…"}` with status 500 (`listener.cljs:120-121`).
+  `{"error": "MethodNotExist: git@…"}` with status 500 (`listener.cljs:126-127`).
 - A missing method in the `app`, `editor`, `db` or `cli` namespaces makes `js-invoke` throw. That also
-  returns an `error` object with status 500 (`listener.cljs:122`, `:127-129`), but the message is the
+  returns an `error` object with status 500 (`listener.cljs:128`, `:133-135`), but the message is the
   JavaScript engine's own `TypeError` text.
 
 ---
@@ -471,7 +475,7 @@ curl -X POST http://127.0.0.1:12315/api \
 | 200         | The method returned                                            | `server.cljs:119-125`          |
 | 400         | The body has no `method`                                       | `server.cljs:127-129`          |
 | 401         | No `Authorization` header, or the token is not in the saved list | `server.cljs:83-103`         |
-| 500         | The method threw or rejected, or the namespace does not exist  | `listener.cljs:120-129`, `server.cljs:121-124` |
+| 500         | The method threw or rejected, or the namespace does not exist  | `listener.cljs:126-135`, `server.cljs:121-124` |
 
 A request with no JSON body at all makes the handler throw (`server.cljs:130`).
 
@@ -485,7 +489,7 @@ A request with no JSON body at all makes the handler throw (`server.cljs:130`).
 {"error": "Invalid page uuid"}
 ```
 
-The first comes from an unknown namespace (`listener.cljs:120-121`). The second is a method's own error,
+The first comes from an unknown namespace (`listener.cljs:126-127`). The second is a method's own error,
 here from `renamePage` called with a page name (`src/main/frontend/handler/page.cljs:124-129`).
 
 ---
@@ -512,8 +516,8 @@ here from `renamePage` called with a page name (`src/main/frontend/handler/page.
 
 ### No API Icon in the Header
 
-- Turn on **Settings → Features → HTTP API server** and restart the app (`settings.cljs:617-630`,
-  `header.cljs:601-602`).
+- Turn on **Settings → Features → HTTP API server** and restart the app (`settings.cljs:629-642`,
+  `header.cljs:607-608`).
 
 ### 401 Unauthorized
 

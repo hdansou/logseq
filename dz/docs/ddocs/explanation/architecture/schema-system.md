@@ -2,8 +2,8 @@
 title: 'Database Schema System'
 status: 🟢 Stable
 version: 'Schema v65.33'
-last-verified: '2026-09-09'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
@@ -16,6 +16,10 @@ tags:
 ---
 
 # Database Schema System
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This document explains Logseq's database graph schema architecture—the structured data model powering database-backed graphs. Understanding the schema system is essential for developers working with database APIs, properties, classes, and queries.
 
@@ -379,7 +383,7 @@ Cardinality is **not** a property of the type; it is declared per property. `car
 
 **18 built-in classes** form the object hierarchy.
 
-**Location:** `deps/db/src/logseq/db/frontend/class.cljs:17-105` (the file is `.cljs`, not
+**Location:** `deps/db/src/logseq/db/frontend/class.cljs:16-104` (the file is `.cljs`, not
 `.cljc`; entries span lines 22-102). Like `built-in-properties`, this is an `ordered-map` keyed
 by `:db/ident`, not a vector of maps. Verbatim excerpt:
 
@@ -407,8 +411,8 @@ by `:db/ident`, not a vector of maps. Verbatim excerpt:
 Note the two distinct keys: `:properties` holds property **values** set on the class entity
 itself (including `:logseq.property.class/extends`), while `:schema {:properties [...]}` lists
 the properties the class **gives to its objects**. `:schema` may also carry
-`:required-properties` (see `:logseq.class/Asset`, `class.cljs:73-74`, and
-`:logseq.class/Pdf-annotation`, `class.cljs:94-98`).
+`:required-properties` (see `:logseq.class/Asset`, `class.cljs:72-73`, and
+`:logseq.class/Pdf-annotation`, `class.cljs:93-97`).
 
 **Class Hierarchy** (all 18):
 
@@ -434,21 +438,21 @@ Root                       ; :title "Root Tag"
 ```
 
 Only three classes declare `:logseq.property.class/extends` in `built-in-classes`: `Journal`
-and `Whiteboard` extend `Page` (`class.cljs:32`, `:38`), and `Cards` extends `Query`
-(`class.cljs:66`). Everything else lands under `Root` because `build-new-class` assigns
+and `Whiteboard` extend `Page` (`class.cljs:31`, `:37`), and `Cards` extends `Query`
+(`class.cljs:65`). Everything else lands under `Root` because `build-new-class` assigns
 `:logseq.property.class/extends :logseq.class/Root` to any class that does not already declare
 one, and to every class except `Root` itself
 (`deps/db/src/logseq/db/sqlite/util.cljs:91-100`).
 
 > **Removed:** the previous revision showed `Cards` nested under `Card`; `Cards` extends
-> `Query`, not `Card` (`class.cljs:63-66`). It also titled Root `"Root"` (it is `"Root Tag"`),
+> `Query`, not `Card` (`class.cljs:62-65`). It also titled Root `"Root"` (it is `"Root Tag"`),
 > attached `:logseq.property/built-in? true` inline to each class definition (built-in marking
 > is applied at graph creation, not declared here), and gave `Task` the non-existent
 > `:logseq.property.task/due-date` and `:logseq.property.task/priority`.
 
 ### Class Inheritance
 
-Classes inherit properties from parent classes. Real example, verbatim from `class.cljs:30-33`:
+Classes inherit properties from parent classes. Real example, verbatim from `class.cljs:29-32`:
 
 ```clojure
 :logseq.class/Journal
@@ -457,8 +461,8 @@ Classes inherit properties from parent classes. Real example, verbatim from `cla
               :logseq.property.journal/title-format "MMM do, yyyy"}}
 ```
 
-`get-class-extends` (`class.cljs:167-176`) walks `:logseq.property.class/extends` transitively;
-`get-structured-children` (`class.cljs:154-165`) walks the other direction with the
+`get-class-extends` (`class.cljs:184-193`) walks `:logseq.property.class/extends` transitively;
+`get-structured-children` (`class.cljs:171-182`) walks the other direction with the
 `class-extends` Datalog rule.
 
 > **Removed:** `:logseq.property.journal/page-ref` does not exist. The `logseq.property.journal`
@@ -817,7 +821,7 @@ Present in `origin/master` at `be800f1711` and undescribed by the previous revis
 ### `defkeywords` + `ordered-map`, not plain data literals
 
 Both `built-in-properties` (`deps/db/src/logseq/db/frontend/property.cljs:20-704`) and
-`built-in-classes` (`deps/db/src/logseq/db/frontend/class.cljs:17-105`) are built by applying
+`built-in-classes` (`deps/db/src/logseq/db/frontend/class.cljs:16-104`) are built by applying
 `ordered-map` to a `defkeywords` form from `logseq.common.defkeywords`. Iteration order is
 therefore the declaration order, which matters for anything that renders these in sequence.
 

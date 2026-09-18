@@ -2,8 +2,8 @@
 title: 'Workflow Automation Tutorial'
 status: 🟢 Stable
 version: 'Schema v65.33 / @logseq/libs v0.3.4'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (7800cf72b0). The 2026-09-10 date covers only the built-in macro notes (4a37d8997b) and the removal of the dead template API from the templates section, journal hook and test suite (bd51297f2b).'
 reviewStatus: audited
 quadrant: 'Tutorial'
@@ -16,6 +16,10 @@ tags: ['automation', 'workflows', 'plugins', 'scripting', 'productivity']
 ---
 
 # Workflow Automation Tutorial
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Automate repetitive tasks in Logseq using queries, templates and a plugin. This hands-on tutorial builds a working automation plugin against a **DB graph**, using APIs that are both declared in `@logseq/libs` v0.3.4 and implemented by the host at `be800f1711`. Some declared methods have no host implementation; where this tutorial meets one, it says so.
 
@@ -74,7 +78,7 @@ Automate repetitive tasks in Logseq using queries, templates and a plugin. This 
 3. The Console tab is our workspace
 ```
 
-The toggle is `developer-mode-row` in `src/main/frontend/components/settings.cljs:568-575`; it sets
+The toggle is `developer-mode-row` in `src/main/frontend/components/settings.cljs:580-587`; it sets
 `:ui/developer-mode?` in app state. Turning it on is what makes the **Load unpacked plugin** button
 appear on the Plugins dashboard — that button is gated on developer mode **and** Electron
 (`src/main/frontend/components/plugins.cljs:828-838`).
@@ -101,9 +105,9 @@ yourself — and read its source first (see [Plugin Security Architecture](../..
 **Step 4: Project Structure**
 
 Your plugin lives outside the graph. Marketplace installs land in `~/.logseq/plugins`
-(`src/electron/electron/core.cljs:40`); an unpacked plugin you load yourself can live anywhere.
+(`src/electron/electron/core.cljs:41`); an unpacked plugin you load yourself can live anywhere.
 DB graphs themselves live under `~/logseq/graphs`
-(`deps/common/src/logseq/common/config.cljs:55`) and are not a directory of Markdown files.
+(`deps/common/src/logseq/common/config.cljs:58`) and are not a directory of Markdown files.
 
 ```
 ~/dev/logseq-automation-workflows/    # our unpacked plugin
@@ -214,9 +218,9 @@ variable to drive one.
 > `{{currentTime}}`, `{{sum of tasks}}`, `{{today tasks}}` and `{{overdue count}}`. None of these
 > exist. Logseq's `{{...}}` macros are the built-in `img` macro
 > (`src/main/frontend/state.cljs:512-513`), the embed and video macros the block renderer handles
-> (`src/main/frontend/components/block.cljs:1870-1920`), and whatever you define under `:macros` in
+> (`src/main/frontend/components/block.cljs:1887-1937`), and whatever you define under `:macros` in
 > `config.edn` (`deps/common/src/logseq/common/util/macro.cljs:1-40`). `{{query …}}` is not one of
-> them any more: in a DB graph it renders only a deprecation warning (`block.cljs:1870-1871`); use
+> them any more: in a DB graph it renders only a deprecation warning (`block.cljs:1887-1888`); use
 > `/Query`.
 
 ### Auto-Tagging System
@@ -354,7 +358,7 @@ zoomed in.
 ### What Templates Actually Are
 
 In a DB graph a template is a block tagged **`#Template`** — `:logseq.class/Template`
-(`deps/db/src/logseq/db/frontend/class.cljs:100-102`). It carries one built-in property,
+(`deps/db/src/logseq/db/frontend/class.cljs:99-101`). It carries one built-in property,
 `:logseq.property/template-applied-to` ("Apply template to tags",
 `deps/db/src/logseq/db/frontend/property.cljs:696`), which makes the template insert itself automatically
 into blocks that gain one of those tags (`src/main/frontend/worker/pipeline.cljs:94-150`). Applying a template is
@@ -397,7 +401,7 @@ What does work, without a plugin:
   one of those tags, the template's children are inserted into it
   (`src/main/frontend/worker/pipeline.cljs:94-150`). For a journal template, set it to `Journal` —
   the `:default-templates` config key is file-graph only
-  (`deps/common/src/logseq/common/config.cljs:138-139`).
+  (`deps/common/src/logseq/common/config.cljs:141-142`).
 
 **Hooks for page and journal events**
 

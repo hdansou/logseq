@@ -3,8 +3,8 @@ title: 'Tag properties vs page properties'
 description: 'Understanding the two distinct kinds of properties in a Logseq DB graph — schema declared by a tag versus values stored on a page — and when to use each'
 status: stable
 audience: [developer, user]
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '0.11.x'
 category: concepts
@@ -18,6 +18,10 @@ relatedDocs:
 ---
 
 # Tag properties vs page properties
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > In a Logseq DB graph, "tag properties" and "page properties" are not two flavours of the same thing — they live in different places, play different roles, and are authored through different UI. **Tag properties declare a schema on a tag. Page properties store actual values on a page.** Understanding this distinction is essential for designing tags, writing queries, and reasoning about inheritance.
 
@@ -52,7 +56,7 @@ A tag in the DB graph is a class entity (identified by having `:logseq.class/Tag
 The product itself calls these **Tag Properties**. The UI message when editing a class is explicit:
 
 > "Tag properties are inherited by all nodes using the tag. For example, each `#Task` node inherits 'Status' and 'Priority'."
-> — `src/resources/dicts/en.edn:194` (`:class/tag-properties-desc`), rendered at `src/main/frontend/components/property.cljs:1032`
+> — `src/resources/dicts/en.edn:194` (`:class/tag-properties-desc`), rendered at `src/main/frontend/components/property.cljs:1055`
 
 Declaring a tag property does **not** give an instance a value. It tells the UI and queries "every node with this tag is expected to carry this property"; the instance's own datoms still hold the actual value (or absence thereof).
 
@@ -61,7 +65,7 @@ Declaring a tag property does **not** give an instance a value. It tells the UI 
 From `deps/db/src/logseq/db/frontend/class.cljs`:
 
 ```clojure
-;; class.cljs:40-42
+;; class.cljs:39-41
 :logseq.class/Task
 {:title "Task"
  :schema {:properties [:logseq.property/status
@@ -69,13 +73,13 @@ From `deps/db/src/logseq/db/frontend/class.cljs`:
                        :logseq.property/deadline
                        :logseq.property/scheduled]}}
 
-;; class.cljs:59-61
+;; class.cljs:58-60
 :logseq.class/Card
 {:title "Card"
  :schema {:properties [:logseq.property.fsrs/state
                        :logseq.property.fsrs/due]}}
 
-;; class.cljs:68-74
+;; class.cljs:67-73
 :logseq.class/Asset
 {:title "Asset"
  :schema {:properties     [:logseq.property.asset/type
@@ -88,7 +92,7 @@ From `deps/db/src/logseq/db/frontend/class.cljs`:
 
 Any page tagged `#Task` automatically surfaces `status`, `priority`, `deadline`, `scheduled` as expected properties. `#Asset` additionally enforces its three properties through validation.
 
-The built-in class table has grown well beyond these three. `:logseq.class/Query` declares `:logseq.property/query` (class.cljs:54-57), `:logseq.class/Code-block` declares `:logseq.property.node/display-type` and `:logseq.property.code/lang` (76-79), and `:logseq.class/Comments`, `:logseq.class/Quote-block`, `:logseq.class/Math-block`, `:logseq.class/Pdf-annotation` and `:logseq.class/Template` each declare their own (class.cljs:17-105). The same tag-property mechanism carries all of them — there is no separate "internal schema" path.
+The built-in class table has grown well beyond these three. `:logseq.class/Query` declares `:logseq.property/query` (class.cljs:53-56), `:logseq.class/Code-block` declares `:logseq.property.node/display-type` and `:logseq.property.code/lang` (76-79), and `:logseq.class/Comments`, `:logseq.class/Quote-block`, `:logseq.class/Math-block`, `:logseq.class/Pdf-annotation` and `:logseq.class/Template` each declare their own (class.cljs:16-104). The same tag-property mechanism carries all of them — there is no separate "internal schema" path.
 
 ### Inheritance across tags
 
@@ -107,11 +111,11 @@ Tags can extend other tags via `:logseq.property.class/extends`:
                                  "This enables tags to inherit properties from other tags"}}
 ```
 
-`:logseq.class/Journal`, for example, extends `:logseq.class/Page` (`class.cljs:30-33`), so every journal page transitively picks up the page class's tag properties. `:logseq.class/Whiteboard` does the same (36-38), and `:logseq.class/Cards` extends `:logseq.class/Query` (63-66).
+`:logseq.class/Journal`, for example, extends `:logseq.class/Page` (`class.cljs:29-32`), so every journal page transitively picks up the page class's tag properties. `:logseq.class/Whiteboard` does the same (36-38), and `:logseq.class/Cards` extends `:logseq.class/Query` (63-66).
 
 Resolution happens in three layers:
 
-1. `get-class-extends` walks one class's `:logseq.property.class/extends` chain breadth-first and returns the ancestors in outermost-first order (`deps/db/src/logseq/db/frontend/class.cljs:167-176`).
+1. `get-class-extends` walks one class's `:logseq.property.class/extends` chain breadth-first and returns the ancestors in outermost-first order (`deps/db/src/logseq/db/frontend/class.cljs:184-193`).
 2. `get-classes-parents` runs that over a set of tags, filtering to actual classes (`deps/db/src/logseq/db/frontend/db.cljs:91-96`).
 3. `get-block-classes-properties` unions `:logseq.property.class/properties` across every class in `:block/tags` plus those ancestors, dropping classes that declare none (`deps/outliner/src/logseq/outliner/property.cljs:1020-1034`).
 
@@ -148,10 +152,10 @@ A page does **not** need to be tagged with a class to have properties. You can a
 
 If a class declares property `X` through `:logseq.property.class/properties`, and the page sets property `X` directly, there is **one datom** — the value lives on the page entity. The class declaration just tells the UI to show `X` as part of the page's expected property set. No merging, no override logic; the page is authoritative for values.
 
-The partitioning has moved out of the UI layer and into the worker. It now lives at `src/main/frontend/worker/handler/property.cljs:641-646`:
+The partitioning has moved out of the UI layer and into the worker. It now lives at `src/main/frontend/worker/handler/property.cljs:689-694`:
 
 ```clojure
-;; src/main/frontend/worker/handler/property.cljs:641-646
+;; src/main/frontend/worker/handler/property.cljs:689-694
 {:keys [all-classes classes-properties]} (block-class-properties db block-entity)
 classes-properties-set (set (map :db/ident classes-properties))
 block-own-properties (->> properties
@@ -159,9 +163,9 @@ block-own-properties (->> properties
                           (remove (fn [[id _]] (classes-properties-set id))))
 ```
 
-> **Note:** this citation moved. The equivalent code was at `src/main/frontend/components/property.cljs:749-802` when this page was last verified. The component now consumes an already-partitioned result rather than computing it.
+> **Note:** this citation moved. The equivalent code was at `src/main/frontend/components/property.cljs:772-825` when this page was last verified. The component now consumes an already-partitioned result rather than computing it.
 
-The page's properties are still simply split into "came from a tag's schema" and "set directly on this page" for display purposes. The worker goes one step further and walks `all-classes` in order to build the class-supplied rows, skipping any property the page already owns (`worker/handler/property.cljs:674-694`) — so the same property never appears twice, and the page's own value always wins the slot.
+The page's properties are still simply split into "came from a tag's schema" and "set directly on this page" for display purposes. The worker goes one step further and walks `all-classes` in order to build the class-supplied rows, skipping any property the page already owns (`worker/handler/property.cljs:722-742`) — so the same property never appears twice, and the page's own value always wins the slot.
 
 A parallel, position-aware version of the same split lives in `deps/outliner/src/logseq/outliner/property.cljs:1105-1124` (`get-block-positioned-properties`), which decides which properties render beside, below, or in the properties area of a block.
 
@@ -203,7 +207,7 @@ No. The UI starts showing the property as an expected slot on every page that ha
 No. It removes the property from the class's declared schema. Any values already written to pages remain as ordinary page properties — they just stop appearing under the "inherited from tag" grouping in the UI.
 
 **"Tag properties enforce required fields."**
-Only when the class declares `:required-properties` — still rare, and still only `:logseq.class/Asset` (`deps/db/src/logseq/db/frontend/class.cljs:74`) and `:logseq.class/Pdf-annotation` (`class.cljs:97-98`) among the built-ins. The general `:schema {:properties [...]}` form is a suggestion, not an enforcement.
+Only when the class declares `:required-properties` — still rare, and still only `:logseq.class/Asset` (`deps/db/src/logseq/db/frontend/class.cljs:73`) and `:logseq.class/Pdf-annotation` (`class.cljs:96-97`) among the built-ins. The general `:schema {:properties [...]}` form is a suggestion, not an enforcement.
 
 **"Two pages with the same tag share property values."**
 No. Each page holds its own property datoms. Sharing the tag means sharing the *shape*, not the *data*.
@@ -228,10 +232,10 @@ No. Each page holds its own property datoms. Sharing the tag means sharing the *
 
 - Tag properties attribute: `deps/db/src/logseq/db/frontend/property.cljs:172`
 - Tag inheritance attribute: `deps/db/src/logseq/db/frontend/property.cljs:164`
-- Built-in classes: `deps/db/src/logseq/db/frontend/class.cljs:17-105`
-- Extends walker: `deps/db/src/logseq/db/frontend/class.cljs:167-176`, `deps/db/src/logseq/db/frontend/db.cljs:91-96`
+- Built-in classes: `deps/db/src/logseq/db/frontend/class.cljs:16-104`
+- Extends walker: `deps/db/src/logseq/db/frontend/class.cljs:184-193`, `deps/db/src/logseq/db/frontend/db.cljs:91-96`
 - Class/instance property resolution: `deps/outliner/src/logseq/outliner/property.cljs:1020-1034`
 - Position-aware split: `deps/outliner/src/logseq/outliner/property.cljs:1105-1124`
-- Worker code that partitions the two surfaces: `src/main/frontend/worker/handler/property.cljs:641-694`
+- Worker code that partitions the two surfaces: `src/main/frontend/worker/handler/property.cljs:689-742`
 - Class detection: `deps/db/src/logseq/db/frontend/entity_util.cljs:28-30`
 - Related: [`:block/tags` vs `:logseq.property/page-tags`](block-tags-vs-page-tags.md)

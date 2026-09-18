@@ -49,7 +49,7 @@ Logseq never calls `app.setPath`. `<userData>` and the electron-log location fol
 ### Naming quirks
 
 - Graph dirs are URL-encoded with `%`→`~` (`graph_dir.cljs:6`): `a/b` → `a~2Fb`.
-- `client-ops-/db.sqlite` (trailing hyphen, `db_core.cljs:445`) coexists with `client-ops/db.sqlite` (`:133`); `:846-856` migrates between them.
+- `client-ops-/db.sqlite` (trailing hyphen, `db_core.cljs:445`) coexists with `client-ops/db.sqlite` (`:133`); `:851-861` migrates between them.
 - OPFS uses two names for one graph: directory `.logseq-pool-<g>`, VFS `logseq-pool-<g>`.
 
 ### Addenda — plugins, backups, mirror, config.edn, assets

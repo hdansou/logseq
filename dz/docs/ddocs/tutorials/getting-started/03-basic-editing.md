@@ -3,8 +3,8 @@ title: 'Basic Note-Taking'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 platform: 'All'
 related-docs:
@@ -15,6 +15,10 @@ related-docs:
 ---
 
 # Basic Note-Taking
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -35,7 +39,7 @@ Unlike traditional note apps where you edit entire pages, Logseq works with **bl
 **Create a new block:**
 
 - Press `Enter` at the end of a block to create a new sibling block below (`:editor/new-block`, [`config.cljs:107`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
-- Click the empty row below the last block on a page to add a new block at the end ([`src/main/frontend/components/page.cljs:55-80`](../../../../../src/main/frontend/components/page.cljs))
+- Click the empty row below the last block on a page to add a new block at the end ([`src/main/frontend/components/page.cljs:56-81`](../../../../../src/main/frontend/components/page.cljs))
 
 **Edit a block:**
 
@@ -45,8 +49,8 @@ Unlike traditional note apps where you edit entire pages, Logseq works with **bl
 
 **Delete a block:**
 
-- Clear the block's text, then press `Backspace` with the cursor at the start of the empty block ([`src/main/frontend/handler/editor.cljs:3223-3226`](../../../../../src/main/frontend/handler/editor.cljs), handled by `delete-block-when-zero-pos!` at `:3163`)
-- Or select the whole block and delete it: while editing, `Ctrl/Cmd + A` selects the block's text, and pressing it again selects the block itself ([`src/main/frontend/handler/editor.cljs:4234-4245`](../../../../../src/main/frontend/handler/editor.cljs), [`config.cljs:247`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). Then press `Backspace` or `Delete` ([`config.cljs:208`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
+- Clear the block's text, then press `Backspace` with the cursor at the start of the empty block ([`src/main/frontend/handler/editor.cljs:3256-3259`](../../../../../src/main/frontend/handler/editor.cljs), handled by `delete-block-when-zero-pos!` at `:3196`)
+- Or select the whole block and delete it: while editing, `Ctrl/Cmd + A` selects the block's text, and pressing it again selects the block itself ([`src/main/frontend/handler/editor.cljs:4293-4304`](../../../../../src/main/frontend/handler/editor.cljs), [`config.cljs:247`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). Then press `Backspace` or `Delete` ([`config.cljs:208`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
 
 **Practice Exercise:**
 
@@ -63,12 +67,12 @@ Blocks can be nested to create hierarchy:
 **Indent (make child):**
 
 - Press `Tab` ([`config.cljs:220`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
-- Or drag the block by its bullet and drop it well to the right of the target block. A drop more than 50px from the target's left edge nests it ([`src/main/frontend/components/block.cljs:3946-3953`](../../../../../src/main/frontend/components/block.cljs))
+- Or drag the block by its bullet and drop it well to the right of the target block. A drop more than 50px from the target's left edge nests it ([`src/main/frontend/components/block.cljs:3995-4002`](../../../../../src/main/frontend/components/block.cljs))
 
 **Outdent (make parent/sibling):**
 
 - Press `Shift + Tab` ([`config.cljs:223`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
-- Or drag the block and drop it aligned with the block it should follow, which makes it a sibling ([`src/main/frontend/components/block.cljs:3948-3956`](../../../../../src/main/frontend/components/block.cljs))
+- Or drag the block and drop it aligned with the block it should follow, which makes it a sibling ([`src/main/frontend/components/block.cljs:3997-4005`](../../../../../src/main/frontend/components/block.cljs))
 
 **Example Structure:**
 
@@ -89,8 +93,8 @@ Blocks can be nested to create hierarchy:
 
 **Select multiple blocks:**
 
-1. Click a block, then `Shift + Click` another block to select the range between them ([`src/main/frontend/components/block.cljs:2732-2741`](../../../../../src/main/frontend/components/block.cljs))
-2. `Ctrl/Cmd + Click` to add or remove individual blocks ([`src/main/frontend/components/block.cljs:2722-2730`](../../../../../src/main/frontend/components/block.cljs); `Cmd` on macOS, `Ctrl` elsewhere, [`src/main/frontend/util.cljc:1071-1074`](../../../../../src/main/frontend/util.cljc))
+1. Click a block, then `Shift + Click` another block to select the range between them ([`src/main/frontend/components/block.cljs:2771-2780`](../../../../../src/main/frontend/components/block.cljs))
+2. `Ctrl/Cmd + Click` to add or remove individual blocks ([`src/main/frontend/components/block.cljs:2761-2769`](../../../../../src/main/frontend/components/block.cljs); `Cmd` on macOS, `Ctrl` elsewhere, [`src/main/frontend/util.cljc:1072-1075`](../../../../../src/main/frontend/util.cljc))
 3. `Ctrl/Cmd + Shift + A` selects all blocks ([`config.cljs:244`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
 
 **Bulk operations:**
@@ -102,7 +106,7 @@ Blocks can be nested to create hierarchy:
 
 ## Text Formatting
 
-Logseq supports Markdown inline formatting syntax. Block text is parsed as Markdown ([`src/main/frontend/handler/db_based/editor.cljs:110`](../../../../../src/main/frontend/handler/db_based/editor.cljs)) and rendered by [`src/main/frontend/components/block.cljs`](../../../../../src/main/frontend/components/block.cljs) (strikethrough and highlight at `:1937-1938`, inline code at `:2016`).
+Logseq supports Markdown inline formatting syntax. Block text is parsed as Markdown ([`src/main/frontend/handler/db_based/editor.cljs:110`](../../../../../src/main/frontend/handler/db_based/editor.cljs)) and rendered by [`src/main/frontend/components/block.cljs`](../../../../../src/main/frontend/components/block.cljs) (strikethrough and highlight at `:1954-1955`, inline code at `:2033`).
 
 ### Basic Formatting
 
@@ -135,7 +139,7 @@ Logseq supports Markdown inline formatting syntax. Block text is parsed as Markd
 
 ## Slash Commands
 
-Type `/` to open the command menu for quick insertions ([`src/main/frontend/handler/editor.cljs:2270-2272`](../../../../../src/main/frontend/handler/editor.cljs)):
+Type `/` to open the command menu for quick insertions ([`src/main/frontend/handler/editor.cljs:2303-2305`](../../../../../src/main/frontend/handler/editor.cljs)):
 
 ### Common Commands
 
@@ -153,9 +157,9 @@ All in [`src/main/frontend/commands.cljs`](../../../../../src/main/frontend/comm
 - `/Heading 1` … `/Heading 6` and `/Normal text` — Set or clear the block's heading (`:198-209`)
 - `/Add property` — Add a property to the block (`:354-358`)
 
-> **Removed:** "Use `((` to create block references". Typing `((` only shows the warning "To reference a node, please use `[[]]`." ([`src/main/frontend/handler/editor.cljs:1949-1952`](../../../../../src/main/frontend/handler/editor.cljs); `src/resources/dicts/en.edn:503`). See [Block References](#block-references) below.
+> **Removed:** "Use `((` to create block references". Typing `((` only shows the warning "To reference a node, please use `[[]]`." ([`src/main/frontend/handler/editor.cljs:1982-1985`](../../../../../src/main/frontend/handler/editor.cljs); `src/resources/dicts/en.edn:503`). See [Block References](#block-references) below.
 
-> **Removed:** `{{embed [[Page Name]]}}` for page embeds. Any `{{embed …}}` macro now renders the warning "{{embed}} is deprecated. Use '/Node embed' command instead." ([`src/main/frontend/components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs); `en.edn:157`).
+> **Removed:** `{{embed [[Page Name]]}}` for page embeds. Any `{{embed …}}` macro now renders the warning "{{embed}} is deprecated. Use '/Node embed' command instead." ([`src/main/frontend/components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs); `en.edn:157`).
 
 Six task statuses are always available as slash commands under **TASK STATUS**: Backlog, Todo, Doing, In Review, Done and Canceled ([`src/main/frontend/commands.cljs:150-165`](../../../../../src/main/frontend/commands.cljs); values in [`deps/db/src/logseq/db/frontend/property.cljs:313-318`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)). **TASK DATE** has Deadline and Scheduled (`commands.cljs:265-276`).
 
@@ -173,9 +177,9 @@ Every block has a unique ID. You can reference any block from anywhere. A block 
 
 **Create a block reference:**
 
-1. Right-click the target block's bullet and choose **Copy block ref** ([`src/main/frontend/components/container.cljs:392-402`](../../../../../src/main/frontend/components/container.cljs), [`src/main/frontend/components/content.cljs:288-292`](../../../../../src/main/frontend/components/content.cljs); `en.edn:116`). Or, while editing the target block with no text selected, press `Ctrl/Cmd + C` ([`src/main/frontend/handler/editor.cljs:3662-3666`](../../../../../src/main/frontend/handler/editor.cljs), `:3680`)
+1. Right-click the target block's bullet and choose **Copy block ref** ([`src/main/frontend/components/container.cljs:392-402`](../../../../../src/main/frontend/components/container.cljs), [`src/main/frontend/components/content.cljs:288-292`](../../../../../src/main/frontend/components/content.cljs); `en.edn:116`). Or, while editing the target block with no text selected, press `Ctrl/Cmd + C` ([`src/main/frontend/handler/editor.cljs:3695-3699`](../../../../../src/main/frontend/handler/editor.cljs), `:3713`)
 2. Click into the block where you want the reference
-3. Paste with `Ctrl/Cmd + V`. The text is `[[<block-uuid>]]`, and Logseq resolves it to the referenced block ([`src/main/frontend/components/block.cljs:1320-1337`](../../../../../src/main/frontend/components/block.cljs))
+3. Paste with `Ctrl/Cmd + V`. The text is `[[<block-uuid>]]`, and Logseq resolves it to the referenced block ([`src/main/frontend/components/block.cljs:1337-1354`](../../../../../src/main/frontend/components/block.cljs))
 
 **Example:**
 
@@ -184,7 +188,7 @@ Every block has a unique ID. You can reference any block from anywhere. A block 
 - Reference it elsewhere: [[6650e2f3-1b2c-4d5e-9f00-0a1b2c3d4e5f]]
 ```
 
-> **Removed:** `((block-id))` block references. `((uuid))` text renders literally ([`src/main/frontend/components/block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs)).
+> **Removed:** `((block-id))` block references. `((uuid))` text renders literally ([`src/main/frontend/components/block.cljs:1573-1574`](../../../../../src/main/frontend/components/block.cljs)).
 
 **Use cases:**
 
@@ -198,14 +202,14 @@ Every block has a unique ID. You can reference any block from anywhere. A block 
 Embeds show a block in place, as a block of its own:
 
 - Type `/Node embed`, search for the block, and pick it ([`src/main/frontend/components/editor.cljs:289-307`](../../../../../src/main/frontend/components/editor.cljs))
-- Or, while editing the block you want to embed, press `Ctrl/Cmd + Shift + E` to copy it as an embed ([`config.cljs:158`](../../../../../src/main/frontend/modules/shortcut/config.cljs); [`src/main/frontend/handler/editor.cljs:3646-3660`](../../../../../src/main/frontend/handler/editor.cljs)). Then, while editing another block in the same graph, paste: Logseq inserts a new block below it that embeds the copied block ([`src/main/frontend/handler/paste.cljs:219-232`](../../../../../src/main/frontend/handler/paste.cljs))
+- Or, while editing the block you want to embed, press `Ctrl/Cmd + Shift + E` to copy it as an embed ([`config.cljs:158`](../../../../../src/main/frontend/modules/shortcut/config.cljs); [`src/main/frontend/handler/editor.cljs:3679-3693`](../../../../../src/main/frontend/handler/editor.cljs)). Then, while editing another block in the same graph, paste: Logseq inserts a new block below it that embeds the copied block ([`src/main/frontend/handler/paste.cljs:219-232`](../../../../../src/main/frontend/handler/paste.cljs))
 
-> **Removed:** `{{embed ((block-id))}}` syntax ([`src/main/frontend/components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
+> **Removed:** `{{embed ((block-id))}}` syntax ([`src/main/frontend/components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs)).
 
 **Difference:**
 
 - **Reference `[[<block-uuid>]]`:** Sits inline in your text
-- **Embed:** Adds a separate block that renders the embedded block ([`src/main/frontend/components/block.cljs:4107-4126`](../../../../../src/main/frontend/components/block.cljs))
+- **Embed:** Adds a separate block that renders the embedded block ([`src/main/frontend/components/block.cljs:4156-4175`](../../../../../src/main/frontend/components/block.cljs))
 
 > **Unverified:** That an embed shows the embedded block's children. The render path swaps in the linked block, but this audit didn't trace child rendering.
 
@@ -241,7 +245,7 @@ A task is a block with a **Status**. The six statuses are Backlog, Todo, Doing, 
 
 **Shortcuts:**
 
-- `Ctrl/Cmd + Enter`: Cycle the status: no status → Todo → Doing → Done → no status. A block in Backlog, In Review or Canceled goes to Todo ([`src/main/frontend/handler/editor.cljs:819-832`](../../../../../src/main/frontend/handler/editor.cljs), [`config.cljs:167`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
+- `Ctrl/Cmd + Enter`: Cycle the status: no status → Todo → Doing → Done → no status. A block in Backlog, In Review or Canceled goes to Todo ([`src/main/frontend/handler/editor.cljs:825-838`](../../../../../src/main/frontend/handler/editor.cljs), [`config.cljs:167`](../../../../../src/main/frontend/modules/shortcut/config.cljs))
 - Use slash commands to set a specific status directly
 
 > **Removed:** `TODO` / `DOING` / `DONE` text markers. They are file-graph syntax. In a DB graph the status is a property value, and `src/main`, `deps/outliner` and `deps/db` have no code that turns typed `TODO` text into a status.
@@ -266,7 +270,7 @@ Start a block with one to six `#` characters and a space. When the block is save
 - Item 3
 ```
 
-**Ordered (numbered):** In an empty block, type `1. ` (one, period, space) to turn the block into a numbered list item ([`src/main/frontend/handler/editor.cljs:2265-2268`](../../../../../src/main/frontend/handler/editor.cljs)). You can also use `/Number list`, or `/Number children` to number a block's children ([`src/main/frontend/commands.cljs:306-316`](../../../../../src/main/frontend/commands.cljs)).
+**Ordered (numbered):** In an empty block, type `1. ` (one, period, space) to turn the block into a numbered list item ([`src/main/frontend/handler/editor.cljs:2298-2301`](../../../../../src/main/frontend/handler/editor.cljs)). You can also use `/Number list`, or `/Number children` to number a block's children ([`src/main/frontend/commands.cljs:306-316`](../../../../../src/main/frontend/commands.cljs)).
 
 > **Removed:** Typing `1.`, `2.`, `3.` in front of each item. The `1. ` shortcut only fires on an empty block and switches it to numbered-list mode.
 
@@ -274,7 +278,7 @@ Start a block with one to six `#` characters and a space. When the block is save
 
 **Inline code:** `` `code here` ``
 
-**Code block:** Type `/Code block` ([`src/main/frontend/commands.cljs:246-249`](../../../../../src/main/frontend/commands.cljs)). Fenced code is also rendered as a code block ([`src/main/frontend/components/block.cljs:5116`](../../../../../src/main/frontend/components/block.cljs)):
+**Code block:** Type `/Code block` ([`src/main/frontend/commands.cljs:246-249`](../../../../../src/main/frontend/commands.cljs)). Fenced code is also rendered as a code block ([`src/main/frontend/components/block.cljs:5166`](../../../../../src/main/frontend/components/block.cljs)):
 
 ````
 ```javascript
@@ -286,7 +290,7 @@ function hello() {
 
 ### Quotes
 
-Type `/Quote` to make the block a quote ([`src/main/frontend/commands.cljs:140-143`](../../../../../src/main/frontend/commands.cljs)). Markdown quote syntax is also rendered ([`src/main/frontend/components/block.cljs:5031`](../../../../../src/main/frontend/components/block.cljs)):
+Type `/Quote` to make the block a quote ([`src/main/frontend/commands.cljs:140-143`](../../../../../src/main/frontend/commands.cljs)). Markdown quote syntax is also rendered ([`src/main/frontend/components/block.cljs:5081`](../../../../../src/main/frontend/components/block.cljs)):
 
 ```
 > This is a quote
@@ -295,9 +299,9 @@ Type `/Quote` to make the block a quote ([`src/main/frontend/commands.cljs:140-1
 
 ### Math (LaTeX)
 
-**Inline:** `$E = mc^2$` ([`src/main/frontend/components/block.cljs:1997`](../../../../../src/main/frontend/components/block.cljs))
+**Inline:** `$E = mc^2$` ([`src/main/frontend/components/block.cljs:2014`](../../../../../src/main/frontend/components/block.cljs))
 
-**Block:** Type `/Math block` ([`src/main/frontend/commands.cljs:254-257`](../../../../../src/main/frontend/commands.cljs)). Displayed math is also rendered ([`src/main/frontend/components/block.cljs:5099`](../../../../../src/main/frontend/components/block.cljs)):
+**Block:** Type `/Math block` ([`src/main/frontend/commands.cljs:254-257`](../../../../../src/main/frontend/commands.cljs)). Displayed math is also rendered ([`src/main/frontend/components/block.cljs:5149`](../../../../../src/main/frontend/components/block.cljs)):
 
 ```
 $$
@@ -394,13 +398,13 @@ Create a project note with everything you've learned:
 | Page link or node reference | `[[`       | `[[`                  | — |
 | Search          | `Ctrl + K`             | `Cmd + K`             | `:304` |
 
-> **Removed:** "Block reference `((`" from this table. `((` no longer creates a reference ([`src/main/frontend/handler/editor.cljs:1949-1952`](../../../../../src/main/frontend/handler/editor.cljs)).
+> **Removed:** "Block reference `((`" from this table. `((` no longer creates a reference ([`src/main/frontend/handler/editor.cljs:1982-1985`](../../../../../src/main/frontend/handler/editor.cljs)).
 
 ## Findings: New Capabilities
 
 - `/Add property` is available in the slash menu for quickly creating a property on the current block ([`src/main/frontend/commands.cljs:354-358`](../../../../../src/main/frontend/commands.cljs)), and so is its shortcut ([`config.cljs:259`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 - Task date commands (Deadline, Scheduled) are available directly in slash commands under **TASK DATE** ([`src/main/frontend/commands.cljs:265-276`](../../../../../src/main/frontend/commands.cljs)).
-- `Ctrl/Cmd + Shift + E` copies the current block as an embed, and pasting it creates an embed block ([`src/main/frontend/handler/editor.cljs:3646-3660`](../../../../../src/main/frontend/handler/editor.cljs), [`src/main/frontend/handler/paste.cljs:219-232`](../../../../../src/main/frontend/handler/paste.cljs)).
+- `Ctrl/Cmd + Shift + E` copies the current block as an embed, and pasting it creates an embed block ([`src/main/frontend/handler/editor.cljs:3679-3693`](../../../../../src/main/frontend/handler/editor.cljs), [`src/main/frontend/handler/paste.cljs:219-232`](../../../../../src/main/frontend/handler/paste.cljs)).
 - Typing `# ` or `1. ` at the start of a block converts it to a heading or a numbered list item.
 
 ## What You've Learned

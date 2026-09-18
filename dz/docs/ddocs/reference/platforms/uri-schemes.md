@@ -36,11 +36,11 @@ The single fact most likely to surprise: **the desktop and mobile `logseq://` ro
 
 | Scheme | Registration | Platforms |
 |---|---|---|
-| `logseq:` | `setAsDefaultProtocolClient` (`src/electron/electron/core.cljs:76`); iOS `CFBundleURLSchemes` (`ios/App/App/Info.plist:45`); Android `<data android:scheme="logseq"/>` (`android/app/src/main/AndroidManifest.xml:55`) | desktop, iOS, Android |
-| `lsp:` | `registerFileProtocol` (`core.cljs:101`) | desktop only |
-| `assets:` | `registerFileProtocol` (`core.cljs:80`) | desktop only |
+| `logseq:` | `setAsDefaultProtocolClient` (`src/electron/electron/core.cljs:77`); iOS `CFBundleURLSchemes` (`ios/App/App/Info.plist:45`); Android `<data android:scheme="logseq"/>` (`android/app/src/main/AndroidManifest.xml:55`) | desktop, iOS, Android |
+| `lsp:` | `registerFileProtocol` (`core.cljs:104`) | desktop only |
+| `assets:` | `registerFileProtocol` (`core.cljs:81`) | desktop only |
 
-The scheme names are `defonce` constants at `core.cljs:31-33`:
+The scheme names are `defonce` constants at `core.cljs:32-34`:
 
 ```clojure
 (defonce LSP_SCHEME "logseq")
@@ -50,7 +50,7 @@ The scheme names are `defonce` constants at `core.cljs:31-33`:
 
 `LSP_SCHEME` is duplicated in the renderer at `src/main/frontend/util/url.cljs:7`, with a `;; Keep same as electron/electron.core` comment — there is no shared constant.
 
-All three are declared privileged before the app window opens (`core.cljs:466-475`):
+All three are declared privileged before the app window opens (`core.cljs:475-484`):
 
 ```clojure
 (let [privileges {:standard true :secure true :bypassCSP true
@@ -62,7 +62,7 @@ All three are declared privileged before the app window opens (`core.cljs:466-47
                          :privileges (assoc privileges :stream true)}])))
 ```
 
-`:stream true` on `assets` is what lets large media be served without buffering. The two file protocols are torn down together on shutdown (`core.cljs:146-147`).
+`:stream true` on `assets` is what lets large media be served without buffering. The two file protocols are torn down together on shutdown (`core.cljs:149-150`).
 
 ### `lsp:` — the app and its plugins
 
@@ -76,7 +76,7 @@ The production window loads `lsp://logseq.com/index.html` (`src/electron/electro
 | `lsp://logseq.io/external/…` | `EXTERNAL_PLUGIN_URL` | `<decoded root>/<relative>` — an arbitrary root, for plugins under development |
 | `lsp://logseq.com/external/…` | `HOST_EXTERNAL_PLUGIN_URL` | same as above |
 
-Constants at `core.cljs:35-39`; the handler that dispatches between them is `core.cljs:101`. `logseq.io` and `logseq.com` are interchangeable hosts here — neither is contacted over the network.
+Constants at `core.cljs:36-40`; the handler that dispatches between them is `core.cljs:104`. `logseq.io` and `logseq.com` are interchangeable hosts here — neither is contacted over the network.
 
 ### `assets:` — local files by absolute path
 
@@ -154,7 +154,7 @@ These never reach Chromium's network stack — app code rewrites them first.
 | `zotero-link://<rel>` | `file://<zotero-linked-attachment-base-directory>/<rel>` | `src/main/frontend/extensions/pdf/assets.cljs:225` |
 | `zotero-path://<key>/<name>` | `file://<zotero-data-directory>/storage/<key>/<name>` | `assets.cljs:228` |
 
-Both `zotero-*` forms are written during file-graph import (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1729-1730`) into `:logseq.property.asset/external-file-name`, then resolved against `:zotero/settings-v2` when a PDF is opened. Both prefixes are exactly 14 characters, which is why the resolver does a bare `(subs path 14)`.
+Both `zotero-*` forms are written during file-graph import (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1771-1772`) into `:logseq.property.asset/external-file-name`, then resolved against `:zotero/settings-v2` when a PDF is opened. Both prefixes are exactly 14 characters, which is why the resolver does a bare `(subs path 14)`.
 
 `memory://` is a path prefix, not a protocol: `is-file-url?` (`deps/common/src/logseq/common/path.cljs:14`) groups it with `file://` and `assets://` for path-joining purposes, and the FS layer routes on it.
 
@@ -167,7 +167,7 @@ Both `zotero-*` forms are written during file-graph import (`deps/graph-parser/s
 | `file:` | Desktop paths throughout | `path.cljs:14`, `handler/assets.cljs` |
 | `http:` `https:` | Everything remote; the web build's own origin | — |
 | `ws:` `wss:` | RTC sync transport — `wss://api.logseq.io/sync/%s`, `ws://127.0.0.1:8787/sync/%s` in dev | `src/main/frontend/config.cljs:43-44` |
-| `zotero:` | `zotero://select/library/items/<key>`, stored as `:logseq.property.asset/external-url` and opened via `shell.openExternal` | `components/block.cljs:516` |
+| `zotero:` | `zotero://select/library/items/<key>`, stored as `:logseq.property.asset/external-url` and opened via `shell.openExternal` | `components/block.cljs:527` |
 | `mailto:` | Allowed target for `openExternal` | `resources/js/preload.js:9` |
 | `data:` | Export download hrefs (`text/html`, `text/edn`, `text/transit`, `text/json`); also an XSS check on pasted HTML | `handler/export.cljs:36,139,197`; `handler/db_based/export.cljs:95`; `extensions/html_parser.cljs:148` |
 | `blob:` | `URL.createObjectURL` for assets on browser and mobile | `handler/assets.cljs:148` |
@@ -225,7 +225,7 @@ The `{2,}` in `protocol-url?` is there so `C:/Users/…` is not mistaken for a s
 |---|---|
 | `direct://`, `socks://`, `socks5://` | Chromium **proxy-rule syntax** passed to `session.setProxy` (`src/electron/electron/utils.cljs:81`), not URIs Logseq handles |
 | `x-callback-url` | A *host* under `logseq:`, not a scheme — `logseq://x-callback-url/…` (`url.cljs:101`). The Apple convention is often written as though it were one |
-| `logseq://plugin/frame` | Appears only in `src/test/frontend/security_test.cljs` as a DOMPurify fixture. There is no such route; it survives sanitization because `security.cljs:35` sets `ALLOW_UNKNOWN_PROTOCOLS true` |
+| `logseq://plugin/frame` | Appears only in `src/test/frontend/security_test.cljs` as a DOMPurify fixture. There is no such route; it survives sanitization because `security.cljs:37` sets `ALLOW_UNKNOWN_PROTOCOLS true` |
 
 ---
 

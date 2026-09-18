@@ -5,8 +5,8 @@ version: 'Built-in Zotero Web API importer removed in bcc478b5f7 (#12276) — it
 quadrant: 'How-To Guide'
 graphType: [db]
 platform: 'Desktop (Electron). Zotero paths resolve to file:// URLs; the PDF viewer is not mounted in the native mobile app'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '../multimedia/asset-management.md'
@@ -16,6 +16,10 @@ related-docs:
 ---
 
 # Integrating Zotero with Logseq
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -28,7 +32,7 @@ Zotero is a popular reference management tool for researchers and academics. Log
 > - the API key and user/group fields
 > - the `/Zotero` search-and-import slash command
 >
-> It was already **file-graph only** before it was deleted. At `bcc478b5f7^`, the slash command was wrapped in `(when-not db? …)` (`src/main/frontend/commands.cljs:428-429`) and the settings row in `(when-not db-based? …)` (`src/main/frontend/components/settings.cljs:1107`). Commit `bcc478b5f7` ("refactor: separate og and db version", #12276) then deleted `src/main/frontend/extensions/zotero/{api,extractor,handler,schema,setting}.cljs`, `zotero.css` and the extractor test. It reduced `src/main/frontend/extensions/zotero.cljs` to the 101-line file-opening helpers (`git show bcc478b5f7 --stat`). You cannot search or import a Zotero library from inside a DB graph.
+> It was already **file-graph only** before it was deleted. At `bcc478b5f7^`, the slash command was wrapped in `(when-not db? …)` (`src/main/frontend/commands.cljs:428-429`) and the settings row in `(when-not db-based? …)` (`src/main/frontend/components/settings.cljs:1119`). Commit `bcc478b5f7` ("refactor: separate og and db version", #12276) then deleted `src/main/frontend/extensions/zotero/{api,extractor,handler,schema,setting}.cljs`, `zotero.css` and the extractor test. It reduced `src/main/frontend/extensions/zotero.cljs` to the 101-line file-opening helpers (`git show bcc478b5f7 --stat`). You cannot search or import a Zotero library from inside a DB graph.
 
 **What This Guide Covers**:
 
@@ -50,10 +54,10 @@ Zotero is a popular reference management tool for researchers and academics. Log
 
 - The settings map is keyed by profile name: `:zotero/settings-v2` in `config.edn` maps a profile name to settings (`src/main/frontend/extensions/zotero.cljs:29-33`, `:64-68`).
 - The macros pick the profile stored in local storage under `:zotero/setting-profile` (`zotero.cljs:58-62`). Nothing at `be800f1711` writes that key any more: it appears only in the storage spec (`src/main/frontend/spec/storage.cljc:19`, `:62`). The fallback is `(first (all-profiles config))` over a **set** of profile names (`zotero.cljs:53-56`, `:62`), so with several profiles the choice is not tied to map order.
-- PDF path resolution and the file-graph importer read the `"default"` profile unconditionally (`src/main/frontend/extensions/pdf/assets.cljs:220`; `deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1268`, `:1813`, `:3356-3357`). **Use a single profile named `"default"`.**
+- PDF path resolution and the file-graph importer read the `"default"` profile unconditionally (`src/main/frontend/extensions/pdf/assets.cljs:220`; `deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1289`, `:1834`, `:3413-3414`). **Use a single profile named `"default"`.**
 - PDF handling distinguishes imported Zotero files from linked Zotero files, with separate resolution paths for `zotero-path://` and `zotero-link://` (`src/main/frontend/extensions/pdf/assets.cljs:218-232`).
 - The default settings map still carries citekey preference, attachment and note toggles, page prefix, extra tags, overwrite mode and both directory paths (`src/main/frontend/extensions/zotero.cljs:35-44`). Only the two directory paths are read by anything.
-- Only four Zotero i18n keys remain: `:zotero/attachments`, `:zotero/imported-file-warning`, `:zotero/linked-file-warning`, `:zotero/notes` (`src/resources/dicts/en.edn:2005-2008`).
+- Only four Zotero i18n keys remain: `:zotero/attachments`, `:zotero/imported-file-warning`, `:zotero/linked-file-warning`, `:zotero/notes` (`src/resources/dicts/en.edn:2006-2009`).
 
 ---
 
@@ -63,7 +67,7 @@ This is what the current source provides. It lets Logseq **open** Zotero-managed
 
 ### Setup
 
-There is no Zotero settings pane. Open **Settings → Edit config.edn** (`src/main/frontend/components/settings.cljs:201-207`, shown when a graph is open at `:884`; label `src/resources/dicts/en.edn:1753`) and add:
+There is no Zotero settings pane. Open **Settings → Edit config.edn** (`src/main/frontend/components/settings.cljs:201-207`, shown when a graph is open at `:884`; label `src/resources/dicts/en.edn:1754`) and add:
 
 ```clojure
 :zotero/settings-v2
@@ -74,13 +78,13 @@ There is no Zotero settings pane. Open **Settings → Edit config.edn** (`src/ma
 
 In a DB graph, saving `logseq/config.edn` validates it and stores it in the database (`src/main/frontend/handler/db_based/editor.cljs:142-165`). The config schema is an open malli map (`src/main/frontend/schema/handler/common_config.cljc:5-7`) and has no Zotero entry, so the key is accepted as-is.
 
-When you import a file graph, its `config.edn` is copied with only the file-only keys removed (`exporter.cljs:3359-3370`); `:zotero/settings-v2` is not one of them (`deps/common/src/logseq/common/config.cljs:105`). During import, relative Zotero directories are resolved against the old graph's root (`exporter.cljs:3344-3357`, `:3371`).
+When you import a file graph, its `config.edn` is copied with only the file-only keys removed (`exporter.cljs:3416-3427`); `:zotero/settings-v2` is not one of them (`deps/common/src/logseq/common/config.cljs:108`). During import, relative Zotero directories are resolved against the old graph's root (`exporter.cljs:3401-3414`, `:3428`).
 
 > **Removed:** Step-by-step instructions for **Settings > Zotero settings**, the API key and user ID fields, the `/Zotero` slash command and its **Add all** bulk import. None of those exist at `be800f1711`, and none were available in DB graphs before they were removed.
 
 ### Usage
 
-Two macros render an **Open** button for a Zotero attachment (`src/main/frontend/components/block.cljs:1887-1894`):
+Two macros render an **Open** button for a Zotero attachment (`src/main/frontend/components/block.cljs:1904-1911`):
 
 ```text
 {{zotero-imported-file <item-key> "<filename>"}}
@@ -90,7 +94,7 @@ Two macros render an **Open** button for a Zotero attachment (`src/main/frontend
 - The filename/path argument is read with `read-string` (`zotero.cljs:85`, `:95`), so keep the double quotes.
 - `{{zotero-imported-file}}` resolves to `file://<zotero-data-directory>/storage/<item-key>/<filename>` (`zotero.cljs:70-77`).
 - `{{zotero-linked-file}}` resolves under `<zotero-linked-attachment-base-directory>`, stripping a leading `attachments:` prefix (`zotero.cljs:96-100`).
-- If the matching directory setting is blank, Logseq renders a warning instead of the button: "This is a Zotero imported file, set Zotero data directory to open the file in Logseq." (or the linked-file equivalent) (`zotero.cljs:83-84`, `:93-94`; `en.edn:2006-2007`).
+- If the matching directory setting is blank, Logseq renders a warning instead of the button: "This is a Zotero imported file, set Zotero data directory to open the file in Logseq." (or the linked-file equivalent) (`zotero.cljs:83-84`, `:93-94`; `en.edn:2007-2008`).
 - A path ending in `pdf` opens in Logseq's PDF viewer. Anything else becomes a button link with `target="_blank"` (`zotero.cljs:13-27`).
 
 A PDF opened from a macro has no asset block, because the viewer is given only the path (`zotero.cljs:20-22`). Choosing a highlight colour therefore opens the **Create asset** dialog rather than saving an annotation (`src/main/frontend/extensions/pdf/core.cljs:184-186`). See [PDF Annotations — Open a PDF](../../reference/features/pdf-annotations.md#open-a-pdf).
@@ -99,7 +103,7 @@ A PDF opened from a macro has no asset block, because the viewer is given only t
 
 ### Imported Zotero Assets
 
-Asset blocks whose **External URL** starts with `zotero://` are resolved to local files when opened, both from the asset (`src/main/frontend/components/block.cljs:513-519`) and from an annotation's `P<page>` link (`src/main/frontend/extensions/pdf/assets.cljs:238-242`). The file comes from the asset's `:logseq.property.asset/external-file-name` (`deps/db/src/logseq/db/frontend/property.cljs:565-569`):
+Asset blocks whose **External URL** starts with `zotero://` are resolved to local files when opened, both from the asset (`src/main/frontend/components/block.cljs:524-530`) and from an annotation's `P<page>` link (`src/main/frontend/extensions/pdf/assets.cljs:238-242`). The file comes from the asset's `:logseq.property.asset/external-file-name` (`deps/db/src/logseq/db/frontend/property.cljs:565-569`):
 
 | `external-file-name` prefix | Resolves to                                                      |
 | --------------------------- | ---------------------------------------------------------------- |
@@ -107,17 +111,17 @@ Asset blocks whose **External URL** starts with `zotero://` are resolved to loca
 | `zotero-path://<path>`      | `file://<zotero-data-directory>/storage/<path>`                  |
 | anything else               | `file://<zotero-data-directory>/storage/<item-id>/<name>`        |
 
-(`assets.cljs:218-232`). Clicking a `zotero://` External URL value does not open the edit dialog that other external URLs get (`src/main/frontend/components/property/value.cljs:44-48`).
+(`assets.cljs:218-232`). Clicking a `zotero://` External URL value does not open the edit dialog that other external URLs get (`src/main/frontend/components/property/value.cljs:45-49`).
 
 These assets are created by the **file-graph importer**. It detects:
-- Markdown links with the `zotero` protocol (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1261-1271`, `:1336-1337`)
-- `{{zotero-imported-file}}` / `{{zotero-linked-file}}` macros (`exporter.cljs:1345-1357`)
+- Markdown links with the `zotero` protocol (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1303-1313`, `:1357-1358`)
+- `{{zotero-imported-file}}` / `{{zotero-linked-file}}` macros (`exporter.cljs:1366-1378`)
 
-It then builds `zotero-path://` / `zotero-link://` names (`exporter.cljs:1727-1730`) and stores them with the `zotero://` link as the external URL (`exporter.cljs:1743-1753`). A file graph that used the old integration keeps its PDFs openable after import. There is no UI for creating such assets by hand.
+It then builds `zotero-path://` / `zotero-link://` names (`exporter.cljs:1748-1751`) and stores them with the `zotero://` link as the external URL (`exporter.cljs:1764-1774`). A file graph that used the old integration keeps its PDFs openable after import. There is no UI for creating such assets by hand.
 
 ### Links Back to Zotero
 
-A Markdown link with a custom protocol renders as a normal link (`block.cljs:1519-1523`):
+A Markdown link with a custom protocol renders as a normal link (`block.cljs:1536-1540`):
 
 ```markdown
 [Open in Zotero](zotero://select/library/items/ABCD1234)
@@ -214,7 +218,7 @@ The layout above is shorthand for the properties on the page, not text to type.
 
 ### Bring the Export into Logseq
 
-A DB graph has no `pages/` folder to drop Markdown files into; it is a single `db.sqlite` plus `assets/` (`deps/db/src/logseq/db/common/sqlite.cljs:29-33`, `deps/common/src/logseq/common/config.cljs:56`). Copy the exported note's text and paste it into a page. Then re-create the metadata with `/Add property`.
+A DB graph has no `pages/` folder to drop Markdown files into; it is a single `db.sqlite` plus `assets/` (`deps/db/src/logseq/db/common/sqlite.cljs:29-33`, `deps/common/src/logseq/common/config.cljs:59`). Copy the exported note's text and paste it into a page. Then re-create the metadata with `/Add property`.
 
 > **Unverified:** Whether pasted `key:: value` lines are converted into properties was not checked. Assume they arrive as text.
 
@@ -240,7 +244,7 @@ If you prefer to keep PDFs in your Logseq graph:
 2. In Logseq, open the reference page and start editing a block
 3. Type `/Upload an asset` (`src/main/frontend/commands.cljs:335-338`) and pick the PDF, or drop the file onto the editor
 
-Logseq copies the file to `assets/<asset-uuid>.pdf` and creates an `#Asset` block (`src/main/frontend/handler/editor.cljs:1760-1802`). The asset is inserted at the block you are editing (`editor.cljs:1840-1851`). Do not copy files into `assets/` on disk yourself; that creates no asset block.
+Logseq copies the file to `assets/<asset-uuid>.pdf` and creates an `#Asset` block (`src/main/frontend/handler/editor.cljs:1793-1835`). The asset is inserted at the block you are editing (`editor.cljs:1840-1851`). Do not copy files into `assets/` on disk yourself; that creates no asset block.
 
 ### Zotero Link (Alternative)
 
@@ -256,7 +260,7 @@ Or hard-code an absolute path in the block text:
 ![paper](file:///Users/yourname/Zotero/storage/ABC123/paper.pdf)
 ```
 
-With the leading `!`, a `file://` link to a PDF renders as a PDF link that opens the viewer (`src/main/frontend/components/block.cljs:1580-1582`, `:1417-1422`). Without it, Electron opens the file with the system app (`block.cljs:1583-1600`).
+With the leading `!`, a `file://` link to a PDF renders as a PDF link that opens the viewer (`src/main/frontend/components/block.cljs:1597-1599`, `:1434-1439`). Without it, Electron opens the file with the system app (`block.cljs:1600-1617`).
 
 Note: `file://` paths break if the Zotero storage path changes. The macro form survives a move as long as you update `:zotero-data-directory`. PDFs opened either way have no asset block, so annotations require creating an asset first.
 
@@ -313,7 +317,7 @@ Note: `file://` paths break if the Zotero storage path changes. The macro form s
 - According to [[@smith2024]], the results show...
 ```
 
-A `/` in a page title does **not** create a namespaced title in a DB graph. `[[zotero/smith2024]]` creates a `zotero` page with a child page `smith2024` (`deps/outliner/src/logseq/outliner/page.cljs:385-388`). Prefer a tag, e.g. tag reference pages `#Reference`.
+A `/` in a page title does **not** create a namespaced title in a DB graph. `[[zotero/smith2024]]` creates a `zotero` page with a child page `smith2024` (`deps/outliner/src/logseq/outliner/page.cljs:464-467`). Prefer a tag, e.g. tag reference pages `#Reference`.
 
 ### Citation Format
 
@@ -416,7 +420,7 @@ Only five `<% %>` variables are substituted when a template is inserted: `today`
 
 ## Querying References (Database Graphs)
 
-`{{query …}}` does not run in a DB graph; it renders a deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Type `/Query` and enter the bare form. A form must start with `(`, otherwise it becomes a full-text search (`src/main/frontend/components/query/builder.cljs:543-552`).
+`{{query …}}` does not run in a DB graph; it renders a deprecation warning (`src/main/frontend/components/block.cljs:1887-1888`). Type `/Query` and enter the bare form. A form must start with `(`, otherwise it becomes a full-text search (`src/main/frontend/components/query/builder.cljs:608-617`).
 
 `(property name value)` looks the property up by its **title** (`src/main/frontend/worker/query_dsl.cljs:343-356`), so these assume properties you created called `source-type`, `author`, `year` and `pdf`. A `[[Page]]` value is reduced to the page name (`query_dsl.cljs:329-336`). Avoid naming a property `Status`; it collides with the built-in task status (see [Research Workflow](../workflows/research-workflow.md#reading-status-tracking)).
 
@@ -462,7 +466,7 @@ The one-argument form matches blocks that have the property at all (`query_dsl.c
 
 **Problem**: There is no `/Zotero` slash command and no Zotero pane in Settings.
 
-**Cause**: Expected. The Web API integration was file-graph only (`commands.cljs:428-429` and `settings.cljs:1107` at `bcc478b5f7^`) and was removed in `bcc478b5f7` (#12276). Use a plugin or one of the manual routes.
+**Cause**: Expected. The Web API integration was file-graph only (`commands.cljs:428-429` and `settings.cljs:1119` at `bcc478b5f7^`) and was removed in `bcc478b5f7` (#12276). Use a plugin or one of the manual routes.
 
 ### "This is a Zotero imported file" Warning Instead of an Open Button
 
@@ -575,7 +579,7 @@ Zotero settings live in your graph's `logseq/config.edn` under `:zotero/settings
 | `:extra-tags` | Additional tags for imported items | `""` | No |
 | `:page-insert-prefix` | Prefix for imported page names | `"@"` | No |
 
-"Still read?" reflects `be800f1711`. Only the two directory paths are consumed, by `zotero.cljs` (`:74`, `:92`), `pdf/assets.cljs` (`:220-222`) and the file-graph importer (`exporter.cljs:1268`, `:1813`). The rest are defaults left from the removed importer. `:zotero/api-key-v2` and `:zotero/setting-profile` still appear in the local-storage spec (`src/main/frontend/spec/storage.cljc:18-19`, `:61-62`), but nothing reads the API key and nothing writes the profile.
+"Still read?" reflects `be800f1711`. Only the two directory paths are consumed, by `zotero.cljs` (`:74`, `:92`), `pdf/assets.cljs` (`:220-222`) and the file-graph importer (`exporter.cljs:1289`, `:1834`). The rest are defaults left from the removed importer. `:zotero/api-key-v2` and `:zotero/setting-profile` still appear in the local-storage spec (`src/main/frontend/spec/storage.cljc:18-19`, `:61-62`), but nothing reads the API key and nothing writes the profile.
 
 ---
 

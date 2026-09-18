@@ -10,7 +10,7 @@ Can I set a default display size for images? Resizing an image sets asset proper
 
 ## Answer
 
-No setting exists. An image that has never been resized renders **250px wide**, and that number is hard-coded (`src/main/frontend/components/block.cljs:1161`). `config.edn` has no image-size key and the renderer never reads config for this, so adding `:logseq.property.asset/resize-metadata {:width 666}` to `config.edn` does nothing.
+No setting exists. An image that has never been resized renders **250px wide**, and that number is hard-coded (`src/main/frontend/components/block.cljs:1178`). `config.edn` has no image-size key and the renderer never reads config for this, so adding `:logseq.property.asset/resize-metadata {:width 666}` to `config.edn` does nothing.
 
 Two ways forward:
 
@@ -24,9 +24,9 @@ Two ways forward:
 | Property | Holds | Set by |
 |---|---|---|
 | `:logseq.property.asset/width`, `:logseq.property.asset/height` | The image file's original pixel size | Measured once on first render, only if missing (`block.cljs:231-242`). Hidden, `:raw-number` (`deps/db/src/logseq/db/frontend/property.cljs:575-584`) |
-| `:logseq.property.asset/resize-metadata` | `{:width N}`, the display width | Saved when a resize drag ends (`src/main/frontend/handler/editor.cljs:2219-2224`). Hidden, not public, `:map` (`property.cljs:601-604`) |
+| `:logseq.property.asset/resize-metadata` | `{:width N}`, the display width | Saved when a resize drag ends (`src/main/frontend/handler/editor.cljs:2252-2257`). Hidden, not public, `:map` (`property.cljs:601-604`) |
 
-The resize is saved on the asset entity whenever there is one (`editor.cljs:2221-2222`), not on the block that shows it. Resizing an image in one place changes it everywhere it appears.
+The resize is saved on the asset entity whenever there is one (`editor.cljs:2254-2255`), not on the block that shows it. Resizing an image in one place changes it everywhere it appears.
 
 ### How the display width is chosen
 
@@ -36,7 +36,7 @@ In `asset-cp` (`block.cljs:1131`):
 2. The display width is `(or width 250 asset-width)` (`block.cljs:1161`). Because 250 is always truthy, `asset/width` is never used as a width. It only supplies the aspect ratio, and height is width divided by that ratio (`block.cljs:1162-1168`).
 3. The loading placeholder gets the same size as an inline style (`block.cljs:1169-1171`).
 
-`resizable-image` then merges `resize-metadata` into that metadata (`block.cljs:404`; `components/block/image.cljs:4-11`). `asset-container` merges the metadata into the `<img>` attributes (`block.cljs:261-268`), so the width is an HTML `width` attribute, not an inline style.
+`resizable-image` then merges `resize-metadata` into that metadata (`block.cljs:404`; `components/block/image.cljs:22-29`). `asset-container` merges the metadata into the `<img>` attributes (`block.cljs:261-268`), so the width is an HTML `width` attribute, not an inline style.
 
 ### What a resize writes
 
@@ -74,8 +74,8 @@ Resizing is unavailable on native mobile, in breadcrumbs, in positioned properti
 
 - Nothing is saved. Un-resized images still have no `resize-metadata`.
 - The loading placeholder is still 250px (inline style), so the layout can jump when the image appears.
-- Images inside property values are capped at 35% width (`block.css:1999-2001`).
-- Breadcrumb images are forced to 18px tall with `width: unset !important` (`block.css:98-104`).
+- Images inside property values are capped at 35% width (`block.css:2019-2021`).
+- Breadcrumb images are forced to 18px tall with `width: unset !important` (`block.css:118-124`).
 - Table view caps images at 80px wide and 200px tall (`table.css:6-8`).
 
 ## Other routes

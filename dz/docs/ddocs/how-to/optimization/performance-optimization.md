@@ -4,8 +4,8 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
-lastVerified: '2026-09-12'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-10 (7490ff2964). The 2026-09-12 date covers only the Settings > Features platform gates (the Plugins row is web-only; HTTP server and Markdown Mirror are Electron-only).'
 reviewStatus: audited
 related-docs:
@@ -17,11 +17,15 @@ tags: ['performance', 'optimization', 'speed', 'troubleshooting']
 
 # Performance Optimization Guide
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 This guide covers the tools Logseq actually provides for keeping a DB graph responsive: rebuilding the search index, keeping blocks under the size limit, garbage-collecting the SQLite file, validating the graph, and turning off features you do not use.
 
-A DB graph is a single `db.sqlite` file plus an `assets/` folder under `~/logseq/graphs` ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); [`deps/common/src/logseq/common/config.cljs:55-56`](../../../../../deps/common/src/logseq/common/config.cljs)), not a folder of Markdown pages. Advice written for file graphs (re-indexing a folder, moving journal files, tuning file watchers) does not apply.
+A DB graph is a single `db.sqlite` file plus an `assets/` folder under `~/logseq/graphs` ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); [`deps/common/src/logseq/common/config.cljs:58-59`](../../../../../deps/common/src/logseq/common/config.cljs)), not a folder of Markdown pages. Advice written for file graphs (re-indexing a folder, moving journal files, tuning file watchers) does not apply.
 
-> Removed claim: earlier revisions of this page described Settings entries for **auto-save delay**, **number of loaded pages**, **batch size**, **clear cache**, **re-index**, **vacuum database**, **check database integrity**, **migrate schema**, **build search index** and **enable full-text search**, plus feature toggles for **graph view**, **whiteboards** and **PDF annotations**. None of these rows exists in the settings screens ([`src/main/frontend/components/settings.cljs:871-937`](../../../../../src/main/frontend/components/settings.cljs), [`:1129-1181`](../../../../../src/main/frontend/components/settings.cljs)). The real equivalents, where there are any, are below.
+> Removed claim: earlier revisions of this page described Settings entries for **auto-save delay**, **number of loaded pages**, **batch size**, **clear cache**, **re-index**, **vacuum database**, **check database integrity**, **migrate schema**, **build search index** and **enable full-text search**, plus feature toggles for **graph view**, **whiteboards** and **PDF annotations**. None of these rows exists in the settings screens ([`src/main/frontend/components/settings.cljs:883-949`](../../../../../src/main/frontend/components/settings.cljs), [`:1141-1193`](../../../../../src/main/frontend/components/settings.cljs)). The real equivalents, where there are any, are below.
 
 **What You'll Learn:**
 
@@ -66,7 +70,7 @@ Measure before and after each change so you know whether it helped.
 
 > Removed claim: a "Target Times" table (for example "< 1,000 blocks: < 3 seconds", "50,000+ blocks: 30-60 seconds") had no measurement or source behind it.
 
-> Removed claim: "Settings → General" does not show total blocks, pages, assets or database size. The General section renders version, language, theme, font, title bar, accent colour and config-file rows ([`settings.cljs:871-887`](../../../../../src/main/frontend/components/settings.cljs)).
+> Removed claim: "Settings → General" does not show total blocks, pages, assets or database size. The General section renders version, language, theme, font, title bar, accent colour and config-file rows ([`settings.cljs:883-899`](../../../../../src/main/frontend/components/settings.cljs)).
 
 > Removed claim: the "Performance Test Commands" (`(count (d/datoms @conn :avet :block/uuid))` and similar) are ClojureScript, which the DevTools console does not evaluate. For inspecting data, turn on **Developer mode** and use the "(Dev) Show block data" / "(Dev) Show page data" commands ([`modules/shortcut/config.cljs:495-508`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 
@@ -90,7 +94,7 @@ The command is `:search/re-index` ([`modules/shortcut/config.cljs:337-338`](../.
 
 **2. Clear Cache**
 
-> Removed claim: "Settings → Advanced → Clear cache". The Clear cache row is commented out: its definition ([`settings.cljs:557-561`](../../../../../src/main/frontend/components/settings.cljs)) and its only use in `settings-advanced` ([`:931`](../../../../../src/main/frontend/components/settings.cljs)) are both `;;` comments.
+> Removed claim: "Settings → Advanced → Clear cache". The Clear cache row is commented out: its definition ([`settings.cljs:569-573`](../../../../../src/main/frontend/components/settings.cljs)) and its only use in `settings-advanced` ([`:943`](../../../../../src/main/frontend/components/settings.cljs)) are both `;;` comments.
 
 **3. Update Logseq**
 
@@ -99,7 +103,7 @@ Settings → General → current version (with the updater)
 Settings → Advanced → auto update (desktop app, macOS and Windows)
 ```
 
-([`settings.cljs:563-566`](../../../../../src/main/frontend/components/settings.cljs), [`:924`](../../../../../src/main/frontend/components/settings.cljs).)
+([`settings.cljs:575-578`](../../../../../src/main/frontend/components/settings.cljs), [`:936`](../../../../../src/main/frontend/components/settings.cljs).)
 
 **4. Disable Unused Plugins**
 
@@ -107,13 +111,13 @@ Settings → Advanced → auto update (desktop app, macOS and Windows)
 Settings → Features → Plugins
 ```
 
-The Plugins row switches the plugin system on or off ([`settings.cljs:778-781`](../../../../../src/main/frontend/components/settings.cljs); label "Plugins" at [`en.edn:1737`](../../../../../src/resources/dicts/en.edn)). **The row appears only in the web app**: it is rendered `(when (and web-platform? config/feature-plugin-system-on?) ...)` ([`settings.cljs:1154-1155`](../../../../../src/main/frontend/components/settings.cljs)), and `web-platform?` is false on desktop and on native mobile ([`util.cljc:128-130`](../../../../../src/main/frontend/util.cljc)). On desktop, disable plugins one at a time from the plugins page instead.
+The Plugins row switches the plugin system on or off ([`settings.cljs:790-793`](../../../../../src/main/frontend/components/settings.cljs); label "Plugins" at [`en.edn:1738`](../../../../../src/resources/dicts/en.edn)). **The row appears only in the web app**: it is rendered `(when (and web-platform? config/feature-plugin-system-on?) ...)` ([`settings.cljs:1166-1167`](../../../../../src/main/frontend/components/settings.cljs)), and `web-platform?` is false on desktop and on native mobile ([`util.cljc:128-130`](../../../../../src/main/frontend/util.cljc)). On desktop, disable plugins one at a time from the plugins page instead.
 
 > Removed claim: the plugin-count impact figures ("3-5 plugins: Minimal … 20+ plugins: Significant slowdown") had no source.
 
 **5. Reduce Auto-Save Frequency**
 
-> Removed claim: "Settings → Editor → Auto-save delay (default 2000ms)". No such setting exists; the Editor section's rows are date format, brackets, wide mode, spell check, logical outdenting, auto-expand block refs, the tooltip toggles and all-pages-public ([`settings.cljs:888-917`](../../../../../src/main/frontend/components/settings.cljs)).
+> Removed claim: "Settings → Editor → Auto-save delay (default 2000ms)". No such setting exists; the Editor section's rows are date format, brackets, wide mode, spell check, logical outdenting, auto-expand block refs, the tooltip toggles and all-pages-public ([`settings.cljs:900-929`](../../../../../src/main/frontend/components/settings.cljs)).
 
 ---
 
@@ -127,8 +131,8 @@ This is the one size threshold Logseq enforces. The config key `:block/title-max
 
 Above the limit:
 
-- the block shows "Large block will not be editable or searchable to not slow down the app, please use another editor to edit this block." unless it is a code block ([`components/block.cljs:3488-3491`](../../../../../src/main/frontend/components/block.cljs); text at [`en.edn:129`](../../../../../src/resources/dicts/en.edn));
-- clicking the block does not enter editing ([`block.cljs:2696-2699`](../../../../../src/main/frontend/components/block.cljs)).
+- the block shows "Large block will not be editable or searchable to not slow down the app, please use another editor to edit this block." unless it is a code block ([`components/block.cljs:3537-3540`](../../../../../src/main/frontend/components/block.cljs); text at [`en.edn:129`](../../../../../src/resources/dicts/en.edn));
+- clicking the block does not enter editing ([`block.cljs:2735-2738`](../../../../../src/main/frontend/components/block.cljs)).
 
 Split very long blocks into child blocks rather than raising the limit.
 
@@ -153,13 +157,13 @@ After:
 
 **3. Use Namespaces Wisely**
 
-In a DB graph, a title such as `Projects/Work/ClientA` is split and each segment becomes its own page under **Library** ([`deps/outliner/src/logseq/outliner/page.cljs:385-388`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)). Deep paths therefore create many pages.
+In a DB graph, a title such as `Projects/Work/ClientA` is split and each segment becomes its own page under **Library** ([`deps/outliner/src/logseq/outliner/page.cljs:464-467`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)). Deep paths therefore create many pages.
 
 > Removed claim: namespaces do not provide "lazy loading (only load visible pages)"; nothing in the page-splitting code loads pages lazily.
 
 **4. Optimize Queries**
 
-`#+BEGIN_QUERY` is deprecated in DB graphs and renders a warning ([`components/block.cljs:5057-5058`](../../../../../src/main/frontend/components/block.cljs)). Create advanced queries with `/Advanced Query`, which tags the block `Query` and stores the query in a Clojure code property ([`src/main/frontend/commands.cljs:125-132`](../../../../../src/main/frontend/commands.cljs)).
+`#+BEGIN_QUERY` is deprecated in DB graphs and renders a warning ([`components/block.cljs:5107-5108`](../../../../../src/main/frontend/components/block.cljs)). Create advanced queries with `/Advanced Query`, which tags the block `Query` and stores the query in a Clojure code property ([`src/main/frontend/commands.cljs:125-132`](../../../../../src/main/frontend/commands.cljs)).
 
 **Slow Query** — matches every block that has a title:
 
@@ -203,7 +207,7 @@ Two corrections to earlier revisions:
 
 **5. Archive Old Content**
 
-> Removed claim: the "archive-old-journals.sh" script concatenated and deleted `journals/*.md` files. In a DB graph, journals live in `db.sqlite`, not in a `journals/` folder. The optional Markdown Mirror only writes "a derived Markdown copy of edited pages to the graph's mirror/markdown folder" ([`en.edn:1732`](../../../../../src/resources/dicts/en.edn)). Moving or deleting Markdown files does not archive anything in the graph.
+> Removed claim: the "archive-old-journals.sh" script concatenated and deleted `journals/*.md` files. In a DB graph, journals live in `db.sqlite`, not in a `journals/` folder. The optional Markdown Mirror only writes "a derived Markdown copy of edited pages to the graph's mirror/markdown folder" ([`en.edn:1733`](../../../../../src/resources/dicts/en.edn)). Moving or deleting Markdown files does not archive anything in the graph.
 
 ---
 
@@ -211,7 +215,7 @@ Two corrections to earlier revisions:
 
 ### Database Graph Performance
 
-The database maintenance commands are **developer commands**. Turn on **Settings → Advanced → Developer mode** first (not shown in the native mobile app; [`settings.cljs:568-575`](../../../../../src/main/frontend/components/settings.cljs), [`:926`](../../../../../src/main/frontend/components/settings.cljs); label at [`en.edn:1702`](../../../../../src/resources/dicts/en.edn)). Each command below is inactive unless developer mode is on.
+The database maintenance commands are **developer commands**. Turn on **Settings → Advanced → Developer mode** first (not shown in the native mobile app; [`settings.cljs:580-587`](../../../../../src/main/frontend/components/settings.cljs), [`:938`](../../../../../src/main/frontend/components/settings.cljs); label at [`en.edn:1703`](../../../../../src/resources/dicts/en.edn)). Each command below is inactive unless developer mode is on.
 
 **1. Garbage-Collect the Graph (includes VACUUM)**
 
@@ -257,7 +261,7 @@ The current DB schema version is **65.33** ([`deps/db/src/logseq/db/frontend/sch
 
 ### Optimize Media Files
 
-Logseq saves pasted and uploaded files into the graph's assets directory itself (`db-based-save-assets!`, [`handler/editor.cljs:1804-1837`](../../../../../src/main/frontend/handler/editor.cljs); directory from `ensure-assets-dir!`, [`handler/assets.cljs:290-294`](../../../../../src/main/frontend/handler/assets.cljs)). Smaller files mean a smaller graph folder and smaller backups.
+Logseq saves pasted and uploaded files into the graph's assets directory itself (`db-based-save-assets!`, [`handler/editor.cljs:1837-1870`](../../../../../src/main/frontend/handler/editor.cljs); directory from `ensure-assets-dir!`, [`handler/assets.cljs:321-325`](../../../../../src/main/frontend/handler/assets.cljs)). Smaller files mean a smaller graph folder and smaller backups.
 
 **1. Compress Images**
 
@@ -294,7 +298,7 @@ Tools:
 
 **3. External Asset Hosting**
 
-An image link whose target starts with `http` is used directly as the image source ([`components/block.cljs:650-652`](../../../../../src/main/frontend/components/block.cljs)):
+An image link whose target starts with `http` is used directly as the image source ([`components/block.cljs:661-663`](../../../../../src/main/frontend/components/block.cljs)):
 
 ```markdown
 ![](https://example.com/abc123.png)
@@ -308,7 +312,7 @@ Trade-off: the image needs a network connection and depends on the external host
 
 **5. Asset Location**
 
-Keep assets in the graph's own `assets/` directory, which is where Logseq writes them ([`deps/common/src/logseq/common/config.cljs:56`](../../../../../deps/common/src/logseq/common/config.cljs)).
+Keep assets in the graph's own `assets/` directory, which is where Logseq writes them ([`deps/common/src/logseq/common/config.cljs:59`](../../../../../deps/common/src/logseq/common/config.cljs)).
 
 > Removed claim: "Single location = faster indexing" and the `images/`, `pdfs/`, `videos/`, `audio/` subfolder layout. Neither claim had a source; Logseq writes new assets into `assets/` itself.
 
@@ -334,18 +338,18 @@ Linux: htop → logseq
 
 **3. Disable Features**
 
-**Settings → Features** renders exactly these rows ([`settings.cljs:1129-1181`](../../../../../src/main/frontend/components/settings.cljs)):
+**Settings → Features** renders exactly these rows ([`settings.cljs:1141-1193`](../../../../../src/main/frontend/components/settings.cljs)):
 
 ```markdown
 - Plugins (plugin system)   — web only
 - HTTP server               — Electron only
-- Markdown Mirror           — Electron only ("Write a derived Markdown copy of edited pages to the graph's mirror/markdown folder. Desktop only.", en.edn:1732)
+- Markdown Mirror           — Electron only ("Write a derived Markdown copy of edited pages to the graph's mirror/markdown folder. Desktop only.", en.edn:1733)
 - Flashcards
 - Semantic search
 ```
 
 Three of those rows are gated: Plugins on `web-platform?`, HTTP server and Markdown Mirror on
-`(util/electron?)` ([`settings.cljs:1154-1159`](../../../../../src/main/frontend/components/settings.cljs)). So no build shows all five.
+`(util/electron?)` ([`settings.cljs:1166-1171`](../../../../../src/main/frontend/components/settings.cljs)). So no build shows all five.
 
 (Row functions `plugin-system-switcher-row`, `http-server-switcher-row`, `markdown-mirror-row`, `flashcards-switcher-row` and `semantic-search-row`.) Turn off the ones you do not use.
 
@@ -449,7 +453,7 @@ A DB graph is one SQLite file per graph ([`sqlite.cljs:29-33`](../../../../../de
 4. Replace deprecated {{embed}} macros with /Node embed
 ```
 
-`{{embed}}` renders only a deprecation warning in a DB graph ([`components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)).
+`{{embed}}` renders only a deprecation warning in a DB graph ([`components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs)).
 
 **5. High CPU Usage**
 

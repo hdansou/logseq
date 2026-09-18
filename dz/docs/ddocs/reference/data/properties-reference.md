@@ -2,8 +2,8 @@
 title: 'Properties Reference'
 status: 🟢 Stable
 quadrant: 'Reference'
-last-verified: '2026-09-09'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 platform: 'Desktop + Mobile'
 related-docs:
@@ -11,6 +11,10 @@ related-docs:
   - '[Stop Task Time Tracking in DB Graphs](../../how-to/tasks/disable-task-time-tracking.md)'
 tags: ['properties', 'db-graphs', 'schema', 'reference']
 ---
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This page documents the **118** built-in DB-graph properties currently declared in
 `built-in-properties` at `deps/db/src/logseq/db/frontend/property.cljs:20-704` (entries span
@@ -237,7 +241,7 @@ previous revision of this page. All nine were introduced between schema `65.26` 
 | Ident                                              | Source                                | Schema | Notes                                                                               |
 | -------------------------------------------------- | ------------------------------------- | ------ | ----------------------------------------------------------------------------------- |
 | `:logseq.property.repeat/repeat-type`              | `property.cljs:381-393`               | 65.26  | Closed-value repeat strategy; defaults to `repeat-type.double-plus`.                  |
-| `:logseq.property.comments/blocks`                 | `property.cljs:262-266`               | 65.27  | Ships with the new `:logseq.class/Comments` class (`class.cljs:44-48`).               |
+| `:logseq.property.comments/blocks`                 | `property.cljs:262-266`               | 65.27  | Ships with the new `:logseq.class/Comments` class (`class.cljs:43-47`).               |
 | `:logseq.property/assignee`                        | `property.cljs:401-408`               | 65.30  | First public, many-cardinality task property scoped to `:logseq.class/Page`.          |
 | `:logseq.property.agent/session-id`                | `property.cljs:685-690`               | 65.31  | AgentBridge session routing.                                                          |
 | `:logseq.property.view/gallery-asset-property`     | `property.cljs:463-467`               | 65.33  | Gallery view configuration.                                                           |
@@ -248,7 +252,7 @@ previous revision of this page. All nine were introduced between schema `65.26` 
 
 Two related classes also arrived alongside these properties and are not property definitions,
 but affect which properties appear on a node: `:logseq.class/Comments` and
-`:logseq.class/Comment` (`deps/db/src/logseq/db/frontend/class.cljs:44-52`), bringing the
+`:logseq.class/Comment` (`deps/db/src/logseq/db/frontend/class.cljs:43-51`), bringing the
 built-in class count to 18.
 
 ### Properties removed from the schema

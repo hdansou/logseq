@@ -2,8 +2,8 @@
 title: 'RTC vs File Sync'
 description: 'Why Logseq replaced file-level Markdown sync with operation-level DB sync (db-sync, still labelled RTC in parts of the code), and how the two differ'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 category: comparisons
@@ -19,6 +19,10 @@ relatedDocs:
 
 # RTC vs File Sync
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > **Last revised:** 2026-09-11 — verified against `be800f1711`
 
 > Why Logseq moved from syncing Markdown files to syncing database transactions, and what actually changed.
@@ -28,7 +32,7 @@ relatedDocs:
 Logseq has had two cloud sync implementations. **Only one exists today.**
 
 - **File Sync** synced the Markdown/Org files of a file-based graph. Its runtime was deleted in commit `bcc478b5f7` ("refactor: separate og and db version", 2025-12-29). That commit removed `src/main/frontend/fs/sync.cljs` (3,322 lines), `src/main/frontend/components/file_sync.cljs`, `src/main/frontend/handler/file_sync.cljs` and `src/electron/electron/file_sync_rsapi.cljs`. File-based graphs cannot be opened any more either: the graph list keeps only DB graphs ([`repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs#L321-L323), "use `config/db-based-graph?` to avoid loading old file graphs").
-- **DB sync** syncs the transactions of a database graph. In source it is called **db-sync**: the client lives in `frontend.worker.sync` ([`src/main/frontend/worker/sync.cljs`](../../../../../src/main/frontend/worker/sync.cljs) and `worker/sync/`), and the server in `logseq.db-sync` ([`deps/db-sync/`](../../../../../deps/db-sync/)). The older name **RTC** survives in UI state and component names, for example `[:rtc/state :online-users]` ([`header.cljs:124`](../../../../../src/main/frontend/components/header.cljs#L124)) and `src/main/frontend/components/rtc/`.
+- **DB sync** syncs the transactions of a database graph. In source it is called **db-sync**: the client lives in `frontend.worker.sync` ([`src/main/frontend/worker/sync.cljs`](../../../../../src/main/frontend/worker/sync.cljs) and `worker/sync/`), and the server in `logseq.db-sync` ([`deps/db-sync/`](../../../../../deps/db-sync/)). The older name **RTC** survives in UI state and component names, for example `[:rtc/state :online-users]` ([`header.cljs:125`](../../../../../src/main/frontend/components/header.cljs#L125)) and `src/main/frontend/components/rtc/`.
 
 What remains of File Sync is not a sync engine:
 - The `/file-sync/` HTTP prefix is still used, but only for the account `user_info` call ([`user.cljs:424`](../../../../../src/main/frontend/handler/user.cljs#L424), [`:511-513`](../../../../../src/main/frontend/handler/user.cljs#L511-L513), called from [`events/ui.cljs:503`](../../../../../src/main/frontend/handler/events/ui.cljs#L503)).
@@ -134,7 +138,7 @@ The File Sync column describes removed code at `bcc478b5f7^`.
 
 | Resource          | Limit                                          | Source |
 | ----------------- | ---------------------------------------------- | ------ |
-| Per-asset size    | 100 MiB, or 200 MiB on the server for E2EE graphs | Server [`assets.cljs:9-10`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs#L9-L10), selected at [`:229`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs#L229); client [`worker/sync/assets.cljs:19`](../../../../../src/main/frontend/worker/sync/assets.cljs#L19) |
+| Per-asset size    | 100 MiB, or 200 MiB on the server for E2EE graphs | Server [`assets.cljs:9-10`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs#L9-L10), selected at [`:230`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs#L230); client [`worker/sync/assets.cljs:19`](../../../../../src/main/frontend/worker/sync/assets.cljs#L19) |
 | Tx batch per upload | 50 pending txs                               | [`apply_txs.cljs:960`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L960) |
 | Graph count / storage | Shown in the UI, **not enforced** by the server | [sync-limits.md](../../reference/features/sync-limits.md#account-level-limits--claimed-not-enforced) |
 
@@ -193,7 +197,7 @@ When two clients edit the same graph:
 
 Rebases do not always succeed:
 - If a pending tx fails to rebase, or rebases to a no-op, it is marked non-pending and never uploaded ([`apply_txs.cljs:1700-1710`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L1700-L1710)).
-- If a remote `:block/title` overwrote a block with pending local edits, the remote value is saved as a sync conflict. The block then shows a warning button ([`block.cljs:3389`](../../../../../src/main/frontend/components/block.cljs#L3389)). The popup says: "These server versions conflicted with local edits. Copy the text you want and edit the block manually." ([`en.edn:1831`](../../../../../src/resources/dicts/en.edn#L1831)). So title conflicts are resolved automatically but surfaced for review; other attributes are not recorded.
+- If a remote `:block/title` overwrote a block with pending local edits, the remote value is saved as a sync conflict. The block then shows a warning button ([`block.cljs:3438`](../../../../../src/main/frontend/components/block.cljs#L3438)). The popup says: "These server versions conflicted with local edits. Copy the text you want and edit the block manually." ([`en.edn:1832`](../../../../../src/resources/dicts/en.edn#L1832)). So title conflicts are resolved automatically but surfaced for review; other attributes are not recorded.
 
 > **Removed:** the claim "No user intervention needed". Title conflicts surface a manual review prompt, and failed rebases drop local edits.
 
@@ -269,7 +273,7 @@ Only two attributes are encrypted, `:block/title` and `:block/name` ([`worker/sy
 | ---------------- | -------------------------------------------------------------------------- |
 | Not connecting   | The client needs a WebSocket to `wss://api.logseq.io/sync/…`. Check the network, firewall and login. |
 | Sync paused      | Uploads wait until the socket is open, the worker is online and the local `t` matches the remote `t` ([`apply_txs.cljs:940-945`](../../../../../src/main/frontend/worker/sync/apply_txs.cljs#L940-L945)). Reconnects use backoff (see [sync-limits.md](../../reference/features/sync-limits.md#websocket-reconnect-client)). |
-| Forgot E2EE password | There is no recovery. "Force reset password" makes "all currently encrypted graph data stored on the server permanently unreadable" ([`en.edn:613`](../../../../../src/resources/dicts/en.edn#L613); flow at [`settings.cljs:1288`](../../../../../src/main/frontend/components/settings.cljs#L1288)). The local copy stays readable, and you re-upload from it. |
+| Forgot E2EE password | There is no recovery. "Force reset password" makes "all currently encrypted graph data stored on the server permanently unreadable" ([`en.edn:613`](../../../../../src/resources/dicts/en.edn#L613); flow at [`settings.cljs:1300`](../../../../../src/main/frontend/components/settings.cljs#L1300)). The local copy stays readable, and you re-upload from it. |
 | Version mismatch | > **Unverified:** the server records `client-revision` only as tx metadata ([`handler/sync.cljs:336-341`](../../../../../deps/db-sync/src/logseq/db_sync/worker/handler/sync.cljs#L336-L341)). No version gate was found that rejects older clients. |
 
 ---

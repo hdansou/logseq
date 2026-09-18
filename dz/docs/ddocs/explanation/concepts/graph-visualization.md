@@ -2,8 +2,8 @@
 title: 'Graph Visualization and Navigation'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop'
@@ -14,6 +14,10 @@ tags: ['graph', 'visualization', 'navigation', 'connections', 'knowledge-graph']
 ---
 
 # Graph Visualization and Navigation
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This document explains Logseq's graph visualization system—how your notes form an interconnected knowledge graph, and how to navigate and understand these relationships. Master the graph view to discover insights and connections in your knowledge base.
 
@@ -99,7 +103,7 @@ Every edge from a block is drawn between the block's page and the page it refere
 
 - Shows your whole graph, in one of two view modes: **Tags** or **All pages** ([`src/main/frontend/components/graph.cljs:313-338`](../../../../../src/main/frontend/components/graph.cljs); `en.edn:787-789`)
 - Bird's-eye view of entire knowledge base
-- Access: **Graph view** in the left sidebar, one of the navigation items shown by default ([`src/main/frontend/components/left_sidebar.cljs:313-320`](../../../../../src/main/frontend/components/left_sidebar.cljs), `:234-235`; `en.edn:1076`), or press `g g` ([`src/main/frontend/modules/shortcut/config.cljs:396-397`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). Both open the `/graph` route, rendered by `global-graph` ([`src/main/frontend/routes.cljs:49-51`](../../../../../src/main/frontend/routes.cljs))
+- Access: **Graph view** in the left sidebar, one of the navigation items shown by default ([`src/main/frontend/components/left_sidebar.cljs:313-320`](../../../../../src/main/frontend/components/left_sidebar.cljs), `:234-235`; `en.edn:1076`), or press `g g` ([`src/main/frontend/modules/shortcut/config.cljs:396-397`](../../../../../src/main/frontend/modules/shortcut/config.cljs)). Both open the `/graph` route, rendered by `global-graph` ([`src/main/frontend/routes.cljs:64-66`](../../../../../src/main/frontend/routes.cljs))
 
 > **Removed:** `Cmd+Shift+G`. The graph view shortcut is `g g`; `g shift+g` is "Go to all graphs" ([`src/main/frontend/modules/shortcut/config.cljs:399`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 
@@ -107,7 +111,7 @@ Every edge from a block is drawn between the block's page and the page it refere
 
 - Shows connections for one page
 - Fixed at the page's direct neighbours, plus links among those neighbours
-- Access: open the right sidebar and click **Page graph** in its top bar ([`src/main/frontend/components/right_sidebar.cljs:519-526`](../../../../../src/main/frontend/components/right_sidebar.cljs), `:126-128`; `en.edn:799`)
+- Access: open the right sidebar and click **Page graph** in its top bar ([`src/main/frontend/components/right_sidebar.cljs:530-537`](../../../../../src/main/frontend/components/right_sidebar.cljs), `:126-128`; `en.edn:799`)
 
 > **Removed:** "Page menu → Show graph view" and "1-3 hops away". The page graph is added from the right sidebar, and it is built from one hop around the page ([`src/main/frontend/worker/graph_view.cljs:980-1021`](../../../../../src/main/frontend/worker/graph_view.cljs)).
 
@@ -169,7 +173,7 @@ In All pages, each reference from a block becomes an edge from the block's page 
 
 **Graph (All pages):** no edge. The referenced block isn't a page node, so the reference is dropped when edges are matched to nodes ([`src/main/frontend/worker/graph_view.cljs:775-783`](../../../../../src/main/frontend/worker/graph_view.cljs)).
 
-> **Removed:** `((block-uuid))` and "Current Block —[refs]→ Referenced Block's Page". A block reference is `[[<uuid>]]` ([`src/main/frontend/util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs)); `((uuid))` renders as literal text ([`src/main/frontend/components/block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs)).
+> **Removed:** `((block-uuid))` and "Current Block —[refs]→ Referenced Block's Page". A block reference is `[[<uuid>]]` ([`src/main/frontend/util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs)); `((uuid))` renders as literal text ([`src/main/frontend/components/block.cljs:1573-1574`](../../../../../src/main/frontend/components/block.cljs)).
 
 > **Unverified:** How the page graph treats a block reference. It collects every `:block/refs` target of the page's blocks ([`src/main/frontend/worker/graph_view.cljs:949-961`](../../../../../src/main/frontend/worker/graph_view.cljs)), which can include blocks; whether those are drawn as nodes wasn't checked.
 
@@ -248,7 +252,7 @@ The canvas has a bottom toolbar with the **Graph settings** button, the **Time t
 | **Cmd-click (macOS) / Ctrl-click** | Preview the node in a popup |
 | **Hover** | Emphasise the node and show its label |
 
-Sources: wheel zoom, scale clamped to 0.05–3.6 ([`src/main/frontend/extensions/graph/pixi.cljs:1593-1618`](../../../../../src/main/frontend/extensions/graph/pixi.cljs); [`src/main/frontend/extensions/graph/pixi/logic.cljs:278-300`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs)); pan and node drag (`pixi.cljs:1503-1511`); dragged neighbours follow by Depth with decaying weight (`pixi.cljs:2272-2278`); click, double-click within 320 ms and shift-click (`logic.cljs:276`, `:303-323`; `pixi.cljs:1458-1479`); Cmd/Ctrl-click preview (`pixi.cljs:1450-1457`; [`src/main/frontend/util.cljc:1071-1074`](../../../../../src/main/frontend/util.cljc)); open and open-in-sidebar ([`src/main/frontend/components/graph_actions.cljs:68-73`](../../../../../src/main/frontend/components/graph_actions.cljs)); preview popup (`graph_actions.cljs:32-66`); click on empty space clears (`pixi.cljs:1590-1592`); hover emphasis and label (`logic.cljs:263-274`, `:349-357`).
+Sources: wheel zoom, scale clamped to 0.05–3.6 ([`src/main/frontend/extensions/graph/pixi.cljs:1593-1618`](../../../../../src/main/frontend/extensions/graph/pixi.cljs); [`src/main/frontend/extensions/graph/pixi/logic.cljs:278-300`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs)); pan and node drag (`pixi.cljs:1503-1511`); dragged neighbours follow by Depth with decaying weight (`pixi.cljs:2272-2278`); click, double-click within 320 ms and shift-click (`logic.cljs:276`, `:303-323`; `pixi.cljs:1458-1479`); Cmd/Ctrl-click preview (`pixi.cljs:1450-1457`; [`src/main/frontend/util.cljc:1072-1075`](../../../../../src/main/frontend/util.cljc)); open and open-in-sidebar ([`src/main/frontend/components/graph_actions.cljs:68-73`](../../../../../src/main/frontend/components/graph_actions.cljs)); preview popup (`graph_actions.cljs:32-66`); click on empty space clears (`pixi.cljs:1590-1592`); hover emphasis and label (`logic.cljs:263-274`, `:349-357`).
 
 > **Removed:** "Right-click → Context menu". The renderer listens only for pointer down/move/up/leave, wheel and keydown, and its keydown handler does nothing ([`src/main/frontend/extensions/graph/pixi.cljs:1624-1629`](../../../../../src/main/frontend/extensions/graph/pixi.cljs), `:1619-1620`).
 
@@ -307,7 +311,7 @@ Edges:
 - Links among the neighbour pages themselves
 ```
 
-The page graph opens on the page you are viewing, or on today's journal when you aren't on a page ([`src/main/frontend/components/page.cljs:623-651`](../../../../../src/main/frontend/components/page.cljs)). It counts references to the page's aliases too, and it leaves out journal pages that mention it ([`src/main/frontend/worker/graph_view.cljs:930-961`](../../../../../src/main/frontend/worker/graph_view.cljs), `:963-1021`). Nodes are placed in rings by distance from the page, which is pinned in the centre ([`src/main/frontend/extensions/graph/pixi/logic.cljs:1083-1111`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs), `:654-656`). Labels are shown without zooming (`logic.cljs:488-490`), and double-click, shift-click and Cmd/Ctrl-click work as in the global graph ([`src/main/frontend/components/page.cljs:602-610`](../../../../../src/main/frontend/components/page.cljs)).
+The page graph opens on the page you are viewing, or on today's journal when you aren't on a page ([`src/main/frontend/components/page.cljs:717-745`](../../../../../src/main/frontend/components/page.cljs)). It counts references to the page's aliases too, and it leaves out journal pages that mention it ([`src/main/frontend/worker/graph_view.cljs:930-961`](../../../../../src/main/frontend/worker/graph_view.cljs), `:963-1021`). Nodes are placed in rings by distance from the page, which is pinned in the centre ([`src/main/frontend/extensions/graph/pixi/logic.cljs:1083-1111`](../../../../../src/main/frontend/extensions/graph/pixi/logic.cljs), `:654-656`). Labels are shown without zooming (`logic.cljs:488-490`), and double-click, shift-click and Cmd/Ctrl-click work as in the global graph ([`src/main/frontend/components/page.cljs:696-704`](../../../../../src/main/frontend/components/page.cljs)).
 
 > **Removed:** "Adjustable Depth: 1 hop / 2 hops / 3 hops" and "Connected Pages (2 hops): John (via Team)". The page graph has no settings panel and doesn't walk past direct neighbours; a second-hop page shows up only if it is itself linked to the page ([`src/main/frontend/worker/graph_view.cljs:980-1021`](../../../../../src/main/frontend/worker/graph_view.cljs)).
 
@@ -599,7 +603,7 @@ Capitalisation alone doesn't create a duplicate: page names are looked up lower-
 Creates structured graph clusters
 ```
 
-Creating a `/` title with **New page** splits it into one page per segment under **Library** ([`deps/outliner/src/logseq/outliner/page.cljs:385-388`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)). All pages draws an edge from each page to its parent ([`src/main/frontend/worker/graph_view.cljs:601-609`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+Creating a `/` title with **New page** splits it into one page per segment under **Library** ([`deps/outliner/src/logseq/outliner/page.cljs:464-467`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)). All pages draws an edge from each page to its parent ([`src/main/frontend/worker/graph_view.cljs:601-609`](../../../../../src/main/frontend/worker/graph_view.cljs)).
 
 > **Unverified:** Whether a `/` title typed as a link and saved without **New page** is split as well.
 
@@ -744,7 +748,7 @@ Sources: [`src/main/frontend/components/graph.cljs:248-268`](../../../../../src/
 
 ## Mobile Graph View
 
-No graph view was found in the mobile app. Its router defines only `/`, `/page/:name`, `/import` and `/export` ([`src/main/mobile/routes.cljs:8-19`](../../../../../src/main/mobile/routes.cljs)). Its tabs are home, graphs (the graph list), go to, search, flashcards and capture ([`src/main/mobile/components/app.cljs:272-283`](../../../../../src/main/mobile/components/app.cljs)). The graph view route belongs to the desktop app's router ([`src/main/frontend/routes.cljs:49-51`](../../../../../src/main/frontend/routes.cljs)).
+No graph view was found in the mobile app. Its router defines only `/`, `/page/:name`, `/import` and `/export` ([`src/main/mobile/routes.cljs:8-19`](../../../../../src/main/mobile/routes.cljs)). Its tabs are home, graphs (the graph list), go to, search, flashcards and capture ([`src/main/mobile/components/app.cljs:272-283`](../../../../../src/main/mobile/components/app.cljs)). The graph view route belongs to the desktop app's router ([`src/main/frontend/routes.cljs:64-66`](../../../../../src/main/frontend/routes.cljs)).
 
 > **Removed:** "Mobile Limitations" and "Mobile Best Practices" (local graph, reduced hop depth). They describe a mobile graph view that the mobile code doesn't route to.
 

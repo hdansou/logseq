@@ -2,8 +2,8 @@
 title: 'Publish a Page'
 description: 'How to publish a page to the web and customize the published design with CSS and JavaScript'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop, web]
@@ -15,6 +15,10 @@ relatedDocs:
     - '[Custom CSS](custom-css.md)'
     - '[Custom JavaScript](custom-js.md)'
 ---
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -30,14 +34,14 @@ There are two unrelated ways to get pages onto the web. Don't mix them up:
 You will need:
 
 - a page in a DB graph
-- to be **signed in**. The publish server rejects uploads without a valid Logseq token ([routes.cljs:64-72](../../../../../deps/publish/src/logseq/publish/routes.cljs#L64-L72)). When you're signed out the app simply omits the token ([publish.cljs:323-327](../../../../../src/main/frontend/handler/publish.cljs#L323-L327)), so you only see **Publish failed.**
+- to be **signed in**. The publish server rejects uploads without a valid Logseq token ([routes.cljs:64-72](../../../../../deps/publish/src/logseq/publish/routes.cljs#L64-L72)). When you're signed out the app simply omits the token ([publish.cljs:324-328](../../../../../src/main/frontend/handler/publish.cljs#L324-L328)), so you only see **Publish failed.**
 - optionally, `logseq/publish.css` and `logseq/publish.js` records in the graph (see Step 4)
 
 The graph does not need to be synced. Publishing uses the graph's sync UUID if it has one, and otherwise its local graph UUID ([graph.cljs:159-163](../../../../../src/main/frontend/worker/handler/graph.cljs#L159-L163)).
 
 ## Findings: New Capabilities
 
-- The publish dialog is in the header's **⋯** menu on any page and also has a keyboard shortcut ([header.cljs:190-203](../../../../../src/main/frontend/components/header.cljs#L190-L203), [page_menu.cljs:143-146](../../../../../src/main/frontend/components/page_menu.cljs#L143-L146), [shortcut config.cljs:380-382](../../../../../src/main/frontend/modules/shortcut/config.cljs#L380-L382))
+- The publish dialog is in the header's **⋯** menu on any page and also has a keyboard shortcut ([header.cljs:191-204](../../../../../src/main/frontend/components/header.cljs#L191-L204), [page_menu.cljs:143-146](../../../../../src/main/frontend/components/page_menu.cljs#L143-L146), [shortcut config.cljs:380-382](../../../../../src/main/frontend/modules/shortcut/config.cljs#L380-L382))
 - You can point the app at a self-hosted publish server (see [Use a Self-Hosted Publish Server](#use-a-self-hosted-publish-server))
 
 ## Step 1: Open the Publish Dialog
@@ -58,33 +62,33 @@ The dialog is titled **Publish page** and reads "Optionally protect this page wi
 ## Step 2: Publish the Page
 
 1. Enter a password if you want the page to require one.
-2. Leave the password empty if the page should be public. A blank or whitespace-only password is ignored ([publish.cljs:328-333](../../../../../src/main/frontend/handler/publish.cljs#L328-L333)).
+2. Leave the password empty if the page should be public. A blank or whitespace-only password is ignored ([publish.cljs:329-334](../../../../../src/main/frontend/handler/publish.cljs#L329-L334)).
 3. Click **Publish**. The button shows **Publishing...** while it works.
 
-After a successful publish, Logseq ([publish.cljs:369-411](../../../../../src/main/frontend/handler/publish.cljs#L369-L411)):
+After a successful publish, Logseq ([publish.cljs:370-412](../../../../../src/main/frontend/handler/publish.cljs#L370-L412)):
 
-- uploads the assets referenced by the page ([publish.cljs:290-298](../../../../../src/main/frontend/handler/publish.cljs#L290-L298))
-- uploads `logseq/publish.css` and `logseq/publish.js` if they exist and aren't blank ([publish.cljs:300-321](../../../../../src/main/frontend/handler/publish.cljs#L300-L321))
-- posts the page snapshot ([publish.cljs:323-367](../../../../../src/main/frontend/handler/publish.cljs#L323-L367))
-- writes the returned URL to the page's **Published URL** property and shows **Published to: <url>** ([publish.cljs:395-398](../../../../../src/main/frontend/handler/publish.cljs#L395-L398); [en.edn:1493](../../../../../src/resources/dicts/en.edn#L1493), [:1597](../../../../../src/resources/dicts/en.edn#L1597))
+- uploads the assets referenced by the page ([publish.cljs:291-299](../../../../../src/main/frontend/handler/publish.cljs#L291-L299))
+- uploads `logseq/publish.css` and `logseq/publish.js` if they exist and aren't blank ([publish.cljs:301-322](../../../../../src/main/frontend/handler/publish.cljs#L301-L322))
+- posts the page snapshot ([publish.cljs:324-368](../../../../../src/main/frontend/handler/publish.cljs#L324-L368))
+- writes the returned URL to the page's **Published URL** property and shows **Published to: <url>** ([publish.cljs:396-399](../../../../../src/main/frontend/handler/publish.cljs#L396-L399); [en.edn:1493](../../../../../src/resources/dicts/en.edn#L1493), [:1597](../../../../../src/resources/dicts/en.edn#L1597))
 
 ## Step 3: Open or Unpublish the Result
 
 Once the page is published, look at the page properties.
 
-You will see the built-in **Published URL** property with ([value.cljs:1629-1643](../../../../../src/main/frontend/components/property/value.cljs#L1629-L1643)):
+You will see the built-in **Published URL** property with ([value.cljs:1917-1931](../../../../../src/main/frontend/components/property/value.cljs#L1917-L1931)):
 
 - the public URL as a link
 - an **Unpublish** button
 
-Clicking **Unpublish** deletes the page from the publish server, removes the property, and shows **Unpublished.** ([publish.cljs:416-440](../../../../../src/main/frontend/handler/publish.cljs#L416-L440)). The server also requires you to be signed in to unpublish ([routes.cljs:451-461](../../../../../deps/publish/src/logseq/publish/routes.cljs#L451-L461)).
+Clicking **Unpublish** deletes the page from the publish server, removes the property, and shows **Unpublished.** ([publish.cljs:417-441](../../../../../src/main/frontend/handler/publish.cljs#L417-L441)). The server also requires you to be signed in to unpublish ([routes.cljs:451-461](../../../../../deps/publish/src/logseq/publish/routes.cljs#L451-L461)).
 
 ## Step 4: Customize the Published Theme with CSS
 
 `logseq/publish.css` is a file **record inside the DB graph**, not a file on disk. Creating it takes a detour:
 
 - New graphs only contain `logseq/config.edn`, `logseq/custom.css` and `logseq/custom.js` ([create_graph.cljs:205-220](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs#L205-L220))
-- Settings only has edit entries for `config.edn`, `custom.css` and (on Electron) `export.css` ([settings.cljs:884-886](../../../../../src/main/frontend/components/settings.cljs#L884-L886))
+- Settings only has edit entries for `config.edn`, `custom.css` and (on Electron) `export.css` ([settings.cljs:896-898](../../../../../src/main/frontend/components/settings.cljs#L896-L898))
 - The in-app file editor only saves files that already exist in the graph ([code.cljs:21-35](../../../../../src/main/frontend/handler/code.cljs#L21-L35))
 
 To create or replace it, call the plugin API from a plugin:
@@ -217,7 +221,7 @@ After editing either record:
 
 The custom files are linked with a content hash (`?v=<sha256>`, [render.cljs:217-219](../../../../../deps/publish/src/logseq/publish/render.cljs#L217-L219), [:1259](../../../../../deps/publish/src/logseq/publish/render.cljs#L1259)), so a changed file gets a new URL. The page HTML, however, is served with `cache-control: public, max-age=300, must-revalidate` ([routes.cljs:593](../../../../../deps/publish/src/logseq/publish/routes.cljs#L593), [:601](../../../../../deps/publish/src/logseq/publish/routes.cljs#L601)). If the old design still appears, wait up to five minutes or do a hard refresh.
 
-To remove your custom CSS or JS, make the record blank and republish. Blank files aren't uploaded, and the page only links a custom file when a hash was recorded ([publish.cljs:307](../../../../../src/main/frontend/handler/publish.cljs#L307), [:351-355](../../../../../src/main/frontend/handler/publish.cljs#L351-L355)).
+To remove your custom CSS or JS, make the record blank and republish. Blank files aren't uploaded, and the page only links a custom file when a hash was recorded ([publish.cljs:308](../../../../../src/main/frontend/handler/publish.cljs#L308), [:352-356](../../../../../src/main/frontend/handler/publish.cljs#L352-L356)).
 
 ## Common Patterns
 
@@ -261,11 +265,11 @@ To remove your custom CSS or JS, make the record blank and republish. Blank file
 
 ## Use a Self-Hosted Publish Server
 
-**Settings → Advanced → Publish Server URL** lets you replace Logseq Publish ([settings.cljs:761-764](../../../../../src/main/frontend/components/settings.cljs#L761-L764), [:928](../../../../../src/main/frontend/components/settings.cljs#L928); [en.edn:1777-1782](../../../../../src/resources/dicts/en.edn#L1777-L1782)):
+**Settings → Advanced → Publish Server URL** lets you replace Logseq Publish ([settings.cljs:773-776](../../../../../src/main/frontend/components/settings.cljs#L773-L776), [:940](../../../../../src/main/frontend/components/settings.cljs#L940); [en.edn:1778-1783](../../../../../src/resources/dicts/en.edn#L1778-L1783)):
 
 - The value is stored in browser `localStorage`, not in the graph ([config.cljs:102-117](../../../../../src/main/frontend/config.cljs#L102-L117))
 - It must start with `http://` or `https://`, and trailing slashes are stripped ([config.cljs:119-128](../../../../../src/main/frontend/config.cljs#L119-L128))
-- The app warns: "Your Logseq authentication tokens will be sent to this server, so only use a trusted URL." ([en.edn:1780](../../../../../src/resources/dicts/en.edn#L1780))
+- The app warns: "Your Logseq authentication tokens will be sent to this server, so only use a trusted URL." ([en.edn:1781](../../../../../src/resources/dicts/en.edn#L1781))
 - **Reset to default** returns to Logseq Publish
 
 ## Troubleshooting
@@ -308,9 +312,9 @@ This is the separate, **Electron-only** static export ([export.cljs:145-148](../
 
 1. Choose which pages are public. Either:
    - on each page, open the page menu and choose **Make it public for publishing** (Electron only; [page_menu.cljs:148-150](../../../../../src/main/frontend/components/page_menu.cljs#L148-L150); [en.edn:1125](../../../../../src/resources/dicts/en.edn#L1125)), or
-   - turn on **Settings → Editor → All pages public when publishing**, which sets `:publishing/all-pages-public?` ([settings.cljs:541-547](../../../../../src/main/frontend/components/settings.cljs#L541-L547); [en.edn:1714](../../../../../src/resources/dicts/en.edn#L1714)). All pages are then exported except those whose property is explicitly `false` ([html.cljs:141-146](../../../../../deps/publishing/src/logseq/publishing/html.cljs#L141-L146)).
-2. Open the header **⋯** menu → **Export graph** → **Export public pages** ([header.cljs:227-230](../../../../../src/main/frontend/components/header.cljs#L227-L230); [en.edn:640](../../../../../src/resources/dicts/en.edn#L640), [:656](../../../../../src/resources/dicts/en.edn#L656))
-3. Pick an output folder. Logseq writes `index.html` plus a `static/` folder and the referenced assets ([core.cljs:149-161](../../../../../src/electron/electron/core.cljs#L149-L161), [export.cljs:99-118](../../../../../deps/publishing/src/logseq/publishing/export.cljs#L99-L118))
+   - turn on **Settings → Editor → All pages public when publishing**, which sets `:publishing/all-pages-public?` ([settings.cljs:553-559](../../../../../src/main/frontend/components/settings.cljs#L553-L559); [en.edn:1715](../../../../../src/resources/dicts/en.edn#L1715)). All pages are then exported except those whose property is explicitly `false` ([html.cljs:141-146](../../../../../deps/publishing/src/logseq/publishing/html.cljs#L141-L146)).
+2. Open the header **⋯** menu → **Export graph** → **Export public pages** ([header.cljs:228-231](../../../../../src/main/frontend/components/header.cljs#L228-L231); [en.edn:640](../../../../../src/resources/dicts/en.edn#L640), [:656](../../../../../src/resources/dicts/en.edn#L656))
+3. Pick an output folder. Logseq writes `index.html` plus a `static/` folder and the referenced assets ([core.cljs:152-164](../../../../../src/electron/electron/core.cljs#L152-L164), [export.cljs:99-118](../../../../../deps/publishing/src/logseq/publishing/export.cljs#L99-L118))
 
 If `:publishing/enable-editing?` is true in the graph's config, the exported app allows editing ([state.cljs:504-510](../../../../../src/main/frontend/state.cljs#L504-L510)).
 

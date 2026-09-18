@@ -26,7 +26,7 @@ Logging in uploads no graph data. A graph reaches the server only when the user 
 
 ### Login is AWS Cognito; tokens live on the device
 
-- The `:user/login` event opens a login modal on desktop and web, and redirects to the `:user-login` route on native mobile (`handler/events/ui.cljs:421-424`). The modal uses AWS Amplify (`components/user/login.cljs:24`) and hands the session to `login-callback` (`login.cljs:335`, `handler/user.cljs:265-272`). Electron also accepts a `loginCallback` from its main process (`src/main/electron/listener.cljs:86-88`).
+- The `:user/login` event opens a login modal on desktop and web, and redirects to the `:user-login` route on native mobile (`handler/events/ui.cljs:421-424`). The modal uses AWS Amplify (`components/user/login.cljs:24`) and hands the session to `login-callback` (`login.cljs:335`, `handler/user.cljs:265-272`). Electron also accepts a `loginCallback` from its main process (`src/main/electron/listener.cljs:92-94`).
 - `login-with-username-password-e2e` (`user.cljs:282-306`) is an exported helper for end-to-end tests, not the user login path.
 - Tokens are refreshed through `config/OAUTH-DOMAIN` (`user.cljs:184-190`).
 - `logged-in?` only checks that a non-blank refresh token exists (`user.cljs:87-90`).
@@ -61,7 +61,7 @@ Until the Pro plan officially launches, Pro access is granted through [Open Coll
 What the repo does show:
 
 - The only code reference to the group is `rtc-group?` (`user.cljs:362`).
-- Logged-out users on desktop and mobile see this under the Login button in Settings → Features: *"To access new features before anyone else you must be an Open Collective Sponsor or Backer of Logseq and therefore log in first."* (`settings.cljs:1178`; `en.edn:1730`)
+- Logged-out users on desktop and mobile see this under the Login button in Settings → Features: *"To access new features before anyone else you must be an Open Collective Sponsor or Backer of Logseq and therefore log in first."* (`settings.cljs:1178`; `en.edn:1731`)
 - The README asks for support on Open Collective and thanks sponsors and backers (`README.md:140`, `:195-204`).
 
 ### Collaboration
@@ -84,7 +84,7 @@ What the repo does show:
 
 ### Publishing
 
-- The page menu's Publish item has no login check (`header.cljs:201-203`). The client attaches a `Bearer` token only if one exists (`handler/publish.cljs:325-327`) and sends the owner's `owner_sub` and `owner_username` (`publish.cljs:348-349`).
+- The page menu's Publish item has no login check (`header.cljs:201-203`). The client attaches a `Bearer` token only if one exists (`handler/publish.cljs:326-328`) and sends the owner's `owner_sub` and `owner_username` (`publish.cljs:348-349`).
 - The server refuses the upload without a verified JWT (`routes.cljs:64-73`). Deleting a page requires the token's `sub` to match the page's `owner_sub`, otherwise it returns 403 (`routes.cljs:451-482`). Deleting a graph also requires a token (`routes.cljs:484-492`).
 - So a logged-out user can open the publish dialog, but the publish fails at the server.
 

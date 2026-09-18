@@ -1,11 +1,15 @@
 ---
 title: 'Experiments.registerSidebarRenderer'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 ---
 
 # `Experiments.registerSidebarRenderer`
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Experimental.** See the warning in
 > [02-hosted-renderer.md](./02-hosted-renderer.md) — `libs/src/modules/LSPlugin.Experiments.ts:41-45`.
@@ -51,11 +55,11 @@ yourself is pointless — it is overwritten.
 ## How the host wires it up
 
 1. The right sidebar collects every hosted renderer whose `:type` is exactly `"sidebar"` and, if
-   any exist, shows a puzzle-piece button (`src/main/frontend/components/right_sidebar.cljs:499-512`).
+   any exist, shows a puzzle-piece button (`src/main/frontend/components/right_sidebar.cljs:510-523`).
    It filters on `:type`, **not** on the `_sidebar.` key prefix.
 2. Each menu entry shows your `title` and adds a sidebar block keyed
    `(keyword pid key)` with type `:plugin`
-   (`src/main/frontend/components/right_sidebar.cljs:476-488`).
+   (`src/main/frontend/components/right_sidebar.cljs:487-499`).
 3. `renderer-resolver` looks the entry back up with
    `resolve-hosted-render pid key :sidebar` and mounts it
    (`src/main/frontend/components/plugins.cljs:1863-1882`); it also writes `title` into the pane
@@ -134,7 +138,7 @@ Two corrections against the previous revision of this example:
 ## Source
 
 - TS API: [`libs/src/modules/LSPlugin.Experiments.ts`](../../../../../../libs/src/modules/LSPlugin.Experiments.ts):155-167
-- Sidebar menu: [`src/main/frontend/components/right_sidebar.cljs`](../../../../../../src/main/frontend/components/right_sidebar.cljs):476-488, `:499-512`
+- Sidebar menu: [`src/main/frontend/components/right_sidebar.cljs`](../../../../../../src/main/frontend/components/right_sidebar.cljs):487-499, `:510-523`
 - Resolution and mount: [`src/main/frontend/components/plugins.cljs`](../../../../../../src/main/frontend/components/plugins.cljs):1856-1882
 - Registry: `src/main/frontend/handler/plugin.cljs:662`, `:678-701`
 - Merge commit: `a95483655b refactor: plugin libs (#12395)`

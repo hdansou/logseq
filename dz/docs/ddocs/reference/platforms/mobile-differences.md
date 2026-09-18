@@ -4,8 +4,8 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 quadrant: 'Reference'
 platform: 'Mobile (iOS & Android)'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '[URI Schemes](./uri-schemes.md)'
@@ -17,6 +17,10 @@ tags: ['mobile', 'ios', 'android', 'capacitor', 'platform', 'limitations']
 ---
 
 # Mobile Platform Differences
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This reference covers the differences between Logseq's native mobile app (iOS and Android) and the desktop (Electron) and web builds. Each difference below was checked against the source at `be800f1711`, mostly against the platform checks in shared code (`mobile-util/native-platform?`, `util/electron?`, `util/web-platform?`).
 
@@ -83,20 +87,20 @@ The "Mobile" column only states what the code shows; a ✅ means no platform che
 | --- | --- | --- | --- |
 | **Plugin system** | ✅ | ❌ | `plugin-platform?` is true only on Electron or on non-native, non-publishing web (`src/main/frontend/util.cljc:127-131`); `config/lsp-enabled?` requires it (`src/main/frontend/config.cljs:149-152`) |
 | **custom.js** | ✅ | ❌ | See [§5](#customjs) |
-| **HTTP API server** | ✅ (default port `12315`) | ❌ | Settings row shown only on Electron (`src/main/frontend/components/settings.cljs:1156-1157`); default port at `src/electron/electron/server.cljs:21` |
+| **HTTP API server** | ✅ (default port `12315`) | ❌ | Settings row shown only on Electron (`src/main/frontend/components/settings.cljs:1168-1169`); default port at `src/electron/electron/server.cljs:21` |
 | **MCP server** | ✅ | ❌ | Electron-only settings row (`settings.cljs:1445-1446`); served by the desktop API server (`src/electron/electron/mcp_server.cljs:2`) |
 | **Markdown mirror** | ✅ | ❌ | Electron-only settings row (`settings.cljs:1158-1159`) |
 | **Developer mode** | ✅ | ❌ | Row hidden on native platforms (`settings.cljs:926`) |
 | **YouTube embeds** | IFrame player | Wrapper player | `use-youtube-wrapper?` is `native-platform?` (`src/main/frontend/extensions/video/youtube.cljs:31-32`) |
 | **YouTube timestamps** (`/Embed YouTube timestamp`) | ✅ | ❌ | With the wrapper, `gen-youtube-ts-macro` shows "timestamp unavailable" and inserts nothing (`youtube.cljs:163-167`) |
 | **PDF viewer** | ✅ | ⚠️ see [§8](#1-pdf-viewer) | |
-| **Open graph in new window** | New Electron window | `window.open` (web tab behaviour) | `src/main/frontend/handler/ui.cljs:249-263` |
+| **Open graph in new window** | New Electron window | `window.open` (web tab behaviour) | `src/main/frontend/handler/ui.cljs:304-318` |
 | **Git auto-commit** | ❌ | ❌ | No git versioning code exists at `be800f1711`. The only `git` reference in `src/electron/` is the `:shell/run` allow-list (`src/electron/electron/shell.cljs:11`) |
 | **Share to Logseq** | — | ✅ | Android accepts `SEND` intents for `text/plain`, `image/*`, `application/*` and `video/*` (`android/app/src/main/AndroidManifest.xml:40-46`); iOS has a share extension that opens `logseq://shared?…` (`ios/App/ShareViewController/ShareViewController.swift:40`) |
 | **Home-screen widget / Control Center controls** | — | iOS | A widget linking to `logseq://mobile`, `…/go/audio` and `…/go/quick-add` (`ios/App/shortcuts/shortcuts.swift`), plus `QuickAddButton` and `RecordAudioButton` controls (`ios/App/shortcuts/shortcutsControl.swift`) |
 | **Audio recording** | — | ✅ | Toolbar **Audio** action (`src/main/mobile/components/editor_toolbar.cljs:151-160`). A recording is saved as an asset, with optional transcription through the native `UILocal` plugin (`src/main/mobile/components/recorder.cljs:50-95`) |
 | **Camera** | — | ✅ | Toolbar **Photo** action (`editor_toolbar.cljs:141-149`, `src/main/frontend/mobile/camera.cljs:32`, `:61`) |
-| **Sync asset size limit** | 100 MB | 100 MB | Server-side and the same for every client (`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9`, `:105`) — not a mobile limit |
+| **Sync asset size limit** | 100 MB | 100 MB | Server-side and the same for every client (`deps/db-sync/src/logseq/db_sync/worker/handler/assets.cljs:9`, `:106`) — not a mobile limit |
 
 ---
 
@@ -131,8 +135,8 @@ The mobile app has its own shell with a native bottom tab bar instead of the des
 
 | Gesture | Result | Source |
 | --- | --- | --- |
-| **Horizontal swipe on a block** (more than 10 px and more horizontal than vertical) | Toggles the block's selection, fires a haptic tap, and shows the selection action bar while any block is selected | `src/main/frontend/handler/block.cljs:308-342` |
-| **Touch-move tracking** | Registered only when `util/mobile?` or `native-platform?` is true | `src/main/frontend/components/block.cljs:4278-4282` |
+| **Horizontal swipe on a block** (more than 10 px and more horizontal than vertical) | Toggles the block's selection, fires a haptic tap, and shows the selection action bar while any block is selected | `src/main/frontend/handler/block.cljs:311-345` |
+| **Touch-move tracking** | Registered only when `util/mobile?` or `native-platform?` is true | `src/main/frontend/components/block.cljs:4327-4331` |
 | **Tap the status bar** (iOS) | Scrolls to top | `src/main/mobile/init.cljs:101-102` |
 | **Android back gesture** | Routed through `MainActivity` to JS (`window.LogseqNative.onNativePop`); `@capacitor/app`'s back handler is disabled | `capacitor.config.ts:20-26` |
 
@@ -184,7 +188,7 @@ See [URI Schemes](./uri-schemes.md).
 | | Desktop | iOS / Android |
 | --- | --- | --- |
 | **Graph format** | Each DB graph is a single `db.sqlite` (`deps/db/src/logseq/db/common/sqlite.cljs:29-33`) | Same DB graph format |
-| **Location** | Under `~/logseq/graphs` by default (`deps/common/src/logseq/common/config.cljs:55`); automatic backups go to `<graph>/backup/` (`src/main/logseq/db_worker/graph_backup.cljs:10`) | Inside the app, managed by the browser db-worker. Its storage layer is OPFS (`src/main/frontend/worker/platform/browser.cljs:74`), and the worker runs with owner source `:capacitor` (`:192-197`) |
+| **Location** | Under `~/logseq/graphs` by default (`deps/common/src/logseq/common/config.cljs:58`); automatic backups go to `<graph>/backup/` (`src/main/logseq/db_worker/graph_backup.cljs:10`) | Inside the app, managed by the browser db-worker. Its storage layer is OPFS (`src/main/frontend/worker/platform/browser.cljs:74`), and the worker runs with owner source `:capacitor` (`:192-197`) |
 | **Getting data in/out** | Filesystem, import/export | `/import` and `/export` routes (`src/main/mobile/routes.cljs:15-22`), the share sheet, and sync |
 
 > **Unverified:** the earlier on-device paths (`/var/mobile/Containers/…`, `/data/data/com.logseq.app/files/`, Files-app visibility) and the iCloud/Google Drive/Dropbox table can't be derived from the source, so they were removed.
@@ -280,7 +284,7 @@ const platform = Capacitor.getPlatform() // 'ios' | 'android' | 'web'
 
 ### 1. PDF viewer
 
-- `open-pdf-file` has an explicit native-platform branch: on native (and Electron) it uses the asset href directly, then sets the current PDF (`src/main/frontend/components/block.cljs:513-529`).
+- `open-pdf-file` has an explicit native-platform branch: on native (and Electron) it uses the asset href directly, then sets the current PDF (`src/main/frontend/components/block.cljs:524-540`).
 - The viewer component, `pdf/default-embed-playground`, is mounted in `frontend.components.theme` (`src/main/frontend/components/theme.cljs:159`).
 - The mobile app's component namespace (`src/main/mobile/components/app.cljs`) does not require that namespace.
 
@@ -305,8 +309,8 @@ Off on native mobile (see [§5](#plugins)). Everything a plugin provides is ther
 | **HTTP API / MCP server** | ✅ | ❌ | `settings.cljs:1156-1157`, `:1445-1446` |
 | **Developer mode** | ✅ | ❌ | `settings.cljs:926` |
 | **Markdown mirror** | ✅ | ❌ | `settings.cljs:1158-1159` |
-| **Multi-window** | ✅ Electron windows | Uses `window.open` | `src/main/frontend/handler/ui.cljs:249-263` |
-| **External URLs** | Opened through `window.apis.openExternal` | Assigned to `window.location.href` (the non-Electron branch) | `src/main/frontend/util.cljc:1160-1167` |
+| **Multi-window** | ✅ Electron windows | Uses `window.open` | `src/main/frontend/handler/ui.cljs:304-318` |
+| **External URLs** | Opened through `window.apis.openExternal` | Assigned to `window.location.href` (the non-Electron branch) | `src/main/frontend/util.cljc:1161-1168` |
 | **Electron-only shortcuts** | ✅ | ❌ | `shortcut/config.cljs:317-473` (see [§3](#keyboard-shortcuts)) |
 
 > **Unverified:** how the native WebView treats a `window.open` or `location.href` navigation (system browser or in-app) was not tested.

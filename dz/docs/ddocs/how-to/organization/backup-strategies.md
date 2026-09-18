@@ -4,8 +4,8 @@ status: 🟢 Stable
 version: 'DB graph schema 65.33'
 quadrant: 'How-To'
 platform: 'Desktop + Web + Mobile'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '[Import and Export Guide](./import-export.md)'
@@ -16,9 +16,13 @@ tags: ['backup', 'recovery', 'sync', 'export', 'data-safety']
 
 # Backup and Recovery Strategies
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 This guide shows you how to protect a Logseq DB graph. It covers the backups Logseq already makes, the exports you can make yourself, how to restore them, and what sync does and does not protect you from.
 
-A DB graph is a single `db.sqlite` file plus an `assets/` folder ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); [`deps/common/src/logseq/common/config.cljs:56`](../../../../../deps/common/src/logseq/common/config.cljs)). It is not a folder of Markdown files, so every backup below copies that database.
+A DB graph is a single `db.sqlite` file plus an `assets/` folder ([`deps/db/src/logseq/db/common/sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); [`deps/common/src/logseq/common/config.cljs:59`](../../../../../deps/common/src/logseq/common/config.cljs)). It is not a folder of Markdown files, so every backup below copies that database.
 
 **What You'll Learn:**
 
@@ -47,7 +51,7 @@ A DB graph is a single `db.sqlite` file plus an `assets/` folder ([`deps/db/src/
 
 ### Where your graph lives
 
-**Desktop app:** DB graphs are stored under `~/logseq/graphs/` ([`deps/common/src/logseq/common/config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)), one folder per graph. The home directory is expanded with Node's `os.homedir()`, so on Windows this is `%USERPROFILE%\logseq\graphs\` ([`deps/common/src/logseq/common/graph.cljs:116-126`](../../../../../deps/common/src/logseq/common/graph.cljs)). A graph's folder holds:
+**Desktop app:** DB graphs are stored under `~/logseq/graphs/` ([`deps/common/src/logseq/common/config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs)), one folder per graph. The home directory is expanded with Node's `os.homedir()`, so on Windows this is `%USERPROFILE%\logseq\graphs\` ([`deps/common/src/logseq/common/graph.cljs:116-126`](../../../../../deps/common/src/logseq/common/graph.cljs)). A graph's folder holds:
 
 ```
 ~/logseq/graphs/<graph folder>/
@@ -59,7 +63,7 @@ A DB graph is a single `db.sqlite` file plus an `assets/` folder ([`deps/db/src/
 └── client-ops-/  ← a second worker database (client-ops-/db.sqlite)
 ```
 
-(`db.sqlite`: [`sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); `backup/`: [`src/main/logseq/db_worker/graph_backup.cljs:10`, `:39-47`](../../../../../src/main/logseq/db_worker/graph_backup.cljs); `export/`: [`src/electron/electron/db.cljs:98-103`](../../../../../src/electron/electron/db.cljs), [`src/main/frontend/handler/export.cljs:78-86`](../../../../../src/main/frontend/handler/export.cljs); `search/` and `client-ops-/`: [`src/main/frontend/worker/db_core.cljs:133`, `:559-563`](../../../../../src/main/frontend/worker/db_core.cljs), joined to the graph folder by [`src/main/frontend/worker/platform/node.cljs:59-61`, `:715-716`](../../../../../src/main/frontend/worker/platform/node.cljs).)
+(`db.sqlite`: [`sqlite.cljs:29-33`](../../../../../deps/db/src/logseq/db/common/sqlite.cljs); `backup/`: [`src/main/logseq/db_worker/graph_backup.cljs:10`, `:39-47`](../../../../../src/main/logseq/db_worker/graph_backup.cljs); `export/`: [`src/electron/electron/db.cljs:98-103`](../../../../../src/electron/electron/db.cljs), [`src/main/frontend/handler/export.cljs:78-86`](../../../../../src/main/frontend/handler/export.cljs); `search/` and `client-ops-/`: [`src/main/frontend/worker/db_core.cljs:133`, `:564-568`](../../../../../src/main/frontend/worker/db_core.cljs), joined to the graph folder by [`src/main/frontend/worker/platform/node.cljs:60-62`, `:721-722`](../../../../../src/main/frontend/worker/platform/node.cljs).)
 
 The folder name is the graph name, URI-encoded, with `%20` turned back into a space and the remaining `%` escapes written as `~` ([`deps/common/src/logseq/common/graph_dir.cljs:6-12`](../../../../../deps/common/src/logseq/common/graph_dir.cljs)). A graph called `my/graph` therefore lives in `my~2Fgraph`.
 
@@ -83,8 +87,8 @@ The graphs directory can be overridden with the `LOGSEQ_GRAPHS_DIR` environment 
 - ✅ `db.sqlite`. It holds all content **and** the graph's `logseq/config.edn`, `logseq/custom.css` and `logseq/custom.js`, which are stored as file records inside the database ([`deps/db/src/logseq/db/sqlite/create_graph.cljs:205-220`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)).
 - ✅ `assets/`. **Neither the automatic backups nor Export SQLite DB include assets.** A backup snapshot contains only `db.sqlite` and `metadata.edn` ([`graph_backup.cljs:11-12`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Only **Export both SQLite DB and assets** bundles them ([`handler/export.cljs:88-100`](../../../../../src/main/frontend/handler/export.cljs)).
 - ✅ `backup/` and `export/`, when you copy the graph folder off the machine.
-- ➖ `search/` and `client-ops-/`. Snapshots and exports copy only the main database connection ([`db_core.cljs:980-994`](../../../../../src/main/frontend/worker/db_core.cljs)), so these are never part of a Logseq backup.
-- ❌ Plugins (`~/.logseq/plugins`, [`src/electron/electron/core.cljs:40`](../../../../../src/electron/electron/core.cljs)) and the desktop app's own `configs.edn` (Electron's user-data folder, [`src/electron/electron/configs.cljs:10-12`](../../../../../src/electron/electron/configs.cljs)) live outside the graph folder and are in no Logseq backup.
+- ➖ `search/` and `client-ops-/`. Snapshots and exports copy only the main database connection ([`db_core.cljs:979-993`](../../../../../src/main/frontend/worker/db_core.cljs)), so these are never part of a Logseq backup.
+- ❌ Plugins (`~/.logseq/plugins`, [`src/electron/electron/core.cljs:41`](../../../../../src/electron/electron/core.cljs)) and the desktop app's own `configs.edn` (Electron's user-data folder, [`src/electron/electron/configs.cljs:10-12`](../../../../../src/electron/electron/configs.cljs)) live outside the graph folder and are in no Logseq backup.
 - ❌ There are no `pages/`, `journals/` or separate `logseq/` config folders in a DB graph.
 
 > Removed claim: earlier revisions listed "SQLite database file (`<graph-name>.db`)" and a "Transit export file (`.edn` backup)". The file is `db.sqlite` inside the graph folder. EDN and debug transit are two separate exports, and the app itself says of EDN: "Don't rely on this as a primary backup." ([`src/resources/dicts/en.edn:635`](../../../../../src/resources/dicts/en.edn)).
@@ -95,7 +99,7 @@ The graphs directory can be overridden with the `LOGSEQ_GRAPHS_DIR` environment 
 
 > Removed section. File-based graphs can no longer be opened: the graph list keeps only DB graphs ("use `config/db-based-graph?` to avoid loading old file graphs", [`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)). File Sync was deleted in commit `bcc478b5f7` (2025-12-29). The Git setup, commit scripts, Task Scheduler batch file, "move the graph into iCloud/OneDrive/Dropbox" steps, `logseq/.recycle/` and `logseq/bak/` advice, and the "JSON / Markdown / EDN" export menu all applied to file graphs. The Export dialog has no JSON entry ([`src/main/frontend/components/export.cljs:125-153`](../../../../../src/main/frontend/components/export.cljs)), and no "Export on Schedule" plugin is part of Logseq.
 
-**If you still have a file-graph folder:** Logseq only reads it as input, through ⋯ → **Import** → **File to DB graph**. That import creates a new DB graph ([`src/main/frontend/components/imports.cljs:597-611`](../../../../../src/main/frontend/components/imports.cljs)). Keep a plain copy of the old folder with any file-backup tool until you are happy with the imported graph. See [Import and Export Guide](./import-export.md#from-a-logseq-file-graph-file-to-db).
+**If you still have a file-graph folder:** Logseq only reads it as input, through ⋯ → **Import** → **File to DB graph**. That import creates a new DB graph ([`src/main/frontend/components/imports.cljs:601-615`](../../../../../src/main/frontend/components/imports.cljs)). Keep a plain copy of the old folder with any file-backup tool until you are happy with the imported graph. See [Import and Export Guide](./import-export.md#from-a-logseq-file-graph-file-to-db).
 
 ---
 
@@ -107,10 +111,10 @@ The graphs directory can be overridden with the `LOGSEQ_GRAPHS_DIR` environment 
 
 **How it works:**
 
-- **No setting to turn on.** When a window opens a graph, the app registers it and starts a one-hour timer ([`src/electron/electron/handler.cljs:371-383`](../../../../../src/electron/electron/handler.cljs) → [`src/electron/electron/db.cljs:146-154`](../../../../../src/electron/electron/db.cljs), timer at [`:128-136`](../../../../../src/electron/electron/db.cljs)).
+- **No setting to turn on.** When a window opens a graph, the app registers it and starts a one-hour timer ([`src/electron/electron/handler.cljs:393-405`](../../../../../src/electron/electron/handler.cljs) → [`src/electron/electron/db.cljs:146-154`](../../../../../src/electron/electron/db.cljs), timer at [`:128-136`](../../../../../src/electron/electron/db.cljs)).
 - **Hourly.** Each tick snapshots every graph that is open in a window ([`db.cljs:105-126`](../../../../../src/electron/electron/db.cljs)). A snapshot is skipped if the newest automatic backup is less than an hour old ([`db.cljs:59-61`](../../../../../src/electron/electron/db.cljs); [`graph_backup.cljs:233-240`, `:253-257`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)).
 - **Keeps 12.** After each snapshot, automatic backups beyond the newest 12 are deleted ([`db.cljs:15-18`](../../../../../src/electron/electron/db.cljs); [`graph_backup.cljs:176-190`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). The interval and the count are constants in source, not settings.
-- **Only open graphs.** A graph with no open window gets no new backups, and the worker refuses with "graph not opened" ([`src/main/frontend/worker/db_core.cljs:985-987`](../../../../../src/main/frontend/worker/db_core.cljs)).
+- **Only open graphs.** A graph with no open window gets no new backups, and the worker refuses with "graph not opened" ([`src/main/frontend/worker/db_core.cljs:984-986`](../../../../../src/main/frontend/worker/db_core.cljs)).
 
 **Layout:** each backup is a folder named `<graph>-<UTC timestamp>`, for example `my-graph-20260911T143000Z`. It contains `db.sqlite` and a `metadata.edn` map with `:schema-version` (1), `:name`, `:repo`, `:source` (here `:electron-auto`), `:created-at-ms` and `:db-path` ([`graph_backup.cljs:13`, `:77-101`, `:221-231`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). If the name is taken, `-1`, `-2`, … is appended rather than overwriting ([`:192-211`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). If a snapshot fails, its temporary file and the empty folder are removed ([`:213-219`, `:286-288`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)).
 
@@ -126,7 +130,7 @@ Pruning and the one-hour check read `:source` and `:created-at-ms` from `metadat
     └── metadata.edn
 ```
 
-**Consistency:** the snapshot is taken from the open database. The worker checkpoints the WAL, then runs SQLite's backup API on the live connection ([`db_core.cljs:980-994`](../../../../../src/main/frontend/worker/db_core.cljs); [`deps/db/src/logseq/db/sqlite/backup.cljs:35-44`](../../../../../deps/db/src/logseq/db/sqlite/backup.cljs)). It writes to a temporary file and renames it into place ([`graph_backup.cljs:258-271`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)), so a finished `backup/…/db.sqlite` is a complete file you can copy while Logseq runs.
+**Consistency:** the snapshot is taken from the open database. The worker checkpoints the WAL, then runs SQLite's backup API on the live connection ([`db_core.cljs:979-993`](../../../../../src/main/frontend/worker/db_core.cljs); [`deps/db/src/logseq/db/sqlite/backup.cljs:35-44`](../../../../../deps/db/src/logseq/db/sqlite/backup.cljs)). It writes to a temporary file and renames it into place ([`graph_backup.cljs:258-271`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)), so a finished `backup/…/db.sqlite` is a complete file you can copy while Logseq runs.
 
 **Find it:** ⋯ (**More**) → **Export graph**. At the bottom the desktop dialog says "Hourly backups are enabled for this graph, open backups folder for this graph."; the link opens `<graph folder>/backup` ([`components/export.cljs:155-164`](../../../../../src/main/frontend/components/export.cljs); [`en.edn:672`, `:675`](../../../../../src/resources/dicts/en.edn); path from [`frontend/config.cljs:333-335`](../../../../../src/main/frontend/config.cljs)).
 
@@ -141,9 +145,9 @@ Pruning and the one-hour check read `:source` and `:created-at-ms` from `metadat
 **Steps:**
 
 1. In the desktop app, press `mod+s` (Cmd+S on macOS, Ctrl+S elsewhere). The command is described as "Save the current db to the disk (~/logseq/graphs/your-current-graph)" and is inactive outside the desktop app ([`src/main/frontend/modules/shortcut/config.cljs:376-378`](../../../../../src/main/frontend/modules/shortcut/config.cljs); [`en.edn:394`](../../../../../src/resources/dicts/en.edn)).
-2. The notification "DB backup successfully." appears ([`src/main/frontend/persist_db.cljs:429-440`](../../../../../src/main/frontend/persist_db.cljs)).
+2. The notification "DB backup successfully." appears ([`src/main/frontend/persist_db.cljs:503-514`](../../../../../src/main/frontend/persist_db.cljs)).
 
-**What it does:** it writes a snapshot into the same `backup/` folder with `:source :electron-manual` ([`handler/events.cljs:290-294`](../../../../../src/main/frontend/handler/events.cljs); [`electron/handler.cljs:256-259`](../../../../../src/electron/electron/handler.cljs); [`db.cljs:43-47`](../../../../../src/electron/electron/db.cljs)). Manual snapshots are **not throttled and never pruned**, because the one-hour throttle and the 12-copy limit apply only to automatic backups ([`db.cljs:59-61`](../../../../../src/electron/electron/db.cljs); pruning filters by source at [`graph_backup.cljs:183-186`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Delete old ones yourself.
+**What it does:** it writes a snapshot into the same `backup/` folder with `:source :electron-manual` ([`handler/events.cljs:290-294`](../../../../../src/main/frontend/handler/events.cljs); [`electron/handler.cljs:278-281`](../../../../../src/electron/electron/handler.cljs); [`db.cljs:43-47`](../../../../../src/electron/electron/db.cljs)). Manual snapshots are **not throttled and never pruned**, because the one-hour throttle and the 12-copy limit apply only to automatic backups ([`db.cljs:59-61`](../../../../../src/electron/electron/db.cljs); pruning filters by source at [`graph_backup.cljs:183-186`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Delete old ones yourself.
 
 ---
 
@@ -174,7 +178,7 @@ Pruning and the one-hour check read `:source` and `:created-at-ms` from `metadat
 
 **Steps:**
 
-1. ⋯ → **Export graph** ([`components/header.cljs:227-230`](../../../../../src/main/frontend/components/header.cljs)).
+1. ⋯ → **Export graph** ([`components/header.cljs:228-231`](../../../../../src/main/frontend/components/header.cljs)).
 2. Choose one:
    - **Export SQLite DB**: "Primary way to backup graph's content to a single .sqlite file."
    - **Export both SQLite DB and assets**: "Primary way to backup graph's content and assets to a .zip file."
@@ -183,7 +187,7 @@ Pruning and the one-hour check read `:source` and `:created-at-ms` from `metadat
 
 **Where the file goes:**
 
-- **Desktop app:** into the graph's own `export/` folder. The notification shows the path: "SQLite DB exported to {1}." or "ZIP exported to {1}." ([`handler/export.cljs:78-86`, `:118-120`, `:146-154`](../../../../../src/main/frontend/handler/export.cljs); [`electron/handler.cljs:261-263`](../../../../../src/electron/electron/handler.cljs); [`db.cljs:98-103`](../../../../../src/electron/electron/db.cljs); [`en.edn:662`, `:668`](../../../../../src/resources/dicts/en.edn)). The file names end in `_<Unix seconds>.sqlite` / `_<Unix seconds>.zip` ([`handler/export.cljs:50-54`](../../../../../src/main/frontend/handler/export.cljs)). **The export stays on the same disk as the graph**, so copy it off the machine yourself.
+- **Desktop app:** into the graph's own `export/` folder. The notification shows the path: "SQLite DB exported to {1}." or "ZIP exported to {1}." ([`handler/export.cljs:78-86`, `:118-120`, `:146-154`](../../../../../src/main/frontend/handler/export.cljs); [`electron/handler.cljs:283-285`](../../../../../src/electron/electron/handler.cljs); [`db.cljs:98-103`](../../../../../src/electron/electron/db.cljs); [`en.edn:662`, `:668`](../../../../../src/resources/dicts/en.edn)). The file names end in `_<Unix seconds>.sqlite` / `_<Unix seconds>.zip` ([`handler/export.cljs:50-54`](../../../../../src/main/frontend/handler/export.cljs)). **The export stays on the same disk as the graph**, so copy it off the machine yourself.
 - **Browser:** a save dialog where the browser supports one, otherwise a download ([`handler/export.cljs:121-124`, `:155-169`](../../../../../src/main/frontend/handler/export.cljs)).
 
 **Other entries in the dialog are not backups:**
@@ -206,7 +210,7 @@ The mobile app has an Export route ([`src/main/mobile/routes.cljs:19-22`](../../
 
 **Best For:** Scheduled backups and scripting.
 
-The CLI in `cli/` is published as the npm package `@logseq/cli`, and its command is `logseq` ([`scripts/prepare-cli-package.mjs:126-133`](../../../../../scripts/prepare-cli-package.mjs); [`docs/cli/logseq-cli.md:3`](../../../../../docs/cli/logseq-cli.md)). It has four backup commands ([`cli/lib/cli_parse.ml:175-187`, `:843-871`](../../../../../cli/lib/cli_parse.ml); [`cli/lib/command_registry.ml:225-242`](../../../../../cli/lib/command_registry.ml)):
+The CLI in `cli/` is published as the npm package `@logseq/cli`, and its command is `logseq` ([`scripts/prepare-cli-package.mjs:126-133`](../../../../../scripts/prepare-cli-package.mjs); [`docs/cli/logseq-cli.md:3`](../../../../../docs/cli/logseq-cli.md)). It has four backup commands ([`cli/lib/cli_parse.ml:175-187`, `:839-867`](../../../../../cli/lib/cli_parse.ml); [`cli/lib/command_registry.ml:225-242`](../../../../../cli/lib/command_registry.ml)):
 
 | Command | Options |
 | ------- | ------- |
@@ -215,13 +219,13 @@ The CLI in `cli/` is published as the npm package `@logseq/cli`, and its command
 | `graph backup restore` | `--graph`, `--src <backup name>` (required), `--dst <new graph name>` (required) |
 | `graph backup remove` | `--graph`, `--src <backup name>` (required) |
 
-- `create` snapshots the graph through the db-worker backup API. It writes into the same `<graph folder>/backup/` tree, named `<graph>-<label>-<UTC timestamp>` (or `<graph>-<UTC timestamp>` without `--name`; `/`, `\` and `:` become `-`), with `:source :cli` in `metadata.edn`. If the snapshot fails, the new backup folder is removed ([`cli/lib/graph.ml:131-155`, `:466-473`, `:796-876`](../../../../../cli/lib/graph.ml)).
+- `create` snapshots the graph through the db-worker backup API. It writes into the same `<graph folder>/backup/` tree, named `<graph>-<label>-<UTC timestamp>` (or `<graph>-<UTC timestamp>` without `--name`; `/`, `\` and `:` become `-`), with `:source :cli` in `metadata.edn`. If the snapshot fails, the new backup folder is removed ([`cli/lib/graph.ml:392-416`, `:629-636`, `:903-983`](../../../../../cli/lib/graph.ml)).
 - CLI backups are **not pruned** by the desktop's 12-copy limit, which only counts `:electron-auto` backups ([`graph_backup.cljs:183-186`](../../../../../src/main/logseq/db_worker/graph_backup.cljs)). Use `graph backup remove`.
-- `list` shows each backup's `name`, `created-at` (the modification time of its `db.sqlite`), `size-bytes`, and `source` when `metadata.edn` has one ([`graph.ml:702-751`](../../../../../cli/lib/graph.ml)). With `--output json` the names are at `data.backups[].name` ([`cli-e2e/spec/non_sync_cases.edn:184`](../../../../../cli-e2e/spec/non_sync_cases.edn)).
-- `restore` runs a SQLite import of the backup's `db.sqlite` into a new graph named by `--dst`. An unknown name fails with "backup not found: …" ([`graph.ml:1049-1060`](../../../../../cli/lib/graph.ml)).
-- `remove` deletes the folder `<graph folder>/backup/<src>` and everything in it. The name is joined to that path without further checks, so pass exactly a name printed by `graph backup list` ([`graph.ml:469-470`, `:753-758`](../../../../../cli/lib/graph.ml)).
+- `list` shows each backup's `name`, `created-at` (the modification time of its `db.sqlite`), `size-bytes`, and `source` when `metadata.edn` has one ([`graph.ml:842-891`](../../../../../cli/lib/graph.ml)). With `--output json` the names are at `data.backups[].name` ([`cli-e2e/spec/non_sync_cases.edn:227`](../../../../../cli-e2e/spec/non_sync_cases.edn)).
+- `restore` runs a SQLite import of the backup's `db.sqlite` into a new graph named by `--dst`. An unknown name fails with "backup not found: …" ([`graph.ml:1176-1187`](../../../../../cli/lib/graph.ml)).
+- `remove` deletes the folder `<graph folder>/backup/<src>` and everything in it. The name is joined to that path without further checks, so pass exactly a name printed by `graph backup list` ([`graph.ml:632-633`, `:893-898`](../../../../../cli/lib/graph.ml)).
 
-The whole lifecycle (create → list → restore → remove) is an end-to-end CLI test case ([`non_sync_cases.edn:176-200`](../../../../../cli-e2e/spec/non_sync_cases.edn)):
+The whole lifecycle (create → list → restore → remove) is an end-to-end CLI test case ([`non_sync_cases.edn:219-243`](../../../../../cli-e2e/spec/non_sync_cases.edn)):
 
 ```bash
 logseq graph backup create --graph my-graph --name nightly
@@ -236,12 +240,12 @@ logseq graph backup remove --graph my-graph --src my-graph-nightly-20260911T0200
 
 **Best For:** Adding Logseq to an existing machine-wide backup.
 
-**What to know about a live `db.sqlite`:** Logseq opens the database with `locking_mode=exclusive` in WAL mode, and turns automatic checkpointing off ([`db_core.cljs:585-592`, `:740-742`](../../../../../src/main/frontend/worker/db_core.cljs)). It checkpoints about 2 seconds after writes and when it closes the graph ([`db_core.cljs:74-75`, `:155-164`, `:471`, `:477-484`](../../../../../src/main/frontend/worker/db_core.cljs)). Until then, recent changes live in the `-wal` file beside `db.sqlite`. A copy of `db.sqlite` taken while Logseq is running can miss them.
+**What to know about a live `db.sqlite`:** Logseq opens the database with `locking_mode=exclusive` in WAL mode, and turns automatic checkpointing off ([`db_core.cljs:590-597`, `:745-747`](../../../../../src/main/frontend/worker/db_core.cljs)). It checkpoints about 2 seconds after writes and when it closes the graph ([`db_core.cljs:74-75`, `:155-164`, `:471`, `:477-484`](../../../../../src/main/frontend/worker/db_core.cljs)). Until then, recent changes live in the `-wal` file beside `db.sqlite`. A copy of `db.sqlite` taken while Logseq is running can miss them.
 
 **So:**
 
 - ✅ Back up the `backup/` and `export/` folders plus `assets/`. Finished snapshots are complete files.
-- ✅ To copy `db.sqlite` itself, quit Logseq first. Also stop any CLI server for the graph (`server stop --graph <name>`, [`non_sync_cases.edn:200`](../../../../../cli-e2e/spec/non_sync_cases.edn)). Closing the graph checkpoints the WAL into `db.sqlite` ([`db_core.cljs:477-484`](../../../../../src/main/frontend/worker/db_core.cljs)). Then:
+- ✅ To copy `db.sqlite` itself, quit Logseq first. Also stop any CLI server for the graph (`server stop --graph <name>`, [`non_sync_cases.edn:243`](../../../../../cli-e2e/spec/non_sync_cases.edn)). Closing the graph checkpoints the WAL into `db.sqlite` ([`db_core.cljs:477-484`](../../../../../src/main/frontend/worker/db_core.cljs)). Then:
 
   ```bash
   # macOS/Linux
@@ -379,12 +383,12 @@ CLI backups are never pruned automatically. Remove old ones with `graph backup r
 
 **A page:** deleting a page moves it to **Recycle** ("Node has been moved to Recycle", [`en.edn:1126`](../../../../../src/resources/dicts/en.edn)). The exceptions are tags and properties, which are removed outright, and today's journal, which is emptied rather than deleted ([`deps/outliner/src/logseq/outliner/page.cljs:105-155`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
 
-1. ⋯ → **Recycle**. The item appears once the Recycle page exists ([`components/header.cljs:222-225`, `:332-334`](../../../../../src/main/frontend/components/header.cljs); [`handler/page.cljs:45-49`](../../../../../src/main/frontend/handler/page.cljs)).
-2. Find the page and click **Restore** ([`en.edn:1823`](../../../../../src/resources/dicts/en.edn)).
+1. ⋯ → **Recycle**. The item appears once the Recycle page exists ([`components/header.cljs:223-226`, `:333-335`](../../../../../src/main/frontend/components/header.cljs); [`handler/page.cljs:45-49`](../../../../../src/main/frontend/handler/page.cljs)).
+2. Find the page and click **Restore** ([`en.edn:1824`](../../../../../src/resources/dicts/en.edn)).
 
-"Deleted pages and blocks stay here until restored or automatically garbage collected after 30 days." ([`en.edn:1824`](../../../../../src/resources/dicts/en.edn)). The retention is 30 days, checked at most once a day as transactions run ([`deps/outliner/src/logseq/outliner/recycle.cljs:13-14`, `:273-298`](../../../../../deps/outliner/src/logseq/outliner/recycle.cljs); [`worker/handler/transaction.cljs:28-38`](../../../../../src/main/frontend/worker/handler/transaction.cljs)).
+"Deleted pages and blocks stay here until restored or automatically garbage collected after 30 days." ([`en.edn:1825`](../../../../../src/resources/dicts/en.edn)). The retention is 30 days, checked at most once a day as transactions run ([`deps/outliner/src/logseq/outliner/recycle.cljs:13-14`, `:273-298`](../../../../../deps/outliner/src/logseq/outliner/recycle.cljs); [`worker/handler/transaction.cljs:28-38`](../../../../../src/main/frontend/worker/handler/transaction.cljs)).
 
-**Blocks:** deleting blocks removes them and their children outright ([`deps/outliner/src/logseq/outliner/core.cljs:431-443`, `:1011-1051`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). They do not go to Recycle. The function that would recycle blocks, `recycle-blocks-tx-data` ([`recycle.cljs:127`](../../../../../deps/outliner/src/logseq/outliner/recycle.cljs)), is called only from tests. To get blocks back:
+**Blocks:** deleting blocks removes them and their children outright ([`deps/outliner/src/logseq/outliner/core.cljs:453-465`, `:1065-1105`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)). They do not go to Recycle. The function that would recycle blocks, `recycle-blocks-tx-data` ([`recycle.cljs:127`](../../../../../deps/outliner/src/logseq/outliner/recycle.cljs)), is called only from tests. To get blocks back:
 
 1. Undo right away with `mod+z` ([`shortcut/config.cljs:235-236`](../../../../../src/main/frontend/modules/shortcut/config.cljs)).
 2. Otherwise restore a recent backup into a new graph (Scenario 2) and copy the blocks back.
@@ -403,8 +407,8 @@ Logseq restores a backup by **importing it as a new graph**. There is no in-app 
    - Desktop snapshot: ⋯ → **Export graph** → "open backups folder for this graph", then pick the newest `backup/<graph>-<timestamp>/db.sqlite`.
    - Desktop export: `<graph folder>/export/…sqlite` or `…zip`.
    - Browser backup folder: `<folder>/<graph name>/db.sqlite`, or an older `backups/<epoch ms>.db.sqlite`.
-2. ⋯ → **Import** ([`components/header.cljs:232-235`](../../../../../src/main/frontend/components/header.cljs)).
-3. Choose **SQLite** for a `.sqlite` file, or **SQLite + assets (.zip)** for a zip export ([`imports.cljs:572-595`](../../../../../src/main/frontend/components/imports.cljs); [`en.edn:950-951`](../../../../../src/resources/dicts/en.edn)).
+2. ⋯ → **Import** ([`components/header.cljs:233-236`](../../../../../src/main/frontend/components/header.cljs)).
+3. Choose **SQLite** for a `.sqlite` file, or **SQLite + assets (.zip)** for a zip export ([`imports.cljs:576-599`](../../../../../src/main/frontend/components/imports.cljs); [`en.edn:950-951`](../../../../../src/resources/dicts/en.edn)).
 4. Enter a **new** graph name. An empty name or an existing one is rejected ([`imports.cljs:74-110`](../../../../../src/main/frontend/components/imports.cljs); [`en.edn:923`, `:929`](../../../../../src/resources/dicts/en.edn)).
 5. Logseq creates the graph from the file and switches to it ([`src/main/frontend/handler/db_based/import.cljs:104-121`](../../../../../src/main/frontend/handler/db_based/import.cljs)). The zip import also copies the assets and reports how many were imported or skipped ([`import.cljs:123-172`](../../../../../src/main/frontend/handler/db_based/import.cljs)).
 

@@ -7,12 +7,16 @@ platform: 'Desktop (macOS/Windows/Linux), Mobile (iOS/Android), Web, Node/CLI'
 related-docs:
   - '../../tutorials/collaboration/real-time-sync.md'
   - '../../reference/features/user-profiles.md'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 ---
 
 # End-to-End Encryption (E2EE) in Logseq
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-09
 
@@ -505,7 +509,7 @@ Nothing in the app checks this, so it is entirely on you.
 
 ⚠️ There is **no password recovery**. There is a **destructive reset**.
 
-Settings exposes a "forgot password" flow that calls `:thread-api/reset-user-rsa-key-pair` ([`frontend.components.settings:1288`](../../../../../src/main/frontend/components/settings.cljs#L1288)). The app's own warning text states the consequence exactly ([`en.edn:613`](../../../../../src/resources/dicts/en.edn#L613)):
+Settings exposes a "forgot password" flow that calls `:thread-api/reset-user-rsa-key-pair` ([`frontend.components.settings:1288`](../../../../../src/main/frontend/components/settings.cljs#L1300)). The app's own warning text states the consequence exactly ([`en.edn:613`](../../../../../src/resources/dicts/en.edn#L613)):
 
 > "If you forget your password, you can force a reset of your encryption password. However, this will make all currently encrypted graph data stored on the server permanently unreadable. After resetting, you'll need to re-upload your graphs from the client."
 
@@ -525,7 +529,7 @@ That is because the reset generates a **new** RSA key pair ([crypt.cljs:875-887]
 
 Two distinct operations exist:
 
-- **Change password** — `:thread-api/change-e2ee-password` ([crypt.cljs:889-891](../../../../../src/main/frontend/worker/sync/crypt.cljs#L889-L891), UI at [settings.cljs:1389](../../../../../src/main/frontend/components/settings.cljs#L1389)). Decrypts the private key with the old password, re-encrypts it with the new one (picking up the current 600,000-iteration schedule), uploads it, and re-persists the local secret. Graph AES keys and graph content are **not** touched, so nothing is re-encrypted ([crypt.cljs:823-841](../../../../../src/main/frontend/worker/sync/crypt.cljs#L823-L841)).
+- **Change password** — `:thread-api/change-e2ee-password` ([crypt.cljs:889-891](../../../../../src/main/frontend/worker/sync/crypt.cljs#L889-L891), UI at [settings.cljs:1401](../../../../../src/main/frontend/components/settings.cljs#L1401)). Decrypts the private key with the old password, re-encrypts it with the new one (picking up the current 600,000-iteration schedule), uploads it, and re-persists the local secret. Graph AES keys and graph content are **not** touched, so nothing is re-encrypted ([crypt.cljs:823-841](../../../../../src/main/frontend/worker/sync/crypt.cljs#L823-L841)).
 - **Reset key pair** — `:thread-api/reset-user-rsa-key-pair`, the destructive path described above.
 
 Neither rotates the per-graph AES key. There is no AES key rotation in source at this revision.

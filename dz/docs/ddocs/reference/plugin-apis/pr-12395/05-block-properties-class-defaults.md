@@ -1,11 +1,15 @@
 ---
 title: 'Editor.getBlockProperties class defaults'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 ---
 
 # `Editor.getBlockProperties`: class default values are now merged in
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 ## Summary
 
@@ -32,14 +36,14 @@ At `be800f1711`, all three APIs go through `get-all-block-properties`
 
 1. Fetch the block from the DB worker and read its `:block/properties` (`editor.cljs:482-483`).
    The worker builds that map from the block's own property datoms, starting from `{}`
-   ([`src/main/frontend/worker/handler/property.cljs:511-529`](../../../../../../src/main/frontend/worker/handler/property.cljs),
+   ([`src/main/frontend/worker/handler/property.cljs:559-577`](../../../../../../src/main/frontend/worker/handler/property.cljs),
    assoc'd at
    [`src/main/frontend/worker/handler/block.cljs:399-404`](../../../../../../src/main/frontend/worker/handler/block.cljs)).
    A block with no own properties therefore yields an empty map, not `nil`, and still gets class
    defaults.
 2. Ask the worker for class defaults. The API calls `db-async/<get-block-class-default-properties`
    (`editor.cljs:476-478`;
-   [`src/main/frontend/db/async.cljs:135-137`](../../../../../../src/main/frontend/db/async.cljs)),
+   [`src/main/frontend/db/async.cljs:136-138`](../../../../../../src/main/frontend/db/async.cljs)),
    which runs `:thread-api/get-block-class-default-properties` (worker `property.cljs:179-192`).
 3. The worker collects properties from every class on the block **and every class those classes
    extend**:
@@ -77,7 +81,7 @@ these properties:
 ## Example
 
 The built-in `Task` class lists `:logseq.property/status` in its schema
-([`deps/db/src/logseq/db/frontend/class.cljs:40-42`](../../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
+([`deps/db/src/logseq/db/frontend/class.cljs:39-41`](../../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
 `:logseq.property/status` has `:logseq.property/default-value :logseq.property/status.todo`
 (`property.cljs:319-321`). That closed value's title is `"Todo"` (`property.cljs:315`).
 
@@ -91,7 +95,7 @@ const props = await logseq.Editor.getBlockProperties(blockUuid)
 > **Unverified:** the output above is derived by reading the code path, not by running it against a
 > live graph. Two points were not confirmed:
 >
-> - That the `Task` class schema at `class.cljs:40-42` materializes as
+> - That the `Task` class schema at `class.cljs:39-41` materializes as
 >   `:logseq.property.class/properties` on the class entity, which is the attribute the walk reads.
 > - The exact plain form `worker-plain/attribute-value->plain` gives a block's *own* ref-valued
 >   properties before `readable-properties` runs (worker `property.cljs:481-483`).

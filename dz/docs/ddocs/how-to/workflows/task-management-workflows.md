@@ -2,8 +2,8 @@
 title: 'Task Management Workflows'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (ccc03ab0aa). The 2026-09-10 date covers only the simple-query examples and the <% %> template variables (4a37d8997b).'
 reviewStatus: audited
 quadrant: 'How-To'
@@ -16,6 +16,10 @@ tags: ['tasks', 'todo', 'gtd', 'productivity', 'workflow']
 ---
 
 # Task Management Workflows
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This guide shows you how to manage tasks effectively in Logseq. Learn different task management methodologies (GTD, PARA, custom) and build a system that works for you.
 
@@ -64,7 +68,7 @@ were file-graph text. Typing `TODO` at the start of a block leaves you with a
 block whose text happens to begin with the word "TODO".
 
 The `Task` tag's schema is exactly four properties
-(`deps/db/src/logseq/db/frontend/class.cljs:42`):
+(`deps/db/src/logseq/db/frontend/class.cljs:41`):
 
 | Property | Ident | Type |
 | --- | --- | --- |
@@ -113,13 +117,13 @@ Method 2: Slash commands — /Doing, /Done, /Canceled, ...
 Method 3: Keyboard — Cmd/Ctrl+Enter cycles the current block
           Todo → Doing → Done → (no status)
           (src/main/frontend/modules/shortcut/config.cljs:167,
-           src/main/frontend/handler/editor.cljs:819-831)
+           src/main/frontend/handler/editor.cljs:825-837)
 ```
 
 > **Note:** the cycle only walks Todo → Doing → Done → (no status). A block
 > sitting on Backlog, In Review or Canceled is not part of the loop: those fall
 > to the `case`'s trailing default and jump straight to Todo
-> (`src/main/frontend/handler/editor.cljs:819-831`). Use the status picker if
+> (`src/main/frontend/handler/editor.cljs:825-837`). Use the status picker if
 > you want to move between the other three.
 
 ### Task Hierarchy
@@ -321,10 +325,10 @@ Type `/Query`, then enter:
 ```
 
 > **`{{query …}}` does not work in a DB graph.** Typed into a block it renders only a
-> deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Entered as the query
+> deprecation warning (`src/main/frontend/components/block.cljs:1887-1888`). Entered as the query
 > of a `/Query` block it becomes a full-text search for that literal text, because `sanitize-q`
 > quotes anything that does not start with `(`, `"`, a page ref or `[?`
-> (`src/main/frontend/components/query/builder.cljs:543-552`). Every simple query in this guide is
+> (`src/main/frontend/components/query/builder.cljs:608-617`). Every simple query in this guide is
 > therefore shown as the bare form you enter after typing `/Query`; in an outline, a line marked
 > `← /Query block` is its own `/Query` block.
 
@@ -402,8 +406,8 @@ No organizing yet, just capture
 Make a template by adding the built-in **Template** tag to the top block of the
 tree — use the block's tag control, **not** an inline `#Template`. `Template` is
 one of the "block kind" tags, and inline tags in that set are stripped when the
-block is saved (`deps/db/src/logseq/db/frontend/class.cljs:130-140`;
-`deps/outliner/src/logseq/outliner/core.cljs:275-291`). Insert a saved template
+block is saved (`deps/db/src/logseq/db/frontend/class.cljs:147-157`;
+`deps/outliner/src/logseq/outliner/core.cljs:297-313`). Insert a saved template
 later with `/Template` (`src/main/frontend/commands.cljs:339-343`).
 
 ```markdown
@@ -502,7 +506,7 @@ Query shows all in category
 
 Note that `[[GTD/Next Actions]]` creates two pages — `GTD` and
 `Next Actions` — and the reference points at the leaf, whose title is
-`Next Actions` (`deps/outliner/src/logseq/outliner/page.cljs:385-388`).
+`Next Actions` (`deps/outliner/src/logseq/outliner/page.cljs:464-467`).
 
 ### Context-Based Organization
 
@@ -700,7 +704,7 @@ Type `/Query`, then enter:
 
 If you prefer the page hierarchy, walk `:block/parent` instead, which is what
 `A/B` titles actually build
-(`deps/outliner/src/logseq/outliner/page.cljs:385-388`). The recursive `parent`
+(`deps/outliner/src/logseq/outliner/page.cljs:464-467`). The recursive `parent`
 rule takes the **ancestor first**
 (`deps/db/src/logseq/db/frontend/rules.cljc:8-12`):
 
@@ -850,7 +854,7 @@ Examples:
 Retagging is the reliable move. Renaming `Projects/Old` to
 `Archives/Projects/Old` reparents the leaf page, but the page's own title stays
 `Old` either way, so nothing that queries by title changes
-(`deps/outliner/src/logseq/outliner/page.cljs:385-388`).
+(`deps/outliner/src/logseq/outliner/page.cljs:464-467`).
 
 ### PARA Task Flow
 
@@ -1132,7 +1136,7 @@ is the deprecated spelling (`inputs.cljs:80`).
 
 > **Query lines in these templates.** A line marked `← /Query block` is a block of its own: type
 > `/Query` on it and enter the form shown. `/Query` moves the block's whole title into the query
-> (`src/main/frontend/handler/editor.cljs:4377-4394`), so a label cannot share the line and goes in
+> (`src/main/frontend/handler/editor.cljs:4436-4453`), so a label cannot share the line and goes in
 > the parent block instead. `<% today %>` and `<% yesterday %>` already insert a page reference
 > (`deps/outliner/src/logseq/outliner/template.cljs:74`), so they are written bare, not inside
 > `[[…]]`. Inside a template they are fixed to the day the template is inserted; in a standalone

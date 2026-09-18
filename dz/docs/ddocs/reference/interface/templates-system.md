@@ -3,8 +3,8 @@ title: 'Templates System'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
 quadrant: 'Reference'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '[Slash Commands](./slash-commands.md)'
@@ -14,6 +14,10 @@ tags: ['templates', 'automation', 'productivity', 'reference']
 ---
 
 # Templates System
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This is a reference for templates in Logseq **DB graphs**. A template is a reusable block tree. You can insert it anywhere with the `/Template` slash command, or have Logseq insert it automatically whenever a node gets a particular tag, journal pages included.
 
@@ -48,7 +52,7 @@ All `file:line` citations are at `be800f1711`.
 
 ### What is a Template?
 
-A **template** is a block tagged with the built-in `Template` class (`deps/db/src/logseq/db/frontend/class.cljs:100-102`). The template block's **title is its name**. The `/Template` search matches on `:block/title` (`src/main/frontend/search.cljs:45-57`).
+A **template** is a block tagged with the built-in `Template` class (`deps/db/src/logseq/db/frontend/class.cljs:99-101`). The template block's **title is its name**. The `/Template` search matches on `:block/title` (`src/main/frontend/search.cljs:45-57`).
 
 When a template is applied, Logseq copies the template block's **children**. The template block itself is not copied:
 
@@ -61,9 +65,9 @@ A template's children can include:
 
 - Static text and nested block hierarchies
 - `<% … %>` variables (see [Template Variables](#template-variables))
-- References between blocks of the same template. On insert, each one is rewritten to point at the new copy of the referenced block (`deps/outliner/src/logseq/outliner/core.cljs:631-652`).
+- References between blocks of the same template. On insert, each one is rewritten to point at the new copy of the referenced block (`deps/outliner/src/logseq/outliner/core.cljs:653-674`).
 
-Asset blocks are **not** copied. When `insert-template?` is set, insertion removes every block for which `ldb/asset?` is true (`core.cljs:842-844`).
+Asset blocks are **not** copied. When `insert-template?` is set, insertion removes every block for which `ldb/asset?` is true (`core.cljs:896-898`).
 
 The first inserted block gets the hidden `:logseq.property/used-template` property, pointing back at the template (`deps/db/src/logseq/db/frontend/property.cljs:691-695`, set in `op.cljs:246-248` and `pipeline.cljs:115-116`).
 
@@ -82,7 +86,7 @@ Meeting notes          ← root block; tag it "Template" via the Tags property
   Next meeting: <% tomorrow %>
 ```
 
-> **Inline `#Template` is silently stripped.** `Template` is one of the `block-kind-tags` and so belongs to `disallowed-inline-tags` (`class.cljs:130-140`). When an ordinary block is saved, the outliner removes any disallowed inline tag from `:block/tags` and `:block/refs`, and rewrites the title so `#Template` becomes plain text (`core.cljs:275-331`). No error is shown. Typing `Meeting notes #Template` therefore gives you a block whose title contains the literal text "#Template" and which is **not** a template. Add the tag through the block's **Tags** property instead.
+> **Inline `#Template` is silently stripped.** `Template` is one of the `block-kind-tags` and so belongs to `disallowed-inline-tags` (`class.cljs:147-157`). When an ordinary block is saved, the outliner removes any disallowed inline tag from `:block/tags` and `:block/refs`, and rewrites the title so `#Template` becomes plain text (`core.cljs:297-353`). No error is shown. Typing `Meeting notes #Template` therefore gives you a block whose title contains the literal text "#Template" and which is **not** a template. Add the tag through the block's **Tags** property instead.
 
 A second route: set the **Apply template to tags** property on a block. The outliner then adds the `Template` tag automatically (`deps/outliner/src/logseq/outliner/property.cljs:207-208`). See [Tag and Journal Templates](#tag-and-journal-templates).
 
@@ -142,13 +146,13 @@ So `<% 3 days ago %>` renders as `3 days ago`, `<% cursor %>` renders as `cursor
 | `time` | `HH:MM`, 24-hour | `h:mm a` (`query_dsl.cljs:73-75`) |
 | Other names | Bare inner text | Tried as a natural-language date (`nld-parse`, `query_dsl.cljs:68-71`). If that fails, bare inner text |
 
-**A query inside a template is frozen to the day of insertion.** A `/Query` block keeps its query text in a `:logseq.property/query` child block (`run-query-command!`, `src/main/frontend/handler/editor.cljs:4377-4396`). Template insertion loads the template with `get-block-and-children … {:include-property-block? true}` (`op.cljs:242-244`). That option defaults to `false` (`deps/db/src/logseq/db.cljs:376-378`), and when set it also walks the `:logseq.property/query` blocks (`db.cljs:381-384`). So the query block is copied, and its title goes through the template engine like any other block (`template.cljs:151-161`). A templated `(between <% yesterday %> <% today %>)` is stored with the UUID refs of that day's journals. The DSL still resolves those refs, because `ldb/get-page` accepts a UUID string (`db.cljs:544-553`, used by `build-page-ref`, `query_dsl.cljs:467-474`). The same query typed into a standalone `/Query` block moves with the calendar.
+**A query inside a template is frozen to the day of insertion.** A `/Query` block keeps its query text in a `:logseq.property/query` child block (`run-query-command!`, `src/main/frontend/handler/editor.cljs:4436-4455`). Template insertion loads the template with `get-block-and-children … {:include-property-block? true}` (`op.cljs:242-244`). That option defaults to `false` (`deps/db/src/logseq/db.cljs:378-380`), and when set it also walks the `:logseq.property/query` blocks (`db.cljs:383-386`). So the query block is copied, and its title goes through the template engine like any other block (`template.cljs:151-161`). A templated `(between <% yesterday %> <% today %>)` is stored with the UUID refs of that day's journals. The DSL still resolves those refs, because `ldb/get-page` accepts a UUID string (`db.cljs:546-555`, used by `build-page-ref`, `query_dsl.cljs:467-474`). The same query typed into a standalone `/Query` block moves with the calendar.
 
-**Label and query go in separate blocks.** `/Query` moves the block's entire title into the query (`editor.cljs:4388-4395`). A template line such as `Completed: (task done)` therefore cannot become a labelled query block. Put the label in a parent block and the query in a child block.
+**Label and query go in separate blocks.** `/Query` moves the block's entire title into the query (`editor.cljs:4447-4454`). A template line such as `Completed: (task done)` therefore cannot become a labelled query block. Put the label in a parent block and the query in a child block.
 
 ### No date-format configuration
 
-There is no `:template/date-format` key anywhere in the source. `:journal/page-title-format` appears only in `file-only-config`, which lists keys deprecated in DB graphs (`deps/common/src/logseq/common/config.cljs:105-115`). DB graphs read the journal title format from `:logseq.property.journal/title-format` on the Journal class (`op.cljs:253-257`).
+There is no `:template/date-format` key anywhere in the source. `:journal/page-title-format` appears only in `file-only-config`, which lists keys deprecated in DB graphs (`deps/common/src/logseq/common/config.cljs:108-118`). DB graphs read the journal title format from `:logseq.property.journal/title-format` on the Journal class (`op.cljs:253-257`).
 
 ---
 
@@ -162,11 +166,11 @@ There is no `:template/date-format` key anywhere in the source. `:journal/page-t
 
 What happens next:
 
-- If the editing block has content, it is saved first (`src/main/frontend/handler/editor.cljs:2512-2513`).
-- The `:apply-template` outliner op runs (`editor.cljs:2509-2514`).
-- **If the current block is empty, the first template block replaces it** (`:replace-empty-target? true`, `editor.cljs:2522-2527`). Replacement applies only when the target's title is blank (`core.cljs:847-853`).
+- If the editing block has content, it is saved first (`src/main/frontend/handler/editor.cljs:2545-2546`).
+- The `:apply-template` outliner op runs (`editor.cljs:2542-2547`).
+- **If the current block is empty, the first template block replaces it** (`:replace-empty-target? true`, `editor.cljs:2555-2560`). Replacement applies only when the target's title is blank (`core.cljs:901-907`).
 - The template's children are inserted as **children** of the target if the target already has children. Otherwise they are inserted as **siblings** (`op.cljs:273-282`).
-- Any failure shows an error notification (`editor.cljs:2517-2519`).
+- Any failure shows an error notification (`editor.cljs:2550-2552`).
 
 ### Keyboard shortcut
 
@@ -182,7 +186,7 @@ The block context menu (`src/main/frontend/components/content.cljs`) has no "App
 
 ### Apply template to tags
 
-The `Template` class declares one property, **Apply template to tags** (`:logseq.property/template-applied-to`, `:type :class`, `:cardinality :many`, `property.cljs:696-700`; `class.cljs:100-102`).
+The `Template` class declares one property, **Apply template to tags** (`:logseq.property/template-applied-to`, `:type :class`, `:cardinality :many`, `property.cljs:696-700`; `class.cljs:99-101`).
 
 After a transaction, `insert-tag-templates` (`pipeline.cljs:93-159`) looks at every `:block/tags` datom that was added:
 
@@ -305,7 +309,7 @@ Inside the app, templates are applied through the `:apply-template` outliner op 
 
 ### Template doesn't appear in the `/Template` list
 
-1. **The root block isn't actually tagged `Template`.** The usual cause is typing `#Template` inline, which is silently stripped (`core.cljs:275-331`). Add the tag through the Tags property.
+1. **The root block isn't actually tagged `Template`.** The usual cause is typing `#Template` inline, which is silently stripped (`core.cljs:297-353`). Add the tag through the Tags property.
 2. **Wrong search text.** The search matches the template block's title (`search.cljs:55-57`).
 
 ### Variables not expanding
@@ -316,7 +320,7 @@ Inside the app, templates are applied through the `:apply-template` outliner op 
 ### Inserted template is empty, or missing blocks
 
 - The template has no children. The root block is never copied (`op.cljs:239-251`), and tag templates skip childless templates (`pipeline.cljs:112-113`).
-- The missing blocks were asset blocks, which template insertion removes (`core.cljs:842-844`).
+- The missing blocks were asset blocks, which template insertion removes (`core.cljs:896-898`).
 
 ### Journal template not applied
 

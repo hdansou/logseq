@@ -3,8 +3,8 @@ title: 'Bidirectional properties'
 description: 'Understanding how Logseq DB graphs derive reverse-reference sections from ref-valued properties'
 status: stable
 audience: [developer, user]
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 category: concepts
 relatedDocs:
@@ -16,11 +16,15 @@ relatedDocs:
     - '[Linked References and Backlinks](linked-references.md)'
 ---
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > Bidirectional properties are a DB-graph-only reverse-reference view. When a class opts in, Logseq shows nodes of that class that point at the current node through ref-valued properties. Nothing is mirrored back onto the target node, and no separate backlink record is stored.
 
 ## Executive summary
 
-- Bidirectional properties are a derived read-time view over existing DB-graph datoms, not a second write path. The core implementation lives in `deps/db/src/logseq/db.cljs:858-937`.
+- Bidirectional properties are a derived read-time view over existing DB-graph datoms, not a second write path. The core implementation lives in `deps/db/src/logseq/db.cljs:860-939`.
 - A class must opt in with `:logseq.property.class/enable-bidirectional?`. `:logseq.property.class/bidirectional-property-title` is meant to override the section title, but at `be800f1711` that title never reaches the UI — see "Low risk: title override is not displayed".
 - Only ref-valued user or plugin properties that declare `:logseq.property/classes` participate. Scalar properties and unscoped properties are ignored.
 - The UI subscribes to the section through the worker **render-resource** system (`db-hooks/use-resource [:block-bidirectional-properties <block-uuid>]`), and the worker invalidates that subscription on every transaction that could change the result. It is no longer a one-shot mount-time async fetch. There is still no file-graph implementation.
@@ -53,17 +57,17 @@ The user-visible trigger is not a keyboard shortcut. It is rendering the root pr
 
 ```text
 Open page or block
-  -> properties-area renders (components/property.cljs:892)
-  -> bidirectional-properties-area, for root block or page only (components/property.cljs:875-884)
-  -> db-hooks/use-resource [:block-bidirectional-properties <block-uuid>]  (db/hooks.cljs:124-126)
+  -> properties-area renders (components/property.cljs:915)
+  -> bidirectional-properties-area, for root block or page only (components/property.cljs:898-907)
+  -> db-hooks/use-resource [:block-bidirectional-properties <block-uuid>]  (db/hooks.cljs:131-133)
   -> worker resource renderer :block-bidirectional-properties
      (worker/handler/render_resource/property.cljs:143-159)
-  -> logseq.db/get-bidirectional-properties (deps/db/src/logseq/db.cljs:909-937)
+  -> logseq.db/get-bidirectional-properties (deps/db/src/logseq/db.cljs:911-939)
   -> reverse ref scan + filtering + grouping
   -> renderer returns [#{[:bidirectional block-uuid]}          ; invalidation keys
                        [{:class-uuid ... :entity-uuids [...]}]] ; payload
   -> bidirectional-properties-section renders a tab strip below normal properties
-     (components/property.cljs:440-460)
+     (components/property.cljs:439-459)
 
 On every subsequent transaction:
   worker/render_affected_keys.cljs:455-484 recomputes the affected
@@ -73,7 +77,7 @@ On every subsequent transaction:
 > **Removed:** The former path through `frontend.db.async/<get-bidirectional-properties` and a
 > `:thread-api/get-bidirectional-properties` handler in `src/main/frontend/worker/db_worker.cljs`
 > no longer exists. Neither file mentions bidirectional properties at `be800f1711`. The
-> `def-thread-api` entry now lives in `src/main/frontend/worker/handler/property.cljs:299-303`
+> `def-thread-api` entry now lives in `src/main/frontend/worker/handler/property.cljs:308-312`
 > and is invoked by the render-resource renderer rather than by a component effect. There is
 > also no `load-bidirectional-properties` function anywhere in the tree.
 
@@ -118,18 +122,18 @@ The public reference entry in `ddocs/reference/data/properties-reference.md` des
 
 The frontend path is narrow and fully DB-specific:
 
-- `src/main/frontend/components/property.cljs:875-884` (`bidirectional-properties-area`) calls
+- `src/main/frontend/components/property.cljs:898-907` (`bidirectional-properties-area`) calls
   `db-hooks/use-resource [:block-bidirectional-properties block-uuid]`.
 - It renders only when the properties area belongs to the root block or a page
   (`root-block?` or `entity/page?`), and callers can suppress it with
-  `:skip-bidirectional-properties?` (`components/property.cljs:893`, `1042-1044`).
-- `src/main/frontend/db/hooks.cljs:124-126` wires the resource key to the worker subscription.
+  `:skip-bidirectional-properties?` (`components/property.cljs:916`, `1042-1044`).
+- `src/main/frontend/db/hooks.cljs:131-133` wires the resource key to the worker subscription.
 - `src/main/frontend/worker/handler/render_resource/property.cljs:143-159` is the renderer. It
   calls `ldb/get-bidirectional-properties` on the live Datascript connection and returns both
   an invalidation-key set and the serialized payload.
 - `src/main/frontend/worker/render_affected_keys.cljs:53-64` and `404-484` decide which
   `[:bidirectional <target-uuid>]` keys a transaction invalidates.
-- `src/main/frontend/worker/handler/property.cljs:299-303` still exposes
+- `src/main/frontend/worker/handler/property.cljs:308-312` still exposes
   `:thread-api/get-bidirectional-properties` for direct worker calls.
 
 The payload that crosses the worker boundary carries **uuids, not entity maps**, and does not
@@ -141,7 +145,7 @@ carry a title:
 ```
 
 The UI resolves each `:class-uuid` back to a class through `db-hooks/use-block` and uses
-`(:block/title class)` for the tab label (`components/property.cljs:426-438`). The `:title`
+`(:block/title class)` for the tab label (`components/property.cljs:425-437`). The `:title`
 that `logseq.db/get-bidirectional-properties` computes — including the pluralization and the
 `bidirectional-property-title` override — is currently **dropped by the renderer** and is not
 what the user sees on the tab.
@@ -152,18 +156,18 @@ invalidation key fires.
 ### 3. Core DB algorithm
 
 The owning implementation is `get-bidirectional-properties` in
-`deps/db/src/logseq/db.cljs:909-937`, supported by three private helpers in the same file:
+`deps/db/src/logseq/db.cljs:911-939`, supported by three private helpers in the same file:
 `bidirectional-property-attr?` (858-866), `get-bidirectional-property-attrs` (868-876),
 `get-ea-by-v` (878-883) and `build-bidirectional-property-group` (892-907).
 
 The algorithm is:
 
 0. Bail out entirely if the target itself is a property-value block, i.e. it has
-   `:logseq.property/created-from-property` (`db.cljs:915-916`). This guard is easy to miss and
+   `:logseq.property/created-from-property` (`db.cljs:917-918`). This guard is easy to miss and
    means property-value blocks never show a bidirectional section.
 1. Build the candidate attribute set **once per call** with a Datalog query for every property
-   that is both `:db.type/ref` and has `:logseq.property/classes` (`db.cljs:868-876`), then scan
-   `:avet` datoms for `[?a target-id]` per candidate attribute (`get-ea-by-v`, `db.cljs:878-883`).
+   that is both `:db.type/ref` and has `:logseq.property/classes` (`db.cljs:870-878`), then scan
+   `:avet` datoms for `[?a target-id]` per candidate attribute (`get-ea-by-v`, `db.cljs:880-885`).
 2. For each candidate attribute, keep it only if it is:
    - a qualified keyword
    - in a user-property (`namespace` contains `.property`) or plugin-property (`plugin.property.` prefix) namespace
@@ -258,7 +262,7 @@ This is why the feature feels closer to "reverse objects of class X" than to a g
 
 **Purpose:** transport the grouped result from worker to UI
 
-**Shape returned by `logseq.db/get-bidirectional-properties` (`db.cljs:903-907`):**
+**Shape returned by `logseq.db/get-bidirectional-properties` (`db.cljs:905-909`):**
 
 ```clojure
 {:title "Books"
@@ -266,7 +270,7 @@ This is why the feature feels closer to "reverse objects of class X" than to a g
  :entities [{...} {...}]}
 ```
 
-**Shape actually sent to the UI (`render_resource/property.cljs:148-155`):**
+**Shape actually sent to the UI (`render_resource/property.cljs:123-130`):**
 
 ```clojure
 [#{[:bidirectional block-uuid]}                              ; invalidation keys
@@ -335,7 +339,7 @@ This keeps data-loss risk low. If the graph data persists correctly, bidirection
 
 **Expected result:** page `Bob` shows a tab labelled `Person` containing `Alice`.
 
-**Observed in tests:** covered by `deps/db/test/logseq/db_test.cljs:291-397` and
+**Observed in tests:** covered by `deps/db/test/logseq/db_test.cljs:344-450` and
 `clj-e2e/test/logseq/e2e/bidirectional_properties_test.clj:15-51`.
 
 **Risk level:** low
@@ -366,10 +370,10 @@ This keeps data-loss risk low. If the graph data persists correctly, bidirection
 
 **Actual result:** the reverse section omits it.
 
-**Why:** current code explicitly filters recycled entities (`db.cljs:922`, `929`), and ADR 0009
+**Why:** current code explicitly filters recycled entities (`db.cljs:924`, `929`), and ADR 0009
 calls out bidirectional/property-derived views as sensitive to schema deletion behavior
 (`docs/adr/0009-hybrid-schema-deletion.md:19`, `:68`). Regression coverage lives in
-`deps/db/test/logseq/db_test.cljs:330-344`.
+`deps/db/test/logseq/db_test.cljs:383-397`.
 
 **Risk level:** low
 
@@ -396,7 +400,7 @@ tags, `bidirectional-property-title`, `enable-bidirectional?`, `built-in?` or `d
 `:logseq.property/created-from-property`.
 
 **Actual result:** `get-bidirectional-properties` returns `nil` before doing any scan
-(`db.cljs:915-916`), so no section renders regardless of how many nodes point at it.
+(`db.cljs:917-918`), so no section renders regardless of how many nodes point at it.
 
 **Risk level:** low, but it is an undocumented hard exclusion.
 
@@ -422,15 +426,15 @@ If any of those are wrong, the section simply does not appear.
 
 > **Removed:** this page previously listed stale UI as a medium risk. The mount-time async
 > effect it described is gone. `bidirectional-properties-area` now uses a worker render-resource
-> subscription (`components/property.cljs:875-884`, `db/hooks.cljs:124-126`) and
+> subscription (`components/property.cljs:898-907`, `db/hooks.cljs:131-133`) and
 > `render_affected_keys.cljs:455-484` invalidates it per transaction.
 
 ### Low risk: title override is not displayed
 
 `build-bidirectional-property-group` computes a pluralized or user-overridden `:title`
-(`db.cljs:896-902`), but the render-resource layer serializes only `:class-uuid` and
-`:entity-uuids` (`render_resource/property.cljs:148-155`), and the tab label is
-`(:block/title class)` (`components/property.cljs:438`). Setting
+(`db.cljs:898-904`), but the render-resource layer serializes only `:class-uuid` and
+`:entity-uuids` (`render_resource/property.cljs:123-130`), and the tab label is
+`(:block/title class)` (`components/property.cljs:437`). Setting
 `:logseq.property.class/bidirectional-property-title` therefore has no visible effect on the tab
 strip at this commit. This is a behavioral gap, not a data risk.
 
@@ -438,9 +442,9 @@ strip at this commit. This is a behavioral gap, not a data risk.
 
 The algorithm still scans incoming reverse datoms for the target. Commit `cdc1bc1d32` fixed the
 worst repeated attribute lookup pattern by hoisting the candidate-attribute query out of the
-per-datom loop (`get-bidirectional-property-attrs`, `db.cljs:868-876`), and the current test
+per-datom loop (`get-bidirectional-property-attrs`, `db.cljs:870-878`), and the current test
 suite asserts bounded keyword lookups
-(`deps/db/test/logseq/db_test.cljs:369-397`, both tests tagged `^:long`).
+(`deps/db/test/logseq/db_test.cljs:422-450`, both tests tagged `^:long`).
 
 ## Code location reference
 
@@ -464,7 +468,7 @@ All line numbers below are pinned to `origin/master` at `be800f1711`.
 > **Removed:** `src/main/frontend/worker/db_worker.cljs` and `src/main/frontend/db/async.cljs`
 > contain no bidirectional-properties code at `be800f1711` (verified with
 > `git grep -n bidirectional origin/master -- <path>`, no matches). The rows citing
-> `db_worker.cljs:1065-1069` and `async.cljs:48-52` have been deleted rather than re-pinned.
+> `db_worker.cljs:1065-1069` and `async.cljs:49-53` have been deleted rather than re-pinned.
 
 ## Findings: New Capabilities
 
@@ -476,7 +480,7 @@ Discovered in `origin/master` at `be800f1711` and not described in the previous 
 (`src/main/frontend/worker/handler/render_resource/property.cljs:143-159`) alongside
 `:block-display-properties` and `:block-positioned-properties`. The renderer returns a set of
 invalidation keys plus the payload, and the UI subscribes with `db-hooks/use-resource`
-(`src/main/frontend/db/hooks.cljs:124-126`). This makes the section live rather than
+(`src/main/frontend/db/hooks.cljs:131-133`). This makes the section live rather than
 mount-time-only.
 
 ### Per-transaction invalidation for bidirectional targets
@@ -499,7 +503,7 @@ predicates are not identical.
 
 ### The section is a tab strip, not a list
 
-`bidirectional-properties-section` (`src/main/frontend/components/property.cljs:440-460`) builds
+`bidirectional-properties-section` (`src/main/frontend/components/property.cljs:439-459`) builds
 `shui/tabs` with one `tabs-trigger` per class. Each trigger carries a `:data-entity-count`
 attribute and may show the class icon (`bidirectional-tab-icon`, lines 418-424, suppressed when
 the icon id is `"hash"`). Tab content renders through the shared blocks container with
@@ -509,13 +513,13 @@ the icon id is `"hash"`). Tab content renders through the shared blocks containe
 ### Callers can suppress the section
 
 `properties-area` accepts `:skip-bidirectional-properties?`
-(`src/main/frontend/components/property.cljs:893`, `1042-1044`), a knob that did not exist when
+(`src/main/frontend/components/property.cljs:916`, `1042-1044`), a knob that did not exist when
 this page was last written.
 
 ### Property-value blocks are excluded as targets
 
 `get-bidirectional-properties` returns `nil` when the target has
-`:logseq.property/created-from-property` (`deps/db/src/logseq/db.cljs:915-916`).
+`:logseq.property/created-from-property` (`deps/db/src/logseq/db.cljs:917-918`).
 
 ### The computed `:title` never reaches the UI
 
@@ -548,7 +552,7 @@ looks like a live bug rather than a documentation drift.
 
 - Keep unit coverage for disabled-by-default, enabled-per-class, recycled-entity filtering, and performance bounds.
 - Add or keep a regression test for the April 2026 setup bug fixed by `96367595aa`.
-- Add coverage for the property-value-block guard at `db.cljs:915-916`; it is currently untested
+- Add coverage for the property-value-block guard at `db.cljs:917-918`; it is currently untested
   in `deps/db/test/logseq/db_test.cljs`.
 - Add coverage asserting `:logseq.property.class/bidirectional-property-title` reaches the tab
   label, which would have caught the render-resource serialization gap.

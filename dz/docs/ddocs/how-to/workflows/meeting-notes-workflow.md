@@ -2,8 +2,8 @@
 title: 'Meeting Notes Workflow'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'How-To'
 platform: 'Desktop + Mobile'
@@ -15,6 +15,10 @@ tags: ['meetings', 'workflow', 'productivity', 'collaboration']
 ---
 
 # Meeting Notes Workflow
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 Learn how to capture, organize, and act on meeting notes in Logseq. This workflow ensures meetings lead to clear outcomes and action items never get lost.
 
@@ -51,15 +55,15 @@ graph:
   `[#A]` are file-graph text markers. A DB-graph task is a node tagged `#Task`
   carrying `:logseq.property/status`, `:logseq.property/priority`,
   `:logseq.property/deadline` and `:logseq.property/scheduled`
-  (`deps/db/src/logseq/db/frontend/class.cljs:40-42`).
+  (`deps/db/src/logseq/db/frontend/class.cljs:39-41`).
 - **`A/B/C` page names are split into a page hierarchy.** Creating
   `[[Meetings/2026-01-22-Kickoff]]` creates two pages — `Meetings` and
   `2026-01-22-Kickoff` — linked by `:block/parent`, with the top page filed under
   the built-in **Library** page. The leaf page's title is `2026-01-22-Kickoff`,
-  not the full path (`deps/outliner/src/logseq/outliner/page.cljs:227-235, 385-388`;
-  `deps/outliner/test/logseq/outliner/page_test.cljs:33-49`). Pages created from
+  not the full path (`deps/outliner/src/logseq/outliner/page.cljs:308-316, 385-388`;
+  `deps/outliner/test/logseq/outliner/page_test.cljs:35-51`). Pages created from
   the editor are split this way by default
-  (`src/main/frontend/handler/common/page.cljs:147-149`).
+  (`src/main/frontend/handler/common/page.cljs:146-148`).
 
 ---
 
@@ -201,7 +205,7 @@ forward is a node's `Scheduled` or `Deadline` date
 ### How templates work in a DB graph
 
 A template is a **block tagged `Template`** (`:logseq.class/Template`,
-`deps/db/src/logseq/db/frontend/class.cljs:100-102`). There is no `template::`
+`deps/db/src/logseq/db/frontend/class.cljs:99-101`). There is no `template::`
 property and no `{{title}}` placeholder.
 
 To create one:
@@ -210,7 +214,7 @@ To create one:
 2. Tag the top block `Template` and give it a name. Note that an inline
    `#Template` typed into a block's text is **stripped** — `Template` is one of
    the block-kind tags removed from inline text
-   (`deps/db/src/logseq/db/frontend/class.cljs:130-140`), so set the tag from the
+   (`deps/db/src/logseq/db/frontend/class.cljs:147-157`), so set the tag from the
    block's tag control rather than by typing it mid-sentence.
 3. Insert it later with the `/Template` slash command
    (`src/main/frontend/commands.cljs:339-343`).
@@ -370,7 +374,7 @@ DB graph that copies the block's UUID wrapped as a node reference —
 `[[0195b1cb-6b1f-7d70-94b8-6f1b2e4dbb31]]` (`src/main/frontend/components/content.cljs:289-291`,
 via `src/main/frontend/util/ref.cljs:5-7`). Typing `((` does not start a block search; it only
 shows "To reference a node, please use `[[]]`."
-(`src/main/frontend/handler/editor.cljs:1949-1952`).
+(`src/main/frontend/handler/editor.cljs:1982-1985`).
 
 ### Real-Time Techniques
 
@@ -402,7 +406,7 @@ While typing:
 (`src/main/frontend/modules/shortcut/config.cljs:167-168`); the cycle it walks is
 Todo → Doing → Done → cleared, and any other status (Backlog, In Review,
 Canceled) or no status goes to Todo
-(`src/main/frontend/handler/editor.cljs:819-832, 847-856`). `Tab` and
+(`src/main/frontend/handler/editor.cljs:825-838, 847-856`). `Tab` and
 `Shift+Tab` are `:editor/indent` and `:editor/outdent`
 (`src/main/frontend/modules/shortcut/config.cljs:220, 223`). The status slash
 commands are generated from the `Status` property's closed values
@@ -495,7 +499,7 @@ tags the block `#Query` (`:logseq.class/Query`) and stores the query map in
 `:logseq.property/query` as a Clojure code block
 (`src/main/frontend/commands.cljs:125-132`). There is no `#+BEGIN_QUERY` wrapper
 in a DB graph — that is file-graph syntax and renders a deprecation warning
-instead of results (`src/main/frontend/components/block.cljs:5057-5058`).
+instead of results (`src/main/frontend/components/block.cljs:5107-5108`).
 
 **Open action items on the meeting page you are looking at:**
 
@@ -819,10 +823,10 @@ Two ways to query, both authored from the editor:
 
 Logseq decides which one you wrote by reading the block: a map is treated as an
 advanced query, anything else as a DSL query
-(`src/main/frontend/components/block.cljs:4090-4103`).
+(`src/main/frontend/components/block.cljs:4139-4152`).
 
 The old `{{query …}}` macro is deprecated in a DB graph and renders a warning
-instead of results (`src/main/frontend/components/block.cljs:1870-1871`;
+instead of results (`src/main/frontend/components/block.cljs:1887-1888`;
 `src/resources/dicts/en.edn:159`). Use `/Query`.
 
 The DSL filters that exist at this revision are `and`, `or`, `not`, `between`,

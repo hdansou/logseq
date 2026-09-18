@@ -2,8 +2,8 @@
 title: 'Hide Tags from a Node'
 description: 'How to keep a tag attached to DB nodes without showing it in the node tag list'
 status: draft
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop, web, mobile]
@@ -16,15 +16,19 @@ relatedDocs:
     - '[Graph Visualization](../../explanation/concepts/graph-visualization.md)'
 ---
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > Goal: hide a tag from a block's tag chips in a DB graph without removing the tag itself.
 
 ## Overview
 
 Use the built-in tag property `Hide from Node` when a tag should still organize content, drive queries, or provide class behavior, but should not appear as a tag chip on each tagged block.
 
-This is a tag property, not a property you add to each individual node. Its schema limits it to tags ([`deps/db/src/logseq/db/frontend/property.cljs:193-196`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)), and the property picker only offers it on tag pages ([`src/main/frontend/worker/handler/property.cljs:315-318`](../../../../../src/main/frontend/worker/handler/property.cljs)).
+This is a tag property, not a property you add to each individual node. Its schema limits it to tags ([`deps/db/src/logseq/db/frontend/property.cljs:193-196`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)), and the property picker only offers it on tag pages ([`src/main/frontend/worker/handler/property.cljs:324-327`](../../../../../src/main/frontend/worker/handler/property.cljs)).
 
-Several built-in tags already have it turned on: `Comments`, `Comment`, `Asset`, `Code`, `Quote`, `Math` and `PDF Annotation` ([`deps/db/src/logseq/db/frontend/class.cljs:44-93`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
+Several built-in tags already have it turned on: `Comments`, `Comment`, `Asset`, `Code`, `Quote`, `Math` and `PDF Annotation` ([`deps/db/src/logseq/db/frontend/class.cljs:43-92`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
 
 ## Before You Start
 
@@ -82,7 +86,7 @@ Result: the `#internal` tag still works as a tag, but it no longer appears as a 
 
 ## What This Does Not Do
 
-`Hide from Node` changes one display only: the tag chips at the right of a block. The tag chip list skips tags that have it checked ([`src/main/frontend/components/block.cljs:2876-2889`](../../../../../src/main/frontend/components/block.cljs)). That list is the only UI that checks this property. The only other code that reads it is the breadcrumb data loader, which copies the value ([`src/main/frontend/worker/handler/block_breadcrumb.cljs:34`](../../../../../src/main/frontend/worker/handler/block_breadcrumb.cljs)).
+`Hide from Node` changes one display only: the tag chips at the right of a block. The tag chip list skips tags that have it checked ([`src/main/frontend/components/block.cljs:2917-2930`](../../../../../src/main/frontend/components/block.cljs)). That list is the only UI that checks this property. The only other code that reads it is the breadcrumb data loader, which copies the value ([`src/main/frontend/worker/handler/block_breadcrumb.cljs:34`](../../../../../src/main/frontend/worker/handler/block_breadcrumb.cljs)).
 
 It does not:
 
@@ -90,9 +94,9 @@ It does not:
 - stop queries from matching that tag
 - prevent class inheritance or other tag-driven behavior
 - remove tag text written inline in the block. Inline tags are never shown as chips anyway, because the chip list already skips any tag written in the block's text ([`deps/db/src/logseq/db/frontend/db.cljs:108-111`](../../../../../deps/db/src/logseq/db/frontend/db.cljs)).
-- hide the tag in a page's `Tags` property. That value list hides only the built-in `Page`, `Root` and `Asset` tags ([`src/main/frontend/components/property/value.cljs:2181-2183`](../../../../../src/main/frontend/components/property/value.cljs), [`deps/db/src/logseq/db/frontend/class.cljs:148-150`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
+- hide the tag in a page's `Tags` property. That value list hides only the built-in `Page`, `Root` and `Asset` tags ([`src/main/frontend/components/property/value.cljs:2471-2473`](../../../../../src/main/frontend/components/property/value.cljs), [`deps/db/src/logseq/db/frontend/class.cljs:165-167`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
 
-Tag chips are also never shown in table views, gallery views, block references or property values ([`src/main/frontend/components/block.cljs:3677-3680`](../../../../../src/main/frontend/components/block.cljs)), so this setting makes no difference there.
+Tag chips are also never shown in table views, gallery views, block references or property values ([`src/main/frontend/components/block.cljs:3726-3729`](../../../../../src/main/frontend/components/block.cljs)), so this setting makes no difference there.
 
 If you need to remove the tag entirely, remove the tag from the node instead of using `Hide from Node`.
 
@@ -121,7 +125,7 @@ If the tag appears in a page's `Tags` property rather than as a block chip, that
 
 ### Task and Journal chips are missing on mobile
 
-That is separate from `Hide from Node`. On mobile, the chip list always skips the `Task` and `Journal` tags ([`src/main/frontend/components/block.cljs:2889`](../../../../../src/main/frontend/components/block.cljs)).
+That is separate from `Hide from Node`. On mobile, the chip list always skips the `Task` and `Journal` tags ([`src/main/frontend/components/block.cljs:2930`](../../../../../src/main/frontend/components/block.cljs)).
 
 ### I want this to affect every use of the tag
 

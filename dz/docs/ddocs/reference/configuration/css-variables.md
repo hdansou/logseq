@@ -2,8 +2,8 @@
 title: 'CSS Variables Reference'
 description: "Reference for Logseq's CSS custom properties for theme customization"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop, mobile, web]
@@ -17,6 +17,10 @@ relatedDocs:
 ---
 
 # CSS Variables Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -68,7 +72,7 @@ The shui token defaults in `index.css`, and its dark-mode `--lx-gray-02`, sit in
 | `html[data-font]`, `html[data-font-global]` | [`theme.cljs:68-74`](../../../../../src/main/frontend/components/theme.cljs) | Editor font type (styled for `serif` and `mono` in [`src/main/frontend/components/theme.css:204-218`](../../../../../src/main/frontend/components/theme.css)); `true`/`false` |
 | `html.is-mac`, `.is-win32`, `.is-linux`, `.is-electron`, `.is-ios`, `.is-mobile`, `.is-native-ios`, `.is-native-android`, `.is-native-iphone`, `.is-native-ipad`, `.is-publish-mode`, … | [`src/main/frontend/ui.cljs:344-359`](../../../../../src/main/frontend/ui.cljs) | Platform classes |
 
-The accent picker is **Settings → General → Accent color** ([`src/main/frontend/components/settings.cljs:374-434`](../../../../../src/main/frontend/components/settings.cljs), [`:882`](../../../../../src/main/frontend/components/settings.cljs)). It offers `none`, `logseq`, and `tomato red crimson pink plum purple violet indigo blue cyan teal green grass orange` ([`settings.cljs:399`](../../../../../src/main/frontend/components/settings.cljs), [`src/main/frontend/colors.cljs:4`](../../../../../src/main/frontend/colors.cljs)).
+The accent picker is **Settings → General → Accent color** ([`src/main/frontend/components/settings.cljs:386-446`](../../../../../src/main/frontend/components/settings.cljs), [`:894`](../../../../../src/main/frontend/components/settings.cljs)). It offers `none`, `logseq`, and `tomato red crimson pink plum purple violet indigo blue cyan teal green grass orange` ([`settings.cljs:411`](../../../../../src/main/frontend/components/settings.cljs), [`src/main/frontend/colors.cljs:4`](../../../../../src/main/frontend/colors.cljs)).
 
 ### CSS Selectors
 
@@ -104,11 +108,11 @@ Defaults are for the Logseq accent ([`vars-classic.css:42-98`](../../../../../sr
 | `--ls-secondary-background-color` | `#f7f7f7` | `#023643` | Many rules. Examples: `pre` (`common.css:83`), `pre.code` (`:105`), `.bg-base-2` (`:193`); left sidebar, behind `--lx-gray-02` (`theme.css:201`); dark-mode `--lx-gray-02` (`shui/index.css:62`); Tailwind `gray-02` fallback (`tailwind.config.js:37`) |
 | `--ls-tertiary-background-color` | `#eaeaea` | `#08404f` | Many rules. Examples: `.bg-base-4` (`common.css:201`); `resources/css/shui.css:152`; Tailwind `gray-03` fallback (`tailwind.config.js:38`) |
 | `--ls-quaternary-background-color` | `#dcdcdc` | `#094b5a` | Many rules. Examples: `.keyboard-shortcut > code` (`common.css:630`); Tailwind `gray-04`…`07` fallback (`tailwind.config.js:39-42`) |
-| `--ls-block-properties-background-color` | secondary background | `#06323e` | `.block-properties, .page-properties`, behind `--lx-gray-03` (`block.css:939-942`). The app renders DB properties as `div.ls-properties-area` instead (`property.cljs:972-975`). `page-properties` is only a class on the block editor when the text is `---` front matter (`editor.cljs:524`, `:549`, `:716`); both classes also appear in the separate publishing renderer (`deps/publish/src/logseq/publish/render.cljs:1026`, `:1250`). |
-| `--ls-page-properties-background-color` | secondary background | `#06323e` | `.open-block-ref-link` (`block.css:193`), `.query-title` (`block.css:1395`) |
+| `--ls-block-properties-background-color` | secondary background | `#06323e` | `.block-properties, .page-properties`, behind `--lx-gray-03` (`block.css:959-962`). The app renders DB properties as `div.ls-properties-area` instead (`property.cljs:972-975`). `page-properties` is only a class on the block editor when the text is `---` front matter (`editor.cljs:524`, `:569`, `:736`); both classes also appear in the separate publishing renderer (`deps/publish/src/logseq/publish/render.cljs:1026`, `:1270`). |
+| `--ls-page-properties-background-color` | secondary background | `#06323e` | `.open-block-ref-link` (`block.css:213`), `.query-title` (`block.css:1415`) |
 | `--ls-page-blockquote-bg-color` | `var(--lx-gray-03, #fbfaf8)` | secondary background | Blockquotes, read first (`common.css:122`). In light mode the right sidebar redeclares it as quaternary background (`right_sidebar.css:9`). |
 | `--ls-page-inline-code-bg-color` | secondary background | `#01222a` | Inline code, behind `--lx-gray-06` (`common.css:589`). In light mode the right sidebar redeclares it (`right_sidebar.css:8`). |
-| `--ls-selection-background-color` | `#e4f2ff` | `#338fff` | `::selection` (`common.css:159`, `:164`); `block.css:1424`; `command_palette.css:20`, `:24` |
+| `--ls-selection-background-color` | `#e4f2ff` | `#338fff` | `::selection` (`common.css:159`, `:164`); `block.css:1444`; `command_palette.css:20`, `:24` |
 | `--ls-table-tr-even-background-color` | secondary background | `#03333f` | **Nothing.** Defined but never read. |
 | `--ls-slide-background-color` | `#fff` | primary background | **Nothing.** Defined but never read. |
 
@@ -123,15 +127,15 @@ Bare stylesheet names in the "What reads it" columns are under `src/main/fronten
 | `--ls-primary-text-color` | `#433f38` | `#a4b5b6` | Many rules. Examples: body text, behind `--lx-gray-12` (`common.css:33`); `::selection` text (`common.css:160`, `:165`); dark code blocks, read first (`.cm-s-lsradix.cm-s-dark`, `resources/css/codemirror.lsradix.css:37-39`) |
 | `--ls-secondary-text-color` | `#161e2e` | `#dfdfdf` | Many rules. Examples: `.heading-bg` hover ring, behind `--lx-gray-09` (`common.css:319`); `.keyboard-shortcut > code` (`common.css:633`); `command_palette.css:37` |
 | `--ls-title-text-color` | `var(--ls-header-button-background)` | `#93a1a1` | Page titles, behind `--lx-gray-12` (`common.css:334-337`) |
-| `--ls-link-text-color` | `#106ba3` | `rgb(138, 187, 187)` | Many rules. Examples: links and page refs, behind `--lx-accent-11` (`common.css:91`, `block.css:886`); `button.menu` (`common.css:378`); `a.login` (`common.css:410`) |
+| `--ls-link-text-color` | `#106ba3` | `rgb(138, 187, 187)` | Many rules. Examples: links and page refs, behind `--lx-accent-11` (`common.css:91`, `block.css:906`); `button.menu` (`common.css:378`); `a.login` (`common.css:410`) |
 | `--ls-link-text-hover-color` | `#1a537c` | `var(--ls-active-secondary-color)` | Link hover, behind `--lx-accent-12` (`common.css:96`); `a.login:hover` (`common.css:414`); about a dozen more rules |
 | `--ls-link-ref-text-color` | `var(--ls-link-text-color)` | `var(--ls-link-text-color)` | `components/plugins.css:883`; `extensions/pdf/pdf.css:799`; the light `--ls-tag-text-color` alias (`shui/vars-classic.css:65`) |
-| `--ls-block-ref-link-text-color` | `var(--ls-link-text-color)` | `#377f91` | `.block-ref-no-title` underline (`block.css:855`); `.block-ref` underline through the Tailwind arbitrary value `border-b-[--ls-block-ref-link-text-color]` (`block.css:827`) |
+| `--ls-block-ref-link-text-color` | `var(--ls-link-text-color)` | `#377f91` | `.block-ref-no-title` underline (`block.css:875`); `.block-ref` underline through the Tailwind arbitrary value `border-b-[--ls-block-ref-link-text-color]` (`block.css:847`) |
 | `--ls-tag-text-color` | `var(--ls-link-ref-text-color)` | `var(--ls-link-text-color)` | `a.tag`, behind `--lx-accent-11` (`common.css:477`) |
 | `--ls-page-inline-code-color` | primary text | primary text | Inline code, behind `--lx-gray-11` (`common.css:590`) |
 | `--ls-page-blockquote-color` | primary text | primary text | Blockquote text (`common.css:123`) |
 | `--ls-selection-text-color` | secondary text | `#fff` | Command palette highlighted icon (`command_palette.css:19`) only |
-| `--ls-cloze-text-color` | `#0000cd` | `#8fbc8f` | Cloze (`block.css:1407`, `:1412`) |
+| `--ls-cloze-text-color` | `#0000cd` | `#8fbc8f` | Cloze (`block.css:1427`, `:1432`) |
 | `--ls-icon-color` | `#646464` | link text | Plugin log view, `DEBUG` level, only (`components/plugin_logs.cljs:153`) |
 | `--ls-search-icon-color`, `--ls-search-icon-hover-color` | primary / secondary text | primary / secondary text | `command_palette.css:16`, `:31` |
 | `--ls-left-sidebar-text-color` | `var(--lx-gray-12)` | `var(--lx-gray-11)` | **Nothing.** Defined but never read. |
@@ -155,9 +159,9 @@ Neither is read. The `a.tag:hover` rule reads a misspelled `--ls-tag-text-hover-
 | `--ls-border-color` | `#ccc` | `#0e5263` | Many rules. Examples: `hr`, behind `--lx-gray-05` (`common.css:524`); `resources/css/shui.css:196`; `resources/css/ui.css:1043`, `:1071`; `extensions/graph.css:94` |
 | `--ls-secondary-border-color` | `#e2e2e2` | `#126277` | `settings.css:312`, `:329`, `:421`; `block.css:36`; `file_sync.css:344`; `extensions/handbooks/handbooks.css:40`, `:108`, `:187`, `:373` |
 | `--ls-tertiary-border-color` | `rgba(200, 200, 200, 0.3)` | `rgba(0, 2, 0, 0.1)` | `container.css:146`; `file_sync.css:265`, `:289`, `:295`; `extensions/handbooks/handbooks.css:122`, `:125` |
-| `--ls-guideline-color` | `rgba(46, 27, 5, 0.08)` | `#0b4a5a` | Child-block guide line, behind `--lx-gray-04-alpha` (`block.css:654`) |
+| `--ls-guideline-color` | `rgba(46, 27, 5, 0.08)` | `#0b4a5a` | Child-block guide line, behind `--lx-gray-04-alpha` (`block.css:674`) |
 | `--ls-page-blockquote-border-color` | `var(--lx-gray-08, #799bbc)` | border color | Blockquote left border, read first (`common.css:133`) |
-| `--ls-block-bullet-border-color` | `#dedede` | `#0f4958` | Collapsed bullet, behind `--lx-gray-04-alpha` (`block.css:1290`); `block.css:1320` |
+| `--ls-block-bullet-border-color` | `#dedede` | `#0f4958` | Collapsed bullet, behind `--lx-gray-04-alpha` (`block.css:1310`); `block.css:1340` |
 
 Every border also gets `border-color: hsl(var(--border))` from `html *` ([`resources/css/shui.css:1-3`](../../../../../resources/css/shui.css)).
 
@@ -182,7 +186,7 @@ Every border also gets `border-color: hsl(var(--border))` from `html *` ([`resou
 
 | Variable | Defined | What reads it |
 | --- | --- | --- |
-| `--ls-block-bullet-color` | `:root`: `var(--lx-gray-08, var(--rx-gray-08))` ([`vars-classic.css:28`](../../../../../src/main/frontend/shui/vars-classic.css)); Logseq accent: `rgba(67, 63, 56, 0.25)` light, `#608e91` dark; None accent: `var(--rx-gray-08)` ([`shui.css:81`](../../../../../resources/css/shui.css)) | Bullet, behind `--lx-gray-08` (`block.css:1294`); heading bullet (`block.css:1267`); `block.css:1324` |
+| `--ls-block-bullet-color` | `:root`: `var(--lx-gray-08, var(--rx-gray-08))` ([`vars-classic.css:28`](../../../../../src/main/frontend/shui/vars-classic.css)); Logseq accent: `rgba(67, 63, 56, 0.25)` light, `#608e91` dark; None accent: `var(--rx-gray-08)` ([`shui.css:81`](../../../../../resources/css/shui.css)) | Bullet, behind `--lx-gray-08` (`block.css:1314`); heading bullet (`block.css:1287`); `block.css:1344` |
 | `--ls-block-highlight-color` | `#c0e6fd` light, `#0a3d4b` dark; also set per accent in `colors.css` | `.block-highlight`, `.ls-block.selected` and `.ls-table-cell.selected`, read first (`common.css:346-351`) |
 | `--ls-block-bullet-active-color` | Only under `html[data-color=none]`: `var(--rx-gray-12)` ([`shui.css:82`](../../../../../resources/css/shui.css)) | **Nothing.** Defined but never read. |
 | `--ls-block-left-color` | Only on `.block-children-left-border:hover` under `html[data-color=logseq]`: `var(--rx-logseq-11)` ([`shui.css:75-77`](../../../../../resources/css/shui.css)) | **Nothing.** Defined but never read. |
@@ -201,7 +205,7 @@ Defined on `:root` ([`vars-classic.css:19-25`](../../../../../src/main/frontend/
 --ls-highlight-color-pink: var(--rx-pink-05);
 ```
 
-No stylesheet reads them directly. The ClojureScript builds `var(--ls-highlight-color-<name>)` as an inline style when a block's background color is one of these built-in names ([`src/main/frontend/ui.cljs:123-136`](../../../../../src/main/frontend/ui.cljs), [`src/main/frontend/components/block.cljs:3588-3592`](../../../../../src/main/frontend/components/block.cljs)).
+No stylesheet reads them directly. The ClojureScript builds `var(--ls-highlight-color-<name>)` as an inline style when a block's background color is one of these built-in names ([`src/main/frontend/ui.cljs:123-136`](../../../../../src/main/frontend/ui.cljs), [`src/main/frontend/components/block.cljs:3637-3641`](../../../../../src/main/frontend/components/block.cljs)).
 
 ---
 
@@ -213,8 +217,8 @@ No stylesheet reads them directly. The ClojureScript builds `var(--ls-highlight-
 | `--ls-page-checkbox-border-color` | `var(--ls-page-checkbox-color)` | primary background | `theme.css:59`, `:71` |
 | `--ls-page-mark-bg-color` | `#fef3ac` | `#fef3ac` | `mark` (`common.css:575`) |
 | `--ls-page-mark-color` | `#262626` | `#262626` | `mark` (`common.css:576`) |
-| `--ls-pie-bg-color` | `#e1e1e1` | `#01303b` | RTC sync progress pie, set as an inline style (`src/main/frontend/ui.cljs:1128-1131`) |
-| `--ls-pie-fg-color` | `#0a4a5d` | `#0b5869` | Same (`src/main/frontend/ui.cljs:1129`) |
+| `--ls-pie-bg-color` | `#e1e1e1` | `#01303b` | RTC sync progress pie, set as an inline style (`src/main/frontend/ui.cljs:1150-1153`) |
+| `--ls-pie-fg-color` | `#0a4a5d` | `#0b5869` | Same (`src/main/frontend/ui.cljs:1151`) |
 
 ---
 
@@ -238,11 +242,11 @@ Defined on `:root` in [`vars-classic.css:1-17`](../../../../../src/main/frontend
 | Variable | Default | What reads it |
 | --- | --- | --- |
 | `--ls-page-text-size` | `1em` | `#root` font size (`container.css:8-10`) |
-| `--ls-page-title-size` | `36px` | Page title (`common.css:338`, with a `32px` fallback); `block.css:721` |
+| `--ls-page-title-size` | `36px` | Page title (`common.css:338`, with a `32px` fallback); `block.css:741` |
 | `--ls-main-content-max-width` | `960px` | Content width in normal mode (`container.css:503`); `common.css:264`; `onboarding.css:2` |
 | `--ls-main-content-max-width-wide` | `1440px` | Content width in wide mode (`container.css:490`) |
 | `--ls-font-family` | `Inter` | Font on `html:not(.is-native-android)` (`common.css:17-18`). Redeclared by `html[data-font='serif'\|'mono'][data-font-global='true']` (`theme.css:208-218`) and on iOS (`src/main/mobile/components/app.css:12-14`). |
-| `--ls-border-radius-low` | `4px` | `common.css:50`, `:597-598`; `block.css:1379` |
+| `--ls-border-radius-low` | `4px` | `common.css:50`, `:617-618`; `block.css:1399` |
 | `--ls-headbar-height` | `3rem` | `container.css:54`, `:763`; `header.css:8`, `:205`. `header.css:227-294` redeclares it on native iPad, iPhone and zoomed-iOS layouts. |
 | `--ls-headbar-inner-top-padding` | `0px` | `container.css:84`, `:341`; `header.css:6`, `:8`, `:205` |
 | `--ls-left-sidebar-width` | `246px` | `container.css:47`, `:324`, `:444`; `header.css:11` |
@@ -304,7 +308,7 @@ Level 1 is read by `.menu-backdrop` (`common.css:397`), inside `.cp__sidebar-lef
 --color-level-6: #3a7e8e;
 ```
 
-Light values are at [`vars-classic.css:31-40`](../../../../../src/main/frontend/shui/vars-classic.css), dark at [`:156-161`](../../../../../src/main/frontend/shui/vars-classic.css). No rule sets them in dark mode with a non-Logseq accent. They are read in `block.css:1182-1250` (the `.color-level` rule reads `--lx-gray-02` first, `block.css:1182`; the `.color-level-5` and `.color-level-6` rules read them directly, `:1246`, `:1250`), `shortcut.css:67` (behind `--lx-gray-09`), `shortcut.css:601` (read first) and `resources/css/shui.css:459`, `:463` (behind `--lx-accent-06` / `--lx-accent-08-alpha`).
+Light values are at [`vars-classic.css:31-40`](../../../../../src/main/frontend/shui/vars-classic.css), dark at [`:156-161`](../../../../../src/main/frontend/shui/vars-classic.css). No rule sets them in dark mode with a non-Logseq accent. They are read in `block.css:1202-1270` (the `.color-level` rule reads `--lx-gray-02` first, `block.css:1202`; the `.color-level-5` and `.color-level-6` rules read them directly, `:1246`, `:1250`), `shortcut.css:67` (behind `--lx-gray-09`), `shortcut.css:601` (read first) and `resources/css/shui.css:459`, `:463` (behind `--lx-accent-06` / `--lx-accent-08-alpha`).
 
 ---
 
@@ -410,7 +414,7 @@ For what each step is meant for, see the Radix documentation. The step meanings 
 
 ## Creating a Custom Theme
 
-Put this in `custom.css` (Settings → General → **Custom theme** → **Edit custom.css**, shown only when a graph is open: [`src/main/frontend/components/settings.cljs:217-222`](../../../../../src/main/frontend/components/settings.cljs), [`:885`](../../../../../src/main/frontend/components/settings.cljs)) or in a theme plugin's CSS file. The selectors follow [How Variables Resolve](#how-variables-resolve-read-this-first). They are derived from the stylesheets and were not tested in a running app.
+Put this in `custom.css` (Settings → General → **Custom theme** → **Edit custom.css**, shown only when a graph is open: [`src/main/frontend/components/settings.cljs:217-222`](../../../../../src/main/frontend/components/settings.cljs), [`:897`](../../../../../src/main/frontend/components/settings.cljs)) or in a theme plugin's CSS file. The selectors follow [How Variables Resolve](#how-variables-resolve-read-this-first). They are derived from the stylesheets and were not tested in a running app.
 
 ### Minimal Dark Theme
 
@@ -452,10 +456,10 @@ Variables a theme may meet that the sections above do not cover. Paths are under
 | --- | --- | --- |
 | `--lx-pdf-container-dark-bg` | `var(--lx-gray-03)` on `.extensions__pdf-container` (`extensions/pdf/pdf.css:713-714`); redeclared in `resources/css/shui.css:128` | PDF viewer backgrounds in dark mode, read first (`extensions/pdf/pdf.css:302`, `:727`, `:739`) |
 | `--lx-bg-override` | Per element in `resources/css/shui.css:72`, `:123`; also set by a Tailwind utility generated in `tailwind.config.js:86` | **Nothing.** No stylesheet, script or Tailwind color reads it through `var()`. |
-| `--ls-gallery-card-width`, `--ls-gallery-card-height` | `220px`, `320px` on `.ls-cards` (`components/block/views.css:18-20`); also referenced in `components/views.cljs:2364-2365` | Gallery-view card size (`components/block/views.css:26`, `:70-71`) |
+| `--ls-gallery-card-width`, `--ls-gallery-card-height` | `220px`, `320px` on `.ls-cards` (`components/block/views.css:18-20`); also referenced in `components/views.cljs:3089-3090` | Gallery-view card size (`components/block/views.css:26`, `:70-71`) |
 | `--ls-draggable-handle-height` | `30px` on `:root` (`components/plugins.css:1-2`) | Plugin UI drag handles (`components/plugins.css:699`, `:711`, `:747`, `:749`, `:758`) |
 | `--ls-color-icon-preset` | `"inherit"` on `.cp__emoji-icon-picker` (`components/icon.css:1-2`); also referenced in `components/icon.cljs:368` | Icon picker preset color (`components/icon.css:58`) |
-| `--ls-page-title-line-height`, `--ls-block-control-size` | `1.38`, `24px`, local to one rule (`components/block.css:718-719`) | The same rule (`components/block.css:721`) |
+| `--ls-page-title-line-height`, `--ls-block-control-size` | `1.38`, `24px`, local to one rule (`components/block.css:738-739`) | The same rule (`components/block.css:741`) |
 | `--kbd-glow-top`, `--kbd-glow-bottom` | Per mode (`resources/css/shui.css:10-11`, `:29-30`) | Keyboard-shortcut key glow (`resources/css/shui.css:298`, `:304`, `:399`, `:409`) |
 
 ---
@@ -482,7 +486,7 @@ Variables a theme may meet that the sections above do not cover. Paths are under
 - `a.tag:hover` reads `--ls-tag-text-hover-opasxcity`, a typo for `--ls-tag-text-hover-opacity` ([`common.css:480`](../../../../../src/main/frontend/common.css)).
 - `colors.css` has a `brown` accent block ([`colors.css:1243`](../../../../../src/main/frontend/shui/colors.css)) that the accent picker does not offer ([`src/main/frontend/colors.cljs:4`](../../../../../src/main/frontend/colors.cljs)).
 - Each non-Logseq accent still sets whiteboard variables `--ls-wb-stroke-color-default`, `--ls-wb-background-color-default` and `--ls-wb-text-color-default` (for example [`colors.css:136-138`](../../../../../src/main/frontend/shui/colors.css)). Whiteboards were removed, so nothing reads them. The None-accent block also still sets `--ls-*` backgrounds on the tldraw `.tl-container` ([`resources/css/shui.css:111-116`](../../../../../resources/css/shui.css)), a class no ClojureScript under `src/main` renders.
-- Read but defined nowhere in the repository, so the fallback (or nothing) always applies: `--ls-error-text-color` ([`src/main/frontend/components/plugin_logs.cljs:150`](../../../../../src/main/frontend/components/plugin_logs.cljs)), `--ls-bg-quaternary` ([`src/main/frontend/ui.css:143`](../../../../../src/main/frontend/ui.css)), `--ls-quinary-background-color` and `--ls-senary-background-color` ([`resources/css/ui.css:1082-1083`](../../../../../resources/css/ui.css), [`:1090-1091`](../../../../../resources/css/ui.css)), `--ls-right-sidebar-topbar-color` ([`src/main/frontend/components/container.css:694`](../../../../../src/main/frontend/components/container.css)), `--lx-red-11` ([`src/main/frontend/components/block.css:480`](../../../../../src/main/frontend/components/block.css)), `--lx-popover-bg` ([`resources/css/shui.css:66`](../../../../../resources/css/shui.css)) and `--ls-win32-title-bar-height` ([`src/main/frontend/components/header.css:7`](../../../../../src/main/frontend/components/header.css)).
+- Read but defined nowhere in the repository, so the fallback (or nothing) always applies: `--ls-error-text-color` ([`src/main/frontend/components/plugin_logs.cljs:150`](../../../../../src/main/frontend/components/plugin_logs.cljs)), `--ls-bg-quaternary` ([`src/main/frontend/ui.css:143`](../../../../../src/main/frontend/ui.css)), `--ls-quinary-background-color` and `--ls-senary-background-color` ([`resources/css/ui.css:1082-1083`](../../../../../resources/css/ui.css), [`:1090-1091`](../../../../../resources/css/ui.css)), `--ls-right-sidebar-topbar-color` ([`src/main/frontend/components/container.css:694`](../../../../../src/main/frontend/components/container.css)), `--lx-red-11` ([`src/main/frontend/components/block.css:500`](../../../../../src/main/frontend/components/block.css)), `--lx-popover-bg` ([`resources/css/shui.css:66`](../../../../../resources/css/shui.css)) and `--ls-win32-title-bar-height` ([`src/main/frontend/components/header.css:7`](../../../../../src/main/frontend/components/header.css)).
 - Tailwind's `accent-01` and `accent-12` colors are `var(--lx-accent-01, --rx-gray-01)` and `var(--lx-accent-12, --rx-gray-12)` ([`tailwind.config.js:8`](../../../../../tailwind.config.js), [`:19`](../../../../../tailwind.config.js)). The fallback is missing its `var()`, so when the `--lx-accent-*` variable is unset (for example with the None accent) the fallback is the literal text `--rx-gray-01`, not a color. Derived from source; not run.
 
 ---

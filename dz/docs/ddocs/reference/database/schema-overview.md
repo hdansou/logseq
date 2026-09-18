@@ -2,8 +2,8 @@
 title: 'Database Graph Schema Reference'
 description: "Complete reference for Logseq's database graph schema, property types, and built-in classes"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop, web, mobile]
@@ -20,6 +20,10 @@ relatedDocs:
 ---
 
 # Database Graph Schema Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11 (verified against `be800f1711`)
 
@@ -42,7 +46,7 @@ Database graphs use a structured schema with three layers:
 | Concept             | Count | How it was counted |
 | ------------------- | ----- | ------------------ |
 | Built-in properties | 118   | Key/value pairs inside the `defkeywords` form of `built-in-properties` (`deps/db/src/logseq/db/frontend/property.cljs:20-704`) |
-| Built-in classes    | 18    | Key/value pairs inside the `defkeywords` form of `built-in-classes` (`deps/db/src/logseq/db/frontend/class.cljs:17-105`) |
+| Built-in classes    | 18    | Key/value pairs inside the `defkeywords` form of `built-in-classes` (`deps/db/src/logseq/db/frontend/class.cljs:16-104`) |
 | Property types      | 19    | 11 in `internal-built-in-property-types` + 8 in `user-built-in-property-types` (`deps/db/src/logseq/db/frontend/property/type.cljs:15-21`) |
 | Entity kinds        | 13    | Dispatch keys of the `Data` multi-schema (`deps/db/src/logseq/db/frontend/malli_schema.cljs:593-608`) |
 
@@ -99,7 +103,7 @@ Validation assigns every entity one dispatch key. `entity-dispatch-key` tests th
 Notes:
 
 - The page predicates are tag checks: `class?`, `property?`, `journal?` and `internal-page?` test for the `Tag`, `Property`, `Journal` and `Page` tags. `page?` is true for any of the four (`deps/db/src/logseq/db/frontend/entity_util.cljs:24-50`). `asset?` checks for `:logseq.property.asset/type`, not a tag (`entity_util.cljs:52-56`).
-- Journal pages are validated as `:normal-page` and carry `:block/journal-day`. Whiteboards were removed from the app, but the deprecated class and its dispatch branch remain (`class.cljs:35-38`, `malli_schema.cljs:571-572`).
+- Journal pages are validated as `:normal-page` and carry `:block/journal-day`. Whiteboards were removed from the app, but the deprecated class and its dispatch branch remain (`class.cljs:34-37`, `malli_schema.cljs:571-572`).
 - Normal blocks require `:block/title`, `:block/parent`, `:block/order` and `:block/page` (`malli_schema.cljs:406-414`).
 - Asset blocks require `:logseq.property.asset/type`, `:logseq.property.asset/checksum` and `:logseq.property.asset/size` (`malli_schema.cljs:506-519`).
 - `config.edn`, `custom.css` and `custom.js` are stored as `:file/path` entities under `logseq/` (`deps/db/src/logseq/db/sqlite/create_graph.cljs:205-217`).
@@ -165,7 +169,7 @@ Source: `closed-value-property-types` (`type.cljs:30-32`), `cardinality-property
 
 ## Built-in Classes
 
-Classes (tags) classify nodes and support inheritance through `:logseq.property.class/extends`. All 18 are defined in `built-in-classes` (`deps/db/src/logseq/db/frontend/class.cljs:17-105`).
+Classes (tags) classify nodes and support inheritance through `:logseq.property.class/extends`. All 18 are defined in `built-in-classes` (`deps/db/src/logseq/db/frontend/class.cljs:16-104`).
 
 ### Core Classes
 
@@ -181,7 +185,7 @@ Classes (tags) classify nodes and support inheritance through `:logseq.property.
 | Class                      | Extends | Purpose      |
 | -------------------------- | ------- | ------------ |
 | `:logseq.class/Journal`    | Page    | Daily notes (`:logseq.property.journal/title-format "MMM do, yyyy"`) |
-| `:logseq.class/Whiteboard` | Page    | Deprecated; still defined under a `TODO: Remove deprecated` comment (`class.cljs:35-38`) |
+| `:logseq.class/Whiteboard` | Page    | Deprecated; still defined under a `TODO: Remove deprecated` comment (`class.cljs:34-37`) |
 
 ### Block Classes
 
@@ -200,7 +204,7 @@ Classes (tags) classify nodes and support inheritance through `:logseq.property.
 | `:logseq.class/Comment`         | (none)                                           | A single comment   |
 | `:logseq.class/Template`        | template-applied-to                              | Block templates    |
 
-`Comments` and `Comment` are defined at `class.cljs:44-52` and were added by migrations 65.27 and 65.28 (`src/main/frontend/worker/db/migrate.cljs:153-156`). Both set `:logseq.property.class/hide-from-node`, as do `Asset`, `Code-block`, `Quote-block`, `Math-block` and `Pdf-annotation`.
+`Comments` and `Comment` are defined at `class.cljs:43-51` and were added by migrations 65.27 and 65.28 (`src/main/frontend/worker/db/migrate.cljs:153-156`). Both set `:logseq.property.class/hide-from-node`, as do `Asset`, `Code-block`, `Quote-block`, `Math-block` and `Pdf-annotation`.
 
 ### Class Hierarchy
 

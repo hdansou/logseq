@@ -3,8 +3,8 @@ title: 'Installation Guide'
 status: 🟢
 since-version: 'N/A'
 quadrant: 'Tutorial'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 platform: 'All'
 related-docs:
@@ -12,6 +12,10 @@ related-docs:
 ---
 
 # Installation Guide
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -53,7 +57,7 @@ Desktop builds are published to **GitHub Releases** for the `logseq/logseq` repo
 
 - Download the `.AppImage` file (a `.zip` is also built) ([`resources/electron-builder.yml:81-87`](../../../../../resources/electron-builder.yml))
 - Make it executable: `chmod +x Logseq-linux-*.AppImage`
-- Run it: `./Logseq-linux-x64-*.AppImage` (on ARM: `./Logseq-linux-arm64-*.AppImage`, [`.github/workflows/build-desktop-release.yml:324`](../../../../../.github/workflows/build-desktop-release.yml))
+- Run it: `./Logseq-linux-x64-*.AppImage` (on ARM: `./Logseq-linux-arm64-*.AppImage`, [`.github/workflows/build-desktop-release.yml:326`](../../../../../.github/workflows/build-desktop-release.yml))
 
 #### Option 2: Package Managers
 
@@ -98,7 +102,7 @@ The iOS release workflow builds the app and uploads it to **TestFlight** ([`.git
 
 #### Android
 
-The Android workflow builds a signed APK named `Logseq-android-<version>.apk` ([`.github/workflows/build-android.yml:157-160`](../../../../../.github/workflows/build-android.yml)). The desktop release job can attach that APK to the GitHub release ([`.github/workflows/build-desktop-release.yml:790`](../../../../../.github/workflows/build-desktop-release.yml)).
+The Android workflow builds a signed APK named `Logseq-android-<version>.apk` ([`.github/workflows/build-android.yml:161-164`](../../../../../.github/workflows/build-android.yml)). The desktop release job can attach that APK to the GitHub release ([`.github/workflows/build-desktop-release.yml:792`](../../../../../.github/workflows/build-desktop-release.yml)).
 
 > **Unverified:** A Google Play Store listing. Nothing in the repository shows Play Store distribution.
 
@@ -117,9 +121,9 @@ Logseq also offers a web version for quick access without installation:
 
 When you first open Logseq there is no setup screen and nothing to choose:
 
-1. **A graph is created for you.** If no graphs exist yet, Logseq creates a database graph named `Demo` and opens it ([`src/main/frontend/handler.cljs:189-190`](../../../../../src/main/frontend/handler.cljs); name from [`src/main/frontend/config.cljs:288`](../../../../../src/main/frontend/config.cljs)). It also creates today's journal page and opens the Journals view ([`src/main/frontend/handler/repo.cljs:169-176`](../../../../../src/main/frontend/handler/repo.cljs)). The `Demo` graph does not appear in the **All graphs** list ([`src/main/frontend/components/repo.cljs:319`](../../../../../src/main/frontend/components/repo.cljs)).
+1. **A graph is created for you.** If no graphs exist yet, Logseq creates a database graph named `Demo` and opens it ([`src/main/frontend/handler.cljs:189-190`](../../../../../src/main/frontend/handler.cljs); name from [`src/main/frontend/config.cljs:288`](../../../../../src/main/frontend/config.cljs)). It also creates today's journal page and opens the Journals view ([`src/main/frontend/handler/repo.cljs:168-175`](../../../../../src/main/frontend/handler/repo.cljs)). The `Demo` graph does not appear in the **All graphs** list ([`src/main/frontend/components/repo.cljs:319`](../../../../../src/main/frontend/components/repo.cljs)).
 2. **All graphs are database graphs.** You can't create or open a folder of Markdown files. The graph list only shows DB graphs ([`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)), and existing Markdown notes come in through **Import** (next tutorial).
-3. **Language:** First launch doesn't ask for a language. You can change it later under **Settings** → **Language** ([`src/main/frontend/components/settings.cljs:344`](../../../../../src/main/frontend/components/settings.cljs), [`:878`](../../../../../src/main/frontend/components/settings.cljs)).
+3. **Language:** First launch doesn't ask for a language. You can change it later under **Settings** → **Language** ([`src/main/frontend/components/settings.cljs:356`](../../../../../src/main/frontend/components/settings.cljs), [`:890`](../../../../../src/main/frontend/components/settings.cljs)).
 
 > **Removed:** The "Choose Your Graph Storage" (Local Folder vs Database Mode) and "Quick Tour" first-launch steps. Startup creates the `Demo` DB graph without prompting, and neither the components nor `src/resources/dicts/en.edn` contain a tour.
 
@@ -139,8 +143,8 @@ When you first open Logseq there is no setup screen and nothing to choose:
 ## Findings: New Capabilities
 
 - Mobile minimums: the iOS app target requires iOS 16.6 ([`ios/App/App.xcodeproj/project.pbxproj:674`](../../../../../ios/App/App.xcodeproj/project.pbxproj)), and Android targets API 24 ([`android/variables.gradle:2`](../../../../../android/variables.gradle)).
-- The mobile apps use Capacitor 8 (`"@capacitor/core": "^8.3.1"`, [`package.json:130`](../../../../../package.json)).
-- Desktop builds exist for both `x64` and `arm64` on macOS, Windows and Linux ([`.github/workflows/build-desktop-release.yml:669`](../../../../../.github/workflows/build-desktop-release.yml) lists the six build jobs).
+- The mobile apps use Capacitor 8 (`"@capacitor/core": "^8.3.1"`, [`package.json:131`](../../../../../package.json)).
+- Desktop builds exist for both `x64` and `arm64` on macOS, Windows and Linux ([`.github/workflows/build-desktop-release.yml:671`](../../../../../.github/workflows/build-desktop-release.yml) lists the six build jobs).
 
 ## Troubleshooting
 

@@ -5,8 +5,8 @@ version: 'Since 0.9.20'
 quadrant: 'Explanation'
 platform: 'Desktop (macOS/Windows/Linux), Web; not native mobile or published sites'
 graphType: [db]
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '../../how-to/multimedia/video-embed.md'
@@ -15,6 +15,10 @@ related-docs:
 ---
 
 # Handbooks System: In-App Help Panel
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11 (verified against `be800f1711`)
 
@@ -436,7 +440,7 @@ Validated against current source in `src/`:
    - The settings gear is visible only when `state/developer-mode?` is true. It opens a pane with a "Writing mode" toggle backed by the `:handbooks-dev-watch?` storage key.
    - When enabled, the endpoint switches to `http://localhost:1337`. The app sends `HEAD /handbooks.edn` every 2 seconds and reloads the content whenever `content-length` changes.
 
-**Code Reference**: [`url.cljs:111-114`](../../../../../src/electron/electron/url.cljs#L111-L114), [`listener.cljs:135-138`](../../../../../src/main/electron/listener.cljs#L135-L138), [`state.cljs:356`](../../../../../src/main/frontend/state.cljs#L356), [`state.cljs:2082-2087`](../../../../../src/main/frontend/state.cljs#L2082-L2087), [`handbooks/core.cljs:548-560`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L548-L560) (route channel), [`610-619`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L610-L619) (copy link), [`562-576`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L562-L576) (dev watch poll), [`312-319`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L312-L319) (settings pane)
+**Code Reference**: [`url.cljs:111-114`](../../../../../src/electron/electron/url.cljs#L111-L114), [`listener.cljs:141-144`](../../../../../src/main/electron/listener.cljs#L141-L144), [`state.cljs:356`](../../../../../src/main/frontend/state.cljs#L356), [`state.cljs:2082-2087`](../../../../../src/main/frontend/state.cljs#L2082-L2087), [`handbooks/core.cljs:548-560`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L548-L560) (route channel), [`610-619`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L610-L619) (copy link), [`562-576`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L562-L576) (dev watch poll), [`312-319`](../../../../../src/main/frontend/extensions/handbooks/core.cljs#L312-L319) (settings pane)
 
 ---
 

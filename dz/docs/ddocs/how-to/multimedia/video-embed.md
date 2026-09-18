@@ -3,8 +3,8 @@ title: 'Video Embedding in Logseq'
 status: '🟢 Stable'
 quadrant: 'How-To Guide'
 platform: 'Desktop (macOS/Windows/Linux), Web'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '../multimedia/asset-management.md'
@@ -13,6 +13,10 @@ related-docs:
 ---
 
 # Video Embedding in Logseq
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-09 (verified against `be800f1711`)
 
@@ -42,7 +46,7 @@ element.
 > **Deleted (was invented):** there is no `{{loom}}` macro. The macro name set is exactly
 > `#{"video" "youtube" "vimeo" "bilibili"}`
 > ([`src/main/frontend/components/block/video.cljs:6`](../../../../../src/main/frontend/components/block/video.cljs),
-> dispatched at [`components/block.cljs:1879-1904`](../../../../../src/main/frontend/components/block.cljs)).
+> dispatched at [`components/block.cljs:1896-1921`](../../../../../src/main/frontend/components/block.cljs)).
 > Loom is reachable only through `{{video}}` auto-detection.
 
 ## Findings: New Capabilities
@@ -50,7 +54,7 @@ element.
 - **Video embeds are drag-resizable.** Every non-mobile embed gets a resize handle; dragging
   rewrites the macro in the block as `{{video URL, w=NNN}}`, and double-clicking the handle resets
   to the 560px default
-  ([`components/block.cljs:1669-1719`](../../../../../src/main/frontend/components/block.cljs),
+  ([`components/block.cljs:1686-1736`](../../../../../src/main/frontend/components/block.cljs),
   persisted via `update-video-macro-width-in-content`,
   [`components/block/video.cljs:80-103`](../../../../../src/main/frontend/components/block/video.cljs)).
 - **`w=` is a real macro argument**, not just a by-product of dragging — you can type it
@@ -104,7 +108,7 @@ placed inside ([`src/main/frontend/commands.cljs:345-348`](../../../../../src/ma
 > hint requires a `protocol://` URL — `common-util/url?`
 > ([`deps/common/src/logseq/common/util.cljs:77-86`](../../../../../deps/common/src/logseq/common/util.cljs)) —
 > and anything else renders an "Invalid URL" warning
-> ([`components/block.cljs:1832-1844`](../../../../../src/main/frontend/components/block.cljs),
+> ([`components/block.cljs:1849-1861`](../../../../../src/main/frontend/components/block.cljs),
 > string at [`src/resources/dicts/en.edn:128`](../../../../../src/resources/dicts/en.edn)).
 > Even a well-formed URL only embeds if it matches one of the five providers above. Use the
 > `![...](...)` asset syntax for local files.
@@ -180,24 +184,24 @@ and `w=` must be `w=<digits>`
 
 You can also just **drag the right edge of the embed**. The handle writes the resulting `w=` back
 into the block text, and double-clicking it resets to the default
-([`components/block.cljs:1669-1719, 1802-1826`](../../../../../src/main/frontend/components/block.cljs)).
+([`components/block.cljs:1686-1736, 1802-1826`](../../../../../src/main/frontend/components/block.cljs)).
 The handle is not rendered on native mobile
-([`:1726`](../../../../../src/main/frontend/components/block.cljs)).
+([`:1743`](../../../../../src/main/frontend/components/block.cljs)).
 
 **Sizes**:
 
 - Default width: **560px** (`default-video-embed-width`,
-  [`components/block.cljs:1651`](../../../../../src/main/frontend/components/block.cljs))
-- Minimum width: **160px** (`min-video-embed-width`, [`:1652`](../../../../../src/main/frontend/components/block.cljs))
+  [`components/block.cljs:1668`](../../../../../src/main/frontend/components/block.cljs))
+- Minimum width: **160px** (`min-video-embed-width`, [`:1669`](../../../../../src/main/frontend/components/block.cljs))
 - Maximum width: the embed's parent element width, falling back to `(- (window width) 96)`
-  ([`:1727-1728`](../../../../../src/main/frontend/components/block.cljs))
+  ([`:1744-1745`](../../../../../src/main/frontend/components/block.cljs))
 - Height: derived from `aspect-ratio: 16 / 9` in CSS, not set directly
-  ([`:1732-1734`](../../../../../src/main/frontend/components/block.cljs))
+  ([`:1749-1751`](../../../../../src/main/frontend/components/block.cljs))
 
 > **Deleted (stale):** the old claim that width "adapts to the container (max 560px)" via
 > `(min (- (util/get-width) 96) 560)` in `youtube.cljs`. That expression is no longer in
 > `youtube.cljs` at all; it now lives in `asset-video-style`
-> ([`components/block.cljs:475`](../../../../../src/main/frontend/components/block.cljs)) and applies
+> ([`components/block.cljs:486`](../../../../../src/main/frontend/components/block.cljs)) and applies
 > to **local asset videos**, not YouTube embeds. The YouTube component itself now takes a flat
 > `default-video-width` of 560 and `default-video-height` of 315
 > ([`extensions/video/youtube.cljs:53-59`](../../../../../src/main/frontend/extensions/video/youtube.cljs)).
@@ -244,7 +248,7 @@ Anything else parses to `nil` and the macro renders nothing.
 
 **Mobile limitation**: timestamp controls do not work on the native iOS/Android apps. Clicking one
 shows *"YouTube timestamps aren't available on mobile yet."*
-([`src/resources/dicts/en.edn:2003`](../../../../../src/resources/dicts/en.edn)).
+([`src/resources/dicts/en.edn:2004`](../../../../../src/resources/dicts/en.edn)).
 
 **Code Reference**: [`youtube.cljs:146-161`](../../../../../src/main/frontend/extensions/video/youtube.cljs#L146-L161)
 
@@ -322,7 +326,7 @@ browser's decision, not Logseq's:
 | MKV             | `.mkv`    | Recognised by Logseq; browser support is limited          |
 
 > **Note:** a `.webm` file whose title starts with `Audio-` is rendered as an **audio** element
-> instead ([`components/block.cljs:582-584`](../../../../../src/main/frontend/components/block.cljs)).
+> instead ([`components/block.cljs:593-595`](../../../../../src/main/frontend/components/block.cljs)).
 
 **Recommendation**: use MP4 with the H.264 codec for maximum compatibility.
 
@@ -340,7 +344,7 @@ under the graph directory's `assets/` folder.
 ```
 
 **Result**: `<video class="asset-video" controls>` with the browser's native controls
-([`components/block.cljs:508-511`](../../../../../src/main/frontend/components/block.cljs)).
+([`components/block.cljs:519-522`](../../../../../src/main/frontend/components/block.cljs)).
 
 ### Video Player Controls
 
@@ -361,7 +365,7 @@ for keyboard shortcuts — Logseq registers none of its own for the video elemen
 ```
 
 The metadata map feeds `asset-video-style`
-([`components/block.cljs:471-485`](../../../../../src/main/frontend/components/block.cljs)), which:
+([`components/block.cljs:482-496`](../../../../../src/main/frontend/components/block.cljs)), which:
 
 - clamps width to `(min (- (window width) 96) 560)` — so `{:width 800}` renders at **at most
   560px**, not 800;
@@ -370,9 +374,9 @@ The metadata map feeds `asset-video-style`
 
 Logseq also measures the video once and stores its true dimensions on the asset block as
 `:logseq.property.asset/width` / `:logseq.property.asset/height`
-([`:493-507`](../../../../../src/main/frontend/components/block.cljs)); a saved
+([`:504-518`](../../../../../src/main/frontend/components/block.cljs)); a saved
 `:logseq.property.asset/resize-metadata` overrides the inline metadata
-([`src/main/frontend/components/block/image.cljs:4-11`](../../../../../src/main/frontend/components/block/image.cljs)).
+([`src/main/frontend/components/block/image.cljs:22-29`](../../../../../src/main/frontend/components/block/image.cljs)).
 
 ---
 
@@ -445,7 +449,7 @@ text kept in sibling `.video-inline-text` elements
 ([`components/block/video.cljs:105-147`](../../../../../src/main/frontend/components/block/video.cljs)).
 That wrapper carries `data-video-macro-name` and `data-video-macro-id` attributes, which is how a
 resize knows *which* of several identical macros in one block to rewrite
-([`components/block.cljs:1769-1784`](../../../../../src/main/frontend/components/block.cljs)).
+([`components/block.cljs:1786-1801`](../../../../../src/main/frontend/components/block.cljs)).
 
 ### Video with Timestamps as Notes
 
@@ -510,7 +514,7 @@ iframes that precede the clicked element.
   (mobile-util/native-platform?))
 ```
 
-Related messages ([`src/resources/dicts/en.edn:2001-2003`](../../../../../src/resources/dicts/en.edn)):
+Related messages ([`src/resources/dicts/en.edn:2002-2004`](../../../../../src/resources/dicts/en.edn)):
 
 - `:youtube/timestamps-not-available-mobile` — "YouTube timestamps aren't available on mobile yet."
 - `:youtube/player-not-ready` — "YouTube player isn't ready yet."
@@ -630,7 +634,7 @@ limitations — Logseq recognising an extension is not the same as the browser d
 [`src/main/frontend/components/block/video.cljs`](../../../../../src/main/frontend/components/block/video.cljs) (147 lines)
 
 **Macro dispatch, embed shell and resize**:
-[`src/main/frontend/components/block.cljs:1651-1847, 1879-1904`](../../../../../src/main/frontend/components/block.cljs)
+[`src/main/frontend/components/block.cljs:1668-1864, 1879-1904`](../../../../../src/main/frontend/components/block.cljs)
 
 **Configuration**: `video-formats` in
 [`src/main/frontend/config.cljs:183-184`](../../../../../src/main/frontend/config.cljs)

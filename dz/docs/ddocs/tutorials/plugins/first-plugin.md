@@ -4,8 +4,8 @@ status: 🟢 Stable
 version: '@logseq/libs 0.3.4'
 quadrant: 'Tutorial'
 platform: 'Desktop'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '[Plugin API Reference](../../reference/api/plugin-api.md)'
@@ -15,6 +15,10 @@ tags: ['plugin', 'development', 'javascript', 'typescript', 'tutorial']
 ---
 
 # Building Your First Logseq Plugin
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This tutorial walks you through creating a functional Logseq plugin from scratch. You'll learn the plugin architecture, core APIs, and development workflow by building a simple "Quick Note" plugin that adds a slash command to insert timestamped notes.
 
@@ -315,7 +319,7 @@ This starts Parcel in development mode with hot reloading. Output will be in `di
 2. Click **Settings** (⚙️ icon) → **Advanced**
 3. Enable **Developer mode**
 
-The toggle is `developer-mode-row` (`src/main/frontend/components/settings.cljs:568-575`), hidden on native mobile (`:926`). Its description string reads "Developer mode helps contributors and extension developers test their integrations with Logseq more efficiently." (`src/resources/dicts/en.edn:1702-1703`).
+The toggle is `developer-mode-row` (`src/main/frontend/components/settings.cljs:580-587`), hidden on native mobile (`:926`). Its description string reads "Developer mode helps contributors and extension developers test their integrations with Logseq more efficiently." (`src/resources/dicts/en.edn:1703-1704`).
 
 ### Step 2: Load Unpacked Plugin
 

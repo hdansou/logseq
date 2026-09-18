@@ -3,8 +3,8 @@ title: ':block/tags vs :logseq.property/page-tags'
 description: 'Understanding the two tag-like attributes in Logseq DB graphs and when each applies'
 status: stable
 audience: [developer]
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: 'DB graph schema 65.33'
 category: concepts
@@ -16,6 +16,10 @@ relatedDocs:
 ---
 
 # `:block/tags` vs `:logseq.property/page-tags`
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > In a Logseq DB graph there are two attributes that both look like "tags" but mean different things. `:block/tags` is the canonical class/instance relationship; `:logseq.property/page-tags` is a backward-compatible page-to-page association that the file-graph importer fills in.
 
@@ -41,9 +45,9 @@ Tagging a block or page with `:block/tags` makes that entity an **instance** of 
 
 - **Tag properties.** A class lists its "Tag Properties" in `:logseq.property.class/properties` (`property.cljs:172`). `get-block-classes-properties` collects those properties from every tag on a node and from each tag's ancestors (`deps/outliner/src/logseq/outliner/property.cljs:1020-1032`).
 - **The class hierarchy.** Classes extend other classes through `:logseq.property.class/extends`. Query the hierarchy with the `class-extends` rule (`deps/db/src/logseq/db/frontend/rules.cljc:14-19`). A class's object list includes the objects of its child classes (`get-class-objects`, `deps/db/src/logseq/db/frontend/class.cljs:216-234`). The UI calls that list "Tagged nodes" (`src/resources/dicts/en.edn:195`).
-- **The `#tag` syntax.** Inline `#tag`s in a block's title become `:block/tags`. When the tag is new, the outliner gives it a `:db/ident`, sets `extends` to `:logseq.class/Root`, and drops `#Page`, which turns it into a class (`add-missing-tag-idents`, `deps/outliner/src/logseq/outliner/core.cljs:264-273`). Deleting the `#tag` text from the title retracts the tag (`remove-tags-when-title-changed`, `core.cljs:254-262`).
+- **The `#tag` syntax.** Inline `#tag`s in a block's title become `:block/tags`. When the tag is new, the outliner gives it a `:db/ident`, sets `extends` to `:logseq.class/Root`, and drops `#Page`, which turns it into a class (`add-missing-tag-idents`, `deps/outliner/src/logseq/outliner/core.cljs:286-295`). Deleting the `#tag` text from the title retracts the tag (`remove-tags-when-title-changed`, `core.cljs:276-284`).
 
-Some classes cannot be applied inline. On non-page blocks the outliner strips `disallowed-inline-tags`: page classes, private tags, and the block-kind tags such as `#Template`, `#Query` and `#Cards`. It also strips built-in page names. The title keeps `#Name` as plain text, but no tag or ref is stored (`inline-tag-disallowed?` and `remove-disallowed-inline-classes`, `core.cljs:275-331`; `deps/db/src/logseq/db/frontend/class.cljs:130-140`).
+Some classes cannot be applied inline. On non-page blocks the outliner strips `disallowed-inline-tags`: page classes, private tags, and the block-kind tags such as `#Template`, `#Query` and `#Cards`. It also strips built-in page names. The title keeps `#Name` as plain text, but no tag or ref is stored (`inline-tag-disallowed?` and `remove-disallowed-inline-classes`, `core.cljs:297-353`; `deps/db/src/logseq/db/frontend/class.cljs:147-157`).
 
 Typical query:
 
@@ -73,7 +77,7 @@ Matching `[?t :block/name "task"]` also works for built-in classes, because each
 Key points:
 
 - **The value type is `:page`, not `:class`.** `page-entity?` validates it (`type.cljs:123-125`, `:183-185`). It accepts anything `entity-util/page?` accepts: internal pages, journals, classes and property pages (`deps/db/src/logseq/db/frontend/entity_util.cljs:45-50`).
-- **`:view-context :page`.** The property picker hides it on nodes that are not pages (`ui-non-suitable-property?`, `src/main/frontend/worker/handler/property.cljs:305-320`).
+- **`:view-context :page`.** The property picker hides it on nodes that are not pages (`ui-non-suitable-property?`, `src/main/frontend/worker/handler/property.cljs:314-329`).
 - **It carries no class semantics.** It creates no instance-of relationship, adds no tag properties, and plays no part in the `extends` hierarchy.
 - **Import is what fills it in.** When a file graph is imported, `update-page-tags` runs on each page's file-graph tags. Tags that become classes go to `:block/tags`. `convert-tag-to-class` returns nil for the rest, and those are kept as page references in `:logseq.property/page-tags` (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:287-299`, `:344-370`).
 
@@ -102,10 +106,10 @@ No. `:block/tags` must point at a class entity and participates in the class sys
 No. Its `:view-context` is `:page`, so the property picker only offers it on pages. Tag individual blocks with `:block/tags`.
 
 **"The `#tag` syntax writes to `:logseq.property/page-tags`."**
-No. In DB graphs, inline `#tag` writes to `:block/tags` (`core.cljs:264-273`). Only the importer or the property UI on a page populates `:logseq.property/page-tags`.
+No. In DB graphs, inline `#tag` writes to `:block/tags` (`core.cljs:286-295`). Only the importer or the property UI on a page populates `:logseq.property/page-tags`.
 
 **"Every `#tag` sticks."**
-No. On ordinary blocks, `#Template`, `#Query`, `#Cards`, `#Page`, `#Journal` and the other `disallowed-inline-tags` are silently stripped (`class.cljs:136-140`, `core.cljs:275-331`).
+No. On ordinary blocks, `#Template`, `#Query`, `#Cards`, `#Page`, `#Journal` and the other `disallowed-inline-tags` are silently stripped (`class.cljs:153-157`, `core.cljs:297-353`).
 
 ## Further reading
 

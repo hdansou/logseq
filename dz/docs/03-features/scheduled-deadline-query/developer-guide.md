@@ -37,8 +37,8 @@ The feature is a thin **render-on-today's-journal** vertical slice: a Rum compon
 ```mermaid
 graph TD
     A["page.cljs<br/>today? branch"] -->|"today? = true"| B["scheduled-and-deadlines<br/>scheduled_deadlines.cljs"]
-    A -->|"today? = true"| C["today-queries<br/>page.cljs:224"]
-    B --> D["&lt;get-date-scheduled-or-deadlines<br/>async.cljs:228"]
+    A -->|"today? = true"| C["today-queries<br/>page.cljs:225"]
+    B --> D["&lt;get-date-scheduled-or-deadlines<br/>async.cljs:230"]
     C --> E[":default-queries :journals<br/>from config.edn / state.cljs"]
     D --> F["&lt;q → Datascript<br/>scheduled OR deadline"]
     E --> F2["query/custom-query<br/>per journal query"]
@@ -61,10 +61,10 @@ graph LR
     subgraph UI["UI Layer (Rum components)"]
         P["page.cljs<br/>page-blocks-cp"]
         SD["scheduled_deadlines.cljs<br/>scheduled-and-deadlines"]
-        TQ["page.cljs:224<br/>today-queries"]
+        TQ["page.cljs:225<br/>today-queries"]
     end
     subgraph DATA["Data Layer"]
-        AS["async.cljs:228<br/>&lt;get-date-scheduled-or-deadlines"]
+        AS["async.cljs:230<br/>&lt;get-date-scheduled-or-deadlines"]
         Q["&lt;q (db/async)"]
     end
     subgraph CONFIG["Config / State"]
@@ -98,7 +98,7 @@ graph LR
 |------|------|
 | `src/main/frontend/components/page.cljs:531` | Mounts the section, only when `today?` |
 | `src/main/frontend/components/scheduled_deadlines.cljs` | The Rum component itself |
-| `src/main/frontend/db/async.cljs:228` | The async query it calls |
+| `src/main/frontend/db/async.cljs:230` | The async query it calls |
 
 ### The Investigation
 
@@ -161,11 +161,11 @@ flowchart TD
 
 ### The Witness File
 
-`src/main/frontend/db/async.cljs:228-257` — `<get-date-scheduled-or-deadlines`.
+`src/main/frontend/db/async.cljs:230-259` — `<get-date-scheduled-or-deadlines`.
 
 ### The Investigation
 
-**Location**: `src/main/frontend/db/async.cljs:228-257`
+**Location**: `src/main/frontend/db/async.cljs:230-259`
 ```clojure
 (defn <get-date-scheduled-or-deadlines
   [journal-title]
@@ -225,11 +225,11 @@ This is the case-breaking discovery — and it applies to the **other** path, th
 
 ### The Witness File
 
-`src/main/frontend/components/page.cljs:224-241` — `today-queries`.
+`src/main/frontend/components/page.cljs:225-242` — `today-queries`.
 
 ### The Investigation
 
-**Location**: `src/main/frontend/components/page.cljs:224-241`
+**Location**: `src/main/frontend/components/page.cljs:225-242`
 ```clojure
 (rum/defc today-queries < rum/reactive
   [repo today? sidebar?]
@@ -251,7 +251,7 @@ Combined with Evidence #1's hardcoded `:default-collapsed? true`, the verdict is
 
 ```mermaid
 flowchart LR
-    U["config.edn<br/>:collapsed? false"] --> R["today-queries<br/>page.cljs:231"]
+    U["config.edn<br/>:collapsed? false"] --> R["today-queries<br/>page.cljs:232"]
     R --> O["(assoc query :collapsed? true)"]
     O --> X["rendered COLLAPSED"]
     style O fill:#ffd6d6,stroke:#c53030
@@ -298,7 +298,7 @@ So `[:start-of-today-ms :+7d-ms]` reproduces the built-in `[start-time, future-t
 
 ## Critical Findings
 
-1. ❌ **`:collapsed?` is ignored for journal queries.** `page.cljs:231` rewrites every default journal query with `:collapsed? true`. The built-in section is also hardcoded collapsed (`scheduled_deadlines.cljs:45`). **No config un-collapses them.** *(Severity: High — this is a frequent user expectation that silently fails.)*
+1. ❌ **`:collapsed?` is ignored for journal queries.** `page.cljs:232` rewrites every default journal query with `:collapsed? true`. The built-in section is also hardcoded collapsed (`scheduled_deadlines.cljs:45`). **No config un-collapses them.** *(Severity: High — this is a frequent user expectation that silently fails.)*
 2. 🔍 **Two separate code paths share one user-visible name.** The built-in agenda ≠ `:default-queries`. Disabling one does not affect the other.
 3. 🔍 **Millisecond window, not journal-day.** The built-in query compares `scheduled`/`deadline` against epoch-ms bounds; the DOING/TODO defaults compare `:block/journal-day` against `yyyyMMdd`. Mixing them up yields empty results.
 4. ✅ **Empty-safe.** Both paths render nothing when there are no results (`when (seq ...)`), so they never show empty headers.
@@ -377,11 +377,11 @@ sequenceDiagram
 2. Is `:feature/disable-scheduled-and-deadline-query?` set to `true`? (`state.cljs:605-607`)
 3. Do you actually have **open** tasks (status not done/canceled) with a `scheduled`/`deadline` inside today → today+`future-days`? Empty results render nothing.
 
-**"My `:collapsed? false` doesn't work."** Expected — `page.cljs:231` overrides it for journal queries, and the built-in section is hardcoded. Use a non-default custom query instead.
+**"My `:collapsed? false` doesn't work."** Expected — `page.cljs:232` overrides it for journal queries, and the built-in section is hardcoded. Use a non-default custom query instead.
 
 **"My custom port returns nothing."** Almost always the ms-vs-journal-day trap. Confirm your inputs resolve to milliseconds (`:start-of-today-ms`, `:+Nd-ms`), not `:today`/`:7d-after` (which return `yyyyMMdd` ints).
 
-**Inspect the live query**: in the app devtools console, run the query from `async.cljs:240-254` against the current DB with hand-supplied ms bounds to see raw matches before grouping.
+**Inspect the live query**: in the app devtools console, run the query from `async.cljs:242-256` against the current DB with hand-supplied ms bounds to see raw matches before grouping.
 
 ## Performance Notes
 
@@ -402,7 +402,7 @@ sequenceDiagram
 
 ## Future Improvements
 
-1. ✅ Honor `:collapsed?` for journal default queries (remove the unconditional `assoc` at `page.cljs:231`, or only default it when the key is absent).
+1. ✅ Honor `:collapsed?` for journal default queries (remove the unconditional `assoc` at `page.cljs:232`, or only default it when the key is absent).
 2. ✅ Expose `:default-collapsed?` for the built-in section as a config option (e.g. `:feature/scheduled-and-deadline-collapsed?`).
 3. 🔍 Optionally include **overdue** open tasks (start bound earlier than today) behind a config toggle.
 4. 🔍 Allow the agenda on any selected journal/day, not just today.

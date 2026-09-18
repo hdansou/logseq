@@ -308,7 +308,7 @@ override public func viewDidLoad() {
 │ Step 4: Renderer Receives IPC                                     │
 │ Time: ~15ms                                                        │
 └───────────────────────────────────────────────────────────────────┘
-  Handler: main/electron/listener.cljs:114-116
+  Handler: main/electron/listener.cljs:120-122
   safe-api-call "quickCapture" (fn [args] ...)
   Publish event: [:editor/quick-capture args]
 
@@ -1206,7 +1206,7 @@ url - String (e.g., "logseq://shared?payload=...")
 
 **Publisher:**
 
-- macOS: `src/main/electron/listener.cljs:114-116`
+- macOS: `src/main/electron/listener.cljs:120-122`
 - iOS: `src/main/frontend/mobile/intent.cljs:85`
 
 **Subscriber:** (Auto-handled by event system)

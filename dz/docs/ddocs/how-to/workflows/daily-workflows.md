@@ -2,8 +2,8 @@
 title: 'Daily Workflow Setup Guide'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (ccc03ab0aa). The 2026-09-10 date covers only the simple-query examples, the <% %> template variables (4a37d8997b) and the :default-templates citation (bd51297f2b).'
 reviewStatus: audited
 quadrant: 'How-To'
@@ -16,6 +16,10 @@ tags: ['workflow', 'daily-notes', 'journal', 'routine', 'productivity']
 ---
 
 # Daily Workflow Setup Guide
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This guide helps you establish effective daily workflows in Logseq. Learn to structure your day, capture information efficiently, and build sustainable note-taking habits.
 
@@ -192,15 +196,15 @@ g j → Journals (today is at the top)
 ```
 
 > **`{{query …}}` does not work in a DB graph.** Typed into a block it renders only a
-> deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Entered as the query
+> deprecation warning (`src/main/frontend/components/block.cljs:1887-1888`). Entered as the query
 > of a `/Query` block it becomes a full-text search for that literal text, because `sanitize-q`
 > quotes anything that does not start with `(`, `"`, a page ref or `[?`
-> (`src/main/frontend/components/query/builder.cljs:543-552`). Every simple query in this guide is
+> (`src/main/frontend/components/query/builder.cljs:608-617`). Every simple query in this guide is
 > therefore shown as the bare form you enter after typing `/Query`.
 
 > **Query lines in these templates.** A line marked `← /Query block` is a block of its own: type
 > `/Query` on it and enter the form shown. `/Query` moves the block's whole title into the query
-> (`src/main/frontend/handler/editor.cljs:4377-4394`), so a label cannot share the line and goes in
+> (`src/main/frontend/handler/editor.cljs:4436-4453`), so a label cannot share the line and goes in
 > the parent block instead. `<% today %>` and `<% yesterday %>` already insert a page reference
 > (`deps/outliner/src/logseq/outliner/template.cljs:74`), so they are written bare, not inside
 > `[[…]]`. Inside a template they are fixed to the day the template is inserted; in a standalone
@@ -467,7 +471,7 @@ Or use the slash commands, which are generated from the six closed values of
 /Backlog  /Todo  /Doing  /In Review  /Done  /Canceled
 
 Or Cmd/Ctrl+Enter, which cycles Todo → Doing → Done → (no status)
-(config.cljs:167; src/main/frontend/handler/editor.cljs:819-831).
+(config.cljs:167; src/main/frontend/handler/editor.cljs:825-837).
 ```
 
 **Move Tasks to Projects:**
@@ -713,7 +717,7 @@ and `current page` are substituted; any other name loses its `<% %>` wrapper, so
 
 The `:default-templates` key in `config.edn` is deprecated for DB graphs; it "is
 replaced by #Template and the `Apply template to tags` property"
-(`deps/common/src/logseq/common/config.cljs:138-139`).
+(`deps/common/src/logseq/common/config.cljs:141-142`).
 
 ```markdown
 1. Tag the Daily Note block with Template.

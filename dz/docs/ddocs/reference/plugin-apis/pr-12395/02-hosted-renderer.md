@@ -1,11 +1,15 @@
 ---
 title: 'Experiments.registerHostedRenderer'
-lastVerified: '2026-09-09'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 ---
 
 # `Experiments.registerHostedRenderer`
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Experimental.** The SDK's own header warns that plugins relying on `logseq.Experiments.*`
 > "temporarily may not be supported on the Marketplace" and that the API "might be adjusted at any
@@ -46,7 +50,7 @@ Exactly as declared at `libs/src/modules/LSPlugin.Experiments.ts:138-153`.
   `"block"` routes to block-renderer storage, `"block-properties"` to block-properties storage, and
   **anything else** (including omitting it) to hosted-renderer storage. Consumers then filter on
   the exact string: the right sidebar looks for `(= (:type %) "sidebar")`
-  (`src/main/frontend/components/right_sidebar.cljs:499-512`). Pick a value the consumer you want
+  (`src/main/frontend/components/right_sidebar.cljs:510-523`). Pick a value the consumer you want
   actually matches.
 - **`render`** — must return something the host renderer can render. The host calls it as
   `(render opts)` inside `renderer-container`
@@ -55,7 +59,7 @@ Exactly as declared at `libs/src/modules/LSPlugin.Experiments.ts:138-153`.
   `logseq.Experiments.React.createElement` so they share the host's React instance
   (`LSPlugin.Experiments.ts:50-52`).
 - **`title`** — used as the label in the right-sidebar menu
-  (`right_sidebar.cljs:476-488`) and written into the pane header element
+  (`right_sidebar.cljs:487-499`) and written into the pane header element
   (`plugins.cljs:1874-1877`).
 
 > **`subs` does nothing today.** The host stores it (`sdk/experiments.cljs:57-62`,

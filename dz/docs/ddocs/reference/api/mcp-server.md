@@ -2,8 +2,8 @@
 title: 'MCP Server Reference'
 description: "Reference for the Logseq desktop app's Model Context Protocol (MCP) server for AI assistant integration"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop]
@@ -18,6 +18,10 @@ relatedDocs:
 
 # MCP Server Reference
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > **Last revised:** 2026-09-11
 
 > Reference for the desktop app's Model Context Protocol (MCP) server, which lets AI assistants read and write your graph.
@@ -25,7 +29,7 @@ relatedDocs:
 ## Overview
 
 The **MCP Server** implements the [Model Context Protocol](https://modelcontextprotocol.io/) with the
-official TypeScript SDK (`@modelcontextprotocol/sdk`, `resources/package.json:27`). It advertises itself as
+official TypeScript SDK (`@modelcontextprotocol/sdk`, `resources/package.json:28`). It advertises itself as
 `Logseq MCP Server` version `0.1.0` (`src/electron/electron/mcp_server.cljs:220-222`). An MCP client can use
 it to:
 
@@ -69,18 +73,18 @@ methods are exported at `src/main/logseq/api.cljs:235-239`. `logseq.app.search` 
 
 ### Enable in Desktop App
 
-1. **Open Settings → AI** (`src/main/frontend/components/settings.cljs:1442-1446`, `:1483`; label
-   `src/resources/dicts/en.edn:1687`).
-2. **Turn on "MCP Server"** (`settings.cljs:1412-1440`; label `en.edn:1708`).
+1. **Open Settings → AI** (`src/main/frontend/components/settings.cljs:1454-1458`, `:1495`; label
+   `src/resources/dicts/en.edn:1688`).
+2. **Turn on "MCP Server"** (`settings.cljs:1424-1452`; label `en.edn:1709`).
 3. **Start the HTTP API server** from the API icon in the header, if it is not running. The toggle turns on
-   the "HTTP API server" feature flag (`settings.cljs:1426-1428`). It restarts the server only if the server
+   the "HTTP API server" feature flag (`settings.cljs:1438-1440`). It restarts the server only if the server
    is already running (`:1429-1433`); it never starts a stopped server.
 4. **Add a token**: API icon → **Authorization tokens** → **+ Add new token** → **Save** (see
    [HTTP API → Authentication](http-api.md#authentication)).
 5. **Verify**: open the API icon menu. While the server is running with MCP enabled, the menu shows the
    `/mcp` URL with a copy button (`src/main/frontend/components/server.cljs:196-202`).
 
-Turning MCP Server on saves `:server/mcp-enabled?` in the Electron config (`settings.cljs:1429`,
+Turning MCP Server on saves `:server/mcp-enabled?` in the Electron config (`settings.cljs:1441`,
 `server.cljs:53-62`). The `/mcp` routes are registered only when the server starts with that flag set
 (`server.cljs:178-179`). If you change the flag while the server is stopped, the change applies the next
 time you start it.

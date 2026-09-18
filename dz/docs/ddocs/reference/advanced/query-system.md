@@ -2,8 +2,8 @@
 title: 'Query System Reference'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (1be80c82a1, 03ae5276c6). The 2026-09-10 date covers only the :block/properties note on :result-transform (bfcaeb03e7).'
 reviewStatus: audited
 quadrant: 'Reference'
@@ -16,6 +16,10 @@ tags: ['queries', 'datalog', 'advanced', 'datascript', 'database']
 ---
 
 # Query System Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This reference documents Logseq's advanced query system—Datalog queries for retrieving and analyzing graph data in **database (DB) graphs**. Use queries to build custom views, generate reports, and automate workflows.
 
@@ -75,7 +79,7 @@ property's value as a Clojure code editor
 The text you type into that editor becomes the `:block/title` of the query-value block. At render
 time Logseq reads it with `safe-read-string`; if the result is a **map** it is treated as an
 advanced (Datalog) query, otherwise it is treated as a simple DSL query string
-(`src/main/frontend/components/block.cljs:4090-4103`).
+(`src/main/frontend/components/block.cljs:4139-4152`).
 
 So an advanced query is written as a bare EDN map — no `#+BEGIN_QUERY` wrapper, no ` ```query `
 fence:

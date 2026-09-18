@@ -2,8 +2,8 @@
 title: 'Custom JavaScript'
 description: 'How to extend Logseq functionality with custom JavaScript'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop]
@@ -16,6 +16,10 @@ relatedDocs:
 ---
 
 # Custom JavaScript
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -37,7 +41,7 @@ This page covers DB graphs only. Current Logseq does not open file graphs: the g
 
 In a DB graph, `custom.js` is not a file on disk. It is a file record stored inside the graph database with the path `logseq/custom.js`. Logseq creates it, empty, when it creates the graph ([`deps/db/src/logseq/db/sqlite/create_graph.cljs:216-220`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs), [`src/main/frontend/config.cljs:374-381`](../../../../../src/main/frontend/config.cljs)). Editing a `custom.js` file in a folder on disk has no effect on a DB graph.
 
-When you import a file graph, the importer copies that graph's `logseq/custom.js` into the new DB graph ([`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:3336-3338`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)).
+When you import a file graph, the importer copies that graph's `logseq/custom.js` into the new DB graph ([`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:3450-3452`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)).
 
 ### Open custom.js for editing
 
@@ -46,7 +50,7 @@ Settings has an **Edit custom.css** button but no equivalent for `custom.js` ([`
 1. Open search and type `custom.js`.
 2. Choose `logseq/custom.js` in the **Files** group. It opens in Logseq's built-in code editor.
 
-Search lists the graph's stored files whenever you type a query, and choosing one opens the file editor ([`src/main/frontend/components/cmdk/core.cljs:439-451`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:539`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:644-647`](../../../../../src/main/frontend/components/cmdk/core.cljs)).
+Search lists the graph's stored files whenever you type a query, and choosing one opens the file editor ([`src/main/frontend/components/cmdk/core.cljs:444-456`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:544`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:656-659`](../../../../../src/main/frontend/components/cmdk/core.cljs)).
 
 Plugins can also write the file with `logseq.DB.setFileContent('logseq/custom.js', content)`. That API accepts only `logseq/custom.js`, `logseq/custom.css`, `logseq/publish.js` and `logseq/publish.css` ([`src/main/logseq/api/db.cljs:53-73`](../../../../../src/main/logseq/api/db.cljs)). `logseq.DB.getFileContent(path)` reads it back ([`:76-79`](../../../../../src/main/logseq/api/db.cljs)).
 
@@ -164,7 +168,7 @@ document.addEventListener(
 )
 ```
 
-Logseq renders external links as `a.external-link` ([`src/main/frontend/components/block.cljs:1610`](../../../../../src/main/frontend/components/block.cljs)).
+Logseq renders external links as `a.external-link` ([`src/main/frontend/components/block.cljs:1627`](../../../../../src/main/frontend/components/block.cljs)).
 
 ---
 
@@ -252,7 +256,7 @@ saveData('page-visits', visits)
 
 ### Open Developer Console
 
-The desktop app uses Electron's standard **View** menu ([`src/electron/electron/core.cljs:243`](../../../../../src/electron/electron/core.cljs)). That menu includes **Toggle Developer Tools**, which is usually:
+The desktop app uses Electron's standard **View** menu ([`src/electron/electron/core.cljs:246`](../../../../../src/electron/electron/core.cljs)). That menu includes **Toggle Developer Tools**, which is usually:
 
 - **macOS**: `Cmd+Option+I`
 - **Windows/Linux**: `Ctrl+Shift+I`

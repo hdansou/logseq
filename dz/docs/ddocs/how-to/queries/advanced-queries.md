@@ -2,8 +2,8 @@
 title: 'Advanced Queries'
 description: 'How to write advanced Datalog queries in Logseq'
 status: stable
-lastVerified: '2026-09-15'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
@@ -17,13 +17,17 @@ relatedDocs:
 
 # Advanced Queries
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > **Last revised:** 2026-09-15 (verified against `be800f1711`; this revision
 > re-checked the pull/normalization rules only)
 > How to write powerful Datalog queries to search and analyze your graph.
 
 ## Query Basics
 
-> **Removed:** The `#+BEGIN_QUERY` / `#+END_QUERY` wrapper is **file-graph syntax and does not work in a DB graph.** A DB advanced query block stores the query map as the raw text of its `:logseq.property/query` value, which is read back with `safe-read-string` and treated as an advanced query only if the result `map?` (`src/main/frontend/components/block.cljs:4090-4103`). A `#+BEGIN_QUERY` header is not valid EDN, so the read fails and the block never renders as a query. On import from a file graph the wrapper is stripped (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1410`). Every example below has been rewritten to the bare-map form.
+> **Removed:** The `#+BEGIN_QUERY` / `#+END_QUERY` wrapper is **file-graph syntax and does not work in a DB graph.** A DB advanced query block stores the query map as the raw text of its `:logseq.property/query` value, which is read back with `safe-read-string` and treated as an advanced query only if the result `map?` (`src/main/frontend/components/block.cljs:4139-4152`). A `#+BEGIN_QUERY` header is not valid EDN, so the read fails and the block never renders as a query. On import from a file graph the wrapper is stripped (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1452`). Every example below has been rewritten to the bare-map form.
 
 Create one with the **Advanced Query** slash command, which tags the block
 `:logseq.class/Query` and gives it a Clojure code-block query property
@@ -81,7 +85,7 @@ map is ignored by the worker
 >
 > All three are explicitly stripped from advanced query maps when a file graph is
 > imported: `migrate-advanced-query-string` dissocs `[:title :group-by-page? :collapsed?]`
-> (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1159-1167`).
+> (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1201-1209`).
 
 ### Control Child Block Results
 
@@ -174,7 +178,7 @@ common source of "my query works but my `:view` shows nothing":
 | `?title ?day` (two columns)  | a 2-element vector, e.g. `["Jan 1st, 2020" 20200101]`     |
 
 Confirmed by `query-resource-preserves-scalar-tuples-test`
-(`src/test/frontend/worker/handler/render_resource_test.cljs:2021-2038`) and
+(`src/test/frontend/worker/handler/render_resource_test.cljs:2265-2282`) and
 `query-resource-resolves-advanced-page-block-and-today-inputs-test` (line 1921),
 which asserts a pulled block arrives as a UUID.
 

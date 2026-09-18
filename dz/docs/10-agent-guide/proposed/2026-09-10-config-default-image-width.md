@@ -11,7 +11,7 @@ Let a user choose the width that un-resized images display at, through `config.e
 
 ## Problem
 
-`asset-cp` sizes every un-resized image as `(or width 250 asset-width)`, where `width` comes from `:logseq.property.asset/resize-metadata` (`src/main/frontend/components/block.cljs:1157-1168`). There is no config key, so users resize images one at a time or override the size with a `custom.css` rule that saves nothing and leaves a 250px loading placeholder behind. On native mobile, where resize handles are disabled (`block.cljs:410-421`), there is no way to change the size at all.
+`asset-cp` sizes every un-resized image as `(or width 250 asset-width)`, where `width` comes from `:logseq.property.asset/resize-metadata` (`src/main/frontend/components/block.cljs:1174-1185`). There is no config key, so users resize images one at a time or override the size with a `custom.css` rule that saves nothing and leaves a 250px loading placeholder behind. On native mobile, where resize handles are disabled (`block.cljs:421-432`), there is no way to change the size at all.
 
 ## Users
 
@@ -32,9 +32,9 @@ Let a user choose the width that un-resized images display at, through `config.e
 
 1. **Display default, not write-on-insert** — nothing is persisted and the setting applies at once to every un-resized image. Alternative considered: save `resize-metadata {:width N}` on each new asset, which only affects new images and needs a write hook in the insert path.
 2. **Key: `:ui/default-image-width`** — this is a display-only setting like the other `:ui/` keys, and nothing is written to asset properties. Alternative considered: `:asset/default-image-width`, which reads as asset data. Confirm the name with maintainers (see [Open Questions](#open-questions)).
-3. **Whole pixels, at least 60** — the schema type is `:int`, matching `:block/title-max-length` and `:ref/default-open-blocks-level` (`src/main/frontend/schema/handler/common_config.cljc:28`, `:50`). 60 is the resize handle's own floor (`block.cljs:449`). Anything else falls back to 250.
+3. **Whole pixels, at least 60** — the schema type is `:int`, matching `:block/title-max-length` and `:ref/default-open-blocks-level` (`src/main/frontend/schema/handler/common_config.cljc:28`, `:50`). 60 is the resize handle's own floor (`block.cljs:460`). Anything else falls back to 250.
 4. **A pure sizing function in `frontend.components.block.asset`** — lift the inline logic from `asset-cp` into a testable function next to `show-image-placeholder?` (`src/main/frontend/components/block/asset.cljs:55`), whose tests already live in `asset_test.cljs`. Alternative considered: a `state.cljs` accessor like `get-ref-open-blocks-level` (`state.cljs:598-604`). That reads non-reactive config and adds a second function to test.
-5. **Read config reactively** — follow `nested-link`: `(state/config-for-repo (rfx/use-sub [:config]) repo)` (`block.cljs:1399-1401`). `state/get-config` alone is a snapshot and would not re-render on edit.
+5. **Read config reactively** — follow `nested-link`: `(state/config-for-repo (rfx/use-sub [:config]) repo)` (`block.cljs:1416-1418`). `state/get-config` alone is a snapshot and would not re-render on edit.
 6. **One key in the shared schema** — adding it to `common_config.cljc` makes it valid in both global and graph `config.edn`. The existing merge order (built-in defaults, then global, then graph, `state.cljs:493-502`) lets a graph override the global value with no extra code.
 
 ## Data Model
@@ -54,7 +54,7 @@ The render-time rule, in priority order:
 | `:ui/default-image-width`, if an integer ≥ 60 | that value |
 | otherwise | 250 |
 
-Height stays `width / (asset-width / asset-height)` when both original dimensions are known, and is omitted otherwise (unchanged from `block.cljs:1162-1168`).
+Height stays `width / (asset-width / asset-height)` when both original dimensions are known, and is omitted otherwise (unchanged from `block.cljs:1179-1185`).
 
 ## Acceptance Criteria
 
@@ -71,9 +71,9 @@ Height stays `width / (asset-width / asset-height)` when both original dimension
 
 ## Out of Scope (v1)
 
-- Videos (separate sizing: `asset-video-style`, `block.cljs:471-485`).
+- Videos (separate sizing: `asset-video-style`, `block.cljs:482-496`).
 - Published pages. The publish renderer ignores `resize-metadata` and uses a responsive `srcset` (`deps/publish/src/logseq/publish/render.cljs:868-906`), and config is not part of the publish payload.
-- PDF assets, gallery-card layout, and markdown image-link metadata (`image-link`, `block.cljs:641-668`).
+- PDF assets, gallery-card layout, and markdown image-link metadata (`image-link`, `block.cljs:652-679`).
 - Writing `resize-metadata` to assets, and bulk-resetting resized images.
 - A Settings UI control. Without one, no UI text is added and no i18n work is needed.
 - A default height, or per-format defaults.
@@ -106,7 +106,7 @@ Branch off `master` (not `eng-documentation`). Unit tests: `bb dev:test -v <ns>`
       Done when: `bb dev:test -v frontend.handler.common.config-edn-test` passes.
       Est: ~15 min
 
-- [ ] **3. Wire `asset-cp`** — `src/main/frontend/components/block.cljs:1157-1168`
+- [ ] **3. Wire `asset-cp`** — `src/main/frontend/components/block.cljs:1174-1185`
       Read `:ui/default-image-width` reactively (decision 5) and replace the inline `img-metadata` with `image-display-metadata`.
       Done when: all unit tests pass, and in a dev build acceptance criteria 1-7, 9 and 10 hold, and the oversize and gallery questions are answered.
       Est: ~30 min

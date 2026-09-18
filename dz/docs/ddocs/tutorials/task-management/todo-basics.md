@@ -3,8 +3,8 @@ title: 'Todo Basics'
 description: "Learn to manage tasks effectively with Logseq's task management system"
 type: tutorial
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
@@ -21,6 +21,10 @@ relatedDocs:
 ---
 
 # Todo Basics
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11
 
@@ -148,7 +152,7 @@ To see which tasks on the page are finished, add a query block. In a new block, 
 
 > **Corrected:** an earlier version used `[[Weekend Project]]` here. A page reference in a query matches blocks that **reference** the page (rule at `deps/db/src/logseq/db/frontend/rules.cljc:81-82`), not the blocks on it. The `page` filter matches by the block's page (`rules.cljc:90-92`).
 
-> **Removed:** an automatic "1/5 complete" counter and progress bar on the parent block. No such parent-task progress rollup exists in the current source. The only progress bars under `src/main/frontend/components` are for asset transfers (`block.cljs:1153`) and imports (`imports.cljs:536`).
+> **Removed:** an automatic "1/5 complete" counter and progress bar on the parent block. No such parent-task progress rollup exists in the current source. The only progress bars under `src/main/frontend/components` are for asset transfers (`block.cljs:1153`) and imports (`imports.cljs:540`).
 
 ---
 

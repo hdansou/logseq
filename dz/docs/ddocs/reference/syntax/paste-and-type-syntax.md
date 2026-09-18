@@ -3,8 +3,8 @@ title: 'Paste and Type Syntax'
 description: 'Cheatsheet for getting styled, structured content into a Logseq DB graph by pasting Markdown or HTML, or by typing'
 status: stable
 quadrant: 'Reference'
-lastVerified: '2026-09-12'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: authored-from-source
 graphType: [db]
 platform: 'Desktop + Web'
@@ -16,6 +16,10 @@ tags: ['markdown', 'paste', 'editor', 'syntax', 'reference']
 ---
 
 # Paste and Type Syntax
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 The companion to [Markdown Mirror Syntax](./markdown-mirror-syntax.md), for the other direction:
 what to **paste** or **type** so a Logseq DB graph ends up with real headings, blocks, code blocks
@@ -161,7 +165,7 @@ block and pick the tag from the list.
 ### Tasks, priority, dates, properties
 
 None of these are syntax in DB graphs. Parsing of `TODO` markers and `[#A]` priorities is switched
-off ([`mldoc.cljc:338-349`](../../../../../deps/graph-parser/src/logseq/graph_parser/mldoc.cljc)), and
+off ([`mldoc.cljc:344-355`](../../../../../deps/graph-parser/src/logseq/graph_parser/mldoc.cljc)), and
 property lines are never saved as properties.
 
 | You paste | You get | Mark |
@@ -231,12 +235,12 @@ Markdown"), or paste with **Cmd/Ctrl+Shift+V** and fix it by hand.
 | Type | Result | Mark |
 |------|--------|------|
 | `# ` … `###### ` at the start of a block | Heading 1–6 when the block is saved; `#` removed ([`db_based/editor.cljs:47-56, 105-126`](../../../../../src/main/frontend/handler/db_based/editor.cljs)) | ✅ |
-| ```` ``` ```` in an empty block | It autopairs to six backticks and becomes a **code block** immediately ([`editor.cljs:3559-3564`](../../../../../src/main/frontend/handler/editor.cljs)) | ✅ |
+| ```` ``` ```` in an empty block | It autopairs to six backticks and becomes a **code block** immediately ([`editor.cljs:3592-3597`](../../../../../src/main/frontend/handler/editor.cljs)) | ✅ |
 | A block whose whole text is a ```` ```lang ```` fence | Code block with that language, on save | ✅ |
 | `$` | Autopairs to `$$`; a block that is only `$$…$$` becomes a **math block** on save | ✅ |
-| `>` as the only character in a block | **Quote block** immediately ([`editor.cljs:3566-3571`](../../../../../src/main/frontend/handler/editor.cljs)) | ✅ |
+| `>` as the only character in a block | **Quote block** immediately ([`editor.cljs:3599-3604`](../../../../../src/main/frontend/handler/editor.cljs)) | ✅ |
 | `> text` | Text starting with `> `; renders as a quote | ⚠️ |
-| `1. ` as the only text in a block | **Numbered list** block ([`editor.cljs:2265`](../../../../../src/main/frontend/handler/editor.cljs)) | ✅ |
+| `1. ` as the only text in a block | **Numbered list** block ([`editor.cljs:2298`](../../../../../src/main/frontend/handler/editor.cljs)) | ✅ |
 | `[[` | Page search; picks insert a link | ✅ |
 | `#` | Tag search. **Enter** adds the tag and removes the `#text`; **Cmd/Ctrl+Enter** keeps it inline. | ✅ |
 | `;;` | Add property | ✅ |

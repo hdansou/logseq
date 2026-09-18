@@ -271,7 +271,7 @@ Both are **datetime properties** supporting:
 
 #### Example: Get Scheduled/Deadline Tasks for Date Range
 
-**Location:** `src/main/frontend/db/async.cljs:228-257`
+**Location:** `src/main/frontend/db/async.cljs:230-259`
 
 ```clojure
 (defn <get-date-scheduled-or-deadlines

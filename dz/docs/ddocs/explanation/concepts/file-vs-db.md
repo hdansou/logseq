@@ -2,8 +2,8 @@
 title: 'File vs Database Graphs'
 description: 'Understanding the differences between file-based and database-backed graphs in Logseq'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 category: concepts
 relatedDocs:
@@ -18,6 +18,10 @@ relatedDocs:
 ---
 
 # File vs Database Graphs
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 > **Last revised:** 2026-09-11 (verified against `be800f1711`)
 
@@ -43,7 +47,7 @@ Both prefixes are defined in
 > "use `config/db-based-graph?` to avoid loading old file graphs"
 > ([`src/main/frontend/components/repo.cljs:321-323`](../../../../../src/main/frontend/components/repo.cljs)).
 > The CLI server also ignores `logseq_local_`-prefixed graph directories
-> (`ignored-graph-dir?`, [`src/main/logseq/cli/server.cljs:548-552`](../../../../../src/main/logseq/cli/server.cljs),
+> (`ignored-graph-dir?`, [`src/main/logseq/cli/server.cljs:345-349`](../../../../../src/main/logseq/cli/server.cljs),
 > applied at `:562` and `:570`).
 > File graphs therefore survive in this codebase mainly as an **import source** (`deps/graph-parser/`),
 > not as a graph type you can open next to a DB graph. Read everything below as
@@ -107,7 +111,7 @@ and so does the shared ignore list
 
 A DB graph is a single SQLite file. On desktop (and for the CLI's `db-worker-node`) graphs live
 under `~/logseq/graphs`
-(`default-graphs-dir`, [`deps/common/src/logseq/common/config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)):
+(`default-graphs-dir`, [`deps/common/src/logseq/common/config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs)):
 
 ```
 ~/logseq/graphs/my-graph/     # note: the on-disk dir name has NO logseq_db_ prefix
@@ -138,7 +142,7 @@ Some details of the desktop layout:
   ([`src/electron/electron/db.cljs:15-18`](../../../../../src/electron/electron/db.cljs)). The
   `get-db-backups-path` helper at `sqlite.cljs:35-38` builds a `backups/` path, but only tests call it.
 - **WAL.** WAL mode is set at
-  [`src/main/frontend/worker/db_core.cljs:588`](../../../../../src/main/frontend/worker/db_core.cljs).
+  [`src/main/frontend/worker/db_core.cljs:593`](../../../../../src/main/frontend/worker/db_core.cljs).
 - **Config files.** `config.edn`, `custom.css` and `custom.js` are **not files in the graph folder**. They are
   `:file/path` entities inside the database
   ([`deps/db/src/logseq/db/sqlite/create_graph.cljs:205-217`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)).
@@ -189,10 +193,10 @@ and the `:datetime` validator is plain `number?`
 A DB graph is not editable with external tools, but the desktop app can **write** a Markdown copy
 of it. The "Markdown Mirror" setting is described as "Write a derived Markdown copy of edited
 pages to the graph's mirror/markdown folder. Desktop only."
-([`src/resources/dicts/en.edn:1732`](../../../../../src/resources/dicts/en.edn)). Where the code enforces that:
+([`src/resources/dicts/en.edn:1733`](../../../../../src/resources/dicts/en.edn)). Where the code enforces that:
 
 - **Desktop only.** The toggle renders only under Electron
-  ([`src/main/frontend/components/settings.cljs:1158-1159`](../../../../../src/main/frontend/components/settings.cljs)),
+  ([`src/main/frontend/components/settings.cljs:1170-1171`](../../../../../src/main/frontend/components/settings.cljs)),
   and the worker writes only on a node or Electron runtime
   ([`src/main/frontend/worker/markdown_mirror.cljs:200-203`](../../../../../src/main/frontend/worker/markdown_mirror.cljs)).
   Browser workers throw on mirror writes
@@ -200,7 +204,7 @@ pages to the graph's mirror/markdown folder. Desktop only."
 - **Location.** Output goes to `<graph-dir>/mirror/markdown`
   ([`markdown_mirror.cljs:15-17`](../../../../../src/main/frontend/worker/markdown_mirror.cljs)).
 - **Off by default.** It is controlled by the `:feature/markdown-mirror?` config key and is on only when that key is `true`
-  ([`settings.cljs:798`](../../../../../src/main/frontend/components/settings.cljs)).
+  ([`settings.cljs:810`](../../../../../src/main/frontend/components/settings.cljs)).
 - **One-way.** The copy is derived output. `mirror/markdown` is on the shared ignore list
   ([`graph.cljs:74,84`](../../../../../deps/common/src/logseq/common/graph.cljs)), so editing those
   files does not change the graph.
@@ -213,11 +217,11 @@ Content that looks the same in both models often means something different:
 
 | Written as                 | File graph                     | DB graph |
 | -------------------------- | ------------------------------ | -------- |
-| **Block reference**        | `((uuid))`                     | `[[uuid]]`. "Copy block ref" ([`content.cljs:291`](../../../../../src/main/frontend/components/content.cljs)) builds a page-ref around the UUID ([`src/main/frontend/util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs)); `((uuid))` renders as literal text ([`block.cljs:1556-1557`](../../../../../src/main/frontend/components/block.cljs)) |
+| **Block reference**        | `((uuid))`                     | `[[uuid]]`. "Copy block ref" ([`content.cljs:291`](../../../../../src/main/frontend/components/content.cljs)) builds a page-ref around the UUID ([`src/main/frontend/util/ref.cljs:5-7`](../../../../../src/main/frontend/util/ref.cljs)); `((uuid))` renders as literal text ([`block.cljs:1573-1574`](../../../../../src/main/frontend/components/block.cljs)) |
 | **Task**                   | `TODO` / `LATER` / `NOW` marker | `#Task` with a closed-value status: backlog, todo, doing, in-review, done, canceled ([`property.cljs:313-318`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)) |
 | **Priority**               | Letter `A` / `B` / `C` (`:block/priority`, [`exporter.cljs:512-514`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)) | Closed values low, medium, high, urgent ([`property.cljs:334-337`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)) |
-| **Simple query**           | `{{query …}}`                  | Deprecated: renders a warning ([`block.cljs:1870-1871`](../../../../../src/main/frontend/components/block.cljs)); use `/Query` |
-| **Embed**                  | `{{embed …}}`                  | Deprecated: renders a warning ([`block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs)) |
+| **Simple query**           | `{{query …}}`                  | Deprecated: renders a warning ([`block.cljs:1887-1888`](../../../../../src/main/frontend/components/block.cljs)); use `/Query` |
+| **Embed**                  | `{{embed …}}`                  | Deprecated: renders a warning ([`block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs)) |
 | **Advanced query**         | `#+BEGIN_QUERY … #+END_QUERY`  | Deprecated: see [Query Syntax Differences](#query-syntax-differences) |
 | **Format**                 | Markdown or Org                | Markdown only: `get-preferred-format` always returns `:markdown` ([`src/main/frontend/state.cljs:555-557`](../../../../../src/main/frontend/state.cljs)) |
 
@@ -255,7 +259,7 @@ There are also 11 internal types, 19 in all
 | **Built-in classes**    | ❌        | ✅ 18 of them: Task, Card, Asset, Query… |
 
 Built-in classes are defined in
-[`deps/db/src/logseq/db/frontend/class.cljs:17-105`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)
+[`deps/db/src/logseq/db/frontend/class.cljs:16-104`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)
 (`:required-properties` appears on `:logseq.class/Asset` and `:logseq.class/Pdf-annotation`,
 `:74` and `:97`). `:logseq.property.class/extends` is at
 [`deps/db/src/logseq/db/frontend/property.cljs:164`](../../../../../deps/db/src/logseq/db/frontend/property.cljs).
@@ -314,7 +318,7 @@ A file graph stores the query as org-style markup inside the block's text:
 
 **A DB graph cannot run `#+BEGIN_QUERY`.** The renderer matches `["Custom" "query" …]` and shows a
 deprecation warning instead of a result set
-([`src/main/frontend/components/block.cljs:5057-5058`](../../../../../src/main/frontend/components/block.cljs)).
+([`src/main/frontend/components/block.cljs:5107-5108`](../../../../../src/main/frontend/components/block.cljs)).
 The string at [`src/resources/dicts/en.edn:120`](../../../../../src/resources/dicts/en.edn) reads
 "#+BEGIN_QUERY is deprecated. Use '/Advanced Query' command instead."
 
@@ -334,7 +338,7 @@ In a DB graph an advanced query is not markup at all. It is a **block tagged
 
 The query map you type into that code block is the datalog itself. Note there is **no `:title`
 key**. The parsed map is passed straight to `custom-query`
-([`block.cljs:4090-4103`](../../../../../src/main/frontend/components/block.cljs)), but only
+([`block.cljs:4139-4152`](../../../../../src/main/frontend/components/block.cljs)), but only
 built-in queries render `query-title`. User queries go to the untitled `[:div.bd …]` branch
 ([`src/main/frontend/components/query.cljs:166-177`](../../../../../src/main/frontend/components/query.cljs)).
 Put the heading in a `:view` or in the block above:
@@ -410,7 +414,7 @@ A few db-sync runtime behaviours have no file-graph counterpart at all:
   `non-auth-db-sync-config` at [`worker/state.cljs:39`](../../../../../src/main/frontend/worker/state.cljs)).
   Callers pass only `{:enabled? :ws-url :http-base}`
   ([`components/repo.cljs:631-634`](../../../../../src/main/frontend/components/repo.cljs),
-  [`components/settings.cljs:643-646`](../../../../../src/main/frontend/components/settings.cljs)).
+  [`components/settings.cljs:655-658`](../../../../../src/main/frontend/components/settings.cljs)).
   Auth state travels separately via `:thread-api/sync-app-state`
   ([`handler/db_based/sync.cljs:207-226`](../../../../../src/main/frontend/handler/db_based/sync.cljs)).
 - **Graph readiness gates.** Sync HTTP handlers return `409 "graph not ready"` during
@@ -479,7 +483,7 @@ For the steps, see [Import and Export](../../how-to/organization/import-export.m
 >   files are not "moved to `backup/`". The import writes a new graph (above), and a DB graph's
 >   `backup/` holds SQLite backups.
 > - **No CLI path.** The CLI does not import file graphs. `graph import --type` must be `edn`
->   or `sqlite` ([`cli/lib/cli_parse.ml:900`](../../../../../cli/lib/cli_parse.ml)).
+>   or `sqlite` ([`cli/lib/cli_parse.ml:896`](../../../../../cli/lib/cli_parse.ml)).
 
 > **Unverified:** whether block UUIDs from `id::` properties are preserved on import. This was
 > not traced at this revision, so no guarantee is made either way.
@@ -537,7 +541,7 @@ These file-graph attributes are **not part of the DB schema**:
 - **Stripped or ignored.** `:block/properties-text-values` also appears outside it, but only
   where it is stripped or tolerated: excluded-attribute sets in
   [`src/main/frontend/worker/handler/block.cljs:50-53`](../../../../../src/main/frontend/worker/handler/block.cljs)
-  and [`src/main/frontend/worker/plain_value.cljs:118-120`](../../../../../src/main/frontend/worker/plain_value.cljs),
+  and [`src/main/frontend/worker/plain_value.cljs:127-129`](../../../../../src/main/frontend/worker/plain_value.cljs),
   plus template code that reads it only when present (`map?` / `contains?` guards in
   [`deps/outliner/src/logseq/outliner/template.cljs:91,160`](../../../../../deps/outliner/src/logseq/outliner/template.cljs)).
 - **Nowhere.** `:block/journal?` appears **nowhere in the source**. A doc or query that uses it
@@ -577,7 +581,7 @@ The DB schema version is **65.33**
 > (`create-db-ident-from-name`,
 > [`deps/db/src/logseq/db/frontend/db_ident.cljc:66-90`](../../../../../deps/db/src/logseq/db/frontend/db_ident.cljc);
 > called from [`property.cljs:854-859`](../../../../../deps/db/src/logseq/db/frontend/property.cljs)
-> and [`class.cljs:178-186`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
+> and [`class.cljs:195-203`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
 > Only `plugin.class.*` namespaces are exempt from the suffix (`db_ident.cljc:82`).
 > The `LOGSEQ_STABLE_IDENTS` environment variable also disables it, for tests.
 > Never guess a user ident. Resolve it by title.

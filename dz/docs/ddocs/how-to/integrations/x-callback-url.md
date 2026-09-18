@@ -2,8 +2,8 @@
 title: 'X-Callback-URL'
 description: 'How to capture content to Logseq from other apps using logseq://x-callback-url links'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop]
@@ -18,6 +18,10 @@ relatedDocs:
 
 # X-Callback-URL
 
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
+
 > **Last revised:** 2026-09-11
 
 > How to send content to Logseq from other apps, scripts and automation tools.
@@ -29,13 +33,13 @@ Logseq desktop app.
 
 The packaged app registers itself as the handler for the `logseq` scheme
 (`resources/electron-builder.yml:39-42`; `setAsDefaultProtocolClient`,
-`src/electron/electron/core.cljs:66-77`). On Linux the package also declares the MIME type
+`src/electron/electron/core.cljs:67-78`). On Linux the package also declares the MIME type
 `x-scheme-handler/logseq` (`electron-builder.yml:88-89`). The URL reaches the app in one of three ways:
 
-- **macOS:** through the `open-url` event (`core.cljs:282-288`).
-- **Windows and Linux, app not running:** as a command-line argument on first launch (`core.cljs:290-296`,
+- **macOS:** through the `open-url` event (`core.cljs:285-291`).
+- **Windows and Linux, app not running:** as a command-line argument on first launch (`core.cljs:293-299`,
   `:406-407`).
-- **Windows and Linux, app already running:** through the `second-instance` event (`core.cljs:483-489`).
+- **Windows and Linux, app already running:** through the `second-instance` event (`core.cljs:492-498`).
 
 > **Note:** X-callback-url works on **desktop (Electron) only**. The mobile router
 > (`src/main/mobile/deeplink.cljs:77-134`) has no `x-callback-url` branch, so these URLs do nothing on iOS or
@@ -91,7 +95,7 @@ logseq://x-callback-url/<action>?[parameters]
 
 | Part             | Purpose                                                                         |
 | ---------------- | ------------------------------------------------------------------------------- |
-| `logseq://`      | Opens Logseq. Other schemes are ignored (`core.cljs:63-64`)                     |
+| `logseq://`      | Opens Logseq. Other schemes are ignored (`core.cljs:64-65`)                     |
 | `x-callback-url` | The URL host. It selects the x-callback-url router (`src/electron/electron/url.cljs:101-102`) |
 | `<action>`       | The URL path. It is compared exactly, including case (`url.cljs:65`, `:72`, `:83`) |
 | `?parameters`    | Action parameters, read with `URL.searchParams` (`url.cljs:12-22`)             |
@@ -389,7 +393,7 @@ echo "Saved to Logseq"
 - Make sure the desktop app is installed. Development builds and unpackaged apps may not be registered for
   the scheme.
 - Check that the URL starts with `logseq://`.
-- On macOS, the `open-url` handler only acts when the main window exists (`core.cljs:284-288`). If the app
+- On macOS, the `open-url` handler only acts when the main window exists (`core.cljs:287-291`). If the app
   was not running, try again once it has opened.
 
 > **Unverified:** whether a link that launches Logseq on macOS is lost before the window exists. That

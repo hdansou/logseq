@@ -3,8 +3,8 @@ title: 'Stop Task Time Tracking in DB Graphs'
 status: 🟢
 since-version: 'v65.0'
 quadrant: 'How-To'
-last-verified: '2026-09-11'
-verified-against: 'be800f1711'
+last-verified: '2026-09-18'
+verified-against: '5824434a74'
 review-status: audited
 graph-type: [db]
 platform: 'All'
@@ -13,6 +13,10 @@ related-docs:
   - 'reference/data/properties-reference.md'
   - 'explanation/concepts/file-vs-db.md'
 ---
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This guide shows how to stop Logseq from recording new task status history in a DB graph, which also stops new status changes from feeding the task time shown next to a task.
 
@@ -38,7 +42,7 @@ This guide assumes:
 After you uncheck `Enable property history` on `Status`:
 
 1. New status changes are no longer recorded. The history command skips any property whose `Enable property history` value is not `true` ([`src/main/frontend/worker/commands.cljs:259`](../../../../../src/main/frontend/worker/commands.cljs)).
-2. Existing history is kept. Tasks that already have history still show a time next to the title, and you can click it to open `Status history` ([`src/main/frontend/components/block.cljs:3329-3344`](../../../../../src/main/frontend/components/block.cljs)).
+2. Existing history is kept. Tasks that already have history still show a time next to the title, and you can click it to open `Status history` ([`src/main/frontend/components/block.cljs:3378-3393`](../../../../../src/main/frontend/components/block.cljs)).
 3. A task whose last recorded change was to `Doing` keeps gaining time. The calculation adds the time from that `Doing` entry until now ([`src/main/frontend/worker/handler/query.cljs:79-82`](../../../../../src/main/frontend/worker/handler/query.cljs)), and later changes are no longer recorded to stop it. Move those tasks out of `Doing` before you turn history off.
 
 ## Notes

@@ -5,8 +5,8 @@ version: 'PDF extension since 2021-07 (82330fb3f4, first tag 0.3.2); storage as 
 quadrant: 'Reference'
 graphType: [db]
 platform: 'Desktop (Electron) and web app shell; not mounted by the native mobile app shell'
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 related-docs:
   - '../../how-to/multimedia/asset-management.md'
@@ -17,6 +17,10 @@ related-docs:
 > **Last revised:** 2026-09-11
 
 # PDF Annotations Reference
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 ## Overview
 
@@ -39,7 +43,7 @@ Logseq includes a PDF viewer built on PDF.js (`pdfjsViewer.PDFViewer`, `src/main
 
 ### Open a PDF
 
-In a DB graph a PDF is an **asset block**: a block tagged `#Asset` whose file is stored as `assets/<block-uuid>.pdf` (`src/main/frontend/handler/editor.cljs:1760-1802`, file name at `:1792`).
+In a DB graph a PDF is an **asset block**: a block tagged `#Asset` whose file is stored as `assets/<block-uuid>.pdf` (`src/main/frontend/handler/editor.cljs:1793-1835`, file name at `:1825`).
 
 **Method 1: Drag & Drop or Paste**
 
@@ -54,7 +58,7 @@ In a DB graph a PDF is an **asset block**: a block tagged `#Asset` whose file is
 2. Select the PDF in the file dialog
 3. Click the PDF's title to open it
 
-Assets larger than 100 MB are rejected (`src/main/frontend/handler/editor.cljs:1785-1789`). Uploading a file whose checksum matches an existing asset shows "Asset exists already" instead of creating a duplicate (`editor.cljs:1770-1778`).
+Assets larger than 100 MB are rejected (`src/main/frontend/handler/editor.cljs:1818-1822`). Uploading a file whose checksum matches an existing asset shows "Asset exists already" instead of creating a duplicate (`editor.cljs:1803-1811`).
 
 **Method 3: External Link**
 
@@ -62,7 +66,7 @@ Assets larger than 100 MB are rejected (`src/main/frontend/handler/editor.cljs:1
 ![Research Paper](https://arxiv.org/pdf/2301.12345.pdf)
 ```
 
-The leading `!` is required: `show-link?` only routes a link to the media renderer when the text starts with `!` or is a bare http(s) link to an image/audio/video format (`src/main/frontend/components/block.cljs:1417-1427`, `src/main/frontend/config.cljs:186`). `pdf` is in `doc-formats` (`config.cljs:174-175`), so the link renders as a PDF link that opens the viewer (`block.cljs:592-600`).
+The leading `!` is required: `show-link?` only routes a link to the media renderer when the text starts with `!` or is a bare http(s) link to an image/audio/video format (`src/main/frontend/components/block.cljs:1434-1444`, `src/main/frontend/config.cljs:186`). `pdf` is in `doc-formats` (`config.cljs:174-175`), so the link renders as a PDF link that opens the viewer (`block.cljs:603-611`).
 
 A PDF opened from a link has no asset block. Picking a highlight colour, or clicking **Annotations page**, opens the **Create asset** dialog with the warning "Creating a local asset from an external one. PDF annotations require a local asset to work properly." (`core.cljs:184-186`, `src/main/frontend/extensions/pdf/toolbar.cljs:583-586`, `src/main/frontend/components/assets.cljs:280-300`, `en.edn:86`).
 
@@ -106,7 +110,7 @@ In toolbar order (`src/main/frontend/extensions/pdf/toolbar.cljs:527-629`):
 | Page input, ↑ / ↓                   | Type a page number and press Enter; previous / next page                                  | Alt+P / Alt+N |
 | Close                               | Close the viewer                                                                          | Alt+X    |
 
-Bindings are registered as the `:pdf/*` shortcut namespace: `:pdf/previous-page` `alt+p`, `:pdf/next-page` `alt+n`, `:pdf/close` `alt+x`, `:pdf/find` `alt+f` (`src/main/frontend/modules/shortcut/config.cljs:54-64`). The handler group is enabled only while not editing a block (`config.cljs:599-601`) and only while the viewer is mounted (`core.cljs:1058-1061`). They are listed under **Others** in the shortcut settings (`config.cljs:882-887`, label `en.edn:1792`).
+Bindings are registered as the `:pdf/*` shortcut namespace: `:pdf/previous-page` `alt+p`, `:pdf/next-page` `alt+n`, `:pdf/close` `alt+x`, `:pdf/find` `alt+f` (`src/main/frontend/modules/shortcut/config.cljs:54-64`). The handler group is enabled only while not editing a block (`config.cljs:599-601`) and only while the viewer is mounted (`core.cljs:1058-1061`). They are listed under **Others** in the shortcut settings (`config.cljs:882-887`, label `en.edn:1793`).
 
 Tooltip labels are from `src/resources/dicts/en.edn:1185-1216`.
 
@@ -133,7 +137,7 @@ Tooltip labels are from `src/resources/dicts/en.edn:1185-1216`.
   - `:block/tags` `#{:logseq.class/Pdf-annotation}`
   - `:logseq.property/ls-type` `:annotation`
   - `:logseq.property.pdf/hl-color` (closed value), `:logseq.property/asset` (the PDF asset), `:logseq.property.pdf/hl-page`, `:logseq.property.pdf/hl-value` (the full highlight map)
-- In the outline the block shows a `P<page>` prefix (`block.cljs:2462-2466`) and a `data-hl-color` attribute used to colour it (`block.cljs:3450-3453`)
+- In the outline the block shows a `P<page>` prefix (`block.cljs:2491-2495`) and a `data-hl-color` attribute used to colour it (`block.cljs:3499-3502`)
 
 ### Highlight Colours
 
@@ -163,7 +167,7 @@ The colours carry no built-in meaning. The initial last-used colour is yellow (`
 
 **From the Graph**:
 
-- Click the `P<page>` prefix of an annotation block → the PDF opens and scrolls to the highlight (`block.cljs:2446-2457`, `assets.cljs:234-251`). The prefix is rendered inside `text-block-title` (`block.cljs:2414`, `block.cljs:2446-2469`), so it also appears where the block is shown through a `[[<uuid>]]` ref.
+- Click the `P<page>` prefix of an annotation block → the PDF opens and scrolls to the highlight (`block.cljs:2475-2486`, `assets.cljs:234-251`). The prefix is rendered inside `text-block-title` (`block.cljs:2443`, `block.cljs:2475-2498`), so it also appears where the block is shown through a `[[<uuid>]]` ref.
 
 ### Update Highlight Colour
 
@@ -200,10 +204,10 @@ The colours carry no built-in meaning. The initial last-used colour is yellow (`
 **Result**:
 
 - The region is drawn from the page canvas at `devicePixelRatio` into a PNG (`assets.cljs:149-179`) and saved through the normal asset pipeline as a file named `pdf area highlight.png` (`assets.cljs:139-142`)
-- That creates a separate **Asset** block whose file is `assets/<image-asset-uuid>.png` (`editor.cljs:1792`; read back via `src/main/frontend/handler/assets.cljs:52-57`)
+- That creates a separate **Asset** block whose file is `assets/<image-asset-uuid>.png` (`editor.cljs:1825`; read back via `src/main/frontend/handler/assets.cljs:52-57`)
 - The annotation block gets `:logseq.property.pdf/hl-type :area` and `:logseq.property.pdf/hl-image` pointing to that asset (`assets.cljs:101-103`). Its title is the current localised date rather than text, and it is collapsed (`assets.cljs:86-94`)
 - The image asset block is moved under the annotation block (`assets.cljs:112-120`)
-- The annotation block renders the image with **Asset ref block**, **Copy image** and **Maximize image** buttons (`assets.cljs:291-334`, `block.cljs:2468-2469`)
+- The annotation block renders the image with **Asset ref block**, **Copy image** and **Maximize image** buttons (`assets.cljs:291-334`, `block.cljs:2497-2498`)
 
 Existing area highlights can be resized by dragging their edges; the image is re-captured (`core.cljs:313-390`). As with colour changes, only `hl-color` is written back (`core.cljs:306`, `assets.cljs:181-189`), so the new position is not saved to `hl-value`.
 
@@ -342,11 +346,11 @@ File graphs cannot be opened (`src/main/frontend/components/repo.cljs:321-323`).
 
 When a file graph is **imported**, its PDF annotations are converted:
 
-- `assets/<pdf-name>.edn` supplies the highlights and `pages/hls__<pdf-name>.md` supplies block text and child blocks (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1649-1676`)
-- Each highlight becomes a `Pdf-annotation` block under the PDF asset, keeping its id, colour, page and full map in `hl-value` (`exporter.cljs:1540-1576`). Only block text is imported from the `hls__` page, not tags or properties (`exporter.cljs:1588`)
-- Images in `assets/<pdf-name>/` become asset blocks titled "pdf area highlight" (`exporter.cljs:1619-1639`)
+- `assets/<pdf-name>.edn` supplies the highlights and `pages/hls__<pdf-name>.md` supplies block text and child blocks (`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:1691-1718`)
+- Each highlight becomes a `Pdf-annotation` block under the PDF asset, keeping its id, colour, page and full map in `hl-value` (`exporter.cljs:1561-1597`). Only block text is imported from the `hls__` page, not tags or properties (`exporter.cljs:1609`)
+- Images in `assets/<pdf-name>/` become asset blocks titled "pdf area highlight" (`exporter.cljs:1640-1660`)
 
-The importer reads these keys of each highlight (`exporter.cljs:1540-1575`):
+The importer reads these keys of each highlight (`exporter.cljs:1561-1596`):
 
 ```clojure
 {:highlights
@@ -359,7 +363,7 @@ The importer reads these keys of each highlight (`exporter.cljs:1540-1575`):
 
 ### Database Graphs (Current)
 
-**Asset Block** (`src/main/frontend/handler/editor.cljs:1794-1802`):
+**Asset Block** (`src/main/frontend/handler/editor.cljs:1827-1835`):
 
 ```clojure
 {:block/uuid #uuid "pdf-asset-uuid"
@@ -374,7 +378,7 @@ The importer reads these keys of each highlight (`exporter.cljs:1540-1575`):
 ;; and is opened as "../assets/<uuid>.pdf" (assets.cljs:239)
 ```
 
-`Asset` requires `type`, `size` and `checksum` (`deps/db/src/logseq/db/frontend/class.cljs:68-74`). Property schemas: `type` (`property.cljs:554-558`), `external-url` (`:559-563`), `external-file-name` (`:565-569`), `size` (`:570-574`), `checksum` (`:585-588`), `last-visit-page` (`:589-593`).
+`Asset` requires `type`, `size` and `checksum` (`deps/db/src/logseq/db/frontend/class.cljs:67-73`). Property schemas: `type` (`property.cljs:554-558`), `external-url` (`:559-563`), `external-file-name` (`:565-569`), `size` (`:570-574`), `checksum` (`:585-588`), `last-visit-page` (`:589-593`).
 
 **Annotation Block** (`src/main/frontend/extensions/pdf/assets.cljs:92-110`):
 
@@ -408,7 +412,7 @@ Property schemas (`deps/db/src/logseq/db/frontend/property.cljs`):
 
 All are `:hide? true`, so they do not appear in the block's property list.
 
-**Class Definition**: [`class.cljs:91-98`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L91-L98)
+**Class Definition**: [`class.cljs:90-97`](../../../../../deps/db/src/logseq/db/frontend/class.cljs#L90-L97)
 
 ```clojure
 :logseq.class/Pdf-annotation
@@ -425,7 +429,7 @@ All are `:hide? true`, so they do not appear in the block's property list.
 
 ## Querying Annotations
 
-`{{query …}}` does not run in a DB graph; it renders a deprecation warning (`src/main/frontend/components/block.cljs:1870-1871`). Use the advanced queries below: type `/Advanced Query`, which creates a block tagged `#Query` with a Clojure code property (`src/main/frontend/commands.cljs:125-131`, `commands.cljs:326`), and paste the map. A query that reads as an EDN map runs as an advanced query (`block.cljs:4090-4103`).
+`{{query …}}` does not run in a DB graph; it renders a deprecation warning (`src/main/frontend/components/block.cljs:1887-1888`). Use the advanced queries below: type `/Advanced Query`, which creates a block tagged `#Query` with a Clojure code property (`src/main/frontend/commands.cljs:125-131`, `commands.cljs:326`), and paste the map. A query that reads as an EDN map runs as an advanced query (`block.cljs:4139-4152`).
 
 **All PDF Annotations**:
 
@@ -436,7 +440,7 @@ All are `:hide? true`, so they do not appear in the block's property list.
          [?t :db/ident :logseq.class/Pdf-annotation]]}
 ```
 
-**Annotations from a Specific PDF** (asset title = file name without extension, `editor.cljs:1765-1769`):
+**Annotations from a Specific PDF** (asset title = file name without extension, `editor.cljs:1798-1802`):
 
 ```clojure
 {:query [:find (pull ?b [*])
@@ -510,7 +514,7 @@ The window's size is remembered (`windows.cljs:80-85`, `windows.cljs:105-109`). 
 - According to the paper [[6650c1e2-3b7a-4c2e-9f5a-1d2e3f4a5b6c]], the results show...
 ```
 
-`((uuid))` is file-graph syntax and renders as literal text in a DB graph (`block.cljs:1556-1557`).
+`((uuid))` is file-graph syntax and renders as literal text in a DB graph (`block.cljs:1573-1574`).
 
 ### Goto Block Reference
 
@@ -532,7 +536,7 @@ Plugins can add items to the text-highlight context menu with `registerHighlight
 
 ### ✅ Desktop (Electron)
 
-The viewer is mounted in the app container (`theme.cljs:159`), asset links resolve the file URL with `assets-handler/<make-asset-url` (`block.cljs:558-565`), and the external window is allowed by Electron's window-open handler (`window.cljs:186-201`).
+The viewer is mounted in the app container (`theme.cljs:159`), asset links resolve the file URL with `assets-handler/<make-asset-url` (`block.cljs:569-576`), and the external window is allowed by Electron's window-open handler (`window.cljs:186-201`).
 
 **Features**:
 
@@ -544,7 +548,7 @@ The viewer is mounted in the app container (`theme.cljs:159`), asset links resol
 
 ### ⚠️ Web Browser
 
-The web build uses the same container, so the viewer is mounted, and asset links use the same URL resolution (`block.cljs:558-565`). If opening fails, Logseq falls back to a `showOpenFilePicker` file picker and writes the chosen PDF into the graph (`block.cljs:530-544`).
+The web build uses the same container, so the viewer is mounted, and asset links use the same URL resolution (`block.cljs:569-576`). If opening fails, Logseq falls back to a `showOpenFilePicker` file picker and writes the chosen PDF into the graph (`block.cljs:541-555`).
 
 > **Unverified:** Highlight reliability, pop-up blocking of the external window and CORS behaviour for external PDFs in browsers were not checked.
 
@@ -556,7 +560,7 @@ The web build uses the same container, so the viewer is mounted, and asset links
 
 - The only mount of `pdf/default-embed-playground` is `src/main/frontend/components/theme.cljs:159`, reached through `theme/container` in `src/main/frontend/components/container.cljs:502`. The portal target `#app-single-container` is also rendered there (`container.cljs:575`, `core.cljs:1113`)
 - The mobile app root `src/main/mobile/components/app.cljs:1-34` requires neither `frontend.components.container` nor any `frontend.extensions.pdf` namespace, and `git grep` finds no reference to them anywhere under `src/main/mobile/`
-- Shared block rendering still renders a PDF asset as a PDF link and sets `:pdf/current` when clicked (`block.cljs:592-600`, `block.cljs:520-528`), but nothing on mobile renders that state
+- Shared block rendering still renders a PDF asset as a PDF link and sets `:pdf/current` when clicked (`block.cljs:603-611`, `block.cljs:531-539`), but nothing on mobile renders that state
 
 > **Unverified:** What a tap on a PDF asset does on a device was not reproduced.
 
@@ -622,7 +626,7 @@ Find uses PDF.js's find controller over the PDF's text (`core.cljs:809-811`). A 
 
 ### Organization
 
-**All PDFs in one place**: The built-in `Asset` class uses a gallery view (`deps/db/src/logseq/db/frontend/class.cljs:72`). Open the **Asset** tag page to browse every asset.
+**All PDFs in one place**: The built-in `Asset` class uses a gallery view (`deps/db/src/logseq/db/frontend/class.cljs:71`). Open the **Asset** tag page to browse every asset.
 
 **Tag PDFs by Topic**: Add your own tags to the PDF's asset block, for example `#research`, then query or browse by tag.
 
@@ -686,7 +690,7 @@ Find uses PDF.js's find controller over the PDF's text (`core.cljs:809-811`). A 
 - `ensure-ref-block!` (assets.cljs:112) — Calls `db-based-ensure-ref-block!`, then moves an area image asset under the annotation block
 - `db-based-load-hls-data$` (assets.cljs:122) — Load highlights from annotation blocks
 - `open-block-ref!` (assets.cljs:253) — Open the PDF at a highlight from its block
-- `open-pdf-file` (block.cljs:513) — Open a PDF from a rendered link or asset
+- `open-pdf-file` (block.cljs:524) — Open a PDF from a rendered link or asset
 
 ---
 

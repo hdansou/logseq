@@ -2,8 +2,8 @@
 title: 'Plugin Security Architecture'
 status: 🟢 Stable
 version: '@logseq/libs v0.3.4'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 verifiedScope: 'Full audit 2026-09-09 (7800cf72b0). The 2026-09-10 date covers only the common.ts citation in the logseq.Git defect note (4a37d8997b).'
 reviewStatus: audited
 quadrant: 'Explanation'
@@ -15,6 +15,10 @@ tags: ['plugin', 'security', 'iframe', 'permissions', 'rpc']
 ---
 
 # Plugin Security Architecture
+
+> **Line references relocated 2026-09-18:** every source line reference on this page was
+> moved from `be800f1711` to `5824434a74` by locating the same source text in the current
+> file. No claim on this page was re-read against the new revision.
 
 This document explains what Logseq's plugin runtime actually does — where plugin code executes, how it reaches the host, and what does and does not constrain it. Understanding this architecture is essential for plugin developers and security-conscious users.
 
@@ -51,7 +55,7 @@ This document explains what Logseq's plugin runtime actually does — where plug
 
 ### What the model actually is
 
-The only security posture Logseq states in code is the install-time warning shown on the Plugins dashboard (`src/main/frontend/components/plugins.cljs:220-225`, rendered at `:1639` only on Electron; string at `src/resources/dicts/en.edn:1294`). It says three things, all of which the code bears out:
+The only security posture Logseq states in code is the install-time warning shown on the Plugins dashboard (`src/main/frontend/components/plugins.cljs:220-225`, rendered at `:1640` only on Electron; string at `src/resources/dicts/en.edn:1294`). It says three things, all of which the code bears out:
 
 1. Plugins can read and write your graph and your local files.
 2. Plugins can issue network requests.
@@ -129,7 +133,7 @@ Plugins declared with `mode: 'shadow'` skip the iframe entirely: `_setupShadowSa
 
 ### Origins, and why `effect` matters
 
-The plugin frame's `src` is an `lsp://` URL. The scheme is registered as privileged in `src/electron/electron/core.cljs:465-476`:
+The plugin frame's `src` is an `lsp://` URL. The scheme is registered as privileged in `src/electron/electron/core.cljs:474-485`:
 
 ```clojure
 (let [privileges {:standard true :secure true :bypassCSP true
@@ -225,7 +229,7 @@ The name is snake-cased first, and an `ns_` prefix matching a key of `window.log
 
 ### Network requests
 
-`logseq.Net` / `logseq.Experiments.request` route through `exper_request` (`src/main/logseq/api.cljs:172-180`), which forwards to the Electron main process over IPC (`:httpRequest`, handled at `src/electron/electron/handler.cljs:453`). Requests therefore originate outside the renderer: **no CORS, no CSP, no origin header the renderer would have imposed.** A plugin's HTTP traffic is indistinguishable from the app's own.
+`logseq.Net` / `logseq.Experiments.request` route through `exper_request` (`src/main/logseq/api.cljs:172-180`), which forwards to the Electron main process over IPC (`:httpRequest`, handled at `src/electron/electron/handler.cljs:475`). Requests therefore originate outside the renderer: **no CORS, no CSP, no origin header the renderer would have imposed.** A plugin's HTTP traffic is indistinguishable from the app's own.
 
 ---
 
@@ -375,7 +379,7 @@ logseq.provideUI({
 
 **5. No CSP anywhere in the window**
 
-**Risk:** The `lsp://` scheme is registered with `:bypassCSP true` (`src/electron/electron/core.cljs:465-476`), and `disableXFrameOptions` strips both `X-Frame-Options` and `Content-Security-Policy` from every response (`src/electron/electron/utils.js:9-29`, installed at `core.cljs:401`). The source comment there asks the question itself: *"Should we do this? Does this make evil sites doing danagerous things?"*
+**Risk:** The `lsp://` scheme is registered with `:bypassCSP true` (`src/electron/electron/core.cljs:474-485`), and `disableXFrameOptions` strips both `X-Frame-Options` and `Content-Security-Policy` from every response (`src/electron/electron/utils.js:9-29`, installed at `core.cljs:401`). The source comment there asks the question itself: *"Should we do this? Does this make evil sites doing danagerous things?"*
 
 **What actually stands in the way:** nothing. Do not describe Logseq plugin frames as CSP-constrained.
 
