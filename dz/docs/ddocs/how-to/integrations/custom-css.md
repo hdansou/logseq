@@ -2,8 +2,8 @@
 title: 'Custom CSS'
 description: "How to customize Logseq's appearance with custom CSS"
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop, web, mobile]
@@ -17,7 +17,10 @@ relatedDocs:
 
 # Custom CSS
 
-> **Last revised:** 2026-09-11
+> **Last revised:** 2026-09-18 (inline-tag rendering re-checked after #13258;
+> every source line reference on this page relocated to `5824434a74`. Claims
+> other than tag rendering carry over from the 2026-09-11 audit and were not
+> re-read.)
 
 > How to customize Logseq's appearance with your own CSS styles.
 
@@ -27,7 +30,7 @@ This page covers DB graphs only. Current Logseq does not open file graphs: the g
 
 In a DB graph, `custom.css` is not a file on disk. It is a file record stored inside the graph database with the path `logseq/custom.css`. Logseq creates it, empty, when it creates the graph ([`deps/db/src/logseq/db/sqlite/create_graph.cljs:211-215`](../../../../../deps/db/src/logseq/db/sqlite/create_graph.cljs)). Editing a `custom.css` file in a folder on disk has no effect on a DB graph.
 
-When you import a file graph, the importer copies that graph's `logseq/custom.css` into the new DB graph ([`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:3330-3335`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)).
+When you import a file graph, the importer copies that graph's `logseq/custom.css` into the new DB graph ([`deps/graph-parser/src/logseq/graph_parser/exporter.cljs:3387-3392`](../../../../../deps/graph-parser/src/logseq/graph_parser/exporter.cljs)).
 
 ## Open custom.css for Editing
 
@@ -38,14 +41,14 @@ When you import a file graph, the importer copies that graph's `logseq/custom.cs
 3. Find **Custom theme** and click **Edit custom.css**.
 4. Logseq closes Settings and opens `logseq/custom.css` in its built-in code editor.
 
-The button is part of the General tab and appears only when a graph is open ([`src/main/frontend/components/settings.cljs:217-223`](../../../../../src/main/frontend/components/settings.cljs), [`:871-885`](../../../../../src/main/frontend/components/settings.cljs)). Labels come from [`src/resources/dicts/en.edn:1692`](../../../../../src/resources/dicts/en.edn), [`:1752`](../../../../../src/resources/dicts/en.edn) and [`:1754`](../../../../../src/resources/dicts/en.edn).
+The button is part of the General tab and appears only when a graph is open ([`src/main/frontend/components/settings.cljs:217-223`](../../../../../src/main/frontend/components/settings.cljs), [`:883-897`](../../../../../src/main/frontend/components/settings.cljs)). Labels come from [`src/resources/dicts/en.edn:1693`](../../../../../src/resources/dicts/en.edn), [`:1753`](../../../../../src/resources/dicts/en.edn) and [`:1755`](../../../../../src/resources/dicts/en.edn).
 
 ### Option 2: Search
 
 1. Open search and type `custom.css`.
 2. Choose `logseq/custom.css` in the **Files** group.
 
-Search lists the graph's stored files whenever you type a query ([`src/main/frontend/components/cmdk/core.cljs:439-451`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:539`](../../../../../src/main/frontend/components/cmdk/core.cljs); [`src/main/frontend/search.cljs:29-43`](../../../../../src/main/frontend/search.cljs)). Choosing a file opens the same file editor as Settings ([`src/main/frontend/components/cmdk/core.cljs:644-647`](../../../../../src/main/frontend/components/cmdk/core.cljs)). Search does not offer to create a page named `custom.css` ([`:101`](../../../../../src/main/frontend/components/cmdk/core.cljs)).
+Search lists the graph's stored files whenever you type a query ([`src/main/frontend/components/cmdk/core.cljs:444-456`](../../../../../src/main/frontend/components/cmdk/core.cljs), [`:544`](../../../../../src/main/frontend/components/cmdk/core.cljs); [`src/main/frontend/search.cljs:29-43`](../../../../../src/main/frontend/search.cljs)). Choosing a file opens the same file editor as Settings ([`src/main/frontend/components/cmdk/core.cljs:656-659`](../../../../../src/main/frontend/components/cmdk/core.cljs)). Search does not offer to create a page named `custom.css` ([`:101`](../../../../../src/main/frontend/components/cmdk/core.cljs)).
 
 ### Saving
 
@@ -53,13 +56,13 @@ Your changes are saved into the graph database, and Logseq applies the styleshee
 
 ### When custom.css is applied
 
-Logseq injects the stylesheet as the last `<link>` in the page head ([`src/main/frontend/util.cljc:926-945`](../../../../../src/main/frontend/util.cljc)). This happens when a graph is restored at startup and again when the current graph changes ([`src/main/frontend/handler.cljs:62`](../../../../../src/main/frontend/handler.cljs), [`src/main/frontend/components/theme.cljs:18-23`](../../../../../src/main/frontend/components/theme.cljs)). The mobile app runs the same startup ([`src/main/mobile/core.cljs:99`](../../../../../src/main/mobile/core.cljs)).
+Logseq injects the stylesheet as the last `<link>` in the page head ([`src/main/frontend/util.cljc:927-946`](../../../../../src/main/frontend/util.cljc)). This happens when a graph is restored at startup and again when the current graph changes ([`src/main/frontend/handler.cljs:62`](../../../../../src/main/frontend/handler.cljs), [`src/main/frontend/components/theme.cljs:18-23`](../../../../../src/main/frontend/components/theme.cljs)). The mobile app runs the same startup ([`src/main/mobile/core.cljs:99`](../../../../../src/main/mobile/core.cljs)).
 
 > **Unverified:** whether the mobile app shows the **Edit custom.css** button. The button is in the desktop and web Settings component, and no mobile component references it.
 
 ### Loading CSS from config.edn instead
 
-If `:custom-css-url` is set in the graph's `config.edn`, Logseq loads that and ignores `logseq/custom.css` ([`src/main/frontend/handler/ui.cljs:112-119`](../../../../../src/main/frontend/handler/ui.cljs), [`src/main/frontend/state.cljs:532-534`](../../../../../src/main/frontend/state.cljs)). A value starting with `http` is used as the stylesheet URL. Any other value is treated as CSS text, which is why the template's example is an `@import` rule ([`src/main/frontend/util.cljc:932-934`](../../../../../src/main/frontend/util.cljc), [`deps/common/resources/templates/config.edn:50-53`](../../../../../deps/common/resources/templates/config.edn)):
+If `:custom-css-url` is set in the graph's `config.edn`, Logseq loads that and ignores `logseq/custom.css` ([`src/main/frontend/handler/ui.cljs:112-119`](../../../../../src/main/frontend/handler/ui.cljs), [`src/main/frontend/state.cljs:532-534`](../../../../../src/main/frontend/state.cljs)). A value starting with `http` is used as the stylesheet URL. Any other value is treated as CSS text, which is why the template's example is an `@import` rule ([`src/main/frontend/util.cljc:933-935`](../../../../../src/main/frontend/util.cljc), [`deps/common/resources/templates/config.edn:50-53`](../../../../../deps/common/resources/templates/config.edn)):
 
 ```clojure
 :custom-css-url "@import url('https://cdn.jsdelivr.net/gh/dracula/logseq@master/custom.css');"
@@ -67,7 +70,7 @@ If `:custom-css-url` is set in the graph's `config.edn`, Logseq loads that and i
 
 ### Local images in custom.css
 
-Before injecting the CSS, Logseq replaces relative `../assets/...` URLs with blob URLs for the graph's local assets, so `url('../assets/background.png')` works ([`src/main/frontend/handler/assets.cljs:134-146`](../../../../../src/main/frontend/handler/assets.cljs)).
+Before injecting the CSS, Logseq replaces relative `../assets/...` URLs with blob URLs for the graph's local assets, so `url('../assets/background.png')` works ([`src/main/frontend/handler/assets.cljs:165-177`](../../../../../src/main/frontend/handler/assets.cljs)).
 
 ### Reading or writing custom.css from a plugin
 
@@ -89,7 +92,7 @@ Specificity also matters:
 - With any other accent, the variables are set on `html[data-color=<accent>] body, .dark-theme, .light-theme` ([`src/main/frontend/shui/colors.css:57-58`](../../../../../src/main/frontend/shui/colors.css)).
 - Logseq sets `data-theme` on `<html>`. It also gives `<body>` the class `dark-theme` in dark mode, or `light-theme` in light mode ([`src/main/frontend/components/theme.cljs:52-56`](../../../../../src/main/frontend/components/theme.cljs)).
 
-The color recipes below therefore set `--lx-*` variables on `html[data-theme='…'] body.…-theme`, which is more specific than both of the rules above. The selectors come from the stylesheets at `be800f1711`. They have not been tested in a running app, so confirm them in DevTools.
+The color recipes below therefore set `--lx-*` variables on `html[data-theme='…'] body.…-theme`, which is more specific than both of the rules above. The selectors come from the stylesheets at `be800f1711`; line references were relocated to `5824434a74` on 2026-09-18. They have not been tested in a running app, so confirm them in DevTools.
 
 ## Basic Customizations
 
@@ -140,7 +143,7 @@ The body background reads `--lx-gray-01` ([`src/main/frontend/common.css:34`](..
 }
 ```
 
-Page references take their color from `--lx-accent-11` ahead of `--ls-link-text-color` ([`src/main/frontend/components/block.css:885-889`](../../../../../src/main/frontend/components/block.css)), so setting `--ls-link-text-color` alone does not recolor them. A rule on `.page-ref` has the same specificity as Logseq's rule, and custom.css loads last, so it wins.
+Page references take their color from `--lx-accent-11` ahead of `--ls-link-text-color` ([`src/main/frontend/components/block.css:905-909`](../../../../../src/main/frontend/components/block.css)), so setting `--ls-link-text-color` alone does not recolor them. A rule on `.page-ref` has the same specificity as Logseq's rule, and custom.css loads last, so it wins.
 
 ---
 
@@ -186,7 +189,7 @@ This sets the main content width in normal mode ([`src/main/frontend/components/
 }
 ```
 
-Bullets are `span.bullet` inside `span.bullet-container` ([`src/main/frontend/components/block.cljs:2312`](../../../../../src/main/frontend/components/block.cljs), [`:2334`](../../../../../src/main/frontend/components/block.cljs)).
+Bullets are `span.bullet` inside `span.bullet-container` ([`src/main/frontend/components/block.cljs:2329`](../../../../../src/main/frontend/components/block.cljs), [`:2351`](../../../../../src/main/frontend/components/block.cljs)).
 
 ### Highlight the Block Being Edited
 
@@ -197,7 +200,7 @@ Bullets are `span.bullet` inside `span.bullet-container` ([`src/main/frontend/co
 }
 ```
 
-`.editor-wrapper` wraps the block editor ([`src/main/frontend/components/block.cljs:3630`](../../../../../src/main/frontend/components/block.cljs)). An earlier version of this recipe used `.editor-inner .editor-wrapper`. That matches nothing, because `.editor-inner` is rendered inside the editor, not around it ([`src/main/frontend/components/editor.cljs:771`](../../../../../src/main/frontend/components/editor.cljs)).
+`.editor-wrapper` wraps the block editor ([`src/main/frontend/components/block.cljs:3679`](../../../../../src/main/frontend/components/block.cljs)). An earlier version of this recipe used `.editor-inner .editor-wrapper`. That matches nothing, because `.editor-inner` is rendered inside the editor, not around it ([`src/main/frontend/components/editor.cljs:771`](../../../../../src/main/frontend/components/editor.cljs)).
 
 ### Custom Tag Styles
 
@@ -217,7 +220,13 @@ a.tag[data-ref='idea'] {
 }
 ```
 
-Tag links have the class `tag`. Their `data-ref` is the tag title in lower case, so write `data-ref='project'` even for a tag titled `Project` ([`src/main/frontend/components/block.cljs:788-789`](../../../../../src/main/frontend/components/block.cljs), [`:800`](../../../../../src/main/frontend/components/block.cljs), [`:804`](../../../../../src/main/frontend/components/block.cljs)).
+Tag links have the class `tag`. Their `data-ref` is the tag title in lower case, so write `data-ref='project'` even for a tag titled `Project` ([`src/main/frontend/components/block.cljs:799-800`](../../../../../src/main/frontend/components/block.cljs), [`:811`](../../../../../src/main/frontend/components/block.cljs), [`:815`](../../../../../src/main/frontend/components/block.cljs)).
+
+On builds older than `5824434a74`, this applies only to the tags in a block's
+tag list. A tag written inline in block text rendered as a bare `span` carrying
+the raw UUID, with no `tag` class and no `data-ref`, until commit `6007c8e6b5`
+(PR #13258). See
+[Create a Theme](create-theme.md#tags) for the mechanism.
 
 ### Custom Property Area
 
@@ -229,7 +238,7 @@ Tag links have the class `tag`. Their `data-ref` is the tag title in lower case,
 }
 ```
 
-DB graphs render properties in `div.ls-properties-area`, with the class `ls-page-properties` on pages and `ls-block-properties` on blocks ([`src/main/frontend/components/property.cljs:972-975`](../../../../../src/main/frontend/components/property.cljs)). The older `.block-properties` selector still has a stylesheet rule ([`src/main/frontend/components/block.css:939`](../../../../../src/main/frontend/components/block.css)), but the app's DB graph markup doesn't use that class. Published pages do: the publish renderer emits `div.block-properties` and `section.page-properties` ([`deps/publish/src/logseq/publish/render.cljs:1026`](../../../../../deps/publish/src/logseq/publish/render.cljs), [`:1250`](../../../../../deps/publish/src/logseq/publish/render.cljs)), so style those in `publish.css`, not `custom.css`.
+DB graphs render properties in `div.ls-properties-area`, with the class `ls-page-properties` on pages and `ls-block-properties` on blocks ([`src/main/frontend/components/property.cljs:995-998`](../../../../../src/main/frontend/components/property.cljs)). The older `.block-properties` selector still has a stylesheet rule ([`src/main/frontend/components/block.css:959`](../../../../../src/main/frontend/components/block.css)), but the app's DB graph markup doesn't use that class. Published pages do: the publish renderer emits `div.block-properties` and `section.page-properties` ([`deps/publish/src/logseq/publish/render.cljs:1026`](../../../../../deps/publish/src/logseq/publish/render.cljs), [`:1250`](../../../../../deps/publish/src/logseq/publish/render.cljs)), so style those in `publish.css`, not `custom.css`.
 
 ---
 
@@ -276,7 +285,7 @@ See full reference: [CSS Variables](../../reference/configuration/css-variables.
 
 ### Open Developer Tools
 
-The desktop app uses Electron's standard **View** menu ([`src/electron/electron/core.cljs:243`](../../../../../src/electron/electron/core.cljs)). That menu includes **Toggle Developer Tools**, which is usually:
+The desktop app uses Electron's standard **View** menu ([`src/electron/electron/core.cljs:246`](../../../../../src/electron/electron/core.cljs)). That menu includes **Toggle Developer Tools**, which is usually:
 
 - **macOS**: `Cmd+Option+I`
 - **Windows/Linux**: `Ctrl+Shift+I`

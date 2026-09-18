@@ -2,8 +2,8 @@
 title: 'Create a Theme'
 description: 'How to create and publish custom themes for Logseq'
 status: stable
-lastVerified: '2026-09-11'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 logseqVersion: '2.0.1'
 platforms: [desktop, web, mobile]
@@ -17,11 +17,14 @@ relatedDocs:
 
 # Create a Theme
 
-> **Last revised:** 2026-09-11
+> **Last revised:** 2026-09-18 (inline-tag rendering re-checked after #13258;
+> every source line reference on this page relocated to `5824434a74`. Claims
+> other than tag rendering carry over from the 2026-09-11 audit and were not
+> re-read.)
 
 > How to create and package a custom theme for Logseq.
 
-Logseq themes are CSS overrides. A personal theme lives in the graph's `custom.css`. Shareable themes ship as Logseq plugins that declare theme CSS files. The selectors, variables and plugin behavior on this page were read from the source at `be800f1711`. Nothing was tested in a running app, so confirm the result in DevTools.
+Logseq themes are CSS overrides. A personal theme lives in the graph's `custom.css`. Shareable themes ship as Logseq plugins that declare theme CSS files. The selectors, variables and plugin behavior on this page were read from the source at `be800f1711`; line references were relocated to `5824434a74` on 2026-09-18. Nothing was tested in a running app, so confirm the result in DevTools.
 
 ## Findings: New Capabilities
 
@@ -48,7 +51,7 @@ This page covers DB graphs. Current Logseq does not open file graphs ([`src/main
 
 ### 1. Open custom.css
 
-Open Settings, stay on the **General** tab, find **Custom theme** and click **Edit custom.css**. The row appears only when a graph is open ([`src/main/frontend/components/settings.cljs:217-222`](../../../../../src/main/frontend/components/settings.cljs), [`:885`](../../../../../src/main/frontend/components/settings.cljs)).
+Open Settings, stay on the **General** tab, find **Custom theme** and click **Edit custom.css**. The row appears only when a graph is open ([`src/main/frontend/components/settings.cljs:217-222`](../../../../../src/main/frontend/components/settings.cljs), [`:897`](../../../../../src/main/frontend/components/settings.cljs)).
 
 ### 2. Add Your Colors
 
@@ -68,11 +71,11 @@ html[data-theme='light'] body.light-theme {
 }
 ```
 
-The body reads `--lx-gray-12` and `--lx-gray-01` first ([`src/main/frontend/common.css:32-34`](../../../../../src/main/frontend/common.css)). Page titles read `--lx-gray-12` first ([`common.css:334-337`](../../../../../src/main/frontend/common.css)). Links, page refs and tags read `--lx-accent-11` first ([`common.css:91`](../../../../../src/main/frontend/common.css), [`src/main/frontend/components/block.css:885-889`](../../../../../src/main/frontend/components/block.css), [`common.css:477`](../../../../../src/main/frontend/common.css)).
+The body reads `--lx-gray-12` and `--lx-gray-01` first ([`src/main/frontend/common.css:32-34`](../../../../../src/main/frontend/common.css)). Page titles read `--lx-gray-12` first ([`common.css:334-337`](../../../../../src/main/frontend/common.css)). Links, page refs and tags read `--lx-accent-11` first ([`common.css:91`](../../../../../src/main/frontend/common.css), [`src/main/frontend/components/block.css:905-909`](../../../../../src/main/frontend/components/block.css), [`common.css:477`](../../../../../src/main/frontend/common.css)).
 
 ### 3. Save
 
-Saving stores the content in the graph database and applies the stylesheet again right away. There is no reload step ([`src/main/frontend/handler/db_based/editor.cljs:164-165`](../../../../../src/main/frontend/handler/db_based/editor.cljs), [`src/main/frontend/util.cljc:926-944`](../../../../../src/main/frontend/util.cljc)).
+Saving stores the content in the graph database and applies the stylesheet again right away. There is no reload step ([`src/main/frontend/handler/db_based/editor.cljs:164-165`](../../../../../src/main/frontend/handler/db_based/editor.cljs), [`src/main/frontend/util.cljc:927-945`](../../../../../src/main/frontend/util.cljc)).
 
 ---
 
@@ -127,7 +130,7 @@ Scope theme CSS by these hooks when needed:
 | Hook | Current use |
 | --- | --- |
 | `html[data-theme="light"]` / `html[data-theme="dark"]` | Light and dark mode ([`theme.cljs:52`](../../../../../src/main/frontend/components/theme.cljs)) |
-| `html[data-color="..."]` | Accent color; `logseq` when none was picked, `none` for the **None** accent ([`theme.cljs:62-66`](../../../../../src/main/frontend/components/theme.cljs), [`settings.cljs:399`](../../../../../src/main/frontend/components/settings.cljs)) |
+| `html[data-color="..."]` | Accent color; `logseq` when none was picked, `none` for the **None** accent ([`theme.cljs:62-66`](../../../../../src/main/frontend/components/theme.cljs), [`settings.cljs:411`](../../../../../src/main/frontend/components/settings.cljs)) |
 | `html.dark` | Tailwind dark-mode hook ([`theme.cljs:55`](../../../../../src/main/frontend/components/theme.cljs), [`tailwind.config.js:120`](../../../../../tailwind.config.js)) |
 | `body.light-theme`, `body.white-theme`, `body.dark-theme` | Backward-compatible body classes ([`theme.cljs:54-56`](../../../../../src/main/frontend/components/theme.cljs)) |
 | `html[data-font="serif"|"mono"]`, `html[data-font-global="true"]` | Font preference hooks ([`theme.cljs:68-74`](../../../../../src/main/frontend/components/theme.cljs), styled in [`src/main/frontend/components/theme.css:204-218`](../../../../../src/main/frontend/components/theme.css)) |
@@ -223,9 +226,9 @@ What each group feeds:
 - `--lx-gray-02` is the left sidebar background ([`theme.css:200-202`](../../../../../src/main/frontend/components/theme.css)). Link hover reads `--lx-accent-12` first ([`common.css:95-97`](../../../../../src/main/frontend/common.css)).
 - `--ls-block-highlight-color` colors `.block-highlight`, `.ls-block.selected` and `.ls-table-cell.selected` ([`common.css:346-351`](../../../../../src/main/frontend/common.css)). `--ls-selection-background-color` is the `::selection` background ([`common.css:158-161`](../../../../../src/main/frontend/common.css)). `--ls-page-blockquote-bg-color` is the blockquote background ([`common.css:118-122`](../../../../../src/main/frontend/common.css)).
 - `--ls-font-family` is the font on `html:not(.is-native-android)` ([`common.css:17-18`](../../../../../src/main/frontend/common.css)). If the serif or mono editor font is applied globally, a more specific rule redeclares it ([`theme.css:208-218`](../../../../../src/main/frontend/components/theme.css)). `--ls-page-text-size` is the `#root` font size ([`src/main/frontend/components/container.css:8-10`](../../../../../src/main/frontend/components/container.css)), `--ls-page-title-size` the page title size ([`common.css:338`](../../../../../src/main/frontend/common.css)), and `--ls-main-content-max-width` the content width in normal mode ([`container.css:502-503`](../../../../../src/main/frontend/components/container.css)).
-- `custom.css` is appended to the end of `<head>` ([`util.cljc:937-944`](../../../../../src/main/frontend/util.cljc)), so its `:root` rules win over Logseq's own `:root` defaults of equal specificity.
+- `custom.css` is appended to the end of `<head>` ([`util.cljc:938-945`](../../../../../src/main/frontend/util.cljc)), so its `:root` rules win over Logseq's own `:root` defaults of equal specificity.
 
-An earlier version of this template also set `--ls-focus-ring-color`, `--ls-block-properties-background-color`, `--ls-page-properties-background-color` and `--ls-active-secondary-color`. The first is never read. The block-properties color is read only by `.block-properties, .page-properties` ([`block.css:939-942`](../../../../../src/main/frontend/components/block.css)), which the app does not use for DB properties. The page-properties color is read only by `.open-block-ref-link` and `.query-title` ([`block.css:193`](../../../../../src/main/frontend/components/block.css), [`:1395`](../../../../../src/main/frontend/components/block.css)). `--ls-active-secondary-color` is read only by the Logseq accent's dark link-hover alias, which is declared on `<html>` ([`vars-classic.css:120`](../../../../../src/main/frontend/shui/vars-classic.css)), so setting it on `<body>` does not reach that alias.
+An earlier version of this template also set `--ls-focus-ring-color`, `--ls-block-properties-background-color`, `--ls-page-properties-background-color` and `--ls-active-secondary-color`. The first is never read. The block-properties color is read only by `.block-properties, .page-properties` ([`block.css:959-962`](../../../../../src/main/frontend/components/block.css)), which the app does not use for DB properties. The page-properties color is read only by `.open-block-ref-link` and `.query-title` ([`block.css:213`](../../../../../src/main/frontend/components/block.css), [`:1415`](../../../../../src/main/frontend/components/block.css)). `--ls-active-secondary-color` is read only by the Logseq accent's dark link-hover alias, which is declared on `<html>` ([`vars-classic.css:120`](../../../../../src/main/frontend/shui/vars-classic.css)), so setting it on `<body>` does not reach that alias.
 
 ---
 
@@ -248,11 +251,11 @@ An earlier version of this template also set `--ls-focus-ring-color`, `--ls-bloc
 
 Logseq bundles CodeMirror 5's stylesheet ([`tailwind.all.css:13`](../../../../../tailwind.all.css)).
 
-> **Unverified:** that a font from a remote service loads. Logseq injects `custom.css` as a `data:` URL stylesheet ([`util.cljc:932-934`](../../../../../src/main/frontend/util.cljc)). Whether the app's content security policy allows the remote font was not checked.
+> **Unverified:** that a font from a remote service loads. Logseq injects `custom.css` as a `data:` URL stylesheet ([`util.cljc:933-935`](../../../../../src/main/frontend/util.cljc)). Whether the app's content security policy allows the remote font was not checked.
 
 ### Local Fonts
 
-There is no graph folder to put font files in, and a relative URL such as `./fonts/MyFont.woff2` has no folder to resolve against, because the stylesheet is a `data:` URL ([`util.cljc:932-934`](../../../../../src/main/frontend/util.cljc)). The only relative URLs Logseq rewrites are `../assets/…` ones, which become blob URLs for the graph's local assets ([`src/main/frontend/handler/assets.cljs:134-146`](../../../../../src/main/frontend/handler/assets.cljs)):
+There is no graph folder to put font files in, and a relative URL such as `./fonts/MyFont.woff2` has no folder to resolve against, because the stylesheet is a `data:` URL ([`util.cljc:933-935`](../../../../../src/main/frontend/util.cljc)). The only relative URLs Logseq rewrites are `../assets/…` ones, which become blob URLs for the graph's local assets ([`src/main/frontend/handler/assets.cljs:165-177`](../../../../../src/main/frontend/handler/assets.cljs)):
 
 ```css
 @font-face {
@@ -293,7 +296,20 @@ a.tag[data-ref='important'] {
 }
 ```
 
-Tag links have the class `tag` ([`block.cljs:796-800`](../../../../../src/main/frontend/components/block.cljs)). That covers a `#tag` that refers to a tag page inside block text ([`block.cljs:1983-1987`](../../../../../src/main/frontend/components/block.cljs)) and the tags in a block's tag list, where each one is wrapped in `div.block-tag` ([`block.cljs:2820`](../../../../../src/main/frontend/components/block.cljs), [`:2870-2874`](../../../../../src/main/frontend/components/block.cljs)). A `#tag` whose value is not a page UUID renders as a plain `span` ([`block.cljs:1988`](../../../../../src/main/frontend/components/block.cljs)). `data-ref` is the tag title in lower case ([`block.cljs:788-789`](../../../../../src/main/frontend/components/block.cljs), [`:804`](../../../../../src/main/frontend/components/block.cljs)).
+Tag links have the class `tag` ([`block.cljs:807-811`](../../../../../src/main/frontend/components/block.cljs)). That covers a `#tag` that refers to a tag page inside block text ([`block.cljs:2000-2004`](../../../../../src/main/frontend/components/block.cljs)) and the tags in a block's tag list, where each one is wrapped in `div.block-tag` ([`block.cljs:2859`](../../../../../src/main/frontend/components/block.cljs), [`:2910-2914`](../../../../../src/main/frontend/components/block.cljs)). A `#tag` whose value is not a page UUID renders as a plain `span` ([`block.cljs:2005`](../../../../../src/main/frontend/components/block.cljs)). `data-ref` is the tag title in lower case ([`block.cljs:799-800`](../../../../../src/main/frontend/components/block.cljs), [`:815`](../../../../../src/main/frontend/components/block.cljs)).
+
+> **On builds older than `5824434a74`, `a.tag` does not reach inline tags.** A
+> DB graph stores an inline tag as `#[[<uuid>]]`, and before commit `6007c8e6b5`
+> (PR #13258) that branch called `page-cp` with `{:block/name <uuid>}`. `page-cp`
+> only subscribes to the tag page when `:block/uuid` is set
+> ([`block.cljs:1068-1081`](../../../../../src/main/frontend/components/block.cljs)),
+> so it fell through to the `:block/name` branch and rendered a bare
+> `[:span "#" <uuid>]`
+> ([`block.cljs:1051-1058`](../../../../../src/main/frontend/components/block.cljs))
+> — no `a`, no `tag` class, no `data-ref`. Only the tags in a block's tag list
+> got `a.tag`. The fix passes `{:block/uuid (uuid s)}`, so inline tags now reach
+> `page-inner` and carry the class like any other tag link. If a rule targeting
+> `a.tag` seems to skip tags written inside block text, check the build.
 
 ### Code Blocks
 
@@ -330,7 +346,7 @@ Code blocks render in `div.extensions__code` ([`src/main/frontend/extensions/cod
 }
 ```
 
-Page reference links are `a.page-ref` ([`block.cljs:796-800`](../../../../../src/main/frontend/components/block.cljs)), and their color rule reads `--lx-accent-11` first ([`block.css:885-889`](../../../../../src/main/frontend/components/block.css)). An earlier version of this example styled `.page-reference`. That class exists on a wrapping `span` ([`block.cljs:1274`](../../../../../src/main/frontend/components/block.cljs)), but a color set on an ancestor does not override the link's own color rule.
+Page reference links are `a.page-ref` ([`block.cljs:807-811`](../../../../../src/main/frontend/components/block.cljs)), and their color rule reads `--lx-accent-11` first ([`block.css:905-909`](../../../../../src/main/frontend/components/block.css)). An earlier version of this example styled `.page-reference`. That class exists on a wrapping `span` ([`block.cljs:1291`](../../../../../src/main/frontend/components/block.cljs)), but a color set on an ancestor does not override the link's own color rule.
 
 ### Bullets and Property Panels
 
@@ -346,7 +362,7 @@ Page reference links are `a.page-ref` ([`block.cljs:796-800`](../../../../../src
 }
 ```
 
-Bullets are `span.bullet` inside `span.bullet-container` ([`block.cljs:2312`](../../../../../src/main/frontend/components/block.cljs), [`:2334`](../../../../../src/main/frontend/components/block.cljs)). DB graphs render properties in `div.ls-properties-area`, with the class `ls-page-properties` on pages and `ls-block-properties` on blocks ([`src/main/frontend/components/property.cljs:972-975`](../../../../../src/main/frontend/components/property.cljs)). The older `.block-properties` selector still has a stylesheet rule ([`block.css:939`](../../../../../src/main/frontend/components/block.css)), but the app does not render that class. It appears only in the separate publishing renderer ([`deps/publish/src/logseq/publish/render.cljs:1026`](../../../../../deps/publish/src/logseq/publish/render.cljs)).
+Bullets are `span.bullet` inside `span.bullet-container` ([`block.cljs:2329`](../../../../../src/main/frontend/components/block.cljs), [`:2351`](../../../../../src/main/frontend/components/block.cljs)). DB graphs render properties in `div.ls-properties-area`, with the class `ls-page-properties` on pages and `ls-block-properties` on blocks ([`src/main/frontend/components/property.cljs:995-998`](../../../../../src/main/frontend/components/property.cljs)). The older `.block-properties` selector still has a stylesheet rule ([`block.css:959`](../../../../../src/main/frontend/components/block.css)), but the app does not render that class. It appears only in the separate publishing renderer ([`deps/publish/src/logseq/publish/render.cljs:1026`](../../../../../deps/publish/src/logseq/publish/render.cljs)).
 
 ---
 
@@ -418,7 +434,7 @@ logseq.ready(main).catch(console.error)
 
 ### Choosing a Theme
 
-- The **Themes** item in the plugins menu opens the theme list in search ([`src/main/frontend/components/plugins.cljs:1481-1482`](../../../../../src/main/frontend/components/plugins.cljs), [`src/main/frontend/handler/events/ui.cljs:128-131`](../../../../../src/main/frontend/handler/events/ui.cljs)). That menu is rendered with the toolbar's plugin items ([`plugins.cljs:1554-1555`](../../../../../src/main/frontend/components/plugins.cljs), [`src/main/frontend/components/header.cljs:598`](../../../../../src/main/frontend/components/header.cljs)).
+- The **Themes** item in the plugins menu opens the theme list in search ([`src/main/frontend/components/plugins.cljs:1481-1482`](../../../../../src/main/frontend/components/plugins.cljs), [`src/main/frontend/handler/events/ui.cljs:128-131`](../../../../../src/main/frontend/handler/events/ui.cljs)). That menu is rendered with the toolbar's plugin items ([`plugins.cljs:1554-1555`](../../../../../src/main/frontend/components/plugins.cljs), [`src/main/frontend/components/header.cljs:604`](../../../../../src/main/frontend/components/header.cljs)).
 - The shortcut `t i` (**Select available theme colors**) opens the classic theme dialog ([`src/main/frontend/modules/shortcut/config.cljs:461-462`](../../../../../src/main/frontend/modules/shortcut/config.cljs), [`plugins.cljs:1397-1400`](../../../../../src/main/frontend/components/plugins.cljs), [`src/resources/dicts/en.edn:428`](../../../../../src/resources/dicts/en.edn)).
 - A theme with a `mode` is saved as the choice for that mode ([`LSPlugin.core.ts:1886-1897`](../../../../../libs/src/LSPlugin.core.ts), [`plugin.cljs:1273-1282`](../../../../../src/main/frontend/handler/plugin.cljs)). When the mode changes, Logseq selects the saved theme for the new mode, if plugins are enabled ([`theme.cljs:57`](../../../../../src/main/frontend/components/theme.cljs), [`src/main/frontend/ui.cljs:384-392`](../../../../../src/main/frontend/ui.cljs)).
 
@@ -428,9 +444,9 @@ logseq.ready(main).catch(console.error)
 
 ### Check Both Modes
 
-1. Toggle between light and dark mode in Settings → General ([`settings.cljs:348`](../../../../../src/main/frontend/components/settings.cljs), [`:879`](../../../../../src/main/frontend/components/settings.cljs)).
-2. Switch accent colors in Settings → General → **Accent color** and confirm the theme still reads correctly ([`settings.cljs:374-434`](../../../../../src/main/frontend/components/settings.cljs), [`:882`](../../../../../src/main/frontend/components/settings.cljs)). The **None** accent leaves the classic `--ls-*` colors unset, so it is a good test for fallbacks.
-3. Check font preferences if your theme changes typography ([`settings.cljs:880`](../../../../../src/main/frontend/components/settings.cljs)).
+1. Toggle between light and dark mode in Settings → General ([`settings.cljs:360`](../../../../../src/main/frontend/components/settings.cljs), [`:891`](../../../../../src/main/frontend/components/settings.cljs)).
+2. Switch accent colors in Settings → General → **Accent color** and confirm the theme still reads correctly ([`settings.cljs:386-446`](../../../../../src/main/frontend/components/settings.cljs), [`:894`](../../../../../src/main/frontend/components/settings.cljs)). The **None** accent leaves the classic `--ls-*` colors unset, so it is a good test for fallbacks.
+3. Check font preferences if your theme changes typography ([`settings.cljs:892`](../../../../../src/main/frontend/components/settings.cljs)).
 
 ### Test Core Surfaces
 

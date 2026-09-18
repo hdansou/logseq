@@ -2,8 +2,8 @@
 title: 'Block-Based Editing Philosophy'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-10'
-verifiedAgainst: 'be800f1711'
+lastVerified: '2026-09-18'
+verifiedAgainst: '5824434a74'
 reviewStatus: audited
 quadrant: 'Explanation'
 platform: 'Desktop + Mobile'
@@ -79,7 +79,7 @@ This document explains why Logseq uses block-based editing (outliner approach) i
 ```
 
 Every one of those attributes is declared in the DB graph schema
-([`schema.cljs`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs), line numbers at `be800f1711`):
+([`schema.cljs`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs), line numbers at `5824434a74`):
 `:block/uuid` at `:61`, `:block/parent` at `:62`, `:block/order` at `:64`,
 `:block/page` at `:68`, `:block/refs` at `:71`, `:block/tags` at `:73`,
 `:block/title` at `:93`.
@@ -194,12 +194,12 @@ built-in class on `:block/tags`, and in some cases a display type:
   The pipeline skips RTC and graph-download transactions (`pipeline.cljs:312`).
 - **Query blocks** are tagged `Query` (`class.cljs:54`). `/Advanced Query` sets the tag
   in its steps (`commands.cljs:125-132`). `/Query` sets it in `run-query-command!`
-  ([`handler/editor.cljs:4377-4396`](../../../../../src/main/frontend/handler/editor.cljs)).
+  ([`handler/editor.cljs:4436-4455`](../../../../../src/main/frontend/handler/editor.cljs)).
 - **Asset blocks** are tagged `Asset` (`class.cljs:68`) when a file is uploaded
-  ([`handler/editor.cljs:1802`](../../../../../src/main/frontend/handler/editor.cljs)).
+  ([`handler/editor.cljs:1835`](../../../../../src/main/frontend/handler/editor.cljs)).
 
 All of these classes sit in the same `built-in-classes` map as `Task` and `Template`
-([`class.cljs:17-105`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
+([`class.cljs:16-104`](../../../../../deps/db/src/logseq/db/frontend/class.cljs)).
 The slash-command entries are at
 [`commands.cljs:246-257`](../../../../../src/main/frontend/commands.cljs)
 (code, quote, math) and `:325-326` (query, advanced query).
@@ -236,17 +236,26 @@ Every block can be:
 > A DB graph stores a reference in `:block/title` as `[[<uuid>]]`. When a saved
 > ref is resolved to a different entity, the outliner rewrites the `[[<old-uuid>]]`
 > text to the new UUID
-> ([`outliner/core.cljs:240`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
+> ([`outliner/core.cljs:262`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
 > An inline tag is stored as `#[[<uuid>]]`, which is the string `inline-tag?` looks for
 > ([`db.cljs:108-111`](../../../../../deps/db/src/logseq/db/frontend/db.cljs)).
 > The renderer resolves the UUID to whatever it names, and the `block-reference`
 > component simply delegates to `page-reference`
-> ([`components/block.cljs:1320-1338`, `:1369-1375`](../../../../../src/main/frontend/components/block.cljs)).
+> ([`components/block.cljs:1337-1355`, `:1386-1392`](../../../../../src/main/frontend/components/block.cljs)).
+> An inline tag resolves through a separate branch: `["Tag" _]` hands the UUID to
+> `page-cp`, which subscribes to the referenced entity only when it is given
+> `:block/uuid`
+> ([`components/block.cljs:2000-2004`, `:1068-1081`](../../../../../src/main/frontend/components/block.cljs)).
+> Before commit `6007c8e6b5` (PR #13258, in master at `5824434a74`) that branch
+> passed the UUID as `:block/name` instead, so the subscription never happened and
+> the tag rendered as the literal UUID
+> ([`components/block.cljs:1051-1058`](../../../../../src/main/frontend/components/block.cljs)).
+> So "the renderer resolves the UUID" holds for tags only from that commit onward.
 > The file-graph `((uuid))` form is *not* rendered as a reference: the
 > `["Block_ref" id]` branch of `link-cp` returns the literal string
-> ([`components/block.cljs:1553-1557`](../../../../../src/main/frontend/components/block.cljs)).
+> ([`components/block.cljs:1570-1574`](../../../../../src/main/frontend/components/block.cljs)).
 > Typing `((` in the editor shows the warning "To reference a node, please use `[[]]`."
-> ([`handler/editor.cljs:1949-1952`](../../../../../src/main/frontend/handler/editor.cljs), `en.edn:503`).
+> ([`handler/editor.cljs:1982-1985`](../../../../../src/main/frontend/handler/editor.cljs), `en.edn:503`).
 
 **4. Structure Emerges**
 
@@ -297,7 +306,7 @@ Example:
 
 You do not type the UUID by hand. "Copy block ref" wraps the block's
 `:block/uuid` in page-ref brackets and puts that on the clipboard
-([`editor.cljs:3646-3657`](../../../../../src/main/frontend/handler/editor.cljs),
+([`editor.cljs:3679-3690`](../../../../../src/main/frontend/handler/editor.cljs),
 which calls `page-ref/->page-ref`).
 
 ### 2. Context Preservation
@@ -387,7 +396,7 @@ Composed view:
 > **`{{embed}}` is gone.** The macro still parses, but the renderer replaces it
 > with a deprecation warning that points you at the slash command:
 > `"{{embed}} is deprecated. Use '/Node embed' command instead."`
-> ([`components/block.cljs:1917-1918`](../../../../../src/main/frontend/components/block.cljs),
+> ([`components/block.cljs:1934-1935`](../../../../../src/main/frontend/components/block.cljs),
 > string at [`en.edn:157`](../../../../../src/resources/dicts/en.edn)).
 > `/Node embed` ([`commands.cljs:105-108`, `:233-236`](../../../../../src/main/frontend/commands.cljs))
 > opens a block search. Picking a result inserts a new sibling block whose
@@ -711,14 +720,14 @@ Sarah proposed we use microservices"
 > **A `/` in a page title is not part of the title.** Creating the page `Person/Sarah`
 > from the UI creates *two* pages: `Person`, and a page whose `:block/title` is just
 > `Sarah`, filed under it by `split-namespace-pages`
-> ([`page.cljs:385-390`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
+> ([`page.cljs:464-469`](../../../../../deps/outliner/src/logseq/outliner/page.cljs)).
 > The UI page-creation handler turns `:split-namespace?` on unless a caller sets it
-> ([`handler/common/page.cljs:147-149`](../../../../../src/main/frontend/handler/common/page.cljs)).
+> ([`handler/common/page.cljs:146-148`](../../../../../src/main/frontend/handler/common/page.cljs)).
 > Today's journal page is created with it off (`handler/page.cljs:334-335`).
 > The top segment sits under the built-in Library page
-> ([`page_test.cljs:43`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs)).
+> ([`page_test.cljs:45`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs)).
 > Two different parents can each hold a leaf with the same title
-> ([`page_test.cljs:65-72`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs), `vim/keys` and `emacs/keys`).
+> ([`page_test.cljs:67-74`](../../../../../deps/outliner/test/logseq/outliner/page_test.cljs), `vim/keys` and `emacs/keys`).
 > There is no `:block/namespace` attribute in the DB schema.
 
 **This is the power of blocks:** Same content, multiple organizational views through references.
@@ -911,7 +920,7 @@ Use Docs/Notion for:
 
 > Comments are no longer a reason on their own. DB graphs have built-in `Comments` and
 > `Comment` classes
-> ([`class.cljs:44-51`](../../../../../deps/db/src/logseq/db/frontend/class.cljs))
+> ([`class.cljs:43-50`](../../../../../deps/db/src/logseq/db/frontend/class.cljs))
 > and an `/Add comment` slash command
 > ([`commands.cljs:319-324`](../../../../../src/main/frontend/commands.cljs), label at `en.edn:147`).
 > How they compare with a document editor's comment threads was not assessed.
@@ -1022,11 +1031,11 @@ and sibling order is a fractional-index key on `:block/order`
 backed by the `clj-fractional-indexing` dependency at
 [`deps/db/deps.edn:14`](../../../../../deps/db/deps.edn)). When a block is moved,
 the outliner generates one new key between the target and its neighbour
-([`outliner/core.cljs:1078-1082`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
+([`outliner/core.cljs:1132-1136`](../../../../../deps/outliner/src/logseq/outliner/core.cljs)).
 The siblings keep their keys and are not renumbered.
 
 Graphs live under `~/logseq/graphs`
-([`config.cljs:55`](../../../../../deps/common/src/logseq/common/config.cljs)),
+([`config.cljs:58`](../../../../../deps/common/src/logseq/common/config.cljs)),
 and at this revision the graph switcher lists only DB graphs — it filters the
 repo list through `config/db-based-graph?` with the comment "use
 `config/db-based-graph?` to avoid loading old file graphs"

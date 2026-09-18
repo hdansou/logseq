@@ -1,9 +1,10 @@
 # Upstream Defects Found During the ddocs Review Pass
 
-> **Last revised:** 2026-09-12
-> **Verified against:** `master` @ `be800f1711`, which is still current master on 2026-09-13 —
-> both `origin` (the `hdansou/logseq` fork) and `upstream` (`logseq/logseq`) resolve
-> `refs/heads/master` to that commit. **Source read only.** Nothing here was reproduced in a
+> **Last revised:** 2026-09-18
+> **Verified against:** `master` @ `be800f1711`. **Master has since advanced to `5824434a74`
+> (2026-09-18, 78 commits).** The rows below were *not* re-read against it — treat every line
+> reference here as indexing `be800f1711` and re-check at current master before filing, per the
+> rule in the revalidation log. **Source read only.** Nothing here was reproduced in a
 > running app unless the entry says so.
 > **Context:** waves 1–7 of the documentation review audited every page in `dz/docs/ddocs` against
 > source. Along the way the audits found behaviour that looks like a product defect rather than a
@@ -176,6 +177,22 @@ the detail.
   future probe: parse options come from the current repo (`gp-mldoc/get-default-config`).
 
 ## Revalidation log
+
+**2026-09-18 — master advanced; one defect found already fixed, never filed.** Pulling upstream
+moved master from `be800f1711` to `5824434a74`. Reviewing `6007c8e6b5` (PR #13258) against the
+flashcard pages turned up a second defect in the same commit that this list never carried: an
+inline tag in a DB graph, stored as `#[[<uuid>]]`, rendered as the literal UUID in plain text.
+The `["Tag" _]` branch called `page-cp` with `{:block/name <uuid>}`, and `page-cp` subscribes to
+the referenced entity only when given `:block/uuid` (`components/block.cljs:1068-1081` at
+`5824434a74`), so it fell through to the `:block/name` branch and emitted `[:span "#" <uuid>]`
+(`:1051-1058`) — no `a`, no `tag` class, no `data-ref`. Upstream fixed it by passing
+`{:block/uuid (uuid s)}` and covered it with an e2e assertion in `new-tag-test`
+(`clj-e2e/test/logseq/e2e/tag_basic_test.clj:25-32`). Recorded here rather than added as a row,
+because a defect fixed upstream is struck from this list, not filed. The consequence for the docs
+was real: `create-theme.md` claimed `a.tag` covers inline tags, which was untrue on every build
+before this commit; that page and `custom-css.md` now carry the caveat. **Nothing else on this
+page was re-read against `5824434a74`.**
+
 
 **2026-09-12 — four "re-locate before filing" entries resolved.** The wave-3 and wave-4 entries that
 had no citation were tracked down: the highlight-mark mismatch and the `(between deadline …)` clause
