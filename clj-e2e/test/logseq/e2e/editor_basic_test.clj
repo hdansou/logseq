@@ -1138,6 +1138,29 @@
     (b/new-block "another nested child")
     (b/indent)))
 
+(deftest page-icon-in-library
+  (testing "Library page entries show an icon only for the page's own or a tag icon"
+    (b/new-block "library icon source")
+    (util/set-tag "Page" {:hidden? true})
+    (assert/assert-is-visible ".ls-page-blocks .ls-block .ls-icon-file")
+    (p/goto-page "Library")
+    ;; a page with only the default icon stays a bullet in Library
+    (assert/assert-have-count
+     (-> ".ls-page-blocks .ls-block"
+         (loc/filter :has-text "library icon source")
+         (loc/filter :has ".ls-icon-file"))
+     0)
+    ;; a page's own icon still shows in Library
+    (p/goto-page "library icon source")
+    (w/click "button:text('Add icon')")
+    (w/fill ".cp__emoji-icon-picker input" "books")
+    (w/click ".cp__emoji-icon-picker button:has(em-emoji[id='books'])")
+    (p/goto-page "Library")
+    (assert/assert-is-visible
+     (-> ".ls-page-blocks .ls-block"
+         (loc/filter :has-text "library icon source")
+         (loc/filter :has "em-emoji[id='books']")))))
+
 (defn- selection-range
   []
   (w/eval-js
@@ -1774,3 +1797,74 @@
       (let [{:keys [client scroll]} (editor-box-heights)]
         (is (<= scroll client)
             (str "textarea clientHeight " client " scrollHeight " scroll))))))
+
+(deftest page-ref-navigate-persists-unsaved-edit-buffer-test
+  (testing "clicking a page-ref while editing flushes the editor so typed text is not lost (db-test#1250)"
+    (let [target-page (str "pageref-flush-target-" (random-uuid))
+          marker (str "pageref-flush-marker-" (random-uuid))
+          host-page (p/get-page-name)]
+      (p/new-page target-page)
+      (p/goto-page host-page)
+      (b/new-block (str "See [[" target-page "]] here"))
+      ;; Enter directly into a new empty block so the ref block renders without
+      ;; being clicked (clicking it could hit the page-ref link and navigate)
+      (b/new-block "")
+      (assert/assert-is-visible
+       (loc/filter ".page-reference .page-ref" :has-text target-page))
+      (is (= host-page (p/get-page-name)))
+      ;; type without idle autosave, then immediately navigate via page-ref
+      (w/fill util/editor-q marker)
+      (is (= marker (util/get-edit-content)))
+      (w/click
+       (.first (loc/filter ".page-reference .page-ref" :has-text target-page)))
+      (is (= target-page (p/get-page-name)))
+      (p/goto-page host-page)
+      (assert/assert-is-visible
+       (loc/filter ".ls-page-blocks .block-title-wrap" :has-text marker))
+      (is (some #(= marker %) (util/get-page-blocks-contents))))))
+
+(deftest shift-click-select-persists-unsaved-edit-buffer-test
+  (testing "shift+click block selection flushes the editor buffer (db-test#1250)"
+    (let [marker (str "shift-flush-marker-" (random-uuid))
+          shift-click (fn [text]
+                        (.click
+                         (.first (loc/filter ".ls-page-blocks .ls-block .block-content"
+                                             :has-text text))
+                         (doto (Locator$ClickOptions.)
+                           (.setModifiers [KeyboardModifier/SHIFT]))))]
+      (b/new-block "shift flush target one")
+      (b/new-block "shift flush target two")
+      (util/exit-edit)
+      ;; New empty block, type without idle autosave, then shift+click twice to
+      ;; select a range, which exits editing
+      (b/new-block "")
+      (w/fill util/editor-q marker)
+      (is (= marker (util/get-edit-content)))
+      (shift-click "shift flush target one")
+      (shift-click "shift flush target two")
+      (assert/assert-is-visible
+       (loc/filter ".ls-page-blocks .block-title-wrap" :has-text marker))
+      (is (some #(= marker %) (util/get-page-blocks-contents))))))
+
+(deftest page-ref-navigate-persists-edit-buffer-with-open-popup-test
+  (testing "clicking a page-ref while the page-search popup is open still flushes the editor"
+    (let [target-page (str "pageref-popup-target-" (random-uuid))
+          marker (str "pageref-popup-marker-" (random-uuid))
+          host-page (p/get-page-name)]
+      (p/new-page target-page)
+      (p/goto-page host-page)
+      (b/new-block (str "See [[" target-page "]] here"))
+      (b/new-block "")
+      (assert/assert-is-visible
+       (loc/filter ".page-reference .page-ref" :has-text target-page))
+      (is (= host-page (p/get-page-name)))
+      ;; typing "[[" opens the page-search popup, setting :editor/action
+      (util/press-seq (str marker " [[draft"))
+      (assert/assert-is-visible ".ui__popover-content a.menu-link")
+      (w/click
+       (.first (loc/filter ".page-reference .page-ref" :has-text target-page)))
+      (is (= target-page (p/get-page-name)))
+      (p/goto-page host-page)
+      (assert/assert-is-visible
+       (loc/filter ".ls-page-blocks .block-title-wrap" :has-text marker))
+      (is (some #(string/starts-with? % marker) (util/get-page-blocks-contents))))))

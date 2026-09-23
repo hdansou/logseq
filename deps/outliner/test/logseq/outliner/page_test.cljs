@@ -12,7 +12,8 @@
             [logseq.db.frontend.validate :as db-validate]
             [logseq.db.test.helper :as db-test]
             [logseq.graph-parser.block :as gp-block]
-            [logseq.outliner.page :as outliner-page]))
+            [logseq.outliner.page :as outliner-page]
+            [logseq.outliner.validate :as outliner-validate]))
 
 (deftest create-class
   (let [conn (db-test/create-conn)
@@ -167,6 +168,29 @@
     (is (= 1 (count (d/q '[:find [?e ...] :where [?e :block/title "Foo"]] @conn)))
         "A second create must not insert another Foo page")))
 
+(deftest create-pages-with-same-title-and-different-tags
+  (let [conn (db-test/create-conn-with-blocks {:classes {:Kestrel {} :Lantern {}}})
+        kestrel (db-test/find-page-by-title @conn "Kestrel")
+        lantern (db-test/find-page-by-title @conn "Lantern")
+        [_ kestrel-page-uuid] (outliner-page/create! conn "Juniper" {:tags [(:block/uuid kestrel)]})
+        [_ lantern-page-uuid] (outliner-page/create! conn "Juniper" {:tags [(:block/uuid lantern)]})
+        [_ lantern-page-uuid-again] (outliner-page/create! conn "Juniper" {:tags [(:block/uuid lantern)]})
+        tag-titles (fn [page-uuid]
+                     (set (map :block/title (:block/tags (d/entity @conn [:block/uuid page-uuid])))))]
+    (is (not= kestrel-page-uuid lantern-page-uuid)
+        "Same title with a different tag creates a new page")
+    (is (= 2 (count (d/q '[:find [?e ...] :where [?e :block/title "Juniper"]] @conn)))
+        "Both pages share the title")
+    (is (= #{"Kestrel" "Page"} (tag-titles kestrel-page-uuid)))
+    (is (= #{"Lantern" "Page"} (tag-titles lantern-page-uuid)))
+    (is (= lantern-page-uuid lantern-page-uuid-again)
+        "Same title and tag reuses the existing tagged page")
+    (is (nil? (outliner-validate/validate-block-title
+               @conn "Juniper" (d/entity @conn [:block/uuid lantern-page-uuid])))
+        "Page title uniqueness allows the same title for different tags")
+    (is (nil? (:errors (db-validate/validate-db @conn)))
+        "Graph remains valid")))
+
 (deftest create-page-with-page-tag-reuses-page-class
   (let [conn (db-test/create-conn)
         [_ page-uuid] (outliner-page/create! conn "Foo" {:tags [(parsed-tag "Page")]})
@@ -208,7 +232,11 @@
       (is (some? b1'))
       (is (= (:block/uuid recycle-page) (:block/uuid (:block/parent d1'))))
       (is (integer? (:logseq.property/deleted-at d1')))
-      (is (nil? (:block/raw-title b1')))
+      (is (= (str "b1 " (page-ref/->page-ref (:block/uuid d1)))
+             (:v (first (d/datoms @conn :eavt (:db/id b1') :block/title))))
+          "Recycling preserves the child's original title and internal page reference")
+      (is (empty? (d/datoms @conn :eavt (:db/id b1') :block/raw-title))
+          "Raw title is a derived lookup, not a stored attribute")
       (is (contains? (set (map :db/id (:block/refs b1')))
                      (:db/id d1)))
       (is (= (:block/uuid d1') (:block/uuid (:block/page b1')))))))

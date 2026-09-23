@@ -34,7 +34,7 @@ let split_equals_option token =
 
 let boolean_option = function
   | "version" | "help" | "verbose" | "profile" | "enable-sync" | "expand"
-  | "fix" | "include-built-in" | "include-journal" | "journal-only"
+  | "fix" | "force" | "include-built-in" | "include-journal" | "journal-only"
   | "include-hidden" | "with-properties" | "with-extends" | "with-classes"
   | "with-type" | "page-hierarchy" | "linked-references" | "ref-id-footer"
   | "progress" | "upload-keys" | "pretty-print" ->
@@ -215,7 +215,8 @@ let allowed_options_for_path path =
     Vec.append common_list_options (option_names [| "tags"; "properties" |])
   else if path2 path "list" "asset" then common_list_options
   else if path2 path "remove" "block" then option_names [| "id"; "uuid" |]
-  else if path2 path "remove" "page" then option_names [| "id"; "page" |]
+  else if path2 path "remove" "page" then
+    option_names [| "id"; "page"; "force" |]
   else if path2_any path "remove" (option_names [| "tag"; "property" |]) then
     option_names [| "id"; "name" |]
   else if path2 path "upsert" "block" then
@@ -285,7 +286,7 @@ let allowed_options_for_path path =
   else if
     path2_any path "search"
       (option_names [| "block"; "page"; "property"; "tag" |])
-  then option_names [| "content" |]
+  then option_names [| "content"; "include-hidden" |]
   else if path2 path "query" "list" then Vec.empty
   else if path1 path "query" then option_names [| "query"; "name"; "inputs" |]
   else if path1 path "show" then
@@ -560,6 +561,9 @@ let parsed_remove_command options = function
               {
                 id = int64_option "id" options;
                 page = option_value "page" options;
+                force =
+                  Option.value (bool_option_value "force" options)
+                    ~default:false;
               }))
   | "tag" ->
       Some
@@ -765,6 +769,7 @@ let parsed_list_command options = function
 let path_alias_overrides = function
   | [| "graph"; "validate" |] -> [ ("-f", "--fix") ]
   | [| "graph"; "export" |] -> [ ("-f", "--file") ]
+  | [| "remove"; "page" |] -> [ ("-f", "--force") ]
   | [| "list"; "page" | "tag" | "property" |] -> [ ("-e", "--expand") ]
   | _ -> []
 
@@ -918,6 +923,7 @@ let parse ?stdin argv =
                 {
                   content =
                     Option.value (option_value "content" options) ~default:"";
+                  include_hidden = option_present "include-hidden" options;
                 }))
     | [| "search"; "page" |] ->
         make [| "search"; "page" |]
@@ -926,6 +932,7 @@ let parse ?stdin argv =
                 {
                   content =
                     Option.value (option_value "content" options) ~default:"";
+                  include_hidden = option_present "include-hidden" options;
                 }))
     | [| "search"; "property" |] ->
         make [| "search"; "property" |]
@@ -934,6 +941,7 @@ let parse ?stdin argv =
                 {
                   content =
                     Option.value (option_value "content" options) ~default:"";
+                  include_hidden = option_present "include-hidden" options;
                 }))
     | [| "search"; "tag" |] ->
         make [| "search"; "tag" |]
@@ -942,6 +950,7 @@ let parse ?stdin argv =
                 {
                   content =
                     Option.value (option_value "content" options) ~default:"";
+                  include_hidden = option_present "include-hidden" options;
                 }))
     | [| "query"; "list" |] ->
         make [| "query"; "list" |] (Query Query.Parsed_list)
