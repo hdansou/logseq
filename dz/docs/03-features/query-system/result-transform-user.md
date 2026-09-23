@@ -1,10 +1,14 @@
 # Getting Started with :result-transform in Logseq
 
-> **Last revised:** 2026-05-29
+> **Last revised:** 2026-09-22
+>
+> Scope: `:result-transform` pipeline and result ordering re-verified against source at `39ade9a309`; the ordering behavior was traced in source and not observed in a running app.
 
 **Transform your query results like a pro!**
 
-This guide will show you how to use Logseq's `:result-transform` feature to customize your query results by sorting, filtering, and transforming data in powerful ways.
+This guide will show you how to use Logseq's `:result-transform` feature to customize your query results by filtering, limiting, and transforming data.
+
+Sorting is the one thing `:result-transform` cannot do on its own — read [Read this first: sorting in DB graphs](#read-this-first-sorting-in-db-graphs) before you write a sort.
 
 ---
 
@@ -27,17 +31,17 @@ This guide will show you how to use Logseq's `:result-transform` feature to cust
 
 `:result-transform` is a feature that lets you customize how your query results are displayed. Think of it as a post-processing step that runs after your query completes, allowing you to:
 
-- **Sort** results by any property (priority, date, title, etc.)
 - **Filter** results to show only what matters
 - **Limit** results to show just the top N items
 - **Transform** data into custom formats
 - **Combine** multiple operations together
+- **Sort** results — but see the caveat below: in DB graphs, sorting only survives when the query also has a `:view`
 
 ### Why use it?
 
 While Datalog queries are powerful for finding blocks, sometimes you need more control over how results are presented. `:result-transform` fills that gap.
 
-**Example:** Your query finds all TODO tasks, but you want them sorted by priority (A > B > C). `:result-transform` makes this easy!
+**Example:** Your query finds all TODO tasks, but you only want the ones tagged `#work`. `:result-transform` makes this easy!
 
 ### How it works
 
@@ -47,11 +51,40 @@ Your Query → Database → Raw Results → :result-transform → Final Results 
 
 The transformation happens automatically before results are shown to you.
 
+### Read this first: sorting in DB graphs
+
+**In a DB graph, sorting inside `:result-transform` is discarded for block results.** If your query returns blocks and has no `:view` function, the order you produce in the transform never reaches the screen. Filtering (`filter`, `remove`) and truncation (`take`) still work, because they change *which* rows exist, not their order.
+
+Why: after your transform runs, each block is reduced to its bare `:block/uuid` before the rows leave the worker (`src/main/frontend/worker/handler/render_resource/query.cljs:15-21`, applied at `:209`). A result that is all uuids is then rendered by the standard table view (`src/main/frontend/components/query.cljs:52-57`), which puts the uuids into a **set** (`deps/db/src/logseq/db/common/view.cljs:1114`) and re-sorts the rows by the query block's own sorting property, defaulting to most-recently-updated-first (`deps/db/src/logseq/db/common/view.cljs:1115-1118`).
+
+Your order *is* kept in two cases:
+
+1. The query has a `:view` function. The view fn is called with your transformed result, in your order, before the table path is reached (`src/main/frontend/components/query.cljs:43-50`).
+2. The query is one of Logseq's built-in journal queries, which render through a different code path (`src/main/frontend/components/query.cljs:60-72`).
+
+**What to do instead**, in order of preference:
+
+1. **Sort the table.** Click the column header in the rendered query table. That writes `:logseq.property.table/sorting` onto the query block, which is what the renderer actually reads. Same for grouping (`:logseq.property.view/group-by-property`) and filtering (`:logseq.property.table/filters`). These three are hidden properties defined in `deps/db/src/logseq/db/frontend/property.cljs:456-461,512-517,519-523`.
+
+   You can also set them from the CLI:
+
+   ```sh
+   logseq upsert block -g <graph> --id <block-id> \
+     --update-properties '{:logseq.property.view/group-by-property :logseq.property/status
+                           :logseq.property.table/sorting [{:id :logseq.property/priority :asc? false}]}'
+   ```
+
+2. **Add a `:view` function.** Sort in the transform (or in the view fn itself) and render the rows yourself. Everything under [Advanced Techniques](#advanced-techniques) that depends on order needs this.
+
+3. **Return scalars, not blocks.** If your `:find` returns values rather than pulled blocks, the table path is not taken and your order is preserved.
+
+The code that discards the order has no file-graph vs DB-graph branch, so the same applies to any query rendered through the standard table view. The sections below still label examples "File-Based" and "DB Graphs" where the *property names* differ.
+
 ## Findings: New Capabilities
 
-- `:result-transform` supports keyword references to reusable transforms defined in `logseq/config.edn` under `:query/result-transforms`.
-- Query transform evaluation runs in the shared SCI environment and supports helper functions such as `sum`, `average`, `parseFloat`, `isNaN`, `log`, `pprint`, and `call-api`.
-- Logseq now applies child-result pruning by default only for file-based block results; DB graph query results are not pruned by this option.
+- `:result-transform` supports keyword references to reusable transforms defined in `logseq/config.edn` under `:query/result-transforms`. An unregistered keyword throws — it does not fall back to no transform (`src/main/frontend/components/query.cljs:133-140`).
+- The SCI helpers `sum`, `average`, `parseFloat`, `isNaN`, `log`, `pprint` and `call-api` are available to `:view` functions, **not** to `:result-transform`. `:view` is evaluated on the main thread with those bindings injected (`src/main/frontend/extensions/sci.cljs:29-46`); `:result-transform` is evaluated in the worker with plain `sci.core/eval-string` and no bindings (`src/main/frontend/worker/handler/render_resource/query.cljs:12,191`). Inside a transform, assume `clojure.core` only.
+- `:remove-block-children?` child pruning applies to block results in every graph type. The code has no file-vs-DB branch (`src/main/frontend/worker/handler/render_resource/query.cljs:177-186`).
 
 ---
 
@@ -59,7 +92,7 @@ The transformation happens automatically before results are shown to you.
 
 ### Your First Transform
 
-Let's start with something simple: reversing the order of results.
+Let's start with something simple: keeping only the first 10 results.
 
 **Before (no transform):**
 
@@ -72,13 +105,15 @@ Let's start with something simple: reversing the order of results.
 **After (with transform):**
 
 ```clojure
-{:title "My Tasks (Newest First)"
+{:title "My Tasks (First 10)"
  :query [:find (pull ?b [*])
          :where [?b :block/marker "TODO"]]
- :result-transform (fn [result] (reverse result))}
+ :result-transform (fn [result] (take 10 result))}
 ```
 
-That's it! Your results now appear in reverse order.
+That's it! Your query now shows at most 10 rows.
+
+> **Why not `(reverse result)` as the first example?** Because it would do nothing visible. Reordering block results is dropped before rendering — see [Read this first: sorting in DB graphs](#read-this-first-sorting-in-db-graphs).
 
 ### The Basic Pattern
 
@@ -100,6 +135,8 @@ Every `:result-transform` follows this structure:
 
 ### 1. Sort by Priority
 
+> **Needs a `:view`.** On its own, this transform has no visible effect on a block result — the table re-sorts the rows afterwards. Sort the table by clicking its Priority column header instead, or add a `:view` fn. See [Read this first](#read-this-first-sorting-in-db-graphs).
+
 **File-Based Graphs:**
 
 ```clojure
@@ -114,13 +151,25 @@ Every `:result-transform` follows this structure:
                     (sort-by :logseq.property/priority result))
 ```
 
+The equivalent that actually sticks, set on the query block:
+
+```clojure
+:logseq.property.table/sorting [{:id :logseq.property/priority :asc? false}]
+```
+
 ### 2. Limit to First 10 Results
+
+Works as written. `take` changes which rows exist, so it survives rendering.
 
 ```clojure
 :result-transform (fn [result] (take 10 result))
 ```
 
+Careful: which 10 you get is the pre-render order, and the table then re-sorts them. Combine with table sorting only if you are happy truncating an unsorted set.
+
 ### 3. Sort by Date (Newest First)
+
+> **Needs a `:view`.** Same caveat as use case 1.
 
 **By Created Date:**
 
@@ -137,6 +186,8 @@ Every `:result-transform` follows this structure:
 ```
 
 Note: Using `>` as the comparator sorts in descending order (newest first) directly without needing `reverse`.
+
+Newest-updated-first is already the table's default (`deps/db/src/logseq/db/common/view.cljs:1115-1118`), so for this particular case you usually need no transform at all.
 
 ### 4. Filter High Priority Only
 
@@ -164,7 +215,7 @@ Note: Using `>` as the comparator sorts in descending order (newest first) direc
                          (take 5)))
 ```
 
-This filters for TODOs, sorts by date, and shows only the 5 most recent.
+This filters for TODOs, sorts by date, and keeps the 5 oldest. The filter and the `take` hold; the sort determines *which* 5 you keep, but the table decides the order they are displayed in.
 
 ---
 
@@ -219,6 +270,8 @@ First, let's identify if you're using a file-based or DB graph:
 
 ### Step 3: Add Deadline Sorting
 
+> **This step is where the transform stops being enough.** The sort below decides which tasks survive Step 4's `take 10`, but it does not decide the order they appear in. To get deadline order on screen, click the Deadline column header in the rendered table, or set `:logseq.property.table/sorting [{:id :logseq.property/deadline :asc? true}]` on the query block.
+
 **For File-Based Graphs:**
 
 ```clojure
@@ -267,7 +320,12 @@ Save your query and check the results. If something doesn't work, see the [Troub
 
 Copy-paste these recipes and adapt them to your needs!
 
-### Recipe 1: Reverse Chronological Order
+Recipes are tagged:
+
+- **[order]** — changes the order only. On a block result with no `:view`, this does nothing visible; use table sorting or a `:view` fn instead. See [Read this first](#read-this-first-sorting-in-db-graphs).
+- **[rows]** — changes which rows exist. Works as written.
+
+### Recipe 1: Reverse Chronological Order — **[order]**
 
 **Use case:** Show newest items first
 
@@ -275,7 +333,9 @@ Copy-paste these recipes and adapt them to your needs!
 :result-transform (fn [result] (reverse result))
 ```
 
-### Recipe 2: Top 5 Results Only
+Prefer `:logseq.property.table/sorting [{:id :block/created-at :asc? false}]` on the query block.
+
+### Recipe 2: Top 5 Results Only — **[rows]**
 
 **Use case:** Limit overwhelming queries
 
@@ -283,7 +343,7 @@ Copy-paste these recipes and adapt them to your needs!
 :result-transform (fn [result] (take 5 result))
 ```
 
-### Recipe 3: Sort by Priority (A → B → C)
+### Recipe 3: Sort by Priority (A → B → C) — **[order]**
 
 **File-Based:**
 
@@ -301,7 +361,7 @@ Copy-paste these recipes and adapt them to your needs!
 
 The `"zzz"` is a fallback value for blocks without priority (sorts them last).
 
-### Recipe 4: Advanced Priority Sort (A=1, B=2, C=3)
+### Recipe 4: Advanced Priority Sort (A=1, B=2, C=3) — **[order]**
 
 **File-Based:**
 
@@ -328,14 +388,16 @@ The `"zzz"` is a fallback value for blocks without priority (sorts them last).
                              result))
 ```
 
-### Recipe 5: Filter Out Completed Tasks
+### Recipe 5: Filter Out Completed Tasks — **[rows]**
 
 ```clojure
 :result-transform (fn [result]
                     (filter #(not= "DONE" (:block/marker %)) result))
 ```
 
-### Recipe 6: Show Only Today's Tasks
+### Recipe 6: Show Only Today's Tasks — **[rows]**
+
+Uses `js/Date` interop, which has not been verified to work inside a worker-evaluated `:result-transform`. Test it before relying on it.
 
 **File-Based:**
 
@@ -346,7 +408,7 @@ The `"zzz"` is a fallback value for blocks without priority (sorts them last).
                               result)))
 ```
 
-### Recipe 7: Sort by Multiple Criteria
+### Recipe 7: Sort by Multiple Criteria — **[order]**
 
 Priority first, then deadline:
 
@@ -360,7 +422,7 @@ Priority first, then deadline:
                              result))
 ```
 
-### Recipe 8: Remove Duplicates by Content
+### Recipe 8: Remove Duplicates by Content — **[rows]**
 
 ```clojure
 :result-transform (fn [result]
@@ -374,13 +436,15 @@ Priority first, then deadline:
                               result)))
 ```
 
-### Recipe 9: Random Order (Shuffle)
+### Recipe 9: Random Order (Shuffle) — **[order]**
 
 ```clojure
 :result-transform (fn [result] (shuffle result))
 ```
 
-### Recipe 10: Group by Tag and Flatten
+### Recipe 10: Group by Tag and Flatten — **[order]**
+
+For grouping that shows up on screen, set `:logseq.property.view/group-by-property` on the query block instead — the table renders real group headers.
 
 **File-Based:**
 
@@ -392,7 +456,7 @@ Priority first, then deadline:
                          (mapcat second)))
 ```
 
-### Recipe 11: Most Recently Updated Items (Top 50)
+### Recipe 11: Most Recently Updated Items (Top 50) — **[rows]** + **[order]**
 
 **Use case:** Show the 50 blocks you've edited most recently
 
@@ -403,9 +467,9 @@ Priority first, then deadline:
                          (take 50)))
 ```
 
-This is useful for finding blocks you're actively working on.
+This is useful for finding blocks you're actively working on. The `sort-by` here is load-bearing — it picks *which* 50 rows survive — but the table decides their displayed order. Newest-updated-first is already the table default, so in this recipe the two agree.
 
-### Recipe 12: Recently Updated with Priority Filter
+### Recipe 12: Recently Updated with Priority Filter — **[rows]** + **[order]**
 
 **Use case:** High-priority tasks sorted by recent updates
 
@@ -459,18 +523,19 @@ The biggest difference when using `:result-transform` between graph types is **p
 | Status    | `:block/marker`     | `:logseq.property/status`    |
 | Created   | `:block/created-at` | `:block/created-at` (same)   |
 | Updated   | `:block/updated-at` | `:block/updated-at` (same)   |
-| Content   | `:block/content`    | `:block/content` (same)      |
+| Content   | `:block/content`    | `:block/title`               |
 
 ### Universal Properties (Same for Both)
 
 These properties work the same in both graph types:
 
 - `:block/uuid`
-- `:block/content`
 - `:block/created-at`
 - `:block/updated-at`
 
 **Note:** `:block/marker` is file-based only. In DB graphs, task status is stored as `:logseq.property/status`.
+
+**Note:** `:block/content` does not exist in the DB schema; block text lives in `:block/title` (`deps/db/src/logseq/db/frontend/schema.cljs:93`). Any recipe below that reads `:block/content` returns `nil` on a DB graph.
 
 ### Converting Between Graph Types
 
@@ -522,7 +587,11 @@ Replace `:block/priority` with `:logseq.property/priority`
 
 **Symptoms:** Sort doesn't work as expected
 
-**Cause:** Wrong property namespace for your graph type
+**Cause 1 (most likely): your result is blocks and your query has no `:view`.** The order is discarded before rendering. This is not a bug in your transform — no property name will fix it. See [Read this first: sorting in DB graphs](#read-this-first-sorting-in-db-graphs) and sort the table instead.
+
+Quick check: if `(fn [result] (reverse result))` changes nothing, you are hitting this. If `(fn [result] (take 1 result))` leaves one row, the transform is running fine — only the order is being dropped.
+
+**Cause 2:** Wrong property namespace for your graph type
 
 **Solution:**
 
@@ -547,7 +616,7 @@ Replace `:block/priority` with `:logseq.property/priority`
                          result))
    ```
 
-   Check the console to see what properties are actually available.
+   The transform runs inside the query worker, so any output lands in the worker's console context rather than the page's. The `log` and `pprint` helpers are **not** available here — they are only bound for `:view` functions (`src/main/frontend/extensions/sci.cljs:29-46`).
 
 ### Problem: Matching Child Blocks Are Missing
 
@@ -568,15 +637,17 @@ This is a per-query display option, not a `config.edn` setting.
  :remove-block-children? false}
 ```
 
-> **Removed:** "If omitted, `:remove-block-children?` behaves as `true` for all graphs."
+**Current behavior:** If omitted, the default is effectively `true` for block results in every graph type. The pruning code has no file-vs-DB branch — it applies whenever the query returned blocks and `:remove-block-children?` is not explicitly `false` (`src/main/frontend/worker/handler/render_resource/query.cljs:177-186`).
 
-**Current behavior:** If omitted, the default is effectively `true` for file-based block results. For DB graphs, this child-pruning step is not applied.
+> **Corrected 2026-09-22:** an earlier revision of this guide claimed "For DB graphs, this child-pruning step is not applied." That was wrong.
 
 ### Problem: Query Shows No Results After Adding Transform
 
-**Symptoms:** Query worked before, now shows nothing
+**Symptoms:** Query worked before, now shows nothing — or shows a query error box
 
-**Cause:** Transform function returns empty or nil
+**Cause:** Transform function returns empty, or returns something that isn't a collection
+
+A transform must return a sequence or a set. Returning `nil`, a number, a map or a string fails the query outright with `"Query result transform must return rows"` (`src/main/frontend/worker/handler/render_resource/query.cljs:196-198`). So does supplying a form that doesn't evaluate to a function (`"Query result transform is not a function"`).
 
 **Solutions:**
 
@@ -631,11 +702,15 @@ This is a per-query display option, not a `config.edn` setting.
                        (map #(assoc % :x 1) result))
    ```
 
-   `println` and common core functions are available in SCI for query transforms.
+   A transform that throws does **not** fall back to the untransformed result — the query renders an error box instead (`src/main/frontend/components/query.cljs:182-183`).
+
+   Only plain `clojure.core` is in scope. `sum`, `average`, `parseFloat`, `isNaN`, `log`, `pprint` and `call-api` are bound for `:view` functions, not for `:result-transform`.
 
 ### Problem: Sort Order Is Wrong
 
 **Symptoms:** Results are sorted, but not in the expected order
+
+**First check:** does your query return blocks and lack a `:view`? Then what you are seeing is the table's own sorting, not yours — see [Read this first](#read-this-first-sorting-in-db-graphs). The advice below applies to sorting inside a `:view` fn, or to non-block results.
 
 **Solutions:**
 
@@ -679,13 +754,14 @@ Don't try to write complex transforms right away. Build up gradually:
 ;; Step 1: Just return result (verify transform works)
 :result-transform (fn [result] result)
 
-;; Step 2: Add sorting
-:result-transform (fn [result] (sort-by :block/priority result))
+;; Step 2: Add filtering
+:result-transform (fn [result] (filter #(:block/priority %) result))
 
-;; Step 3: Add filtering
+;; Step 3: Add sorting (affects which rows survive step 4, not display order)
 :result-transform (fn [result]
-                    (filter #(:block/priority %)
-                            (sort-by :block/priority result)))
+                    (->> result
+                         (filter #(:block/priority %))
+                         (sort-by :block/priority)))
 
 ;; Step 4: Add limit
 :result-transform (fn [result]
@@ -694,6 +770,8 @@ Don't try to write complex transforms right away. Build up gradually:
                          (sort-by :block/priority)
                          (take 10)))
 ```
+
+Verify each step with a `take`, not with a `reverse` — a `reverse` that appears to do nothing tells you nothing about whether the transform ran.
 
 ### 2. Use Fallback Values
 
@@ -762,6 +840,11 @@ For transforms you use often, define them in `config.edn`:
 
 This makes your queries cleaner and transformations reusable!
 
+Two things to know:
+
+- A keyword that isn't in `:query/result-transforms` throws — the query does not silently run untransformed (`src/main/frontend/components/query.cljs:133-140`).
+- `:priority-sort` and `:recent-first` above are pure reorderings, so they only do something for queries that also have a `:view`. `:top-10` works anywhere.
+
 ### 6. Chain Operations with ->>
 
 The `->>` (thread-last) macro makes complex transformations readable:
@@ -809,7 +892,7 @@ Transforms run every time your query updates. Keep them efficient:
 
 > **Removed:** "No, JavaScript cannot be used in transforms."
 
-**A:** Transforms are written in Clojure(Script) syntax, but ClojureScript interop is available in SCI (for example, `js/Date`, `parseFloat`, and `isNaN`). Most collection operations are still easiest to write in idiomatic Clojure:
+**A:** Transforms are written in Clojure(Script) syntax. Bare `parseFloat` and `isNaN` are **not** bound inside a `:result-transform` — those bindings only exist for `:view` functions (`src/main/frontend/extensions/sci.cljs:29-46`). Whether raw `js/` interop such as `js/Date` is reachable from a transform depends on the worker's SCI configuration and has not been verified; treat the `js/Date` examples in this guide as untested and prefer Clojure forms. Most collection operations are easiest to write in idiomatic Clojure anyway:
 
 | JavaScript           | Clojure               |
 | -------------------- | --------------------- |
@@ -846,7 +929,7 @@ Transforms run every time your query updates. Keep them efficient:
 
 ### Q: Can I use transforms in advanced query tables?
 
-**A:** Yes! Transforms work with both list views and table views.
+**A:** Yes — the transform runs. But a table re-sorts the rows it is given, so only the row-changing parts of your transform (`filter`, `remove`, `take`) survive. Column sorting on the table is the supported way to order a table.
 
 ### Q: Where do I set `:remove-block-children?`?
 
@@ -865,7 +948,7 @@ It is not part of `:result-transform`, and it is not configured globally in
 
 ### Q: What happens if my transform throws an error?
 
-**A:** Logseq will log the error to the console and display the original, untransformed results. Your query won't break.
+**A:** The query fails and renders an error box. There is no fallback to untransformed results. The same happens if the form doesn't evaluate to a function, or if it returns something that is neither a sequence nor a set (`src/main/frontend/worker/handler/render_resource/query.cljs:188-199`, surfaced at `src/main/frontend/components/query.cljs:182-183`).
 
 ### Q: Can I debug my transforms?
 
@@ -883,14 +966,17 @@ Then check the browser console (DevTools).
 
 ### Q: Can transforms modify block content?
 
-**A:** Yes, but it only affects the display in that query, not the actual stored content.
+**A:** Not for block results rendered as a table. Anything you `assoc` onto a block is thrown away: each block is reduced to its bare `:block/uuid` on the way out of the worker, and the renderer then re-reads the block from the database (`src/main/frontend/worker/handler/render_resource/query.cljs:15-21`). The transform below compiles and runs, and changes nothing on screen.
 
 ```clojure
+;; No visible effect on a block result
 :result-transform (fn [result]
-                    (map #(assoc % :block/content
-                                   (str "✅ " (:block/content %)))
+                    (map #(assoc % :block/title
+                                   (str "✅ " (:block/title %)))
                          result))
 ```
+
+To decorate rows, add a `:view` function and render the decorated result yourself. Nothing a transform does can change stored content either way.
 
 ### Q: Do I need to know Clojure to use this?
 
@@ -925,7 +1011,9 @@ You can combine this with sorting and filtering:
 
 ### Q: How do I sort by last updated date?
 
-**A:** Use `:block/updated-at` with the `>` comparator for descending order (newest first):
+**A:** Set `:logseq.property.table/sorting [{:id :block/updated-at :asc? false}]` on the query block, or click the column header in the rendered table. That is already the table's default, so for newest-first you usually need to do nothing at all.
+
+The `:result-transform` forms below only affect the displayed order when the query also has a `:view` fn. They are still useful for deciding which rows a following `take` keeps.
 
 ```clojure
 ;; Most recently updated first
@@ -956,6 +1044,10 @@ You can combine this with sorting and filtering:
 ---
 
 ## Advanced Techniques
+
+> **Read before copying.** Techniques 1, 2, 3, 4 and 6 depend on row order, or on fields added to the block map — both are discarded when a block result is rendered by the standard table (see [Read this first](#read-this-first-sorting-in-db-graphs)). Add a `:view` function alongside `:result-transform` and render the rows yourself. Techniques 5 and 7 only drop rows, so they work as written.
+>
+> On a DB graph, replace `:block/content` with `:block/title` throughout this section — `:block/content` is not in the DB schema.
 
 ### Technique 1: Multi-Level Sorting
 
@@ -1020,7 +1112,7 @@ Count and show only top priority:
 
 ### Technique 5: Date-Based Filtering
 
-Show only items due this week:
+Show only items due this week. Same `js/Date` caveat as Recipe 6.
 
 ```clojure
 :result-transform (fn [result]
@@ -1045,7 +1137,7 @@ Show first N, but always include high-priority items:
                       (concat high-pri (take (- 10 (count high-pri)) others))))
 ```
 
-This always shows all High-priority items, then fills remaining slots with others.
+The row *selection* holds: all High-priority items survive, and the remaining slots are filled with others. The "High-priority first" part does not — without a `:view`, the table decides the order.
 
 ### Technique 7: Deduplicate by Custom Logic
 
@@ -1092,5 +1184,5 @@ Now that you know how to use `:result-transform`, try:
 
 **Happy querying!**
 
-_Last updated: 2026-05-29_
-_Version: 1.1_
+_Last updated: 2026-09-22_
+_Version: 1.2_

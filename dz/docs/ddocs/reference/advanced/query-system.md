@@ -2,9 +2,9 @@
 title: 'Query System Reference'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-18'
+lastVerified: '2026-09-22'
 verifiedAgainst: '5824434a74'
-verifiedScope: 'Full audit 2026-09-09 (1be80c82a1, 03ae5276c6). The 2026-09-10 date covers only the :block/properties note on :result-transform (bfcaeb03e7).'
+verifiedScope: 'Full audit 2026-09-09 (1be80c82a1, 03ae5276c6). The 2026-09-10 date covers only the :block/properties note on :result-transform (bfcaeb03e7). The 2026-09-22 date covers only two sections, checked against 39ade9a309: "View Settings Are Block Properties" (property idents, operators and the CLI write, the latter run live on the cliworker and plugin-test graphs) and "Sorting Results" (result ordering traced through source, not observed in a running app).'
 reviewStatus: audited
 quadrant: 'Reference'
 platform: 'Desktop + Mobile (Database graphs only)'
@@ -90,6 +90,44 @@ fence:
          [?b :block/tags ?t]
          [?t :db/ident :logseq.class/Task]]}
 ```
+
+### View Settings Are Block Properties, Not Query Keys
+
+The filter chips, group-by and sort order you set through the results toolbar are **not part of the
+query**. They are hidden, non-public properties written onto the query block itself — the query
+block doubles as the view entity, with feature type `:query-result`. They are defined in
+`deps/db/src/logseq/db/frontend/property.cljs:432-536` and written by the toolbar in
+`src/main/frontend/components/views.cljs:2135-2180`.
+
+| Toolbar control | Property | Value shape |
+| --- | --- | --- |
+| Filter chips | `:logseq.property.table/filters` | `{:or? false :filters [[<property-ident> <operator> <value>] ...]}` |
+| Group by | `:logseq.property.view/group-by-property` | a property ident, e.g. `:logseq.property/status` |
+| Sort | `:logseq.property.table/sorting` | `[{:id <property-ident> :asc? false} ...]` |
+| Column visibility | `:logseq.property.table/hidden-columns` | `[<property-ident> ...]` |
+| Column order | `:logseq.property.table/ordered-columns` | `[<property-ident> ...]` |
+| Table / List / Gallery | `:logseq.property.view/type` | `:logseq.property.view/type.table`, `.list` or `.gallery` |
+
+Filter operators (`src/main/frontend/components/views.cljs:1837-1853`): `:is`, `:is-not`,
+`:text-contains`, `:text-not-contains`, `:date-before`, `:date-after`, `:before`, `:after`,
+`:number-gt`, `:number-lt`, `:number-gte`, `:number-lte`, `:between`. `:empty` is a *value*, so an
+"is not empty" chip is `[:block/tags :is-not :empty]`. A filter that matches specific nodes stores
+their `:block/uuid`s, not their titles (`views.cljs:2135-2151`).
+
+Because these live on the block, they travel with the block and not with the query text. Copying
+the query text alone loses them. They can be written without the UI:
+
+```bash
+logseq upsert block -g <graph> --id <query-block-id> --update-properties '{
+  :logseq.property.table/filters {:or? false :filters [[:block/tags :is-not :empty]]}
+  :logseq.property.view/group-by-property :logseq.property/status
+  :logseq.property.table/sorting [{:id :logseq.property/priority :asc? false}
+                                  {:id :block/updated-at :asc? false}]}'
+```
+
+`--remove-properties '[:logseq.property.table/sorting ...]'` clears them again. *(Verified
+2026-09-22 by writing and reading back these properties on the `cliworker` and `plugin-test`
+graphs.)*
 
 ### Query Map Keys
 
@@ -327,16 +365,35 @@ directly:
 
 ### Sorting Results
 
-DataScript's `:find`/`:where` has **no `:order-by` clause**. Sort in `:result-transform` (which sees
-pulled maps) or in `:view` (which sees UUIDs/tuples):
+DataScript's `:find`/`:where` has **no `:order-by` clause**, and in a DB graph the query map cannot
+order block results at all. Sorting a block result inside `:result-transform` is discarded:
+
+1. The transform runs in the worker, then every pulled block map is reduced to its `:block/uuid`
+   (`src/main/frontend/worker/handler/render_resource/query.cljs:15-53,188-209`).
+2. A block result with no `:view` renders through the standard table view
+   (`src/main/frontend/components/query.cljs:52-57`).
+3. The view puts those ids into a **set** and sorts them by the block's
+   `:logseq.property.table/sorting`, falling back to `[{:id :block/updated-at :asc? false}]`
+   (`deps/db/src/logseq/db/common/view.cljs:1113-1135`).
+
+`remove`, `filter` and `take` in a transform still work — they change which rows exist, not their
+order. Order survives only where the table view is bypassed: a query with a `:view` function
+receives the transformed rows directly (`components/query.cljs:42-50`), and built-in queries render
+through `->hiccup`.
+
+To order block results, set `:logseq.property.table/sorting` on the query block (see
+[View Settings Are Block Properties](#view-settings-are-block-properties-not-query-keys)). To order
+inside the query text, return scalars instead of pulled blocks and sort in a `:view` function:
 
 ```clojure
-{:query [:find (pull ?b [:block/uuid :logseq.property/deadline])
+{:query [:find ?title ?deadline
          :where
          [?b :block/tags :logseq.class/Task]
-         [?b :logseq.property/deadline _]]
- :result-transform (fn [result]
-                     (sort-by :logseq.property/deadline result))}
+         [?b :logseq.property/deadline ?deadline]
+         [?b :block/title ?title]]
+ :view (fn [rows]
+         [:ul (for [r (sort-by (fn [r] (nth r 1)) rows)]
+                [:li (nth r 0)])])}
 ```
 
 Note that `:result-transform` is stored as a *form*, `pr-str`-ed and evaluated with SCI in the

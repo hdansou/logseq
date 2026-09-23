@@ -2,9 +2,9 @@
 title: 'Query Patterns Reference'
 status: 🟢 Stable
 version: 'DB graph schema 65.33'
-lastVerified: '2026-09-18'
+lastVerified: '2026-09-22'
 verifiedAgainst: '5824434a74'
-verifiedScope: 'Full audit 2026-09-09 (1be80c82a1, 03ae5276c6). The 2026-09-10 date covers only the :block/properties note on :result-transform (bfcaeb03e7).'
+verifiedScope: 'Full audit 2026-09-09 (1be80c82a1, 03ae5276c6). The 2026-09-10 date covers only the :block/properties note on :result-transform (bfcaeb03e7). The 2026-09-22 date covers only two sections, checked against 39ade9a309: the "Simple (DSL) Query" note that the DSL has no sort or group operator, and "Custom Sorting" (result ordering traced through source, not observed in a running app; the CLI write was run live on the cliworker and plugin-test graphs).'
 reviewStatus: audited
 quadrant: 'Reference'
 platform: 'Desktop + Mobile (Database graphs only)'
@@ -107,6 +107,14 @@ clauses (`src/main/frontend/worker/query_dsl.cljs:526-577`).
 Status and priority arguments are capitalised before matching, so `(task todo doing)` and
 `(task TODO DOING)` both resolve to the titles `"Todo"` and `"Doing"`
 (`query_dsl.cljs:411-419`, `:421-429`).
+
+**The DSL cannot sort or group.** That operator list is the whole language: there is no `sort-by`
+and no `group-by`. The parser carries a `sort-by` atom that no builder ever fills
+(`query_dsl.cljs:658,684`), and `build-query` returns `nil` for any form it does not recognise
+(`:576-577`), so a made-up operator is dropped without an error and the query still runs. DB graphs
+also force `group-by-page?` to `false` (`src/main/frontend/components/query/result.cljs:7-15`).
+Sorting and grouping come from properties on the query block instead — see
+[View Settings Are Block Properties](query-system.md#view-settings-are-block-properties-not-query-keys).
 
 ---
 
@@ -855,15 +863,35 @@ page groupings is gone.
 
 ### Custom Sorting
 
-```clojure
-{:query [:find (pull ?b [:block/uuid :logseq.property/deadline])
-         :where
-         [?b :block/tags :logseq.class/Task]]
- :result-transform (fn [result]
-                     (sort-by (fn [b]
-                                (get b :logseq.property/deadline 99999999999999))
-                              result))}
+A `sort-by` in `:result-transform` does **not** order a block result. The transform runs, then the
+pulled maps collapse to `:block/uuid`s, the table view collects them into a set and re-sorts by the
+query block's `:logseq.property.table/sorting` — defaulting to `updated-at` descending
+(`src/main/frontend/worker/handler/render_resource/query.cljs:15-53,188-209`;
+`deps/db/src/logseq/db/common/view.cljs:1113-1135`). Two patterns that do work:
+
+**Sort the table** — set the property on the query block, from the results toolbar or the CLI:
+
+```bash
+logseq upsert block -g <graph> --id <query-block-id> --update-properties '{
+  :logseq.property.table/sorting [{:id :logseq.property/deadline :asc? true}]}'
 ```
+
+**Sort inside the query** — return scalars and order them in a `:view` function, which receives the
+rows before the table view sees them:
+
+```clojure
+{:query [:find ?title ?deadline
+         :where
+         [?b :block/tags :logseq.class/Task]
+         [?b :logseq.property/deadline ?deadline]
+         [?b :block/title ?title]]
+ :view (fn [rows]
+         [:ul (for [r (sort-by (fn [r] (nth r 1)) rows)]
+                [:li (nth r 0)])])}
+```
+
+`:result-transform` remains the right tool for *which* rows survive — `filter`, `remove` and
+`take` all work on block results.
 
 ---
 

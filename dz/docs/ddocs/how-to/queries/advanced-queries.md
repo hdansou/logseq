@@ -2,8 +2,9 @@
 title: 'Advanced Queries'
 description: 'How to write advanced Datalog queries in Logseq'
 status: stable
-lastVerified: '2026-09-18'
+lastVerified: '2026-09-22'
 verifiedAgainst: '5824434a74'
+verifiedScope: 'The 2026-09-22 date covers only two sections, checked against 39ade9a309: "Filters, Group-by and Sort Without the UI" (CLI writes run live on the cliworker and plugin-test graphs) and the "Sort Results" caveat (result ordering traced through source, not observed in a running app). Everything else still dates from the 2026-09-18 audit.'
 reviewStatus: audited
 logseqVersion: '0.11.x'
 platforms: [desktop, web, mobile]
@@ -508,15 +509,30 @@ the query fails with `"Query result transform must return rows"` (lines 188-191)
 
 ### Sort Results
 
-Pull the nested title so the transform has something to read:
+**Sorting here does nothing for a block result.** The transform runs, then each pulled block
+collapses to its `:block/uuid`, and the table view puts those ids in a set and sorts them by the
+query block's own `:logseq.property.table/sorting` — `updated-at` descending when you have not set
+one (`src/main/frontend/worker/handler/render_resource/query.cljs:15-53,188-209`;
+`deps/db/src/logseq/db/common/view.cljs:1113-1135`). Your order is discarded silently: no error, no
+warning, just the table's own order.
+
+Sort with [Filters, Group-by and Sort Without the UI](#filters-group-by-and-sort-without-the-ui)
+instead, or return scalars and sort inside `:view`, which is handed the rows before the table view
+sees them:
 
 ```clojure
-{:query [:find (pull ?b [* {:logseq.property/priority [:block/title]}])
-         :where [?b :logseq.property/priority _]]
- :result-transform
- (fn [result]
-   (sort-by (fn [r] (get-in r [:logseq.property/priority :block/title])) result))}
+{:query [:find ?title ?priority
+         :where
+         [?b :logseq.property/priority ?p]
+         [?p :block/title ?priority]
+         [?b :block/title ?title]]
+ :view (fn [rows]
+         [:ul (for [r (sort-by (fn [r] (nth r 1)) rows)]
+                [:li (nth r 0) " — " (nth r 1)])])}
 ```
+
+The sections below — filtering and limiting — do work on block results, because they change which
+rows exist rather than their order.
 
 ### Filter Results
 
@@ -550,9 +566,50 @@ Filtering in `:where` is cheaper and usually clearer — reach for
  (fn [result]
    (->> result
         (filter (fn [r] (= "Todo" (get-in r [:logseq.property/status :block/title]))))
+        ;; The sort decides which 5 rows `take` keeps, but not the order they
+        ;; appear in — the table re-sorts block results. See Sort Results above.
         (sort-by (fn [r] (get-in r [:logseq.property/priority :block/title])))
         (take 5)))}
 ```
+
+---
+
+## Filters, Group-by and Sort Without the UI
+
+The filter chips, group-by and sort order in the results toolbar are stored as hidden properties on
+the query block, not in the query text (`deps/db/src/logseq/db/frontend/property.cljs:432-536`,
+written by `src/main/frontend/components/views.cljs:2135-2180`). Set them yourself with the CLI:
+
+```bash
+logseq upsert block -g <graph> --id <query-block-id> --update-properties '{
+  :logseq.property.table/filters {:or? false :filters [[:block/tags :is-not :empty]]}
+  :logseq.property.view/group-by-property :logseq.property/status
+  :logseq.property.table/sorting [{:id :logseq.property/priority :asc? false}
+                                  {:id :block/updated-at :asc? false}]}'
+```
+
+Find the block id by title:
+
+```bash
+logseq query -g <graph> --query '[:find ?e :where [?e :block/tags :logseq.class/Query] [?e :block/title "Recent Tasks"]]'
+```
+
+`--remove-properties '[:logseq.property.table/sorting]'` clears a setting again. The full property
+list, value shapes and filter operators are in
+[Query System Reference](../../reference/advanced/query-system.md#view-settings-are-block-properties-not-query-keys).
+
+Three things to know:
+
+- **Filter values are idents and uuids.** A chip filtering on a specific tag or page stores its
+  `:block/uuid`, not its title. `:empty` is a value, so "is not empty" is
+  `[:block/tags :is-not :empty]`.
+- **`Tags is not Empty` never filters tasks.** Every task in a DB graph carries the `Task` tag, so
+  the chip matches all of them. Filter on a specific tag when you mean "tagged by me".
+- **These settings travel with the block, not the query text.** Copy the query text elsewhere and
+  you get an unfiltered, ungrouped table.
+
+*(Verified 2026-09-22: the commands above were run on the `cliworker` and `plugin-test` graphs and
+the properties read back.)*
 
 ---
 
