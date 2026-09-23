@@ -68,6 +68,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 - 🟢 [Managing Favorites & Recent Pages](how-to/content/favorites-recent.md)
 - [Hide Tags from a Node](how-to/content/hide-tags-from-node.md)
 - [Quick Capture](how-to/content/quick-capture.md)
+- [Search Your Graph: Which Tool for Which Job](how-to/content/search-your-graph.md)
 - [View Functions](how-to/content/view-types.md)
 
 #### [Integrations](how-to/integrations/)
@@ -85,8 +86,8 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 #### [Multimedia](how-to/multimedia/)
 
 - 🟢 [Asset Management in Logseq](how-to/multimedia/asset-management.md)
-- [Set Image and Asset Width](how-to/multimedia/image-width.md)
 - [Set a Default Image Size with CSS](how-to/multimedia/default-image-size.md)
+- [Set Image and Asset Width](how-to/multimedia/image-width.md)
 - 🟢 [Video Embedding in Logseq](how-to/multimedia/video-embed.md)
 
 #### [Optimization](how-to/optimization/)
