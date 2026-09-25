@@ -2,9 +2,10 @@
 title: 'CLI Basics'
 description: 'How to use the Logseq command-line interface for automation and scripting'
 status: stable
-lastVerified: '2026-09-18'
+lastVerified: '2026-09-24'
 verifiedAgainst: '5824434a74'
 reviewStatus: audited
+verifiedScope: 'The 2026-09-24 date covers only the matching note under Search, checked in source (cli/lib/search.ml) and by running the command on plugin-test. Everything else dates from 2026-09-18.'
 logseqVersion: '2.0.1'
 cliVersion: 'source-backed'
 platforms: [desktop]
@@ -135,6 +136,13 @@ Search is scoped by entity type and takes `-c/--content` (`cli_parse.ml:285-288`
 - `search page --graph my-graph --content "home"`
 - `search property --graph my-graph --content "owner"`
 - `search tag --graph my-graph --content "quote"`
+
+Matching is a case-insensitive substring test on titles, done in a Datascript query
+(`cli/lib/search.ml:133-155`). It does not use the app's search index, so there is no
+fuzzy, multi-word, or semantic matching: `--content "Probe A"` finds *Probe A — table
+path…*, while `"probe table"` and `"tsk"` return nothing. Hidden nodes are left out unless
+you add `--include-hidden`. For engine-backed search from outside the app, use the MCP
+server's search tool instead.
 
 ### Query
 

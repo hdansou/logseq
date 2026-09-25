@@ -3,8 +3,9 @@ title: 'Turn On Semantic Search'
 description: 'Enable meaning-based search in your Logseq DB graph and confirm it is actually working'
 type: tutorial
 status: active-development
-lastVerified: '2026-09-06'
+lastVerified: '2026-09-24'
 reviewStatus: authored-from-source
+verifiedScope: 'The 2026-09-24 date covers only the Troubleshooting entry "The toggle is on, but the sidecar log does not exist", observed on Logseq DB 2.0.1 (50e1849-dirty). Everything else dates from 2026-09-06.'
 logseqVersion: '2.0.x'
 platforms: [desktop]
 graphType: [db]
@@ -135,6 +136,31 @@ dz/support-engineering/script/semantic-search/test_semantic_search.clj "your que
 ```
 
 It reports whether the sidecar is reachable, whether the index exists, and whether vector hits come back — and tells you which of those is at fault.
+
+**The toggle is on, but the sidecar log does not exist.**
+The app never managed to start the sidecar. Open the main log and look for the failure:
+
+```bash
+grep -n 'embedding-server/start-failed' ~/Library/Logs/Logseq/main.log | tail -3
+```
+
+Each hit is followed by `Error: spawn …/embedding-server/.venv/bin/python ENOENT`. Do
+not take that path at face value: Node reports a missing *working directory* with the
+same message, and the sidecar's working directory is the app bundle's own
+`Contents/Resources/sidecar`. Check both:
+
+```bash
+ls -la ~/Library/Application\ Support/Logseq/embedding-server/.venv/bin/python
+ls /Applications/Logseq-DB.app/Contents/Resources/sidecar/embedding_server.py
+```
+
+Adjust the bundle name if yours is installed as `Logseq.app`. If the first exists and
+the second does not, your build shipped without the sidecar,
+and no setting, restart, or reinstall of the Python environment will help. That was the
+case on 2026-09-24 with Logseq DB 2.0.1 built 2026-09-21: the venv imported
+`sentence_transformers` fine, the setting was on, and every search had been silently
+keyword-only since the day the feature was enabled. You need a build that includes the
+`sidecar` folder (`resources/electron-builder.yml:52-53`).
 
 **You changed your mind.**
 Turn the toggle off in Settings. The embedding service stops immediately. The index stays on disk; delete `~/logseq/graphs/<graph>/search/vector/` if you want the space back.

@@ -3,8 +3,9 @@ title: 'How Semantic Search Works'
 description: "The architecture behind Logseq's hybrid keyword + vector search: the embedding sidecar, the zvec index, and how the two result sets are fused"
 type: explanation
 status: active-development
-lastVerified: '2026-09-06'
+lastVerified: '2026-09-24'
 reviewStatus: authored-from-source
+verifiedScope: 'The 2026-09-24 date covers only the closing example in "Failure is the normal case". Everything else dates from 2026-09-06.'
 logseqVersion: '2.0.x'
 platforms: [desktop]
 graphType: [db]
@@ -137,6 +138,8 @@ Fifty milliseconds is far less than a cold sentence-transformer needs, which is 
 This is why anything diagnosing the feature should supply its own `:query-embedding` rather than relying on the worker to produce one; that path skips the timeout entirely and tests the index rather than the clock. The [Semantic Search API reference](../../reference/api/semantic-search-api.md) covers how.
 
 The same tolerance runs through the rest of the stack. No vector index on the platform? The option is ignored. Sidecar unreachable? Keyword-only. Index empty or stale? Zero vector hits, keyword results unaffected. There is no configuration in which the search box stops working because the semantic layer is unhappy.
+
+The flip side is that the tolerance hides real breakage for as long as you let it. A concrete case from 2026-09-24: a machine with the setting on, a healthy Python environment, and an installed 2.0.1 build that shipped without the `Contents/Resources/sidecar` folder. The main process spawns the sidecar with that folder as its working directory (`electron/embedding_server.cljs:209-218`), Node reports the missing directory as `spawn …/.venv/bin/python ENOENT`, the error is logged as `embedding-server/start-failed`, and the renderer is never told. Every search for ten days had been keyword-only while the Settings toggle said otherwise. Nothing in the UI distinguishes that from a working install with a slow model.
 
 ## Why it only runs on Apple silicon
 

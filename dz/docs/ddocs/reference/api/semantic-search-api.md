@@ -3,8 +3,9 @@ title: 'Semantic Search API'
 description: "Reference for Logseq's hybrid keyword + vector search: search options, ranking constants, the platform vector contract, and the on-disk zvec collection"
 type: reference
 status: active-development
-lastVerified: '2026-09-06'
+lastVerified: '2026-09-24'
 reviewStatus: authored-from-source
+verifiedScope: 'The 2026-09-24 date covers only the added Availability gates row and the CLI bullet under Not available. Everything else dates from 2026-09-06.'
 logseqVersion: '2.0.x'
 platforms: [desktop]
 graphType: [db]
@@ -54,7 +55,7 @@ Semantic ranking is folded in automatically, but **a plugin cannot enable it**: 
 
 ### Not available
 
-- **CLI.** `logseq search` issues a Datascript substring query and never reaches `search-blocks`. Enabling the setting does not change CLI results.
+- **CLI.** `logseq search` issues a Datascript query that lower-cases titles and keeps substrings (`cli/lib/search.ml:133-155`); it never reaches `search-blocks`. Enabling the setting does not change CLI results. Checked 2026-09-24 on `plugin-test`: `--content "Probe A"` matched, `"probe table"` and `"tsk"` did not.
 - **Vector-only queries.** There is no API that returns vector hits without keyword hits.
 
 ## Search options
@@ -213,6 +214,7 @@ All of these must hold, and they are enforced independently:
 | macOS arm64 | `components/settings.cljs` | Settings row is hidden |
 | `python3` on PATH | `electron/handler.cljs` | Toggle rejects with `:missing-python3` |
 | `:feature/enable-semantic-search?` in user config | `electron/configs.cljs` | Sidecar not started at boot |
+| `Contents/Resources/sidecar/embedding_server.py` present in the bundle | `electron/embedding_server.cljs:40-44,209-218` | Spawn fails; logged as `embedding-server/start-failed` with a misleading `spawn …/.venv/bin/python ENOENT`, because Node names the command when the working directory is missing. Observed on the 2.0.1 build of 2026-09-21, which lacks the folder although `resources/electron-builder.yml:52-53` copies it |
 
 There is **no default embedding endpoint**. A db-worker started without `--embedding-endpoint` or `LOGSEQ_EMBEDDINGS_URL` builds no vector index, regardless of platform.
 
