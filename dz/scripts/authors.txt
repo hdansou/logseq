@@ -5,3 +5,4 @@
 
 charlie=Charlie
 megayu=Mega Yu
+Aung-Min-Myat=Aung Min Myat
