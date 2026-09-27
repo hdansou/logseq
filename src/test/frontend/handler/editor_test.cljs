@@ -14,6 +14,7 @@
             [frontend.handler.block :as block-handler]
             [frontend.handler.editor :as editor]
             [frontend.handler.editor.assets :as editor-assets]
+            [frontend.handler.editor.autopair :as editor-autopair]
             [frontend.handler.editor.format :as editor-format]
             [frontend.handler.paste :as paste-handler]
             [frontend.handler.property :as property-handler]
@@ -249,6 +250,7 @@
            (fn []
              (is (= [inserted-block 0 {:container-id 7
                                        :save-code-editor? false
+                                       :save-current-block? false
                                        :skip-load? true}]
                     @calls))))
           (p/catch
@@ -592,7 +594,7 @@
         (#'editor/edit-last-block-after-inserted! {:blocks [inserted-block]})
         (is (= [[:schedule]
                 [:clear-when-saved]
-                [:edit-block inserted-block :max]]
+                [:edit-block inserted-block :max {:save-current-block? false}]]
                @calls))
         (catch :default error
           (is false (str error)))))))
@@ -920,14 +922,15 @@
 
 (defn- keyup-handler
   "Spied version of editor/keyup-handler"
-  [{:keys [value cursor-pos action commands]
+  [{:keys [value cursor-pos action commands event-key]
     ;; Default to some commands matching which matches default behavior for most
     ;; completion scenarios
     :or {commands [:fake-command]}}]
   ;; Reset editor action in order to test result
   (state/set-editor-action! action)
-  ;; Default cursor pos to end of line
+  ;; Default cursor pos to end of line and released key to last char of value
   (let [pos (or cursor-pos (count value))
+        event-key (or event-key (subs value (dec (count value))))
         input #js {:value value}
         command (subs value 1)]
     (with-redefs [editor/get-last-command (constantly command)
@@ -936,7 +939,7 @@
                   editor/default-case-for-keyup-handler (constantly nil)
                   cursor/pos (constantly pos)]
       ((editor/keyup-handler nil input)
-       #js {:key (subs value (dec (count value)))}
+       #js {:key event-key}
        nil))))
 
 (deftest keyup-handler-test
@@ -986,6 +989,34 @@
         "Completion stays open when typing tag before another tag"))
   ;; Reset state
   (state/set-editor-action! nil))
+
+(deftest keyup-handler-converts-backticks-to-code-block-test
+  (doseq [[value event-key] [["```" "`"]
+                             ["``````" "`"]
+                             ;; dead-key commits the backtick via space or a
+                             ;; repeated Dead key release
+                             ["```" " "]
+                             ["```" "Dead"]
+                             ;; IME process/unidentified key releases
+                             ["```" "Process"]
+                             ["```" "Unidentified"]]]
+    (let [events (atom [])]
+      (with-redefs [state/set-edit-content! (constantly nil)
+                    state/get-edit-block (constantly {:block/uuid (random-uuid)})
+                    state/pub-event! (fn [event] (swap! events conj event))]
+        (keyup-handler {:value value :event-key event-key}))
+      (is (= [[:editor/upsert-type-block :code]]
+             (map (fn [[event-name {:keys [type]}]] [event-name type]) @events))
+          (str value " with key " (pr-str event-key))))))
+
+(deftest keyup-handler-ignores-backticks-on-non-typing-keyup-test
+  (doseq [event-key ["ArrowLeft" "ArrowRight" "Shift" "Escape"]]
+    (let [events (atom [])]
+      (with-redefs [state/set-edit-content! (constantly nil)
+                    state/get-edit-block (constantly {:block/uuid (random-uuid)})
+                    state/pub-event! (fn [event] (swap! events conj event))]
+        (keyup-handler {:value "```" :event-key event-key}))
+      (is (empty? @events) event-key))))
 
 (defn- create-tag-with-alias!
   []
@@ -1314,6 +1345,29 @@
          (keydown-dollar-without-selection-result {:value "inline $$"
                                                    :cursor-pos 8}))))
 
+(defn- keydown-backtick-autopaired?
+  [event]
+  (let [autopaired? (atom false)
+        input #js {:id "edit-block-test"
+                   :value ""}]
+    (with-redefs [state/get-edit-input-id (constantly "edit-block-test")
+                  state/get-input (constantly input)
+                  state/get-editor-action (constantly nil)
+                  state/set-state! (constantly nil)
+                  util/get-selected-text (constantly "")
+                  util/stop (constantly nil)
+                  cursor/pos (constantly 0)
+                  editor-autopair/autopair (fn [& _] (reset! autopaired? true))]
+      ((editor/keydown-not-matched-handler :markdown) event nil)
+      @autopaired?)))
+
+(deftest keydown-not-matched-handler-skips-autopair-during-composition
+  (is (keydown-backtick-autopaired? #js {:key "`"
+                                         :isComposing false}))
+  (is (not (keydown-backtick-autopaired? #js {:key "`"
+                                              :isComposing true
+                                              :keyCode 229}))))
+
 (defn- delete-block-at-zero-pos-result
   [block & {:keys [left-sibling]}]
   (let [deleted? (atom false)
@@ -1478,6 +1532,7 @@
       (is (= [(assoc current :block/title "" :block/raw-title "")
               0
               {:save-code-editor? false
+               :save-current-block? false
                :skip-load? true}]
              @edited)
           "Deleting an empty predecessor must not restore the erased mounted title."))))
@@ -1723,6 +1778,7 @@
                              :tail-len 0
                              :container-id 7
                              :save-code-editor? false
+                             :save-current-block? false
                              :skip-load? true}]]
                @calls))))))
 
@@ -2179,6 +2235,7 @@
                             :tail-len 5
                             :container-id nil
                             :save-code-editor? false
+                            :save-current-block? false
                             :skip-load? true}}]
                    @edit-calls)))
           (p/catch (fn [error]
@@ -2227,6 +2284,7 @@
                             :tail-len 5
                             :container-id nil
                             :save-code-editor? false
+                            :save-current-block? false
                             :skip-load? true}}]
                    @edit-calls)))
           (p/catch (fn [error]

@@ -128,6 +128,30 @@
           (is (= ["child"] (child-titles node'))
               "The restored value is not a normal child block"))))))
 
+(deftest moving-non-page-or-non-normal-page-to-library-is-rejected
+  (let [conn (db-test/create-conn-with-blocks
+              {:properties {:p-text {:logseq.property/type :default}}
+               :classes {:SomeTag {}}
+               :pages-and-blocks
+               [{:page {:block/title "page"}
+                 :blocks [{:block/title "node"}]}
+                {:page {:block/title "normal page"}}]})
+        library (ldb/get-library-page @conn)]
+    (is (some? library) "Built-in Library page exists")
+    (doseq [[label entity] [["block" (db-test/find-block-by-content @conn "node")]
+                            ["class" (d/entity @conn :user.class/SomeTag)]
+                            ["property" (d/entity @conn :user.property/p-text)]]]
+      (testing (str "moving a " label " to Library is a no-op")
+        (outliner-core/move-blocks! conn [entity] library {:sibling? false})
+        (is (not= (:db/id library)
+                  (:db/id (:block/parent (d/entity @conn (:db/id entity)))))
+            (str "The " label " was not moved"))))
+    (testing "moving a normal page to Library is allowed"
+      (let [page (db-test/find-page-by-title @conn "normal page")]
+        (outliner-core/move-blocks! conn [page] library {:sibling? false})
+        (is (= (:db/id library)
+               (:db/id (:block/parent (d/entity @conn (:db/id page))))))))))
+
 (deftest undo-delete-restores-many-text-property-values
   (doseq [value-title ["alpha" "beta"]]
     (testing (str "delete " value-title)
