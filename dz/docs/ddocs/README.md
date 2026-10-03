@@ -134,6 +134,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 - [db-worker HTTP API](reference/api/db-worker-http-api.md)
 - [HTTP API Reference](reference/api/http-api.md)
+- [Logseq Server API Reference (REST + MCP)](reference/api/logseq-server-api.md)
 - [MCP Server Reference](reference/api/mcp-server.md)
 - [Plugin API Reference](reference/api/plugin-api.md)
 - [Semantic Search API](reference/api/semantic-search-api.md)
