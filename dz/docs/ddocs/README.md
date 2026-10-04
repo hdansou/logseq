@@ -143,6 +143,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 #### [Configuration](reference/configuration/)
 
 - [config.edn Reference](reference/configuration/config-edn.md)
+- [Code Block Editor Options (:editor/extra-codemirror-options)](reference/configuration/codemirror-options.md)
 - [CSS Variables Reference](reference/configuration/css-variables.md)
 - [Keyboard Shortcuts Reference](reference/configuration/keyboard-shortcuts.md)
 
