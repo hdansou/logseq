@@ -329,6 +329,8 @@ compile through `->dsl`, run via `frontend.db.query-dsl/query`, render as a new 
 Deliberately no chip UI and no stage-2 clauses — the point was to test the pipeline, not the
 interaction. Task plan and full findings in that worktree's `TASKS.md`.
 
+> **Branch deleted 2026-10-05.** The branch, its single commit `a6af1ad7c1` ("experiment: qualifier search in the command palette", 8 files, 582 lines added) and the worktree no longer exist, and the commit was never pushed. The findings in this section are the record. Until git garbage-collects it, the commit can be restored with `git branch experiment/palette-qualifier-chips a6af1ad7c1`.
+
 **Confirmed live** in Chrome against graph `demolocal4` on the dev build:
 
 | Input | Compiled | Result |

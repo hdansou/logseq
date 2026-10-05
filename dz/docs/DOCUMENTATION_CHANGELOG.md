@@ -10,6 +10,10 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-10-05 — Branch cleanup
+
+- [2026-10-05] `07-investigations/030-palette-qualifier-search.md` — **noted** that the experiment branch `experiment/palette-qualifier-chips` was deleted at the user's request. Its one unpushed commit is `a6af1ad7c1`, recoverable from the reflog until garbage collection
+
 ### 2026-10-04 (later still) — Follow-ups after the guide audit
 
 - [2026-10-04] `07-investigations/schema-evolution-and-data-migration.md`, `schema-integrity-01…08` (seven files) — **added** a dated note that the schema moved from the analyzed 65.33 to 65.34 (`68a68263b7`); the analysis itself is unchanged. Frontmatter version tags and "audited against" stamps elsewhere stay at 65.33 on purpose, since they record what was verified
