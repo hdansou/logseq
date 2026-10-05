@@ -103,7 +103,7 @@ Properties are structured entities, not text. **Live**: `status:: Todo` typed in
 
 1. Type `/Add property`, choose or create a property, then set its value. For a task there are direct commands: `/Todo`, `/Doing`, `/Priority High` and so on (**Live** menu).
 2. Or click **+ Add property** in the block's property area, or press `Cmd+P` (`Ctrl+Alt+P` on Windows and Linux). **Live**: `Cmd+P` opens a list of properties including Scheduled.
-3. Or select a block (press Esc while editing) and use a chord. **Live**: `p` then `d` opens the Deadline date picker, and `p` then `s` opens the status list. **Source**: `p t` tags, `p p` priority, `p i` icon. There is no scheduled chord; use `/Scheduled` or `Cmd+P`.
+3. Or select a block (press Esc while editing) and use a chord. **Live**: `p` then `d` opens the Deadline date picker, and `p` then `s` opens the status list. **Live**: `p t` opens the tag picker, `p p` the priority list and `p i` the icon picker. There is no scheduled chord; use `/Scheduled` or `Cmd+P`.
 
 The block right-click menu has no "Add property" item.
 
@@ -113,7 +113,7 @@ User-creatable types (**Source**: `deps/db/src/logseq/db/frontend/property/type.
 
 ### Page properties
 
-Page properties appear at the top of a page. Built-in properties include icon, alias and tags. **Not checked live**: the exact placement of the "Add property" button on a page.
+Page properties appear at the top of a page. **Live**: the page header shows **Add icon** and **Set property** buttons above the title. Built-in properties include icon, alias and tags.
 
 ### Built-in properties worth knowing
 
@@ -138,9 +138,9 @@ Closed values **Low, Medium, High, Urgent**. **Live**: `/Priority` filters to "P
 
 Type `/Scheduled` or `/Deadline`, or select the block and press `p` then `d` for a deadline. Both are DateTime properties (**Source**). The Scheduled and Deadline section on today's journal uses a local-midnight window; see [Customize the Journal Queries](../ddocs/how-to/queries/customize-journal-queries.md).
 
-### Repeating tasks (Source)
+### Repeating tasks
 
-Click the date on a Scheduled or Deadline value, tick **Repeat task**, then set **Every N <unit>** (Minute, Hour, Day, Week, Month, Year), **Next date** (Advance from completion, Advance from scheduled, or Advance from scheduled, skip to future) and the status that triggers the repeat. The panel is hidden on narrow screens. It stores `:logseq.property.repeat/recur-frequency` (default 1), `recur-unit` (default Day), `repeated?`, `repeat-type`, `temporal-property` and `checked-property`. Not run live in this audit.
+**Live**: on a Scheduled or Deadline property pill, click the pencil (edit) icon. Clicking the date itself follows the journal link. The popup has a calendar and, beside it, a **Repeat task** checkbox, **Every [N] [unit]**, **Next date** and **When Status is: Done**. **Next date** offers Advance from completion, Advance from scheduled, and Advance from scheduled, skip to future. Units are Minute, Hour, Day, Week, Month, Year (**Source**). The repeat panel is hidden on narrow screens (**Source**). It stores `:logseq.property.repeat/recur-frequency` (default 1), `recur-unit` (default Day), `repeated?`, `repeat-type`, `temporal-property` and `checked-property`.
 
 ## Text formatting
 
@@ -242,8 +242,8 @@ Bullets are blocks. A numbered list is a block property, not typed text: use `/N
 ```
 
 - Use `/Upload an asset` for files and images. Uploaded files are asset blocks stored as `assets/<block-uuid>.<ext>`; resize and align them from the image's ⋮ menu.
-- A hand-typed relative path such as `../assets/x.png` renders only if that file exists (**Source**; not run). An absolute path to a local image also rendered in the desktop app (**Live**), with a ⋮ menu offering Copy image and Show file in folder.
-- `![alt](img.png){:width 300}` is parsed as image metadata (**Source**); an asset block's own size overrides it.
+- **Live**: a hand-typed `![](../assets/typed.png)` renders when `typed.png` exists in the graph's `assets/` folder, and `{:width 200}` after the image applies that width. An absolute path to a local image also rendered in the desktop app (**Live**), with a ⋮ menu offering Copy image and Show file in folder.
+- An asset block's own size overrides the `{:width ...}` metadata (**Source**).
 - A `.pdf` link opens in the in-app PDF viewer (**Source**).
 
 ## Macros
@@ -251,7 +251,7 @@ Bullets are blocks. A numbered list is a block property, not typed text: use `/N
 - `{{youtube URL}}` and `{{tweet URL}}` render an embedded player (**Live**). `vimeo`, `bilibili` and `video` are handled the same way (**Source**).
 - `{{today}}`, `{{yesterday}}`, `{{tomorrow}}`, `{{current time}}` are **not** macros. **Live**: `{{today}}` shows "Unsupported macro name: today". Use the slash commands `/Today`, `/Yesterday`, `/Tomorrow`, `/Current time` and `/Date picker`.
 - `{{embed}}`, `{{query}}` and `{{namespace}}` are deprecated.
-- Custom macros from `:macros` in `config.edn` are still read (**Source**; not run).
+- **Live**: custom macros from `:macros` in `config.edn` still expand. With `{:macros {"poem" "Roses are $1, violets are $2"}}`, `{{poem red, blue}}` rendered "Roses are red, violets are blue".
 
 ## Templates
 
@@ -288,7 +288,7 @@ Plugins add more (the test profile showed AI and Callout entries). There is no `
 ## Keyboard shortcuts and menus
 
 - `Cmd+P` (`Ctrl+Alt+P` on Windows and Linux) opens Add property (**Live**, macOS).
-- With a block selected: `p d` Deadline, `p s` status, `p t` tags, `p p` priority, `p i` icon (**Live** for `d` and `s`; **Source** for the rest).
+- With a block selected: `p d` Deadline, `p s` status, `p t` tags, `p p` priority, `p i` icon (all **Live**).
 - `Cmd/Ctrl+Shift+E` while editing copies an embed of the block (**Live**).
 - `[[` opens page and block search; `#` opens tag search; `/` opens the command menu.
 
@@ -319,7 +319,7 @@ await logseq.Editor.createTag('Book', {
 })
 ```
 
-The signatures match `libs/src/LSPlugin.ts` (**Source**; not run). The plugin API resolves a property key to a plugin-namespaced property, so `upsertBlockProperty(uuid, 'status', ...)` may not write the built-in Status. For tasks, set status through the UI or the full ident. This was not run.
+The signatures match `libs/src/LSPlugin.ts` (**Source**). **Live**: the two samples above ran and created `:plugin.property._test_plugin/rating`, `:plugin.class._test_plugin/Book` and Book's `author` and `year` properties (the `_test_plugin` segment is the dev harness plugin id; an installed plugin gets its own). Also **Live**: `upsertBlockProperty(uuid, 'status', 'done')` created a plugin-namespaced property (`:plugin.property._test_plugin/status` in the test harness) and left the built-in Status untouched. To set the built-in status, pass its ident, `':logseq.property/status'`, with the value `'Todo'`, `'Done'` and so on.
 
 ## Best practices
 
