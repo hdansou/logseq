@@ -1,5 +1,7 @@
 # Schema Changes & Data Integrity Investigation
 
+> **Update 2026-10-04:** this investigation analyzed schema **65.33**. The schema is now **65.34** (`deps/db/src/logseq/db/frontend/schema.cljs:33`), which adds a repair migration, `db-order/missing-internal-page-parent-order-tx`, that gives nested pages with a parent but no `:block/order` a deterministic order (`68a68263b7`). Statements below that call 65.33 the current version describe the analyzed snapshot; nothing else here was re-verified.
+
 ## Part 2: Schema System Technical Analysis
 
 > **Last revised:** 2026-05-30

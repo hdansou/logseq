@@ -389,7 +389,7 @@ It never applies to:
   2026-09-23 20:18, as `spawn …/.venv/bin/python ENOENT`. The named file exists. Node
   reports a missing *working directory* the same way, and the working directory is the
   bundle's `Contents/Resources/sidecar`, which this 2.0.1 build (2026-09-21) does not
-  contain even though `resources/electron-builder.yml:52-53` lists it. No sidecar process
+  contain even though `resources/electron-builder.yml:52-53` lists it. Packaging was fixed afterwards (`6d5cbe1438`, 2026-10-03: the release workflow now fails if `resources/sidecar/embedding_server.py` is missing), so builds made after that date should include the folder. The Logseq DB 2.0.1 nightly 20261001 on this machine still has no `Resources/sidecar`, which fits a build made before the fix; no build after the fix was inspected here. No sidecar process
   was running, a paraphrase query (*typing suggestions for links*) returned no nodes, and
   so did the nonsense control. Everything else observed for this article was therefore
   keyword-only even though the toggle said otherwise. The tutorial *Turn On Semantic

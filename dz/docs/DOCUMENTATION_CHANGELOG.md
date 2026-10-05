@@ -10,6 +10,12 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-10-04 (later still) — Follow-ups after the guide audit
+
+- [2026-10-04] `07-investigations/schema-evolution-and-data-migration.md`, `schema-integrity-01…08` (seven files) — **added** a dated note that the schema moved from the analyzed 65.33 to 65.34 (`68a68263b7`); the analysis itself is unchanged. Frontmatter version tags and "audited against" stamps elsewhere stay at 65.33 on purpose, since they record what was verified
+- [2026-10-04] `ddocs/how-to/content/search-your-graph.md` — **noted** the sidecar packaging fix (`6d5cbe1438`); the installed nightly 20261001 still lacks the folder, no later build was inspected
+- [2026-10-04] `dz/changelog/` — spotlight renamed to `spotlight-2026-05-17_to_2026-10-04.md` and extended; new `whats-new-2026-10-04.md` and `discord-2026-10-04.md`; October changelog corrected: 2.0.2 is a version bump on master with no published release (latest release 2.0.1, newest nightly 20261003)
+
 ### 2026-10-04 (later) — Full audit of the DB markdown guide
 
 - [2026-10-04] `06-user-guides/logseq-db-markdown-guide.md` — **rewritten** after a full audit (three source audits, then live checks in a throwaway graph on nightly 20261001). Corrected: `[[<uuid>]]` block refs and no `((` picker; `/Node embed` and Cmd/Ctrl+Shift+E embeds (paste makes a `:block/link` block); no "Copy block embed", "Add property" or "Convert to template" menu items; `Cmd+P` is Add property and `p d`/`p s` are chords on a selected block, with no scheduled chord; property types (Text, Number, Date, DateTime, Checkbox, URL, Node, Asset), no `title::`/`filters::`/`template::`; `(task ...)` is case-insensitive while `(property ...)` titles are case-sensitive; `__x__` is bold and `<ins>` underlines; `{{today}}` is unsupported while youtube/tweet macros render; mermaid renders as a plain code block; numbered lists are a block property; `/Template` inserts only the children; namespaced pages get parents under Library; full slash menu, no `/Draw`; export formats; `libs/guides/db_properties_guide.md` path. A bare `between` on deadline or scheduled matched nothing even with a qualified property; the guide points to an advanced query
