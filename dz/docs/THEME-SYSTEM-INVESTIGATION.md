@@ -1,5 +1,7 @@
 # Investigation: Logseq DB Theme System
 
+> **Correction (2026-09-29):** colour variables set on `:root` or on `html[data-theme='…']` alone lose to Logseq's own `html[data-theme][data-color=logseq]` defaults and to the per-accent declarations on `body`, so the snippets on this page now use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. Core also reads `--lx-gray-*`/`--lx-accent-*` before `--ls-*`, and shui tokens (`--primary`, `--background`, …) must be bare HSL channels. Verified live on Logseq 2.0.1; see the [DB theme walkthrough](05-developer-guides/theme-development/db-theme-walkthrough.md).
+
 **Date:** 2025-03-29  
 **Branch:** `test/db`  
 **Scope:** Theme modes, accent colors, fonts, custom CSS, and plugin theming
@@ -464,14 +466,16 @@ The most powerful built-in customization. Users can override any CSS variable:
 
 ```css
 /* Example: Custom accent colors with cancel mode */
-:root {
+html[data-theme][data-color],
+html[data-theme][data-color] body {
   --lx-accent-09: hsl(280, 80%, 60%);
   --ls-primary-background-color: #1a1a2e;
   --ls-link-text-color: #e94560;
 }
 
 /* Target specific themes */
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --ls-primary-background-color: #0f0f23;
 }
 ```

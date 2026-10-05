@@ -1,6 +1,6 @@
 # UI & Framework Differences: File-Based vs Database-Based Graphs
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-29 (`.block-properties` claim only; see [DB theme walkthrough](./db-theme-walkthrough.md) for verified DB selectors)
 
 **Purpose:** A comprehensive guide for theme developers to understand and plan for the UI/CSS differences between file-based graphs (v0.10.x) and database-based graphs (v0.10.x+).
 
@@ -417,9 +417,9 @@ a.tag:hover {
 These selectors may not work or have reduced functionality in DB graphs:
 
 ```css
-/* File-based properties - limited in DB graphs */
+/* File-based properties - NOT rendered in DB graphs (corrected 2026-09-29) */
 .block-properties {
-  /* Still works but may not capture all DB properties */
+  /* DB graphs render .ls-properties-area / .property-value-inner instead */
 }
 
 /* Simple property display */

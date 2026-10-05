@@ -1,5 +1,7 @@
 # Logseq Theme Development Guide
 
+> **Correction (2026-09-29):** colour variables set on `:root` or on `html[data-theme='…']` alone lose to Logseq's own `html[data-theme][data-color=logseq]` defaults and to the per-accent declarations on `body`, so the snippets on this page now use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. Core also reads `--lx-gray-*`/`--lx-accent-*` before `--ls-*`, and shui tokens (`--primary`, `--background`, …) must be bare HSL channels. Verified live on Logseq 2.0.1; see the [DB theme walkthrough](05-developer-guides/theme-development/db-theme-walkthrough.md).
+
 A complete guide to customizing the Logseq DB UI — from quick CSS tweaks to publishing a full theme plugin.
 
 ---
@@ -100,13 +102,15 @@ If you're only making minor tweaks (e.g., changing the font or a single color), 
 
 ```css
 /* Override backgrounds while keeping the selected accent color */
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --ls-primary-background-color: #1e1e2e;
   --ls-secondary-background-color: #181825;
   --ls-tertiary-background-color: #11111b;
 }
 
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   --ls-primary-background-color: #eff1f5;
   --ls-secondary-background-color: #e6e9ef;
   --ls-tertiary-background-color: #dce0e8;
@@ -116,7 +120,8 @@ html[data-theme='light'] {
 ### Example: Custom Link Colors
 
 ```css
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --ls-link-text-color: #89b4fa;
   --ls-link-text-hover-color: #b4d0fb;
 }
@@ -399,15 +404,16 @@ html {
 2. Go to **Settings → Appearance → Accent color** and click ⊘ "Cancel accent color"
 3. The theme takes effect immediately
 
-> **Note:** Because the theme registers under `html[data-color=mytheme]` and Logseq won't set `data-color="mytheme"` through the UI, you can alternatively write the CSS using `:root` / `html[data-theme=dark]` / `html[data-theme=light]` selectors and skip the `data-color` selector entirely for custom.css-only themes.
+> **Correction (2026-09-29):** Logseq only ever sets `data-color` to a built-in accent or `none` (`src/main/frontend/components/theme.cljs:62-66`), so a theme keyed on `html[data-color=mytheme]` never applies. `:root` / `html[data-theme=…]` alone is not enough either: it loses to core's `html[data-theme][data-color=logseq]` defaults and per-accent `body` declarations. Use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. See the [DB theme walkthrough](05-developer-guides/theme-development/db-theme-walkthrough.md).
 
 ### Alternative: Direct override (simpler for custom.css)
 
-If you don't plan to distribute the theme as a plugin, you can skip the `data-color` machinery and directly override variables:
+If you don't plan to distribute the theme as a plugin, you can skip defining your own accent and directly override variables, but you still need the `[data-color]` selector to beat core's defaults:
 
 ```css
 /* Simpler approach for custom.css */
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   --lx-accent-09: #6c63ff;
   --ls-primary-background-color: #ffffff;
   --ls-secondary-background-color: #f9f9fb;
@@ -416,7 +422,8 @@ html[data-theme='light'] {
   /* ... etc */
 }
 
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --lx-accent-09: #6c63ff;
   --ls-primary-background-color: #111113;
   --ls-secondary-background-color: #19191c;
@@ -464,7 +471,7 @@ logseq.ready(main).catch(console.error)
 
 ### Theme CSS File (`theme-dark.css`)
 
-Use the same CSS template from Section 3, but targeting `:root` and `html[data-theme=dark]` selectors (the plugin system handles loading/unloading).
+Use the same CSS template from Section 3 with the `html[data-theme='dark'][data-color], html[data-theme='dark'][data-color] body` selector (the plugin system appends the file as a `<link>`, so it wins ties with core; `libs/src/LSPlugin.core.ts:1858-1877`).
 
 ### Plugin Theme Type
 
@@ -780,7 +787,8 @@ document.documentElement.setAttribute('data-theme', 'light')
 ### Minimal Dark Override (10 lines)
 
 ```css
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --ls-primary-background-color: #0d1117;
   --ls-secondary-background-color: #161b22;
   --ls-primary-text-color: #e6edf3;

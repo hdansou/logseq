@@ -1,12 +1,18 @@
 # Logseq Theme Development Documentation
 
-> **Last revised:** 2026-05-29
+> **Last revised:** 2026-09-29 (activation selectors only)
+
+> **Correction (2026-09-29):** colour variables set on `:root` or on `html[data-theme='…']` alone lose to Logseq's own `html[data-theme][data-color=logseq]` defaults and to the per-accent declarations on `body`, so the snippets on this page now use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. Core also reads `--lx-gray-*`/`--lx-accent-*` before `--ls-*`, and shui tokens (`--primary`, `--background`, …) must be bare HSL channels. Verified live on Logseq 2.0.1; see the [DB theme walkthrough](./db-theme-walkthrough.md).
 
 Welcome to the Logseq Theme Development documentation! This collection of guides will help you create beautiful, custom themes for Logseq.
 
 ## 📚 Documentation Overview
 
-### 1. [Theme Development Guide](./guide.md) - **START HERE**
+### 0. [Create a Logseq DB theme, end to end](./db-theme-walkthrough.md) - **START HERE (verified 2026-09-29)**
+
+The tested process: tokens → variable layers → activation selector → source-verified selectors → live validation → human testing graph → release.
+
+### 1. [Theme Development Guide](./guide.md)
 
 **Complete comprehensive guide covering:**
 
@@ -200,7 +206,8 @@ By following these guides, you'll be able to create:
 Modify CSS variables for colors:
 
 ```css
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   --lx-accent-09: #your-color;
 }
 ```

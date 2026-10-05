@@ -234,7 +234,7 @@ Note `hsl(var(--foreground))` — shui tokens are consumed *inside* `hsl()`, so 
 (do (.remove cls "dark") (doto cls-body (.remove "dark-theme") (.add "white-theme" "light-theme")))
 ```
 
-So `html[data-theme='light'|'dark']` is the hook to use; `.white-theme` / `.light-theme` / `.dark-theme` are **body** classes kept for backward compatibility (the source comment points at logseq/logseq#4652). Do not write `.white-theme, html[data-theme='light'] { ... }` as one rule — they match different elements, and variables declared on `body` will not be visible to rules that resolve them on `html`.
+So `html[data-theme='light'|'dark']` identifies the mode, but on its own it **loses**: core declares its defaults on `html[data-theme=…][data-color=logseq]` (`src/main/frontend/shui/vars-classic.css:42`, `:100`) and, for other accents, on `body` (`src/main/frontend/shui/colors.css:57-58`). Scope variables to `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body` (verified live 2026-09-29 with accents logseq/tomato/blue/none; see the [DB theme walkthrough](../../../05-developer-guides/theme-development/db-theme-walkthrough.md)), which the snippets below use; `.white-theme` / `.light-theme` / `.dark-theme` are **body** classes kept for backward compatibility (the source comment points at logseq/logseq#4652). Do not write `.white-theme, html[data-theme='light'] { ... }` as one rule — they match different elements, and variables declared on `body` will not be visible to rules that resolve them on `html`.
 
 **Step 1: Define Color Palette**
 
@@ -246,7 +246,8 @@ In `themes/light.css`:
    ============================ */
 
 /* Light Mode Variables */
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   color-scheme: light;
   /* Primary Colors */
   --ls-primary-background-color: #ffffff;
@@ -310,7 +311,8 @@ In `themes/dark.css`:
 
 ```css
 /* Dark Mode Variables */
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   color-scheme: dark;
 
   /* Primary Colors */
@@ -376,7 +378,8 @@ html[data-theme='dark'] {
 Newer shui-heavy UI reads the active neutral and accent scales rather than `--ls-*`. If your theme is a complete palette, map them too, or menus, popovers, and the command palette will keep the stock neutrals:
 
 ```css
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --lx-gray-01: #1a202c;
   --lx-gray-02: #1f2733;
   --lx-gray-03: #2d3748;
@@ -446,7 +449,8 @@ Style the checkbox and the property surfaces instead:
 `.form-checkbox` and `.form-radio` are styled in `src/main/frontend/components/theme.css:56-59` and driven by `--ls-page-checkbox-color` and `--ls-page-checkbox-border-color`, so prefer setting those variables:
 
 ```css
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   --ls-page-checkbox-color: #718096;
   --ls-page-checkbox-border-color: #cbd5e0;
 }
@@ -1333,7 +1337,8 @@ To customize colors:
 2. Override CSS variables, scoped to a mode:
 
 ```css
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --ls-primary-background-color: #YOUR-COLOR;
   --ls-link-text-color: #YOUR-COLOR;
   /* shui tokens take HSL channels, not a color */

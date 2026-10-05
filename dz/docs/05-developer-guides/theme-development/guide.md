@@ -1,6 +1,8 @@
 # Logseq Theme Development Guide
 
-> **Last revised:** 2026-05-29
+> **Last revised:** 2026-09-29 (activation selectors only)
+
+> **Correction (2026-09-29):** colour variables set on `:root` or on `html[data-theme='…']` alone lose to Logseq's own `html[data-theme][data-color=logseq]` defaults and to the per-accent declarations on `body`, so the snippets on this page now use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. Core also reads `--lx-gray-*`/`--lx-accent-*` before `--ls-*`, and shui tokens (`--primary`, `--background`, …) must be bare HSL channels. Verified live on Logseq 2.0.1; see the [DB theme walkthrough](./db-theme-walkthrough.md).
 
 **Version:** 1.0
 **Target Audience:** Theme Developers
@@ -138,7 +140,8 @@ your-theme/
    1. ROOT VARIABLES - LIGHT MODE
    ============================================================================= */
 
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   /* Primary Colors */
   --lx-gray-01: #ffffff;
   --lx-gray-02: #fafafa;
@@ -184,7 +187,8 @@ html[data-theme='light'] {
    2. ROOT VARIABLES - DARK MODE
    ============================================================================= */
 
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   /* Primary Colors */
   --lx-gray-01: #0a0a0a;
   --lx-gray-02: #1a1a1a;
@@ -983,7 +987,8 @@ Use color scales appropriately:
 
 ```css
 /* Increase background brightness */
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --lx-gray-01: #1a1a1a; /* Instead of #0a0a0a */
 }
 ```
@@ -992,11 +997,13 @@ html[data-theme='dark'] {
 
 ```css
 /* Increase contrast */
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   --ls-link-text-color: #0066cc; /* Darker blue */
 }
 
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --ls-link-text-color: #60a5fa; /* Lighter blue */
 }
 ```
@@ -1074,7 +1081,8 @@ Short description of your theme.
 ### Change accent color
 
 ```css
-:root {
+html[data-theme][data-color],
+html[data-theme][data-color] body {
   --lx-accent-09: #your-color;
 }
 ```

@@ -1,6 +1,8 @@
 # Logseq Theme Development Quick Reference
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-29 (activation selectors only)
+
+> **Correction (2026-09-29):** colour variables set on `:root` or on `html[data-theme='…']` alone lose to Logseq's own `html[data-theme][data-color=logseq]` defaults and to the per-accent declarations on `body`, so the snippets on this page now use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. Core also reads `--lx-gray-*`/`--lx-accent-*` before `--ls-*`, and shui tokens (`--primary`, `--background`, …) must be bare HSL channels. Verified live on Logseq 2.0.1; see the [DB theme walkthrough](./db-theme-walkthrough.md).
 
 **Companion to:** [Theme Development Guide](./guide.md)
 
@@ -94,12 +96,14 @@ table                      /* Tables */
 
 ```css
 /* Light mode */
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   /* Variables */
 }
 
 /* Dark mode */
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   /* Variables */
 }
 
@@ -131,13 +135,15 @@ html:not(.is-file-graph) {
 
 ```css
 /* Minimal theme template */
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   --lx-gray-01: #ffffff;
   --lx-gray-12: #000000;
   --lx-accent-09: #0066cc;
 }
 
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --lx-gray-01: #1a1a1a;
   --lx-gray-12: #eeeeee;
   --lx-accent-09: #3b82f6;

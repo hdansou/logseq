@@ -1,6 +1,8 @@
 # Example Logseq Theme: "Ocean Breeze"
 
-> **Last revised:** 2026-03-10
+> **Last revised:** 2026-09-29 (activation selectors only)
+
+> **Correction (2026-09-29):** colour variables set on `:root` or on `html[data-theme='…']` alone lose to Logseq's own `html[data-theme][data-color=logseq]` defaults and to the per-accent declarations on `body`, so the snippets on this page now use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. Core also reads `--lx-gray-*`/`--lx-accent-*` before `--ls-*`, and shui tokens (`--primary`, `--background`, …) must be bare HSL channels. Verified live on Logseq 2.0.1; see the [DB theme walkthrough](./db-theme-walkthrough.md).
 
 A sample theme demonstrating Logseq theme development best practices.
 
@@ -38,7 +40,8 @@ A sample theme demonstrating Logseq theme development best practices.
    LIGHT MODE
    ============================================================================= */
 
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   /* Backgrounds - Light sandy beach tones */
   --lx-gray-01: #fafbfc;
   --lx-gray-02: #f5f7f9;
@@ -106,7 +109,8 @@ html[data-theme='light'] {
    DARK MODE
    ============================================================================= */
 
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   /* Backgrounds - Deep ocean tones */
   --lx-gray-01: #0a1420;
   --lx-gray-02: #111c2b;
@@ -620,7 +624,8 @@ tr:nth-child(even) td {
 To change from blue to another color, modify the accent scale:
 
 ```css
-html[data-theme='light'] {
+html[data-theme='light'][data-color],
+html[data-theme='light'][data-color] body {
   /* Replace with your color scale */
   --lx-accent-01: #f0fdf4; /* Light green example */
   --lx-accent-09: #16a34a;

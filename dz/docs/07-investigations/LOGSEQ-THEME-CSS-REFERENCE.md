@@ -3,7 +3,9 @@
 **Investigation Date:** May 30, 2026  
 **Version:** 1.1
 
-> **Last revised:** 2026-05-30
+> **Last revised:** 2026-09-29 (activation selectors only)
+
+> **Correction (2026-09-29):** colour variables set on `:root` or on `html[data-theme='…']` alone lose to Logseq's own `html[data-theme][data-color=logseq]` defaults and to the per-accent declarations on `body`, so the snippets on this page now use `html[data-theme='…'][data-color], html[data-theme='…'][data-color] body`. Core also reads `--lx-gray-*`/`--lx-accent-*` before `--ls-*`, and shui tokens (`--primary`, `--background`, …) must be bare HSL channels. Verified live on Logseq 2.0.1; see the [DB theme walkthrough](../05-developer-guides/theme-development/db-theme-walkthrough.md).
 
 **Purpose:** Comprehensive reference of all CSS custom properties, classes, and structures that make up a Logseq theme
 
@@ -364,7 +366,8 @@ Logseq uses HTML data attributes to control theming:
 **1. Light Mode Theme:**
 
 ```css
-/* All equivalent - use for backward compatibility */
+/* NOT equivalent (corrected 2026-09-29): .white-theme/.light-theme are BODY classes,
+   html[data-theme] is on <html>. Neither beats core's html[data-theme][data-color=logseq]. */
 .white-theme {
   /* ... */
 }
@@ -529,8 +532,8 @@ my-theme/
 @import url('https://cdn.jsdelivr.net/npm/@radix-ui/colors@latest/dist/index.css');
 
 /* Override Logseq variables */
-.dark-theme,
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   /* Backgrounds */
   --ls-primary-background-color: #1a1b26;
   --ls-secondary-background-color: #24283b;
@@ -564,7 +567,8 @@ html[data-theme='dark'] {
 Only override essential variables, let others inherit:
 
 ```css
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   /* Core colors - others will derive from these */
   --ls-primary-background-color: #1e1e2e;
   --ls-primary-text-color: #cdd6f4;
@@ -587,6 +591,8 @@ html[data-theme='dark'] {
 **Modern approach:**
 
 ```css
+/* Corrected 2026-09-29: Logseq never sets data-color to a custom name (theme.cljs:62-66),
+   so this selector never matches. Use html[data-theme='dark'][data-color] instead. */
 html[data-theme='dark'][data-color='myTheme'] {
   /* Use Radix color scales */
   --rx-gray-01: #0d0e14;
@@ -645,7 +651,8 @@ When creating a theme, ensure you define:
 **Legacy Approach (Still Supported):**
 
 ```css
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   --ls-primary-background-color: #002b36;
   --ls-primary-text-color: #a4b5b6;
   /* ... define all variables ... */
@@ -936,8 +943,8 @@ background-color: var(--lx-gray-01, var(--ls-primary-background-color, #fff));
 ```css
 /* === YOUR THEME NAME === */
 
-.dark-theme,
-html[data-theme='dark'] {
+html[data-theme='dark'][data-color],
+html[data-theme='dark'][data-color] body {
   /* Backgrounds (lightest to darkest) */
   --ls-primary-background-color: #____;
   --ls-secondary-background-color: #____;
