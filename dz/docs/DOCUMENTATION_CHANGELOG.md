@@ -10,6 +10,12 @@ Each entry: `[DATE] [FILE] - [CHANGE SUMMARY]`
 
 ## Changes
 
+### 2026-10-04 (later) — Full audit of the DB markdown guide
+
+- [2026-10-04] `06-user-guides/logseq-db-markdown-guide.md` — **rewritten** after a full audit (three source audits, then live checks in a throwaway graph on nightly 20261001). Corrected: `[[<uuid>]]` block refs and no `((` picker; `/Node embed` and Cmd/Ctrl+Shift+E embeds (paste makes a `:block/link` block); no "Copy block embed", "Add property" or "Convert to template" menu items; `Cmd+P` is Add property and `p d`/`p s` are chords on a selected block, with no scheduled chord; property types (Text, Number, Date, DateTime, Checkbox, URL, Node, Asset), no `title::`/`filters::`/`template::`; `(task ...)` is case-insensitive while `(property ...)` titles are case-sensitive; `__x__` is bold and `<ins>` underlines; `{{today}}` is unsupported while youtube/tweet macros render; mermaid renders as a plain code block; numbered lists are a block property; `/Template` inserts only the children; namespaced pages get parents under Library; full slash menu, no `/Draw`; export formats; `libs/guides/db_properties_guide.md` path. A bare `between` on deadline or scheduled matched nothing even with a qualified property; the guide points to an advanced query
+- Not run: repeating-task panel, page-properties button placement, hand-typed relative image paths, custom `:macros`, plugin `upsertBlockProperty(..., 'status', ...)`, `p t`/`p p`/`p i` chords. The guide tags each as Source
+- One audit claim was wrong in the live run: the audit said `(between :logseq.property/deadline today +7d)` works; it returned nothing
+
 ### 2026-10-04 — Drift check after merging upstream through 22a29b30de
 
 Method: two read-only agents compared each new commit's diff with the docs; I re-read the source for the schema version, search versions, `synchronous` pragma, Alt+Shift+C binding, scheduled/deadline range, Card flashcards, asset placement and `current-page` forwarding before editing. Not re-run in the app.

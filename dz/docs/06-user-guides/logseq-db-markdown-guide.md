@@ -1,1030 +1,361 @@
 ---
 name: logseq-db-markdown
-description: Create and edit Logseq DB (Database Mode) compatible content. Use when working with Logseq database graphs. Note that DB mode uses a UI-driven approach rather than text-based syntax for many features.
+description: Create and edit Logseq DB (Database Mode) compatible content. Use when working with Logseq database graphs. DB mode uses a UI-driven approach rather than text-based syntax for properties, tasks, queries and embeds.
 ---
 
 # Logseq DB (Database Mode) Guide
 
-This guide explains how to work with Logseq Database Mode graphs. Unlike the older file-based mode ("Logseq OG"), database mode stores content in SQLite and uses **UI-driven interactions** rather than text-based syntax for many features.
+This guide explains how to work with Logseq database graphs. Unlike the older file-based mode ("Logseq OG"), a DB graph stores content in SQLite and uses **UI-driven interactions** rather than text syntax for properties, tasks, queries and embeds.
 
-> **Last revised:** 2026-05-29. **Partly audited 2026-10-04:** only block references, embeds and the slash-menu embed command were checked (source plus the 2026-10-01 nightly); the rest of this guide has not been re-verified.
+> **Last revised:** 2026-10-04. **Audited in full on 2026-10-04** against source at `22a29b30de` and the installed Logseq DB 2.0.1 nightly 20261001, run on a throwaway graph. Each section below says what was run live and what was only read from source. The previous revision (2026-05-29) described a different build and had many wrong claims, corrected here.
+
+**How to read the evidence tags**
+
+- **Live**: run in the app on 2026-10-04 and observed.
+- **Source**: read in the source tree, not run.
 
 ## Overview
 
-**Critical Understanding:** Logseq DB is fundamentally different from file-based Logseq:
+- **Storage**: a SQLite database, not markdown files.
+- **Properties**: structured data. Typing `key:: value` does not create a property (**Live**: typed and pasted text both stay literal).
+- **Queries**: created with `/Query` or `/Advanced Query`. The `{{query}}` macro is deprecated and renders a warning (**Source**).
+- **Tasks**: status is a property with closed values, not a `TODO` text marker.
+- **References**: pages and blocks are both referenced as `[[...]]`. A block reference is `[[<uuid>]]`. `((uuid))` is plain text (**Live**: a typed `((` opens no picker).
+- **Embeds**: `/Node embed` makes a linked block. The `{{embed}}` macro is deprecated.
 
-- **Storage**: SQLite database (not markdown files)
-- **Properties**: Structured data stored in the database (not `key:: value` text syntax)
-- **Queries**: Created via `/Query` command; `{{query}}` remains available in compatibility paths
-- **Tasks**: UI-based status management (not legacy text markers)
-- **Block References**: Handled through the UI (Copy block ref) as `[[<block-uuid>]]`; `((block-uuid))` is plain text in DB graphs
+**What works as plain text in a block** (**Live** unless noted)
 
-**What Works in DB Mode:**
+- Markdown formatting: bold, italic, strikethrough, highlight, inline code (**Source** for the table below, except underline).
+- Page links `[[Page Name]]` and tags `#tag`.
+- Fenced code blocks, and `$...$` / `$$...$$` math (**Source**).
+- Markdown headings: `## text` renders as an H2.
+- A `---` line renders a horizontal rule.
+- Video and tweet macros: `{{youtube URL}}`, `{{tweet URL}}`.
 
-- Basic markdown formatting (bold, italic, links, etc.)
-- Page links `[[Page Name]]`
-- Tags `#tag`
-- Code blocks
-- Math (LaTeX)
-- Diagrams (Mermaid)
+**What does not work as text**
 
-**What Does NOT Work in DB Mode:**
+- `property:: value`: stays literal text.
+- `((uuid))`: plain text.
+- `{{embed ...}}`, `{{query ...}}`, `{{today}}`, `{{current time}}`: deprecated or unsupported. The embed and query macros show a deprecation message, and `{{today}}` shows "Unsupported macro name: today".
+- File-mode markers: `TODO/DOING/DONE`, `NOW/LATER/WAITING`, `[#A]`, `SCHEDULED:`, `DEADLINE:`, `template::`.
+- Mermaid diagrams: a `mermaid` fence renders as a plain code block (**Live**). No renderer is built in.
 
-- ❌ `property:: value` syntax (use UI instead)
-  > **Removed:** `TODO/DOING/DONE`, `NOW/LATER/WAITING/CANCELLED`, and `[#A]/[#B]/[#C]` are file-mode text markers; DB mode uses the Status and Priority properties.
-  > **Corrected 2026-10-04:** DB mode references blocks and pages with `[[<UUID>]]` (Copy block ref); `((UUID))` is plain text.
-  > **Corrected 2026-10-04:** `{{embed ...}}` is deprecated in DB mode in both the `((UUID))` and `[[UUID]]` forms and renders "{{embed}} is deprecated. Use '/Node embed' command instead." Use `/Node embed` (verified live, nightly 20261001).
-  > **Removed:** `SCHEDULED: <date>` and `DEADLINE: <date>` org-mode text syntax; DB mode uses the Scheduled and Deadline properties.
+## Block structure
 
-## Findings: New Capabilities
-
-- DB task status now uses closed values: Backlog, Todo, Doing, In Review, Done, and Canceled.
-- Priority now uses closed values: Low, Medium, High, and Urgent.
-- `/Scheduled`, `/Deadline`, and `/Query` are first-class DB authoring commands.
-
-## Block Structure
-
-### Basic Blocks
-
-Blocks are created by typing and pressing Enter:
+Blocks are created by typing and pressing Enter. Tab indents and Shift+Tab outdents.
 
 ```markdown
 - This is a block
-- This is another block
-  - This is a nested/child block (Tab to indent)
-  - Another child block
-- Back to parent level (Shift+Tab to outdent)
+  - This is a child block
+- Back to parent level
 ```
 
-**Key Principle:** Everything in Logseq DB is a block with a unique UUID stored in the database.
+Every block is a database entity with a UUID.
 
-## UUIDs in DB Mode
+## References
 
-### Page and Block References
-
-**Critical:** In DB mode, pages use `[[Page Name]]` links and blocks use `[[<UUID>]]` refs.
-
-**Pages:**
-
-- Normal: `[[Page Name]]`
-
-> **Removed:** The guide's earlier same-name UUID page-link rule is not a normal DB authoring pattern; duplicate page names are rejected.
-
-**Blocks:**
-
-- Always: `((65abc123-def4-5678-90ab-cdef12345678))`
-
-**Key Difference from File Mode:**
-
-- File mode: `((block-id))` for blocks, `[[Page]]` for pages
-- DB mode: `[[Page Name]]` for pages, `[[<UUID>]]` for blocks
-
-### Getting UUIDs
-
-**Via UI:**
-
-1. Right-click a block → "Copy block ref"
-2. Paste: `((uuid-will-be-here))`
-
-**Via typing:**
-
-1. Type `[[`
-2. Search for page
-3. Select → Logseq inserts `[[Page Name]]`
-
-OR:
-
-1. Type `((`
-2. Search for block
-3. Select → Logseq inserts `[[<UUID>]]` (`frontend.util.ref/->block-ref` is the page-ref form)
-
-### Block References
-
-**In DB Mode:** Block references use `[[<UUID>]]` syntax; `((UUID))` is plain text.
-
-**How to create:**
-
-1. Type `((` - this triggers block reference search
-2. Search for and select the block you want to reference
-3. Logseq inserts the reference as `((block-uuid-here))`
-
-**Manual syntax:**
+### Page links and tags
 
 ```markdown
-- Reference to a block: ((65abc123-def4-5678-90ab-cdef12345678))
+- A link to a page: [[Page Name]]
+- A tag: #tag-name, or #[[multi word tag]]
 ```
 
-**Note:** Block refs are UUID-backed, but they still keep the `((...))` wrapper in DB mode.
+`#tag` makes the page a **tag**, which is a class: the block becomes an object of that tag and can carry the tag's properties (**Source**). It is not just a link.
 
-### Block Embeds (UI-Based)
+Duplicate page names are rejected, so there is no same-name UUID page link.
 
-**In DB Mode:** Block embeds are created through the UI (`/Node embed`) and are `:block/link` blocks, not text.
+### Block references
 
-**How to embed:**
+A block reference is `[[<block-uuid>]]`.
 
-1. Right-click on a block
-2. Select "Copy block embed"
-3. Paste in target location
+**How to create (Live)**
 
-OR:
+1. Right-click a block and choose **Copy block ref**, then paste. You get `[[<uuid>]]`.
+2. Or type `[[`, then search. The popup lists matching blocks (with their page) as well as pages, and picking a block stores `[[<uuid>]]`.
 
-1. Type `/Node embed`
-2. Search for the block to embed
+Typing `((` does not open a picker in this build (**Live** and **Source**: nothing sets the block-search action except the `/Node embed` flow).
 
-**Result:** Logseq inserts a block with an empty title whose `:block/link` points at the chosen block. There is no embed text in the block, and the target's content renders in its place (verified live 2026-10-04, nightly 20261001).
+### Block embeds
 
-**Note:** The `{{embed ((UUID))}}` macro is deprecated in DB graphs and shows a deprecation message.
+`/Node embed` is the DB embed. **Live**: it inserts a block with an empty title whose `:block/link` points at the chosen node, and the target's content renders in its place.
 
-## Page Links
+**How to embed**
 
-### Basic Page Links
+1. Type `/Node embed`, then search for the block or page.
+2. Or, while editing the block you want to embed, press `Cmd/Ctrl+Shift+E` and paste where you want the embed. **Live**: the clipboard holds `[[<uuid>]]`, and pasting it creates the same linked block with an empty title.
 
-```markdown
-[[Page Name]]
-[[Page Name]] with text after
-Text before [[Page Name]] and after
-```
+The right-click menu has no "Copy block embed" item.
 
-### UUID-Based Links
+`{{embed ((uuid))}}` and `{{embed [[uuid]]}}` are deprecated. **Live**: they render "{{embed}} is deprecated. Use '/Node embed' command instead."
 
-**When pages have the same name**, Logseq uses UUID-based links:
+### Namespaced pages
 
-```markdown
-[[65abc123-def4-5678-90ab-cdef12345678]]
-```
+A `/` in a page title creates parent pages. **Live**: creating `Projects/Alpha/Tasks` made three pages, `Projects` (parent: the **Library** page), `Alpha` (parent: `Projects`) and `Tasks` (parent: `Alpha`), each stored under its leaf title. Creation fails if a parent title already exists as something other than a page (**Source**: "Cannot create this page unless all parents are pages"). The `{{namespace}}` macro is deprecated in favor of Library.
 
-Logseq displays the page title but stores the UUID reference.
+For tags, `#project/alpha` creates `Project` and `Project/alpha` and sets `Extends` so the child extends the parent. It fails if a parent is a non-tag page (**Source**).
 
-**Pages use `[[Page Name]]` links in DB mode. Blocks use `[[<UUID>]]` refs.**
+## Properties (database-first)
 
-### Namespaced Pages
+Properties are structured entities, not text. **Live**: `status:: Todo` typed into a block, and the same text pasted as a multi-line block, both remain literal text with no property created.
 
-```markdown
-[[Project/Alpha]]
-[[Project/Alpha/Tasks]]
-[[Company/Department/Team/Person]]
-```
+### How to add a property
 
-Namespaces use `/` to create hierarchy.
+1. Type `/Add property`, choose or create a property, then set its value. For a task there are direct commands: `/Todo`, `/Doing`, `/Priority High` and so on (**Live** menu).
+2. Or click **+ Add property** in the block's property area, or press `Cmd+P` (`Ctrl+Alt+P` on Windows and Linux). **Live**: `Cmd+P` opens a list of properties including Scheduled.
+3. Or select a block (press Esc while editing) and use a chord. **Live**: `p` then `d` opens the Deadline date picker, and `p` then `s` opens the status list. **Source**: `p t` tags, `p p` priority, `p i` icon. There is no scheduled chord; use `/Scheduled` or `Cmd+P`.
 
-### Page References vs Tags
+The block right-click menu has no "Add property" item.
 
-```markdown
-- This links to a page: [[page-name]]
-- This creates a tag: #tag-name
-- Tags are just pages with # syntax: #[[multi word tag]]
-```
+### Property types
 
-## Properties (Database-First)
+User-creatable types (**Source**: `deps/db/src/logseq/db/frontend/property/type.cljs`): **Text** (default), **Number**, **Date**, **DateTime**, **Checkbox**, **URL**, **Node** and **Asset**. A Node property links to pages and blocks. A property can allow one value or many (cardinality). There is no List, Page or Reference type; the plugin API also accepts `json` and `string`.
 
-### Understanding DB Mode Properties
+### Page properties
 
-**Critical:** In DB mode, properties are **structured database entities**, not text syntax.
+Page properties appear at the top of a page. Built-in properties include icon, alias and tags. **Not checked live**: the exact placement of the "Add property" button on a page.
 
-**The `property:: value` syntax does NOT work in DB mode.**
+### Built-in properties worth knowing
 
-### How to Add Properties (UI-Based)
+- `Alias`, `Tags`, `Icon`.
+- `Status`, `Priority`, `Deadline`, `Scheduled` (carried by the built-in **Task** class).
+- `Publishing Public?` (the old `public::`).
+- Templates are a class, not a property. See Templates.
 
-**Method 1: Using `/` command**
+There is no `title::`, `filters::`, `template::` or `template-including-parent::` property in DB graphs.
 
-1. Type `/` in a block
-2. Search for the property name (e.g., "status", "priority")
-3. Select the property
-4. Enter the value in the UI
+## Task management
 
-**Method 2: Using property menu**
+### Status
 
-1. Click the block menu (three dots)
-2. Select "Add property"
-3. Choose or create property
-4. Set value
+Status is the built-in `:logseq.property/status` property with closed values: **Backlog, Todo, Doing, In Review, Done, Canceled** (**Source**). Set it with `/Backlog`, `/Todo`, `/Doing`, `/In Review`, `/Done`, `/Canceled`, or the `p s` chord.
 
-**Method 3: Shortcuts**
+### Priority
 
-- `Cmd/Ctrl + P` then `S` - Add scheduled date
-- `Cmd/Ctrl + P` then `D` - Add deadline
+Closed values **Low, Medium, High, Urgent**. **Live**: `/Priority` filters to "Priority Low", "Priority Medium", "Priority High", "Priority Urgent" and "No priority".
 
-### Page Properties
+### Scheduled and Deadline
 
-Page properties appear at the top of a page:
+Type `/Scheduled` or `/Deadline`, or select the block and press `p` then `d` for a deadline. Both are DateTime properties (**Source**). The Scheduled and Deadline section on today's journal uses a local-midnight window; see [Customize the Journal Queries](../ddocs/how-to/queries/customize-journal-queries.md).
 
-- Click "Add property" button at page top
-- Select from existing properties or create new
-- Built-in: `icon`, `alias`, `tags`, etc.
+### Repeating tasks (Source)
 
-### Property Types
+Click the date on a Scheduled or Deadline value, tick **Repeat task**, then set **Every N <unit>** (Minute, Hour, Day, Week, Month, Year), **Next date** (Advance from completion, Advance from scheduled, or Advance from scheduled, skip to future) and the status that triggers the repeat. The panel is hidden on narrow screens. It stores `:logseq.property.repeat/recur-frequency` (default 1), `recur-unit` (default Day), `repeated?`, `repeat-type`, `temporal-property` and `checked-property`. Not run live in this audit.
 
-| Type      | Example                       | Description            |
-| --------- | ----------------------------- | ---------------------- |
-| Text      | `name:: John`                 | Plain text value       |
-| Number    | `count:: 42`                  | Numeric value          |
-| Date      | `due:: [[2024-01-30]]`        | Page link to date      |
-| Page      | `project:: [[Project Alpha]]` | Link to another page   |
-| URL       | `link:: https://example.com`  | External link          |
-| Checkbox  | `completed:: true`            | Boolean value          |
-| List      | `tags:: tag1, tag2, tag3`     | Comma-separated values |
-| Reference | `ref:: [[<UUID>]]`            | Block reference        |
+## Text formatting
 
-### Built-in Properties
+| Style         | Syntax                            | Evidence |
+| ------------- | --------------------------------- | -------- |
+| Bold          | `**text**`                        | Source   |
+| Italic        | `*text*`                          | Source   |
+| Bold + italic | `***text***`                      | Source   |
+| Strikethrough | `~~text~~`                        | Source   |
+| Highlight     | `^^text^^`                        | Source   |
+| Inline code   | `` `code` ``                      | Source   |
+| Underline     | `<ins>text</ins>` or `/Underline` | Live     |
 
-Common built-in properties in Logseq:
+`__text__` is **bold**, not underline (**Live**).
 
-- `title::` - Page title
-- `alias::` - Alternative names for a page
-- `tags::` - Page tags
-- `icon::` - Page icon (emoji or image)
-- `public::` - Whether page is public
-- `filters::` - Query filters
-- `template::` - Mark as template
-- `template-including-parent::` - Template includes parent
+### Headings
 
-## Task Management (UI-Based)
+Typing `## Heading` at the start of a block renders an H2 (**Live**). `/Heading 1` to `/Heading 6` and `/Normal text` are in the slash menu.
 
-### Task Status (UI-Based)
+## Queries
 
-**In DB Mode:** Task statuses are managed through UI, stored as `:logseq.property/status` property.
+`/Query` turns the current block into a Query-tagged block and stores its text in the `:logseq.property/query` property (**Source**). Use `/Advanced Query` for datalog. The `{{query}}` macro is deprecated.
 
-**How to set status:**
-
-1. Type `/` in a block
-2. Select a status: Backlog, Todo, Doing, In Review, Done, Canceled
-3. Status appears as a UI element on the left side of the block
-
-**Status Values:**
-
-- **Backlog** - Deferred
-- **Todo** - Not started
-- **Doing** - In progress
-- **In Review** - Under review
-- **Done** - Completed
-- **Canceled** - Canceled
-
-**Note:** Task queries and task UI labels use title-case DB values such as `Todo`, `Doing`, `Done`, `In Review`, `Backlog`, and `Canceled`.
-
-### Priorities (UI-Based)
-
-**How to set priority:**
-
-1. Type `/Priority` in a block
-2. Select: Low, Medium, High, or Urgent
-3. Priority appears as a UI element
-
-**Priority Values:**
-
-- **Low** - Low priority
-- **Medium** - Medium priority
-- **High** - High priority
-- **Urgent** - Urgent
-
-**Note:** The `[#A]`, `[#B]`, `[#C]` text syntax does NOT work in DB mode.
-
-### Scheduled and Deadlines (UI-Based)
-
-**How to add scheduled/deadline:**
-
-- Or type `/Scheduled` or `/Deadline`
-
-**Storage:** Dates stored as `:logseq.property/scheduled` and `:logseq.property/deadline` (datetime timestamps)
-
-**Note:** The `SCHEDULED: <date>` and `DEADLINE: <date>` org-mode text syntax does NOT work in DB mode.
-
-### Repeated Tasks
-
-Repeating tasks are configured through the UI:
-
-1. Set a scheduled or deadline date
-2. Click the date
-3. Enable "Repeat"
-4. Choose frequency (minute, hour, day, week, month, year)
-5. Set interval (e.g., every 2 weeks)
-
-**Storage:** Stored as properties:
-
-- `:logseq.property.repeat/recur-frequency`
-- `:logseq.property.repeat/recur-unit`
-- `:logseq.property.repeat/repeated?`
-
-## Text Formatting
-
-### Basic Formatting
-
-| Style         | Syntax       | Example           | Output            |
-| ------------- | ------------ | ----------------- | ----------------- |
-| Bold          | `**text**`   | `**Bold**`        | **Bold**          |
-| Italic        | `*text*`     | `*Italic*`        | _Italic_          |
-| Bold + Italic | `***text***` | `***Both***`      | **_Both_**        |
-| Strikethrough | `~~text~~`   | `~~Striked~~`     | ~~Striked~~       |
-| Highlight     | `^^text^^`   | `^^Highlighted^^` | ^^Highlighted^^   |
-| Inline code   | `` `code` `` | `` `code` ``      | `code`            |
-| Underline     | `__text__`   | `__Underlined__`  | <u>Underlined</u> |
-
-### Headings in Blocks
-
-```markdown
-- # Heading 1
-- ## Heading 2
-- ### Heading 3
-```
-
-Note: In Logseq, headings are still blocks in the outline structure.
-
-## Queries (UI-Based)
-
-### Critical: `/Query` Command (Not `{{query}}`)
-
-**In DB Mode:** Queries are created with the `/Query` command. `{{query}}` still exists in compatibility paths, but the DB authoring flow uses `/Query`.
-
-**The `/Query` command writes a query block with the `:logseq.property/query` property.**
-
-### Simple Queries
-
-**How to create:**
-
-1. Type `/Query` (capital Q)
-2. Logseq creates a query block with the `:logseq.property/query` property
-3. Enter your query in the property value field
-
-**Query syntax examples:**
+### Simple (DSL) queries — all **Live**
 
 ```clojure
-(and [[Project Alpha]])
-(and [[Project]] [[Active]])
-(task Todo)
+(and [[Project Alpha]] (task Todo))
 (task Todo Doing)
 (priority High Urgent)
+(property Status Done)
+(property :logseq.property/status Done)
 ```
 
-**Important:** Task statuses use **title-case** in DB mode:
+- DSL arguments are **case-insensitive for tasks and priorities**: `(task TODO)`, `(task Todo)` and `(task todo)` return the same blocks. `(task NOW)` and `(task Backlog)` match nothing unless such a status exists on a block.
+- Statuses are Backlog, Todo, Doing, In Review, Done, Canceled. File-mode `NOW`, `LATER`, `WAITING` do not exist.
+- `(property ...)` looks the property up by its **exact, case-sensitive title**: `(property Status Done)` works, and `(property status done)` and `(property Status done)` return nothing.
+- `(property scheduled today)` and `(between deadline today +7d)` match nothing. The qualified `(between :logseq.property/deadline today +7d)` also matched nothing in the test. For deadline and scheduled ranges, use an advanced query as in [Customize the Journal Queries](../ddocs/how-to/queries/customize-journal-queries.md). `(between created-at -1d tomorrow)` does work.
 
-- ✅ `Backlog`, `Todo`, `Doing`, `In Review`, `Done`, `Canceled`
-- ❌ NOT `TODO`, `DOING`, `DONE`, `NOW`, `LATER`, `WAITING`, `CANCELLED` (file-based syntax)
+### Template variables
 
-### Advanced Queries
+`<% today %>`, `<% yesterday %>`, `<% tomorrow %>`, `<% time %>` and `<% current page %>` resolve inside a query (**Source**; `<% current page %>` **Live**). Wrap a variable in an operator, for example `(and <% today %> (task Todo))`. A query whose whole text is a bare variable becomes a text search; see [Dynamic variables](../ddocs/reference/syntax/dynamic-variables.md).
 
-**How to create:**
+### Advanced queries (Live)
 
-1. Type `/Query`
-2. Enter a Clojure map in the property value:
+Use `/Advanced Query` and enter a map:
 
 ```clojure
-{:title "High Priority Tasks"
- :query [:find (pull ?b [*])
+{:query [:find (pull ?b [*])
          :where
-         [?b :block/tags ?tag]
-         [?tag :db/ident :logseq.property/status.todo]]
- :inputs []}
+         [?b :logseq.property/status :logseq.property/status.todo]]}
 ```
 
-### Query Examples
+Status is a property whose value is a ref, so match `:logseq.property/status.todo`, not a tag. A `:title` key is accepted and ignored. Always pull with `[*]` or include `:block/uuid`.
 
-**Today's tasks:**
+## Embeds
 
-```clojure
-(and <% today %> (task Todo))
-```
+See **References → Block embeds**. Page embeds use the same command: `/Node embed`, then pick the page. There is no `/Embed page` or `/Embed block` command (**Live** menu). Embed media with `/Embed Video URL`, `/Embed Twitter tweet`, `/Embed YouTube timestamp` or `/Embed HTML`.
 
-**Multiple statuses:**
+## Code blocks
 
-```clojure
-(task Todo Doing)
-```
+Inline code uses backticks. For a block of code, use `/Code block`, which creates a typed code block with a language setting. A fence typed in text also renders as code (**Live**).
 
-**Property filter:**
-
-```clojure
-(property status done)
-```
-
-**Scheduled for today:**
-
-```clojure
-(and (task Todo) (property scheduled today))
-```
-
-**Date range:**
-
-```clojure
-(and (task Todo) (between deadline today +7d))
-```
-
-**Template variables work:**
-
-- `<% today %>` - Today's date
-- `<% yesterday %>`
-- `<% tomorrow %>`
-- `<% current page %>`
-
-## Embeds (UI-Based)
-
-### Page Embeds
-
-**How to embed pages:**
-
-1. Type `/Node embed`
-2. Search for and select the node (this guide's earlier `/Embed page` is not a DB-graph command; only `/Node embed` is in the DB slash menu source)
-3. Logseq inserts a `:block/link` block that renders the target
-
-**Note:** The `{{embed [[Page Name]]}}` text syntax does NOT work in DB mode.
-
-### Block Embeds
-
-**How to embed blocks:**
-
-1. Right-click a block → "Copy block embed"
-2. Paste in target location
-
-OR:
-
-1. Type `/Node embed`
-2. Search for the block
-
-**Note:** The embed is a block linked through `:block/link`; the `{{embed ((UUID))}}` text syntax is deprecated.
-
-## Code Blocks
-
-### Inline Code
-
-```markdown
-- This contains `inline code` within a block
-```
-
-### Code Blocks
-
-````markdown
-- Code block example:
-  ```javascript
-  function hello() {
-    console.log('Hello, Logseq!')
-  }
-  ```
-````
-
-### Supported Languages
-
-````markdown
-```python
-def greet(name):
-    print(f"Hello, {name}!")
-```
-
-```clojure
-(defn greet [name]
-  (println "Hello," name))
-```
-
-```sql
-SELECT * FROM users WHERE active = true;
-```
-````
+Any CodeMirror mode name is accepted as the language; `edn`, `clj`, `cljc` and `cljs` map to `clojure` (**Source**).
 
 ## Math (LaTeX)
 
-### Inline Math
-
 ```markdown
-- This equation $E = mc^2$ is inline
-- Another example: $\sum_{i=1}^{n} i = \frac{n(n+1)}{2}$
-```
-
-### Block Math
-
-```markdown
-- Math block:
+- Inline: $E = mc^2$
+- Block:
   $$
   \int_a^b f(x)dx = F(b) - F(a)
   $$
 ```
 
-### Display Mode Math
+`/Math block` also inserts a block (**Live** menu entry; rendering **Source**).
+
+## Diagrams
+
+Mermaid is **not built in**. **Live**: a `mermaid` fence renders as a code block with a language label and a Copy button, no diagram. A plugin can register a renderer for a fenced language (**Source**).
+
+## Lists
+
+Bullets are blocks. A numbered list is a block property, not typed text: use `/Number list` (the block) or `/Number children` (its children), or **Toggle number list** in the block menu. Typing `1.` is plain text (**Source**).
+
+## Block quotes and rules
 
 ```markdown
-$$
-\begin{bmatrix}
-a & b \\
-c & d
-\end{bmatrix}
-$$
+- > A quoted block
 ```
 
-## Diagrams (Mermaid)
+`/Quote` inserts one. A `---` line inside a block renders a horizontal rule (**Live**); a `## Heading` is a heading, not a rule.
 
-````markdown
-- Flowchart diagram:
-  ```mermaid
-  graph TD
-      A[Start] --> B{Decision}
-      B -->|Yes| C[Do this]
-      B -->|No| D[Do that]
-      C --> E[End]
-      D --> E
-  ```
-````
-
-### Sequence Diagrams
-
-````markdown
-```mermaid
-sequenceDiagram
-    participant A as Alice
-    participant B as Bob
-    A->>B: Hello Bob
-    B-->>A: Hi Alice
-```
-````
-
-### Gantt Charts
-
-````markdown
-```mermaid
-gantt
-    title Project Timeline
-    dateFormat  YYYY-MM-DD
-    section Phase 1
-    Task 1           :a1, 2024-01-01, 30d
-    Task 2           :after a1, 20d
-```
-````
-
-## Lists and Outlines
-
-### Unordered Lists (Blocks)
-
-```markdown
-- Item 1
-- Item 2
-  - Nested item 2.1
-  - Nested item 2.2
-    - Deeply nested 2.2.1
-- Item 3
-```
-
-### Ordered Lists
-
-```markdown
-- 1. First item
-- 2. Second item
-  - 2.1. Nested item
-  - 2.2. Another nested
-- 3. Third item
-```
-
-Note: In Logseq, ordered lists are still blocks with numbering prefix.
-
-### Mixed Lists
-
-```markdown
-- Bullet item
-  - 1. Numbered sub-item
-  - 2. Another numbered
-    - Bullet under numbered
-```
-
-## Block Quotes
-
-```markdown
-- > This is a quoted block
-  > It can span multiple lines
-  > And preserves formatting
-```
-
-## Horizontal Rules
-
-```markdown
-- ## Content above
-- Content below
-```
-
-## Links
-
-### External Links
+## Links and media
 
 ```markdown
 - [Link text](https://example.com)
-- [Logseq](https://logseq.com)
 - Direct URL: https://example.com
-```
-
-### Image Links
-
-```markdown
 - ![Alt text](https://example.com/image.png)
-- ![Local image](../assets/image.png)
-- ![Image with size](image.png){:width 300}
 ```
 
-### Asset Links
+- Use `/Upload an asset` for files and images. Uploaded files are asset blocks stored as `assets/<block-uuid>.<ext>`; resize and align them from the image's ⋮ menu.
+- A hand-typed relative path such as `../assets/x.png` renders only if that file exists (**Source**; not run). An absolute path to a local image also rendered in the desktop app (**Live**), with a ⋮ menu offering Copy image and Show file in folder.
+- `![alt](img.png){:width 300}` is parsed as image metadata (**Source**); an asset block's own size overrides it.
+- A `.pdf` link opens in the in-app PDF viewer (**Source**).
 
-```markdown
-- ![](../assets/document.pdf)
-- ![](../assets/image_123456789.png)
-```
+## Macros
 
-## Macros (Limited in DB Mode)
+- `{{youtube URL}}` and `{{tweet URL}}` render an embedded player (**Live**). `vimeo`, `bilibili` and `video` are handled the same way (**Source**).
+- `{{today}}`, `{{yesterday}}`, `{{tomorrow}}`, `{{current time}}` are **not** macros. **Live**: `{{today}}` shows "Unsupported macro name: today". Use the slash commands `/Today`, `/Yesterday`, `/Tomorrow`, `/Current time` and `/Date picker`.
+- `{{embed}}`, `{{query}}` and `{{namespace}}` are deprecated.
+- Custom macros from `:macros` in `config.edn` are still read (**Source**; not run).
 
-### Built-in Macros That Work
+## Templates
 
-Some text-based macros still work:
+A template is a block tagged with the **Template** class, and its children are the template body.
 
-```markdown
-- Current time: {{current time}}
-- Today: {{today}}
-- Yesterday: {{yesterday}}
-- Tomorrow: {{tomorrow}}
-```
+**How to create**
 
-### Embed Macros (NOT Supported)
+1. Write a parent block and nest the template content under it.
+2. Tag the parent with `#Template`.
+3. Optionally set **Apply template to tags** so the template is applied automatically to blocks that get those tags (**Source**).
 
-**These do NOT work in DB mode:**
+**How to use (Live):** type `/Template`, pick the template, and Logseq inserts the template's **children**. The template block itself is not inserted.
 
-- ❌ `{{embed ((block-reference))}}` (deprecated; use `/Node embed`)
-- ❌ `{{embed [[Page Name]]}}`
-- ❌ `{{youtube URL}}`
-- ❌ `{{twitter URL}}`
+There is no "Convert to template" or "Make template" menu item. `template::` and `template-including-parent::` do not apply in DB graphs.
 
-**Use UI-based embeds instead** (see Embeds section above).
+## Classes and tags
 
-### Custom Macros
+Tags can carry properties: create a tag, add properties to its definition, and every block with that tag can use them.
 
-Custom macros may not work reliably in DB mode. Check the latest Logseq documentation.
+`#Task` is built in and already carries status, priority, deadline and scheduled. Do not recreate it as a user class with a `status` or `due-date` property. For your own structured data, create tags such as `#Book` (author, year, rating) or `#Person` (email, department, role).
 
-## Templates (UI-Based)
+## Slash commands (Live)
 
-### Creating Templates
+Type `/` in a block. The built-in entries are:
 
-**In DB Mode:** Templates are created through UI and stored as database entities.
+- **Structure:** Node reference, Node embed, Link, Image link, Underline, Code block, Quote, Math block, Normal text, Heading 1 to 6, Number list, Number children.
+- **Tasks:** Backlog, Todo, Doing, In Review, Done, Canceled, Deadline, Scheduled, No priority, Priority Low / Medium / High / Urgent.
+- **Dates:** Tomorrow, Yesterday, Today, Current time, Date picker.
+- **Data:** Query, Advanced Query, Query function, Calculator, Template, Add property, Add comment, Upload an asset, Cloze.
+- **Media:** Embed HTML, Embed Video URL, Embed YouTube timestamp, Embed Twitter tweet.
 
-**How to create:**
+Plugins add more (the test profile showed AI and Callout entries). There is no `/Draw`, `/Embed page` or `/Embed block`.
 
-1. Create a page for your template (e.g., "Meeting Template")
-2. Add content/structure to the page
-3. Right-click the page → "Convert to template"
+## Keyboard shortcuts and menus
 
-OR:
+- `Cmd+P` (`Ctrl+Alt+P` on Windows and Linux) opens Add property (**Live**, macOS).
+- With a block selected: `p d` Deadline, `p s` status, `p t` tags, `p p` priority, `p i` icon (**Live** for `d` and `s`; **Source** for the rest).
+- `Cmd/Ctrl+Shift+E` while editing copies an embed of the block (**Live**).
+- `[[` opens page and block search; `#` opens tag search; `/` opens the command menu.
 
-1. Create blocks with your template structure
-2. Right-click the parent block → "Make template"
+**Right-click menu on a block bullet (Live)**: Open in sidebar, Add comment, Add reaction, Set icon, Copy block ref, Copy block URL, Copy / Export as.., Cut, Delete selected blocks, Make a Flashcard, Toggle number list, Expand all, Collapse all, plus any plugin items.
 
-### Using Templates
+## Linked references
 
-**How to use:**
+Linked references appear at the bottom of each page without any syntax. Filter them in the UI.
 
-1. Type `/Template`
-2. Search for and select your template
-3. Logseq inserts the template content
+## For plugin developers
 
-**Note:** The `template::` and `template-including-parent::` property syntax is from file-based mode and may not work the same way in DB mode.
-
-## Namespaces and Hierarchy
-
-### Page Namespaces
-
-```markdown
-[[Projects/Alpha]]
-[[Projects/Alpha/Tasks]]
-[[Projects/Beta]]
-```
-
-Creates hierarchy:
-
-- Projects (parent)
-  - Alpha (child)
-    - Tasks (grandchild)
-  - Beta (child)
-
-### Tag Namespaces
-
-```markdown
-#project/alpha
-#project/alpha/backend
-#status/active
-```
-
-## Advanced Features (DB Mode)
-
-### Property Schema (Database-Level)
-
-In DB mode, properties have schemas:
-
-- **Type**: default, number, date, datetime, checkbox, url, page, class
-- **Cardinality**: one (single value) or many (multiple values)
-- **Visibility**: public (user-editable) or hidden
-
-**Managed through:** Plugin API or Logseq UI
-
-### Classes and Tags
-
-In DB mode, tags can have properties attached:
-
-1. Create a tag (e.g., `#Person`)
-2. Add properties to the tag definition
-3. All blocks tagged with that tag can use those properties
-
-**Example use case:** Create a `#Book` tag with properties like `author`, `year`, `rating`
-
-## Important Clarifications
-
-### What Still Works (Text-Based)
-
-These markdown features work the same in DB mode:
-
-- **Formatting:** Bold `**text**`, italic `*text*`, highlight `^^text^^`
-- **Links:** Page links `[[Page]]`, external links `[text](url)`
-- **Tags:** `#tag` syntax
-- **Code:** Inline `` `code` `` and code blocks
-- **Math:** Inline `$math$` and block `$$math$$`
-- **Diagrams:** Mermaid code blocks
-- **Lists:** Bullet points and numbered lists
-- **Headings:** `# Heading` within blocks
-
-### What Doesn't Work (Must Use UI)
-
-These file-mode text syntaxes do NOT work in DB mode:
-
-- ❌ `property:: value` (use UI to add properties)
-- ❌ `{{query}}` macros (use `/Query` command)
-- ❌ `((UUID))` block references (plain text; use `[[<UUID>]]` via Copy block ref)
-- ❌ `{{embed}}` macros (deprecated; use the `/Node embed` command)
-- ❌ `TODO/DOING/DONE` markers (use `/` status commands)
-- ❌ `[#A]` priorities (use `/Priority` command)
-- ❌ `SCHEDULED: <date>` (use Cmd+P, S)
-- ❌ `DEADLINE: <date>` (use Cmd+P, D)
-- ❌ `template::` property (use "Convert to template")
-
-### For Plugin Developers
-
-When developing plugins for DB mode:
-
-- Use `logseq.App.checkCurrentIsDbGraph()` to detect mode
-- Use `logseq.Editor.upsertBlockProperty()` for properties
-- Don't generate `property:: value` text in DB mode
-- See `libs/development-notes/db_properties_guide.md` for API details
-
-## Linked References
-
-Logseq automatically shows linked references at the bottom of each page - no special syntax needed.
-
-### Filters
-
-Linked references can be filtered through the UI, not via text syntax.
-
-## Commands and Shortcuts (DB Mode)
-
-### Slash Commands
-
-Type `/` in a block to access:
-
-- `/Query` - Create a query (NOT `{{query}}`)
-- `/Node embed` - Embed a block or page as a linked block
-- `/Template` - Insert a template
-- `/Draw` - Create a drawing
-- `/Priority` - Set priority (Low/Medium/High/Urgent)
-- `/Todo` - Set status to Todo
-- `/Doing` - Set status to Doing
-- `/Done` - Set status to Done
-- `/Scheduled` - Add scheduled date
-- `/Deadline` - Add deadline date
-
-### Keyboard Shortcuts
-
-**Properties:**
-
-- `Cmd/Ctrl + P` then `S` - Add scheduled
-- `Cmd/Ctrl + P` then `D` - Add deadline
-
-**Block Operations:**
-
-- `((` - Trigger block reference search
-- `[[` - Link to a page
-- `#` - Create a tag
-- `/` - Open commands menu
-- `Enter` - Create new block
-- `Tab` - Indent block
-- `Shift+Tab` - Outdent block
-
-### Right-Click Context Menu
-
-- Copy block reference
-- Copy block embed
-- Add property
-- Convert to template
-- Delete block
-
-## Complete Example (DB Mode)
-
-**How this would look in Logseq DB:**
-
-````markdown
-- # Project Alpha - Sprint Planning
-  [Properties set via UI:]
-  - icon: 📋
-  - tags: project, planning, sprint
-  - date: [linked to Jan 25, 2024 page]
-- # Sprint Goals
-- [Status: Todo] [Priority: High] Implement user authentication
-  [Properties set via UI:]
-  - scheduled: Jan 26, 2024
-  - deadline: Jan 30, 2024
-  - assignee: [linked to John Doe page]
-  - Research OAuth2 providers
-  - Set up authentication middleware
-  - Add login/logout endpoints
-- [Status: Todo] [Priority: High] Database schema migration
-  [Properties set via UI:]
-  - scheduled: Jan 27, 2024
-  - assignee: [linked to Jane Smith page]
-  - Review current schema
-  - Plan migration strategy
-  - Write migration scripts
-- ## Medium Priority Tasks
-- [Status: Todo] [Priority: Medium] Update documentation
-  [Properties set via UI:]
-  - deadline: Feb 5, 2024
-  - API documentation
-  - User guide updates
-- ## Query: All Active Tasks
-  [Created with /Query command:]
-  query: (and (task Todo Doing) (property project [[Project Alpha]]))
-- ## Technical Notes
-- The authentication flow uses JWT tokens with expiry of $24$ hours.
-  - Token refresh formula: $t_{refresh} = t_{expiry} - \Delta t$
-- Architecture diagram:
-  ```mermaid
-  graph LR
-      A[Client] --> B[API Gateway]
-      B --> C[Auth Service]
-      B --> D[Database]
-      C --> D
-  ```
-````
-
-- Code example:
-  ```javascript
-  async function authenticate(credentials) {
-    const token = await authService.login(credentials)
-    return { token, expiresIn: 86400 }
-  }
-  ```
-
-````
-
-**Note:** The example above shows conceptual structure. In actual DB mode:
-- Properties appear as UI elements (not text)
-- Task statuses show as colored badges
-- Dates have calendar UI
-- Links are interactive elements
-- Queries render results automatically
-
-## Database-Specific Features
-
-### Property Graph
-
-DB mode creates a true property graph:
-- Entities (pages, blocks) have properties
-- Properties have schemas (type, cardinality, constraints)
-- Properties can reference other entities
-- Full Datalog query support
-
-### Plugin API Access
-
-Plugins can interact with DB mode using dedicated APIs:
+- Detect DB mode with `logseq.App.checkCurrentIsDbGraph()` (**Source**).
+- Write properties with `logseq.Editor.upsertBlockProperty()`; do not generate `property:: value` text.
+- See `libs/guides/db_properties_guide.md` for the API.
 
 ```typescript
-// Check if current graph is DB mode
-const isDb = await logseq.App.checkCurrentIsDbGraph()
-
-// Property operations
-await logseq.Editor.upsertBlockProperty(blockUuid, 'status', 'done')
 await logseq.Editor.upsertProperty('rating', {
   type: 'number',
   cardinality: 'one',
   public: true
 })
 
-// Tag/class operations
 await logseq.Editor.createTag('Book', {
   tagProperties: [
-    { name: 'author', schema: { type: 'default', cardinality: 'one' }},
-    { name: 'year', schema: { type: 'number', cardinality: 'one' }}
+    { name: 'author', schema: { type: 'default', cardinality: 'one' } },
+    { name: 'year', schema: { type: 'number', cardinality: 'one' } }
   ]
 })
-````
-
-### Advanced Queries
-
-DB mode supports powerful Datalog queries:
-
-```clojure
-{:title "Books by Year"
- :query [:find ?title ?year
-         :where
-         [?b :block/tags ?tag]
-         [?tag :db/ident :class/Book]
-         [?b :logseq.property/title ?title]
-         [?b :logseq.property/year ?year]]
- :order-by [[?year :desc]]}
 ```
 
-## Best Practices (DB Mode)
+The signatures match `libs/src/LSPlugin.ts` (**Source**; not run). The plugin API resolves a property key to a plugin-namespaced property, so `upsertBlockProperty(uuid, 'status', ...)` may not write the built-in Status. For tasks, set status through the UI or the full ident. This was not run.
 
-### 1. Use UI for Properties
+## Best practices
 
-**Don't:** Try to write `property:: value` text syntax
-**Do:** Use `/` commands or property menu to add properties
+1. **Use the UI for properties.** Do not write `property:: value`.
+2. **Use `/Query` or `/Advanced Query`.** Do not use `{{query}}`.
+3. **Match statuses by their real values** (Backlog, Todo, Doing, In Review, Done, Canceled). Case does not matter in `(task ...)`, but it does in `(property ...)`.
+4. **Use the shortcuts that exist**: `Cmd+P`, the `p` chords on a selected block, and `/` commands.
+5. **Know where data lives.** Content is in SQLite. Use **Export** (Markdown, EDN, SQLite DB, or zip) for backups. Logseq Sync is sync, not version control.
+6. **Use namespaces for organization**, for example `Projects/Alpha/Tasks`. Parents are created under Library.
+7. **Tag with classes** for structured data: `#Book`, `#Person`.
 
-### 2. Use `/Query` for Queries
+## DB mode vs file mode
 
-**Don't:** Use `{{query}}` macros (deprecated)
-**Do:** Use `/Query` command and enter query value in property
+| Feature              | File mode (Logseq OG)               | DB mode (Logseq DB)                                        |
+| -------------------- | ----------------------------------- | ---------------------------------------------------------- |
+| **Storage**          | Markdown/Org files                  | SQLite database                                            |
+| **Page links**       | `[[Page]]`                          | `[[Page]]`                                                 |
+| **Block references** | `((block-id))`                      | `[[<UUID>]]`                                               |
+| **Properties**       | `property:: value` text             | UI-based, stored as database properties                    |
+| **Embeds**           | `{{embed ((uuid))}}`                | `/Node embed` (a `:block/link` block)                      |
+| **Tasks**            | `TODO/DOING/DONE` text markers      | Status property: Backlog, Todo, Doing, In Review, Done, Canceled |
+| **Priorities**       | `[#A]` `[#B]` `[#C]`                | Priority property: Low, Medium, High, Urgent               |
+| **Scheduled**        | `SCHEDULED: <date>`                 | Scheduled property (`/Scheduled`, `Cmd+P`)                 |
+| **Deadline**         | `DEADLINE: <date>`                  | Deadline property (`/Deadline`, `p d`)                     |
+| **Tags**             | `#tag` or `[[tag]]`                 | `#tag` makes the page a tag (class)                        |
+| **Queries**          | `{{query}}` macro                   | `/Query` (a Query-tagged block)                            |
+| **Query statuses**   | `TODO`, `DOING`, `DONE`             | Real values; `(task ...)` ignores case                     |
+| **Templates**        | `template::` property               | `#Template` class and `Apply template to tags`             |
+| **Export**           | Direct file access                  | Markdown, EDN, SQLite DB, zip                              |
 
-### 3. Use Title-Case for Task Statuses in Queries
-
-**Don't:** `(task TODO DOING)`
-**Do:** `(task Todo Doing)`
-
-### 4. Leverage UI-Based Features
-
-- Use keyboard shortcuts (Cmd+P for properties)
-- Right-click menus for operations
-- Block menu (three dots) for options
-
-### 5. Understand Database Storage
-
-- Content is stored in SQLite, not markdown files
-- Export regularly if you need file backups
-- Use Logseq Sync or export for version control
-
-### 6. Use Namespaces for Organization
-
-```markdown
-[[Projects/Alpha]]
-[[Projects/Alpha/Tasks]]
-[[Company/People/Engineering/John]]
-```
-
-### 7. Tag with Classes
-
-Create tags with properties for structured data:
-
-- `#Book` with properties: author, year, rating
-- `#Person` with properties: email, department, role
-- `#Task` with properties: assignee, due-date, status
-
-## DB Mode vs File Mode (Logseq OG)
-
-| Feature              | File Mode (Logseq OG)               | DB Mode (Logseq DB)                             |
-| -------------------- | ----------------------------------- | ----------------------------------------------- |
-| **Storage**          | Markdown/Org files                  | SQLite database                                 |
-| **Structure**        | File-based                          | Database entities                               |
-| **Page links**       | `[[Page]]` or `[[Page#^block-id]]`  | `[[Page]]`                                      |
-| **Block references** | `((block-id))` text syntax          | `[[<UUID>]]` (UUID-backed)                       |
-| **Properties**       | `property:: value` text             | UI-based (stored in database)                   |
-| **Embeds**           | `![[Page]]` or `{{embed}}`          | `/Node embed` (`:block/link` block)             |
-| **Highlight**        | `^^text^^`                          | `^^text^^` (same)                               |
-| **Tasks**            | `TODO/DOING/DONE` text markers      | UI-based status (Todo/Doing/Done)               |
-| **Priorities**       | `[#A]` `[#B]` `[#C]` text           | UI-based (Low/Medium/High/Urgent)               |
-| **Scheduled**        | `SCHEDULED: <date>` org-mode        | UI-based property (Cmd+P, S)                    |
-| **Deadline**         | `DEADLINE: <date>` org-mode         | UI-based property (Cmd+P, D)                    |
-| **Tags**             | `#tag` or `[[tag]]`                 | `#tag` or `[[tag]]` (same, but stored as class) |
-| **Queries**          | `{{query}}` macro                   | `/Query` command (creates property)             |
-| **Query status**     | `TODO`, `DOING`, `DONE` (uppercase) | `Todo`, `Doing`, `Done` (title-case)            |
-| **Templates**        | `template::` property               | UI-based conversion                             |
-| **Export**           | Direct file access                  | Export to markdown/JSON/EDN                     |
-| **Sync**             | Git, file sync                      | Logseq Sync or export + Git                     |
-| **Performance**      | File I/O based                      | Database queries (faster for large graphs)      |
-
-**Migration:** Content can be imported from file mode to DB mode, but not all syntax translates directly.
-
-## Summary: Key Differences from File Mode
-
-**DB Mode is UI-First, Not Text-First**
-
-File Mode (Logseq OG) used text syntax for everything. DB Mode stores data in a database and uses UI for most operations.
-
-**What Changed:**
-
-- Properties: Text syntax → UI-based
-- Queries: `{{query}}` → `/Query` command
-- Tasks: Text markers → UI status
-- Block references: legacy file-mode block IDs → UUID-backed `[[<UUID>]]` refs
-- Embeds: `{{embed}}` and page-style embed text → `/Node embed` (a `:block/link` block)
-
-**What Stayed the Same:**
-
-- Basic markdown formatting
-- Page links `[[Page]]`
-- Tags `#tag`
-- Code blocks
-- Math and diagrams
-
-**Critical UUID Change:** In DB mode, pages stay as `[[Page Name]]` links and blocks use UUID-backed `[[<UUID>]]` refs. This differs from file mode where block refs used legacy block IDs and pages used `[[Page]]`.
-
-**Bottom Line:** If you're used to typing everything in file mode, DB mode requires adapting to UI-based workflows for properties, tasks, and queries.
+**Migration:** content can be imported from file mode, but not all syntax translates directly.
 
 ## References
 
-- [Logseq Documentation](https://docs.logseq.com/)
-- [Logseq DB Documentation](https://docs.logseq.com/db)
-- [Query Syntax: DB vs File](dz/docs/03-features/query-system/syntax-db-vs-file.md)
-- [DB Properties Guide (Plugin Developers)](libs/development-notes/db_properties_guide.md)
-- [Database Graph Schema Reference](dz/docs/03-features/database-graphs/schema-reference.md)
-- [Plugin API Changes 2024-2025](dz/docs/04-api-reference/plugin-api/changes-2024-2025.md)
+- [Customize the Journal Queries](../ddocs/how-to/queries/customize-journal-queries.md)
+- [Dynamic variables](../ddocs/reference/syntax/dynamic-variables.md)
+- [Database Graph Schema Reference](../03-features/database-graphs/schema-reference.md)
+- [Query Syntax: DB vs File](../03-features/query-system/syntax-db-vs-file.md)
+- `libs/guides/db_properties_guide.md` (plugin developers, in the Logseq repository)
