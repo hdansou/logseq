@@ -271,40 +271,37 @@ Both are **datetime properties** supporting:
 
 #### Example: Get Scheduled/Deadline Tasks for Date Range
 
-**Location:** `src/main/frontend/db/async.cljs:230-259`
+**Location:** `src/main/frontend/db/async.cljs:460-466` (range) and `src/main/frontend/worker/handler/property.cljs:939-962` (query), as of `22a29b30de`
+
+> **Changed 2026-10-04 (`829fb85cca`):** the range is local midnight, not UTC midnight, and the Datascript query moved into the db-worker. The previous listing here (`journal-day->utc-ms`, `tc/to-long`, `<q` in the renderer) is gone. The local-midnight boundaries were verified live 2026-10-04; see [Customize the Journal Queries](../ddocs/how-to/queries/customize-journal-queries.md).
 
 ```clojure
+;; renderer: computes the window
 (defn <get-date-scheduled-or-deadlines
   [journal-title]
   (when-let [date (date/journal-title->int journal-title)]
-    (let [future-days (state/get-scheduled-future-days)
-          current-day (tf/parse yyyyMMdd-formatter (str date))
-          future-date (t/plus current-day (t/days future-days))
-          future-day (some->> future-date
-                              (tf/unparse yyyyMMdd-formatter)
-                              (parse-long))
-          start-time (date/journal-day->utc-ms date)
-          future-time (tc/to-long future-date)]
-      (when-let [repo (and future-day (state/get-current-repo))]
-        (p/let [result
-                (<q repo {}
-                    '[:find [(pull ?block ?block-attrs) ...]
-                      :in $ ?start-time ?end-time ?block-attrs
-                      :where
-                      (or [?block :logseq.property/scheduled ?n]
-                          [?block :logseq.property/deadline ?n])
-                      [(>= ?n ?start-time)]
-                      [(<= ?n ?end-time)]
-                      [?block :logseq.property/status ?status]
-                      [?status :db/ident ?status-ident]
-                      [(not= ?status-ident :logseq.property/status.done)]
-                      [(not= ?status-ident :logseq.property/status.canceled)]]
-                    start-time
-                    future-time
-                    '[*])]
-          (->> result
-               db-model/sort-by-order-recursive
-               db-utils/group-by-page))))))
+    (when-let [repo (state/get-current-repo)]
+      (when-let [[start-time future-time]   ; local-midnight epoch ms, both inclusive
+                 (date/journal-day-local-range-ms date (state/get-scheduled-future-days))]
+        (<get-date-scheduled-or-deadlines-from-worker repo start-time future-time)))))
+
+;; worker: runs the query
+(defn- get-date-scheduled-or-deadlines
+  [db start-time end-time]
+  (->> (d/q '[:find [(pull ?block ?block-attrs) ...]
+              :in $ ?start-time ?end-time ?block-attrs
+              :where
+              (or [?block :logseq.property/scheduled ?n]
+                  [?block :logseq.property/deadline ?n])
+              [(>= ?n ?start-time)]
+              [(<= ?n ?end-time)]
+              [?block :logseq.property/status ?status]
+              [?status :db/ident ?status-ident]
+              [(not= ?status-ident :logseq.property/status.done)]
+              [(not= ?status-ident :logseq.property/status.canceled)]]
+            db start-time end-time scheduled-deadline-pull-selector)
+       sort-by-order-recursive
+       group-by-page))
 ```
 
 **Query Logic:**
@@ -648,7 +645,7 @@ Display: Results rendered in query block
 | File                                                 | Purpose              | Key Functions/Data                                                         | Lines            |
 | ---------------------------------------------------- | -------------------- | -------------------------------------------------------------------------- | ---------------- |
 | `deps/db/src/logseq/db/frontend/property.cljs`       | Property definitions | Built-in properties including scheduled/deadline                           | 340-353          |
-| `src/main/frontend/db/async.cljs`                    | Query functions      | `<get-date-scheduled-or-deadlines` - fetch tasks by date                   | 228-257          |
+| `src/main/frontend/db/async.cljs`                    | Query functions      | `<get-date-scheduled-or-deadlines` - computes the local-midnight window    | 460-466          |
 | `src/main/frontend/db/query_dsl.cljs`                | Query DSL parser     | `db-based-build-between-three-arg`, `build-property-two-arg`, `build-task` | 254-373          |
 | `deps/db/src/logseq/db/frontend/rules.cljc`          | DataScript rules     | `:between`, `:task`, property helper rules                                 | 97-304           |
 | `deps/db/src/logseq/db/frontend/inputs.cljs`         | Input resolution     | Date/relative-date-time keyword conversion                                 | 71-140           |

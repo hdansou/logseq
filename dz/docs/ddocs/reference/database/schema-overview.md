@@ -37,7 +37,7 @@ Database graphs use a structured schema with three layers:
 2. **Malli validation layer**: entity schemas in `deps/db/src/logseq/db/frontend/malli_schema.cljs`, compiled into validators by `deps/db/src/logseq/db/frontend/validate.cljs:11-14`.
 3. **SQLite persistence layer**: one `db.sqlite` per graph (`deps/db/src/logseq/db/common/sqlite.cljs:29-33`). Its only table is `kvs` (`sqlite.cljs:13`), which stores the DataScript data. You query it as DataScript, not with SQL.
 
-**Current schema version**: 65.33 (`deps/db/src/logseq/db/frontend/schema.cljs:33`)
+**Current schema version**: 65.34 (`deps/db/src/logseq/db/frontend/schema.cljs:33`)
 
 ---
 

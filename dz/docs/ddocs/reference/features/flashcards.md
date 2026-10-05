@@ -54,7 +54,7 @@ Before the answer is revealed, the review dialog renders the card block with `:h
 
 Blocks tagged with a tag that extends Card are also listed for review. The due-card query collects Card plus every class that extends it (`src/main/frontend/worker/handler/flashcard.cljs:21-23`, `deps/db/src/logseq/db/frontend/class.cljs:171-181`).
 
-> **Unverified:** whether rating such a card works. The review UI's `card-block?` test only accepts a block whose own tags include `:logseq.class/Card` (`fsrs.cljs:50-52`). For any other block, `get-card-map` returns `nil` and `repeat-card!` writes nothing (`fsrs.cljs:54-68`, `:70-87`). Not reproduced live.
+> **Rating works for these cards too** (since `928630b2a9`; earlier builds crashed on Show answer and wrote nothing). `card-block?` accepts Card or any class that reaches Card through `:logseq.property.class/extends`, at any depth (`src/main/frontend/extensions/fsrs.cljs:53-82`), and `repeat-card!` pulls `extends` recursively so the FSRS state is written. The statistics count and `cards?` queries use the same Card-plus-descendants set. Verified in source; not re-run in the app.
 
 ### Context Menu ("Make a Flashcard")
 

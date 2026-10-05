@@ -411,7 +411,7 @@ Anything outside those sets renders as a file link — and syncs identically to 
 | Restriction | Allowed set | Source | Effect |
 |---|---|---|---|
 | **Mobile share sheet** | `doc-formats` ∪ `media-formats` (33 extensions) | `src/main/frontend/mobile/intent.cljs:139, 193, 241` | Sharing an unlisted type into Logseq shows `:mobile.share/unsupported-import-type` and no asset is created. Note `.heic` is **not** in the set. |
-| **Copy image to clipboard** (Electron) | `png jpg jpeg gif webp bmp svg ico` | `src/main/frontend/components/block.cljs:277-289` | Falls back to `:asset/copy-image-unsupported-extension` warning; the asset itself is unaffected. |
+| **Copy image to clipboard** (Electron) | `png jpg jpeg gif webp bmp svg ico` | `src/main/frontend/components/block.cljs:277-289` | Falls back to `:asset/copy-image-unsupported-extension` warning; the asset itself is unaffected. Also offered on inline images with no asset block (`8ffbb22093`); a missing file shows `:asset/missing-file`. Re-checked 2026-10-04 for the missing-file and copy paths, not the extension list. |
 | **External link protocols** | `https: http: mailto: zotero: file:` | `resources/js/preload.js:9` | `openExternal` throws `illegal protocol` for anything else, including `assets:`. |
 | **Asset alias directories** (file graphs) | user-chosen per directory | `src/main/frontend/components/assets.cljs:104-190` | Legacy file-graph feature; not part of DB sync. |
 

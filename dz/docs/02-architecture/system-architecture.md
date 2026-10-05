@@ -295,7 +295,8 @@ graph TD
 ;; Connection setup with optimizations
 (defn- enable-sqlite-wal-mode! [^Object db]
   (.exec db "PRAGMA locking_mode=exclusive")
-  (.exec db "PRAGMA journal_mode=WAL"))  ; Write-Ahead Logging for better concurrency
+  (.exec db "PRAGMA journal_mode=WAL")  ; Write-Ahead Logging for better concurrency
+  (.exec db "PRAGMA synchronous=NORMAL"))  ; no per-commit fsync (fff75ea17d)
 ```
 
 ### 4. Plugin System

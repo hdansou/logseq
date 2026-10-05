@@ -116,7 +116,7 @@ That means sync filtering is partly schema-driven and partly hard-coded for know
 The current frontend schema version is:
 
 ```clojure
-(def version (parse-schema-version "65.33"))
+(def version (parse-schema-version "65.34"))
 ```
 
 Source of truth: `deps/db/src/logseq/db/frontend/schema.cljs`.

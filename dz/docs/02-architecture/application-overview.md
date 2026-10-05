@@ -145,7 +145,7 @@ graph LR
 ### Linking System
 
 - `[[Page Name]]` - Page references
-- `((block-id))` - Block references
+- `[[<uuid>]]` - Node (block or page) references
 - `#tag` - Tags for categorization
 - `#[[Multi-word Tag]]` - Complex tags
 

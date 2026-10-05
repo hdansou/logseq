@@ -16,7 +16,7 @@ This checklist ensures all schema changes are properly reviewed before merging. 
 
 ## Findings: New Capabilities
 
-- Frontend DB schema is currently `65.33`, and frontend migrations currently run through `65.33`.
+- Frontend DB schema is currently `65.34`, and frontend migrations currently run through `65.34`.
 - Frontend migrations now support `:delete-properties` in addition to `:properties`, `:classes`, and `:fix`.
 - Validation repair now calls `ensure-built-in-data-exists!` before invalid-entity repair.
 - User-facing property types now include `:asset`.

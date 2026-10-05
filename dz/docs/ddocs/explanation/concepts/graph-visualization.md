@@ -133,7 +133,7 @@ Jan 21st, 2026 → journal (hidden unless "Show journals" is on)
 active → tag (a tag is a page too)
 ```
 
-Some pages are left out: hidden or recycled pages, property pages, built-in pages, and pages with **Excluded from Graph view?** set ([`src/main/frontend/worker/graph_view.cljs:785-798`](../../../../../src/main/frontend/worker/graph_view.cljs), `:838-848`, `:868-871`). Pages with no connections are still drawn: the global graph never asks to hide orphans ([`src/main/frontend/components/graph.cljs:785-788`](../../../../../src/main/frontend/components/graph.cljs); [`src/main/frontend/worker/graph_view.cljs:611-613`](../../../../../src/main/frontend/worker/graph_view.cljs)).
+Some pages are left out: hidden or recycled pages together with all of their nested child pages (`768f525916`), property pages, built-in pages, and pages with **Excluded from Graph view?** set ([`src/main/frontend/worker/graph_view.cljs:785-798`](../../../../../src/main/frontend/worker/graph_view.cljs), `:838-848`, `:868-871`). Pages with no connections are still drawn: the global graph never asks to hide orphans ([`src/main/frontend/components/graph.cljs:785-788`](../../../../../src/main/frontend/components/graph.cljs); [`src/main/frontend/worker/graph_view.cljs:611-613`](../../../../../src/main/frontend/worker/graph_view.cljs)).
 
 **Tags view**
 

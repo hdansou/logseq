@@ -18,7 +18,7 @@ This guide reflects the current DB-graph migration path implemented in:
 - [src/main/frontend/worker/db/migrate.cljs](../../../src/main/frontend/worker/db/migrate.cljs)
 - [src/test/frontend/worker/migrate_test.cljs](../../../src/test/frontend/worker/migrate_test.cljs)
 
-As of this revision, the current frontend DB schema version is `65.33`.
+As of this revision, the current frontend DB schema version is `65.34`.
 
 **Critical rule:** if a change affects persisted DB-graph data, update the built-in definition, add or adjust the migration entry, and bump `db-schema/version` together.
 
@@ -81,7 +81,7 @@ What each key does today:
 Update `version` in [deps/db/src/logseq/db/frontend/schema.cljs](../../../deps/db/src/logseq/db/frontend/schema.cljs):
 
 ```clojure
-(def version (parse-schema-version "65.33"))
+(def version (parse-schema-version "65.34"))
 ```
 
 The migration entry and `db-schema/version` must advance together.

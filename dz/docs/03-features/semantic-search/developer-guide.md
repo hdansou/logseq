@@ -46,13 +46,13 @@ Defined in `src/main/frontend/worker/db_core.cljs`:
 - Metadata is persisted and validated:
   - `:embedding-model-id`
   - `:embedding-dimension`
-  - `:context-version` (`search/vector-context-version`, currently `2`)
+  - `:context-version` (`search/vector-context-version`, currently `3`)
 
 ### Build pipeline details
 
 `src/main/frontend/worker/db_core.cljs` now builds indices in cooperative batches with progress reporting and idle-aware pauses.
 
-- Search DB version gate: `search-db-version` is `2`.
+- Search DB version gate: `search-db-version` is `6` (`src/main/frontend/worker/handler/search.cljs:15`). `blocks_fts` rows share the rowid of their `blocks` row and the triggers delete and update by rowid (`792f86328b`); an index at version 4 migrates in place in batches, other old versions rebuild.
 - Batch constants include:
   - `search-index-build-batch-size = 200`
   - `vector-embedding-batch-size = 32`

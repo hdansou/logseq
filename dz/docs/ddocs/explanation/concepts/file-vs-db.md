@@ -572,7 +572,7 @@ into a DB graph is the file-graph *entity model*, meaning the attributes above.
               {:db/ident :user.class/Project}]}
 ```
 
-The DB schema version is **65.33**
+The DB schema version is **65.34**
 ([`deps/db/src/logseq/db/frontend/schema.cljs:33`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)).
 
 > **Note on user idents:** `:user.class/Project` above is illustrative only. User classes and

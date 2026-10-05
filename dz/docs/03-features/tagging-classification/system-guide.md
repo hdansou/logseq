@@ -79,7 +79,7 @@ Tag/class integrity is actively repaired/normalized in worker code:
 
 ### Schema version
 
-Current schema version in source is `65.33` (`deps/db/src/logseq/db/frontend/schema.cljs`), with migrations up to `65.33` in `src/main/frontend/worker/db/migrate.cljs`.
+Current schema version in source is `65.34` (`deps/db/src/logseq/db/frontend/schema.cljs`), with migrations up to `65.34` in `src/main/frontend/worker/db/migrate.cljs`.
 
 ## Findings: New Capabilities
 
@@ -89,7 +89,7 @@ Compared to the previous revision of this guide, the following capabilities are 
 2. Automatic query property bootstrapping when a block is tagged as `:logseq.class/Query`.
 3. Automatic comments linkage initialization when a block is tagged as `:logseq.class/Comments`.
 4. User property type list includes `:asset`.
-5. Schema/migration head is `65.33` (not `65.22`).
+5. Schema/migration head is `65.34` (not `65.22`).
 
 ## Findings: Removed or Stale Claims
 
@@ -97,7 +97,7 @@ Compared to the previous revision of this guide, the following capabilities are 
 
 > **Removed:** Prior “comprehensive” query examples and pseudo-rules were mixed with non-authoritative snippets and should not be treated as implementation documentation.
 
-> **Removed:** The previously stated schema head `65.22` is stale; source now declares `65.33`.
+> **Removed:** The previously stated schema head `65.22` is stale; source now declares `65.34`.
 
 ## Practical Notes
 

@@ -297,7 +297,7 @@ The EDN file is a datom-level export of the whole graph
  :datoms [...]}
 ```
 
-The schema version is `65.33` (`deps/db/src/logseq/db/frontend/schema.cljs:33`).
+The schema version is `65.34` (`deps/db/src/logseq/db/frontend/schema.cljs:33`).
 
 **Markdown Export:**
 

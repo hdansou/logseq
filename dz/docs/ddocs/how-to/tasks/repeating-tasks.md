@@ -98,7 +98,7 @@ The definitions are at [property.cljs:354-399](../../../../../deps/db/src/logseq
 | ------------ | ----- | --------- |
 | Advance from completion | `repeat-type.dotted-plus` | Now + frequency × unit. The time of day comes from the moment you complete the task ([commands.cljs:111-114](../../../../../src/main/frontend/worker/commands.cljs#L111-L114)) |
 | Advance from scheduled | `repeat-type.plus` | Current date + frequency × unit, once. The result can still be in the past ([commands.cljs:116-121](../../../../../src/main/frontend/worker/commands.cljs#L116-L121)) |
-| Advance from scheduled, skip to future | `repeat-type.double-plus` | Current date + whole multiples of frequency × unit, until the result is after now ([commands.cljs:123-140](../../../../../src/main/frontend/worker/commands.cljs#L123-L140)). Also used for an unknown type ([commands.cljs:154-155](../../../../../src/main/frontend/worker/commands.cljs#L154-L155)) |
+| Advance from scheduled, skip to future | `repeat-type.double-plus` | Current date + whole multiples of frequency × unit, until the result is after now ([commands.cljs:122-139](../../../../../src/main/frontend/worker/commands.cljs#L122-L139)). Each candidate is counted from the scheduled date (scheduled + n × step), so month-end clamping does not compound within one catch-up: Jan 31 + 6 months is Jul 31, not Jul 30 (`fdfd7758a3`). Also used for an unknown type ([commands.cljs:154-155](../../../../../src/main/frontend/worker/commands.cljs#L154-L155)) |
 
 ## Common Patterns
 

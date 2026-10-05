@@ -241,7 +241,7 @@ The number next to the heading counts referencing blocks, not pages ([`deps/db/s
 
 Linked references also show when a page is open in the right sidebar, which renders the same page component with `:sidebar? true` ([`src/main/frontend/components/right_sidebar.cljs:59-64`](../../../../../src/main/frontend/components/right_sidebar.cljs)). Unlinked references do not show in the sidebar, on the home view, or on tag and property pages ([`src/main/frontend/components/page.cljs:531-537`](../../../../../src/main/frontend/components/page.cljs)).
 
-On a tag page, blocks tagged with that tag (or one of its child tags) are left out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs), `:281-283`). They are listed on the page's **Tagged nodes** tab instead ([`src/main/frontend/components/page.cljs:393-396`](../../../../../src/main/frontend/components/page.cljs); `en.edn:195`).
+On a tag page, blocks tagged with that tag (or one of its child tags) are left out of Linked references ([`deps/db/src/logseq/db/common/reference.cljs:252-255`](../../../../../deps/db/src/logseq/db/common/reference.cljs), `:281-283`). A tag page still shows Linked references for `[[tag]]` page links: since `3b6c4573af` the count is no longer forced to 0 for class pages (only property pages are, `src/main/frontend/worker/handler/render_resource/basic.cljs:201-214`), so the section mounts when such links exist. They are listed on the page's **Tagged nodes** tab instead ([`src/main/frontend/components/page.cljs:393-396`](../../../../../src/main/frontend/components/page.cljs); `en.edn:195`).
 
 ### Backlink Context
 

@@ -247,7 +247,7 @@ The command is `:dev/validate-db` ([`modules/shortcut/config.cljs:522-525`](../.
 
 **3. Schema Version**
 
-The current DB schema version is **65.33** ([`deps/db/src/logseq/db/frontend/schema.cljs:33`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)).
+The current DB schema version is **65.34** ([`deps/db/src/logseq/db/frontend/schema.cljs:33`](../../../../../deps/db/src/logseq/db/frontend/schema.cljs)).
 
 > Removed claim: `@(get-in @state/state [:db/schema-version])` ("should be 65.16 or higher") and "⋯ → Settings → Advanced → Migrate schema". `:db/schema-version` does not appear in `src/main/`, and there is no Migrate schema row in Settings.
 

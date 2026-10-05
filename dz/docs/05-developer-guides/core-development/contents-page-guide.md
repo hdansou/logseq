@@ -24,7 +24,7 @@ The Contents page behaves like a normal page when rendered, with some special UI
 ### 2. Toggle Command and Shortcut
 
 - You can toggle Contents in the sidebar via command `:ui/toggle-contents`
-- Default shortcut is `alt+shift+c`
+- Default shortcut is `alt+shift+c`; it works while editing a block as well as when not editing (global handler since `dbe1abb4cf`)
 - Plugin API command surface includes `logseq.ui/toggle-contents`
 
 ### 3. Regular Page Functionality
@@ -50,7 +50,7 @@ Despite its special status, the Contents page works like any other Logseq page:
 1. **Right Sidebar**: Click the "Contents" button in the right sidebar
 2. **Direct Navigation**: Search for "Contents" in the global search
 3. **Page Links**: Navigate to it like any other page using `[[Contents]]`
-4. **Shortcut**: Use `alt+shift+c` to toggle it in the right sidebar
+4. **Shortcut**: Use `alt+shift+c` to toggle it in the right sidebar (also while editing a block)
 
 ### Best Practices for Organization
 
@@ -86,7 +86,7 @@ Despite its special status, the Contents page works like any other Logseq page:
 #### 2. Use Page Links and References
 
 - **Page Links**: `[[Page Name]]` - Creates connections in your graph
-- **Block References**: `((block-uuid))` - Links to specific blocks
+- **Block References**: `[[<block-uuid>]]` - Links to specific blocks
 - **Block Embeds**: `{{embed [[Page Name]]}}` - Shows content inline
 
 #### 3. Add Contextual Information

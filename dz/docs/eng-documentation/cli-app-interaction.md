@@ -32,13 +32,15 @@ From [db_core.cljs](../../src/main/frontend/worker/db_core.cljs#L264-L267):
 (defn- enable-sqlite-wal-mode!
   [db]
   (.exec db "PRAGMA locking_mode=exclusive")
-  (.exec db "PRAGMA journal_mode=WAL"))
+  (.exec db "PRAGMA journal_mode=WAL")
+  (.exec db "PRAGMA synchronous=NORMAL"))
 ```
 
 The database uses:
 
 - **WAL mode** (Write-Ahead Logging): Allows concurrent readers but only one writer
 - **Exclusive locking**: The process that opens the database maintains exclusive locks
+- **synchronous=NORMAL** (since `fff75ea17d`): no per-commit fsync. A process crash is durable; a power loss or OS crash can lose commits since the last checkpoint. The graph database checkpoints 2 s after the last store (`wal-checkpoint-idle-ms`, `src/main/frontend/worker/db_core.cljs`); the source is now at `db_core.cljs:594-603`, not the line range cited above.
 
 ## Lock File Mechanism
 

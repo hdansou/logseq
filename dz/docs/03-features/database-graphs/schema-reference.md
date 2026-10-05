@@ -4,7 +4,7 @@
 
 **Complete enumeration of all built-in properties, classes, property types, and entity types**
 
-**Schema Version**: 65.33
+**Schema Version**: 65.34
 **Last Updated**: 2026-05-29
 **Source**: `deps/db/src/logseq/db/frontend/`
 

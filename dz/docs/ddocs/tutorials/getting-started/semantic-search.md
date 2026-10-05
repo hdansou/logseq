@@ -160,7 +160,7 @@ and no setting, restart, or reinstall of the Python environment will help. That 
 case on 2026-09-24 with Logseq DB 2.0.1 built 2026-09-21: the venv imported
 `sentence_transformers` fine, the setting was on, and every search had been silently
 keyword-only since the day the feature was enabled. You need a build that includes the
-`sidecar` folder (`resources/electron-builder.yml:52-53`).
+`sidecar` folder (`resources/electron-builder.yml:52-53`). Release builds after `6d5cbe1438` include `Contents/Resources/sidecar/embedding_server.py`, and the release workflow fails if it is missing; the 2.0.1 build observed here predates that fix. Whether your installed 2.0.2 build has the folder is unverified, so check for the file.
 
 **You changed your mind.**
 Turn the toggle off in Settings. The embedding service stops immediately. The index stays on disk; delete `~/logseq/graphs/<graph>/search/vector/` if you want the space back.

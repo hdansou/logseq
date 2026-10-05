@@ -54,7 +54,7 @@ Every method ends in `db-based-save-assets!` → `new-asset-block` ([`src/main/f
 2. **Checks.** A file with no extension is rejected ("File doesn't have a valid ext."). A file over 100 MiB shows "Asset size shouldn't be larger than 100M" ([`editor.cljs:1814-1822`](../../../../../src/main/frontend/handler/editor.cljs); [`handler/assets.cljs:14-17`](../../../../../src/main/frontend/handler/assets.cljs); [`en.edn:109`](../../../../../src/resources/dicts/en.edn)).
 3. **File.** The bytes are written to `assets/<uuid>.<ext>` ([`editor.cljs:1823-1826`](../../../../../src/main/frontend/handler/editor.cljs)).
 4. **Block.** A block is created with the tag `Asset`, a title and the properties below ([`editor.cljs:1827-1835`](../../../../../src/main/frontend/handler/editor.cljs)). The title is the file name without its extension. A pasted file named `image` (a typical screenshot) gets the current date and time as its title instead ([`editor.cljs:1798-1802`](../../../../../src/main/frontend/handler/editor.cljs)).
-5. **Placement.** The new block goes next to the block you are editing (replacing it if it is empty), otherwise at the end of today's journal ([`editor.cljs:1852-1897`](../../../../../src/main/frontend/handler/editor.cljs)).
+5. **Placement.** The new block goes next to the block you are editing (replacing it if it is empty), otherwise at the end of the built-in `Asset` page, the `#assets` tag page (before `e9fd02c8be` it was today's journal) ([`handler/editor/assets.cljs:105-132`](../../../../../src/main/frontend/handler/editor/assets.cljs)). The other pipeline line cites in this section predate that move to `assets.cljs` and are unchecked.
 
 > **Note:** The extension check throws inside the upload promise and is only logged to the console ([`editor.cljs:1916-1918`](../../../../../src/main/frontend/handler/editor.cljs)). If an extensionless file seems to do nothing, that is why. Rename it with an extension.
 
@@ -135,6 +135,8 @@ Asset blocks for images, audio and video show the media inside the block, togeth
   - **Copy image**. In the desktop app only `png jpg jpeg gif webp bmp svg ico` can be copied. Other types show "Copy image is not supported for {1} files" ([`block.cljs:276-289`](../../../../../src/main/frontend/components/block.cljs); [`en.edn:85`](../../../../../src/resources/dicts/en.edn)).
   - **Show file in folder** (a local asset) or **Open image in browser** (a remote one), desktop app only.
   - **Delete image** (see [Deleting Assets](#deleting-assets)). Not shown in published pages.
+
+  An inline image that has no asset block (for example `![](/path/to/img.png)` in a block) also gets the ⋮ button on the desktop app, since `8ffbb22093`, but its menu holds only **Copy image** and **Show file in folder**: Align and Delete need an asset block. Copy image reads a local file through the app and puts `image/png` on the clipboard. If the file is gone, both actions show "Can't find file {path}." The reveal item appears only for an http(s) source (labelled Open image in browser) or a filesystem path. **Verified live 2026-10-04** (nightly 20261001): menu items, Copy image clipboard type, and the missing-file toast for both actions. Not triggered: the actual Finder reveal, to avoid opening a window, and the menu on a real asset block, which this build did not change.
 
 ### Resizing images
 

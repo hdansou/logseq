@@ -275,7 +275,7 @@ relatedDocs:
 | ---------------------------------- | -------------- | -------------------------- |
 | `:shell/run`                       | `mod+shift+1`  | Run shell command (desktop) |
 | `:page/toggle-favorite`            | `mod+shift+f`  | Toggle favorite            |
-| `:editor/copy-page-url`           | ---            | Copy page URL (desktop)    |
+| `:editor/copy-page-url`           | ---            | Copy page URL (web URL for synced graphs, `logseq://` URL for local-only graphs; a warning when neither exists, `8d48704384`) |
 | `:editor/insert-youtube-timestamp` | `mod+shift+y`  | Insert YouTube timestamp   |
 | `:go/search-themes`               | Mac: `mod+shift+i` / Win: `alt+shift+i` | Search themes |
 | `:graph/add`                       | ---            | Add graph                  |

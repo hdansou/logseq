@@ -16,7 +16,7 @@
 
 **Key Discovery Highlights**:
 
-- **Schema Version**: Currently at 65.33 (major.minor versioning)
+- **Schema Version**: Currently at 65.34 (major.minor versioning)
 - **Dual Schema System**: Uses both DataScript schema (for database structure) and Malli schema (for validation)
 - **100+ Built-in Properties**: Comprehensive property system from basic metadata to advanced features
 - **18 Built-in Classes**: Root, Tag, Property, Page, Journal, Whiteboard, Task, Comments, Comment, Query, Card, Cards, Asset, Code-block, Quote-block, Math-block, Pdf-annotation, and Template
@@ -1562,11 +1562,11 @@ sequenceDiagram
 
 ---
 
-### 3. 🔍 **Schema Version 65.33**
+### 3. 🔍 **Schema Version 65.34**
 
 **Evidence**: `deps/db/src/logseq/db/frontend/schema.cljs`
 
-**Finding**: Current schema version is **65.33** (major.minor format).
+**Finding**: Current schema version is **65.34** (major.minor format).
 
 **Major version (65)**: Breaking changes requiring migration
 **Minor version (33)**: Non-breaking additions
@@ -1989,7 +1989,7 @@ Each closed value is **an entity** with:
 
 ```clojure
 db-schema/version
-;; => {:major 65 :minor 33}
+;; => {:major 65 :minor 34}
 ```
 
 ---
@@ -2248,12 +2248,12 @@ db-schema/version
 
 **Schema Version Format**: `{:major number :minor number}`
 
-**Current Version**: `{:major 65 :minor 33}` (as of this writing)
+**Current Version**: `{:major 65 :minor 34}` (as of this writing)
 
 **Location**: `deps/db/src/logseq/db/frontend/schema.cljs`
 
 ```clojure
-(def version (parse-schema-version "65.33"))
+(def version (parse-schema-version "65.34"))
 ```
 
 **Version Comparison**: `deps/db/src/logseq/db/frontend/schema.cljs:34-38`
@@ -2900,7 +2900,7 @@ src/main/frontend/db/
 **Generated with**: Claude Code 🤖
 **Investigation Date**: 2025-10-15
 **Last Validated**: 2026-05-29
-**Schema Version**: 65.33
+**Schema Version**: 65.34
 **Evidence Files**: 10+
 **Lines of Code Analyzed**: 3000+
 **Diagrams Created**: 8

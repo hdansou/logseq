@@ -1068,7 +1068,7 @@ This query is:
 
 **Causes**:
 
-1. **Sidebar**: Query runs in sidebar context, not main page
+1. **Sidebar**: A query on a page opened in the right sidebar uses that sidebar page, not the main-view page (since `7f4cb08738`). Verified live 2026-10-04 (nightly 20261001) for the DSL variable `<% current page %>`: with Beta Page in the main view and Alpha Page in the sidebar, the query on Alpha Page resolved to Alpha Page. The datalog `:current-page` input was verified live the same way (nightly 20261001): an advanced query `{:query [:find (pull ?b [*]) :in $ ?p :where [?b :block/refs ?r] [?r :block/name ?p]] :inputs [:current-page]}` on Alpha Page matched the same block as the literal input `"alpha page"` and none for `"beta page"`, and from a sidebar Alpha Page over a main-view Beta Page it still resolved to Alpha (`src/main/frontend/components/query/result.cljs:17-27`)
 2. **Editing**: If editing a block, might return block's page
 3. **Lowercase**: Always returns lowercase name
 

@@ -308,7 +308,7 @@ sequenceDiagram
 **Block References**:
 
 ```clojure
-;; ((block-uuid)) creates:
+;; [[<block-uuid>]] creates (`((uuid))` is plain text in DB graphs):
 {:block/refs [{:block/uuid #uuid "550e8400-e29b-41d4-a716-446655440000"}]}
 ```
 
@@ -430,7 +430,7 @@ sequenceDiagram
 
 ### Schema Evolution
 
-The current DB schema version is **65.33**. Migrations are data-driven, defined in `src/main/frontend/worker/db/migrate.cljs` as a vector of `[version migration-map]` tuples:
+The current DB schema version is **65.34**. Migrations are data-driven, defined in `src/main/frontend/worker/db/migrate.cljs` as a vector of `[version migration-map]` tuples:
 
 ```clojure
 ;; Actual migration framework: schema-version->updates
@@ -442,7 +442,8 @@ The current DB schema version is **65.33**. Migrations are data-driven, defined 
                           :logseq.property.view/gallery-display-properties
                           :logseq.property.view/gallery-card-size
                           :logseq.property.view/gallery-card-width
-                          :logseq.property.view/gallery-card-height]}]])
+                          :logseq.property.view/gallery-card-height]}]
+   ["65.34" {:fix db-order/missing-internal-page-parent-order-tx}]])
 ;; Each migration map supports keys: :properties, :classes, :fix, :delete-properties
 ```
 
@@ -498,7 +499,7 @@ The following capabilities exist in the codebase but were not mentioned in the o
 
 ### Schema Versioning
 
-DB graphs carry a structured schema version (currently **65.33**, as a `{:major 65 :minor 33}` map). The version is stored in the graph as `:logseq.kv/schema-version` and validated on open. See `deps/db/src/logseq/db/frontend/schema.cljs` and `src/main/frontend/worker/db/migrate.cljs`.
+DB graphs carry a structured schema version (currently **65.34**, as a `{:major 65 :minor 34}` map). The version is stored in the graph as `:logseq.kv/schema-version` and validated on open. See `deps/db/src/logseq/db/frontend/schema.cljs` and `src/main/frontend/worker/db/migrate.cljs`.
 
 ### Fractional-Index Block Ordering
 

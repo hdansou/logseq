@@ -252,11 +252,11 @@ const statusProp = await logseq.Editor.upsertProperty('status', {
   cardinality: 'one',
 })
 
-// Add allowed choices by entity ids (pages/blocks that represent choices)
-await logseq.Editor.addPropertyValueChoices(statusProp.id, [
-  todoChoiceId,
-  doingChoiceId,
-  doneChoiceId,
+// Add allowed choices by UUID (a UUID string or {uuid}); numeric entity ids throw
+await logseq.Editor.addPropertyValueChoices(statusProp.uuid, [
+  todoChoiceUuid,
+  doingChoiceUuid,
+  doneChoiceUuid,
 ])
 ```
 
@@ -1466,8 +1466,8 @@ Add closed-value choices for a property.
 
 **Parameters:**
 
-- `propertyId` (BlockIdentity) - Property UUID/entity id
-- `choices` (Array<BlockIdentity>) - Choice entity ids
+- `propertyId` (BlockIdentity) - Property UUID (string or `{uuid}`); numeric entity ids and non-property blocks throw (since `b64e4f0a3b`)
+- `choices` (Array<BlockIdentity>) - Choice block UUIDs (string or `{uuid}`)
 
 **Returns:** Promise<void>
 

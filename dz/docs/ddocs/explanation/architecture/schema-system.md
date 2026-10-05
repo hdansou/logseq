@@ -65,7 +65,7 @@ Logseq's **database schema** is a structured data model defining:
 - **Relationships**: Parent-child, references, tags
 - **Validation rules**: Type checking, cardinality, constraints
 
-**Current Version:** 65.33 (major.minor) — `(def version (parse-schema-version "65.33"))` at
+**Current Version:** 65.34 (major.minor) — `(def version (parse-schema-version "65.34"))` at
 `deps/db/src/logseq/db/frontend/schema.cljs:33`.
 
 > **Note:** every source citation on this page is pinned to `origin/master` at commit
@@ -586,7 +586,7 @@ The write is speculative (`d/with`) until validation passes, so an invalid trans
 
 ### Schema Version Management
 
-**Current Version:** 65.33 (`deps/db/src/logseq/db/frontend/schema.cljs:33`)
+**Current Version:** 65.34 (`deps/db/src/logseq/db/frontend/schema.cljs:33`)
 
 **Version Format:** `MAJOR.MINOR`, parsed into `{:major <num> :minor <num>}` by
 `parse-schema-version` (`schema.cljs:8-25`) and compared with `compare-schema-version`
@@ -649,7 +649,8 @@ strings. Verbatim tail:
                           :logseq.property.view/gallery-display-properties
                           :logseq.property.view/gallery-card-size
                           :logseq.property.view/gallery-card-width
-                          :logseq.property.view/gallery-card-height]}]])
+                          :logseq.property.view/gallery-card-height]}]
+   ["65.34" {:fix db-order/missing-internal-page-parent-order-tx}]])
 ```
 
 The migration map keys are `:properties`, `:classes`, `:fix` and — undocumented in the var's own

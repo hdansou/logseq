@@ -250,13 +250,15 @@ Built-in classes (all are tagged :logseq.class/Tag; source: class.cljs:16-100):
 | Reference Type  | Syntax                | Stored as                                  |
 | --------------- | --------------------- | ------------------------------------------ |
 | Page link       | `[[Page Name]]`       | `:block/refs` (cardinality-many ref)       |
-| Block reference | `((block-uuid))`      | `:block/refs`                              |
+| Block reference | `[[<block-uuid>]]`    | `:block/refs`                              |
 | Tag             | `#Tag` / `#[[Tag]]`   | `:block/tags` (and `:block/refs`)          |
 | Property value  | property of type `:node` / `:date` / `:asset` | a ref stored under the property's own `:db/ident` |
 
 All ref attributes are declared in `deps/db/src/logseq/db/frontend/schema.cljs:69-83`
 (`:block/refs`, `:block/tags`, `:block/link`, `:block/alias`).
 
+> **Corrected 2026-10-04:** the block-reference row used `((block-uuid))`. DB graphs reference blocks and pages alike with `[[<uuid>]]` (what Copy block ref produces); `((uuid))` is plain text, and title resolution, `get-matched-ids` and search handle `[[uuid]]` only (`22a29b30de`).
+>
 > **Removed:** the previous table listed `{{embed ((uuid))}}` and `property:: [[Page]]` as
 > reference *types*. `property:: value` is **file-graph markdown syntax**; DB graphs store property
 > values as datoms keyed by the property's `:db/ident`, and there is no `:block/properties` attribute

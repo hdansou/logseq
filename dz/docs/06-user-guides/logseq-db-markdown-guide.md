@@ -7,7 +7,7 @@ description: Create and edit Logseq DB (Database Mode) compatible content. Use w
 
 This guide explains how to work with Logseq Database Mode graphs. Unlike the older file-based mode ("Logseq OG"), database mode stores content in SQLite and uses **UI-driven interactions** rather than text-based syntax for many features.
 
-> **Last revised:** 2026-05-29
+> **Last revised:** 2026-05-29. **Partly audited 2026-10-04:** only block references, embeds and the slash-menu embed command were checked (source plus the 2026-10-01 nightly); the rest of this guide has not been re-verified.
 
 ## Overview
 
@@ -17,7 +17,7 @@ This guide explains how to work with Logseq Database Mode graphs. Unlike the old
 - **Properties**: Structured data stored in the database (not `key:: value` text syntax)
 - **Queries**: Created via `/Query` command; `{{query}}` remains available in compatibility paths
 - **Tasks**: UI-based status management (not legacy text markers)
-- **Block References**: Handled through UI or `((block-uuid))` syntax
+- **Block References**: Handled through the UI (Copy block ref) as `[[<block-uuid>]]`; `((block-uuid))` is plain text in DB graphs
 
 **What Works in DB Mode:**
 
@@ -32,8 +32,8 @@ This guide explains how to work with Logseq Database Mode graphs. Unlike the old
 
 - ❌ `property:: value` syntax (use UI instead)
   > **Removed:** `TODO/DOING/DONE`, `NOW/LATER/WAITING/CANCELLED`, and `[#A]/[#B]/[#C]` are file-mode text markers; DB mode uses the Status and Priority properties.
-  > **Removed:** DB mode does not use `[[UUID]]` for block references; block refs still use `((UUID))`.
-  > **Removed:** DB mode does not use `{{embed [[UUID]]}}` for block embeds; use `{{embed ((UUID))}}` or the UI.
+  > **Corrected 2026-10-04:** DB mode references blocks and pages with `[[<UUID>]]` (Copy block ref); `((UUID))` is plain text.
+  > **Corrected 2026-10-04:** `{{embed ...}}` is deprecated in DB mode in both the `((UUID))` and `[[UUID]]` forms and renders "{{embed}} is deprecated. Use '/Node embed' command instead." Use `/Node embed` (verified live, nightly 20261001).
   > **Removed:** `SCHEDULED: <date>` and `DEADLINE: <date>` org-mode text syntax; DB mode uses the Scheduled and Deadline properties.
 
 ## Findings: New Capabilities
@@ -62,7 +62,7 @@ Blocks are created by typing and pressing Enter:
 
 ### Page and Block References
 
-**Critical:** In DB mode, pages use `[[Page Name]]` links and blocks use `((UUID))` refs.
+**Critical:** In DB mode, pages use `[[Page Name]]` links and blocks use `[[<UUID>]]` refs.
 
 **Pages:**
 
@@ -77,7 +77,7 @@ Blocks are created by typing and pressing Enter:
 **Key Difference from File Mode:**
 
 - File mode: `((block-id))` for blocks, `[[Page]]` for pages
-- DB mode: `[[Page Name]]` for pages, `((UUID))` for blocks
+- DB mode: `[[Page Name]]` for pages, `[[<UUID>]]` for blocks
 
 ### Getting UUIDs
 
@@ -96,11 +96,11 @@ OR:
 
 1. Type `((`
 2. Search for block
-3. Select → Logseq inserts `((UUID))`
+3. Select → Logseq inserts `[[<UUID>]]` (`frontend.util.ref/->block-ref` is the page-ref form)
 
 ### Block References
 
-**In DB Mode:** Block references use `((UUID))` syntax.
+**In DB Mode:** Block references use `[[<UUID>]]` syntax; `((UUID))` is plain text.
 
 **How to create:**
 
@@ -118,7 +118,7 @@ OR:
 
 ### Block Embeds (UI-Based)
 
-**In DB Mode:** Block embeds are created through the UI and use `((UUID))` references.
+**In DB Mode:** Block embeds are created through the UI (`/Node embed`) and are `:block/link` blocks, not text.
 
 **How to embed:**
 
@@ -128,16 +128,12 @@ OR:
 
 OR:
 
-1. Type `/Embed block`
+1. Type `/Node embed`
 2. Search for the block to embed
 
-**Result:** Logseq may create an embed using the block's UUID:
+**Result:** Logseq inserts a block with an empty title whose `:block/link` points at the chosen block. There is no embed text in the block, and the target's content renders in its place (verified live 2026-10-04, nightly 20261001).
 
-```markdown
-{{embed ((65abc123-def4-5678-90ab-cdef12345678))}}
-```
-
-**Note:** While the embed uses macro-like syntax, the reference inside is `((UUID))`, not `[[UUID]]`.
+**Note:** The `{{embed ((UUID))}}` macro is deprecated in DB graphs and shows a deprecation message.
 
 ## Page Links
 
@@ -159,7 +155,7 @@ Text before [[Page Name]] and after
 
 Logseq displays the page title but stores the UUID reference.
 
-**Pages use `[[Page Name]]` links in DB mode. Blocks use `((UUID))` refs.**
+**Pages use `[[Page Name]]` links in DB mode. Blocks use `[[<UUID>]]` refs.**
 
 ### Namespaced Pages
 
@@ -227,7 +223,7 @@ Page properties appear at the top of a page:
 | URL       | `link:: https://example.com`  | External link          |
 | Checkbox  | `completed:: true`            | Boolean value          |
 | List      | `tags:: tag1, tag2, tag3`     | Comma-separated values |
-| Reference | `ref:: ((UUID))`              | Block reference        |
+| Reference | `ref:: [[<UUID>]]`            | Block reference        |
 
 ### Built-in Properties
 
@@ -424,9 +420,9 @@ Note: In Logseq, headings are still blocks in the outline structure.
 
 **How to embed pages:**
 
-1. Type `/Embed page`
-2. Search for and select the page
-3. Logseq inserts the embed as a UI element
+1. Type `/Node embed`
+2. Search for and select the node (this guide's earlier `/Embed page` is not a DB-graph command; only `/Node embed` is in the DB slash menu source)
+3. Logseq inserts a `:block/link` block that renders the target
 
 **Note:** The `{{embed [[Page Name]]}}` text syntax does NOT work in DB mode.
 
@@ -439,10 +435,10 @@ Note: In Logseq, headings are still blocks in the outline structure.
 
 OR:
 
-1. Type `/Embed block`
+1. Type `/Node embed`
 2. Search for the block
 
-**Note:** The `{{embed ((UUID))}}` text syntax is the DB block-embed form.
+**Note:** The embed is a block linked through `:block/link`; the `{{embed ((UUID))}}` text syntax is deprecated.
 
 ## Code Blocks
 
@@ -640,7 +636,7 @@ Some text-based macros still work:
 
 **These do NOT work in DB mode:**
 
-- ❌ `{{embed ((block-reference))}}`
+- ❌ `{{embed ((block-reference))}}` (deprecated; use `/Node embed`)
 - ❌ `{{embed [[Page Name]]}}`
 - ❌ `{{youtube URL}}`
 - ❌ `{{twitter URL}}`
@@ -746,8 +742,8 @@ These file-mode text syntaxes do NOT work in DB mode:
 
 - ❌ `property:: value` (use UI to add properties)
 - ❌ `{{query}}` macros (use `/Query` command)
-- ❌ `[[UUID]]` block references (use `((UUID))` instead)
-- ❌ `{{embed}}` without UUID (use `/Embed` command or `{{embed ((UUID))}}`)
+- ❌ `((UUID))` block references (plain text; use `[[<UUID>]]` via Copy block ref)
+- ❌ `{{embed}}` macros (deprecated; use the `/Node embed` command)
 - ❌ `TODO/DOING/DONE` markers (use `/` status commands)
 - ❌ `[#A]` priorities (use `/Priority` command)
 - ❌ `SCHEDULED: <date>` (use Cmd+P, S)
@@ -778,8 +774,7 @@ Linked references can be filtered through the UI, not via text syntax.
 Type `/` in a block to access:
 
 - `/Query` - Create a query (NOT `{{query}}`)
-- `/Embed page` - Embed a page
-- `/Embed block` - Embed a block
+- `/Node embed` - Embed a block or page as a linked block
 - `/Template` - Insert a template
 - `/Draw` - Create a drawing
 - `/Priority` - Set priority (Low/Medium/High/Urgent)
@@ -981,9 +976,9 @@ Create tags with properties for structured data:
 | **Storage**          | Markdown/Org files                  | SQLite database                                 |
 | **Structure**        | File-based                          | Database entities                               |
 | **Page links**       | `[[Page]]` or `[[Page#^block-id]]`  | `[[Page]]`                                      |
-| **Block references** | `((block-id))` text syntax          | `((UUID))` (UUID-backed)                        |
+| **Block references** | `((block-id))` text syntax          | `[[<UUID>]]` (UUID-backed)                       |
 | **Properties**       | `property:: value` text             | UI-based (stored in database)                   |
-| **Embeds**           | `![[Page]]` or `{{embed}}`          | `{{embed ((UUID))}}` or UI `/Embed`             |
+| **Embeds**           | `![[Page]]` or `{{embed}}`          | `/Node embed` (`:block/link` block)             |
 | **Highlight**        | `^^text^^`                          | `^^text^^` (same)                               |
 | **Tasks**            | `TODO/DOING/DONE` text markers      | UI-based status (Todo/Doing/Done)               |
 | **Priorities**       | `[#A]` `[#B]` `[#C]` text           | UI-based (Low/Medium/High/Urgent)               |
@@ -1010,8 +1005,8 @@ File Mode (Logseq OG) used text syntax for everything. DB Mode stores data in a 
 - Properties: Text syntax → UI-based
 - Queries: `{{query}}` → `/Query` command
 - Tasks: Text markers → UI status
-- Block references: legacy file-mode block IDs → UUID-backed `((UUID))` refs
-- Embeds: `{{embed}}` and page-style embed text → `{{embed ((UUID))}}` or UI commands
+- Block references: legacy file-mode block IDs → UUID-backed `[[<UUID>]]` refs
+- Embeds: `{{embed}}` and page-style embed text → `/Node embed` (a `:block/link` block)
 
 **What Stayed the Same:**
 
@@ -1021,7 +1016,7 @@ File Mode (Logseq OG) used text syntax for everything. DB Mode stores data in a 
 - Code blocks
 - Math and diagrams
 
-**Critical UUID Change:** In DB mode, pages stay as `[[Page Name]]` links and blocks use UUID-backed `((UUID))` refs. This differs from file mode where block refs used legacy block IDs and pages used `[[Page]]`.
+**Critical UUID Change:** In DB mode, pages stay as `[[Page Name]]` links and blocks use UUID-backed `[[<UUID>]]` refs. This differs from file mode where block refs used legacy block IDs and pages used `[[Page]]`.
 
 **Bottom Line:** If you're used to typing everything in file mode, DB mode requires adapting to UI-based workflows for properties, tasks, and queries.
 
