@@ -81,6 +81,8 @@ Only the types of the keys it lists are checked.
 
 ### Global config.edn (Desktop only)
 
+If the global `config.edn` or its directory is missing, Logseq creates both from the default template (`ensure-global-config-file!`, `src/main/frontend/handler/global_config.cljs:36-45`, `6009d9b522`), including before saving a shortcut change. Read from source; not run.
+
 On Desktop, **Settings > General > Custom global configuration > Edit global config.edn** opens a second
 `config.edn` in the app's config directory. The row appears only when `global-config-enabled?` is true, and
 that is `util/electron?` (`settings.cljs:209-215`, `:895`; `src/main/frontend/config.cljs:146`; path
@@ -251,7 +253,10 @@ goes only one level deep (`state.cljs:469-479`). Use `{:journals []}` to remove 
 The `:default-queries` entry above is the built-in *Doing* query (`state.cljs:438-449`), with a plain
 `:title` in place of its translated `:title-key`. Transforms receive plain pulled maps. Priority is a
 closed-value **ref** (`deps/db/src/logseq/db/frontend/property.cljs:323-329`), so
-`(get b :logseq.property/priority)` returns an entity map, not a sortable string. Sort on a scalar instead.
+`(get b :logseq.property/priority)` returns an entity map, not a sortable string. Pull the ident
+with `(pull ?b [* {:logseq.property/priority [:db/ident]}])` and rank it in the transform; see
+[Customize the Journal Queries](../../how-to/queries/customize-journal-queries.md), which also
+covers the built-in TODO and Scheduled and Deadline sections.
 
 ---
 

@@ -72,7 +72,7 @@ graph LR
         IN["inputs.cljs<br/>:default-queries input resolution"]
     end
     subgraph TIME["Time helpers"]
-        DT["date.cljs<br/>journal-title->int<br/>journal-day->utc-ms"]
+        DT["date.cljs<br/>journal-title->int<br/>journal-day-local-range-ms"]
     end
 
     P --> SD
@@ -161,40 +161,22 @@ flowchart TD
 
 ### The Witness File
 
-`src/main/frontend/db/async.cljs:230-259` — `<get-date-scheduled-or-deadlines`.
+`src/main/frontend/db/async.cljs:460-466` — `<get-date-scheduled-or-deadlines`.
 
 ### The Investigation
 
-**Location**: `src/main/frontend/db/async.cljs:230-259`
+**Location**: `src/main/frontend/db/async.cljs:460-466`
 ```clojure
 (defn <get-date-scheduled-or-deadlines
   [journal-title]
   (when-let [date (date/journal-title->int journal-title)]                  ; "Jun 2nd, 2026" → 20260602
-    (let [future-days (state/get-scheduled-future-days)                      ; default 7
-          current-day (tf/parse yyyyMMdd-formatter (str date))
-          future-date (t/plus current-day (t/days future-days))
-          start-time  (date/journal-day->utc-ms date)                       ; ← MILLISECONDS
-          future-time (tc/to-long future-date)]                             ; ← MILLISECONDS
-      (when-let [repo (and future-day (state/get-current-repo))]
-        (p/let [result (<q repo {}
-                           '[:find [(pull ?block ?block-attrs) ...]
-                             :in $ ?start-time ?end-time ?block-attrs
-                             :where
-                             (or [?block :logseq.property/scheduled ?n]      ; ← DB-graph property
-                                 [?block :logseq.property/deadline ?n])
-                             [(>= ?n ?start-time)]
-                             [(<= ?n ?end-time)]
-                             [?block :logseq.property/status ?status]
-                             [?status :db/ident ?status-ident]              ; ← status is a REF entity
-                             [(not= ?status-ident :logseq.property/status.done)]
-                             [(not= ?status-ident :logseq.property/status.canceled)]]
-                           start-time future-time '[*])]
-          (->> result
-               db-model/sort-by-order-recursive                            ; preserve outline order
-               db-utils/group-by-page))))))                                ; → {page → [blocks]}
+    (when-let [repo (state/get-current-repo)]
+      (when-let [[start-time future-time]                                    ; ← LOCAL-midnight MILLISECONDS
+                 (date/journal-day-local-range-ms date (state/get-scheduled-future-days))]
+        (<get-date-scheduled-or-deadlines-from-worker repo start-time future-time)))))
 ```
 
-🔍 **Critical detail — milliseconds, not journal-days.** `?n` (the `scheduled`/`deadline` value) is compared against `start-time`/`future-time`, which are **epoch milliseconds** (`journal-day->utc-ms`, `tc/to-long`). This is *unlike* the DOING/TODO default queries, which compare `:block/journal-day` against `yyyyMMdd` integers. Any custom port of this query **must** use millisecond inputs (see [Evidence #4](#evidence-4-the-time-window-inputs)).
+🔍 **Critical detail — milliseconds, not journal-days.** `?n` (the `scheduled`/`deadline` value) is compared against `start-time`/`future-time`, which are **epoch milliseconds** (local-midnight values from `journal-day-local-range-ms`, `deps/common/src/logseq/common/util/date_time.cljs:119-130`; UTC before `829fb85cca`). This is *unlike* the DOING/TODO default queries, which compare `:block/journal-day` against `yyyyMMdd` integers. Any custom port of this query **must** use millisecond inputs (see [Evidence #4](#evidence-4-the-time-window-inputs)).
 
 🔍 **Status is a ref, not a string.** Done/canceled filtering dereferences `:logseq.property/status` to a status entity and tests its `:db/ident`. You cannot write `[?b :logseq.property/status "Done"]`.
 
@@ -278,7 +260,7 @@ If you want an *expandable* agenda, you must rebuild it as your own custom query
   ...)
 ```
 
-So `[:start-of-today-ms :+7d-ms]` reproduces the built-in `[start-time, future-time]` window. The `7` must match your `:scheduled/future-days`.
+`[:start-of-today-ms :+7d-ms]` gives a close window, but **not the same one** *(corrected 2026-10-04)*. Both are **local** time, but `:+7d-ms` runs to 23:59:59.999 on day 7, while the built-in stops at 00:00 local on day 7 (`deps/common/src/logseq/common/util/date_time.cljs:119-130`). Use `:+6d-end` instead of `:+7d-ms` to stop at the end of day 6. Before `829fb85cca` the built-in bounds were UTC midnights. The local-midnight bounds were verified live 2026-10-04 (nightly 20261001, UTC−5). The `7` must match your `:scheduled/future-days`. See [Customize the Journal Queries](../../ddocs/how-to/queries/customize-journal-queries.md).
 
 ## Key Witnesses (Main Files)
 
@@ -287,12 +269,12 @@ So `[:start-of-today-ms :+7d-ms]` reproduces the built-in `[start-time, future-t
 | `src/main/frontend/components/page.cljs` | 530-531 | Mounts the built-in section (today only) |
 | `src/main/frontend/components/page.cljs` | 224-241 | `today-queries` — renders default journal queries, **forces collapse** |
 | `src/main/frontend/components/scheduled_deadlines.cljs` | 1-46 | The agenda component, hardcoded `:default-collapsed? true` |
-| `src/main/frontend/db/async.cljs` | 228-257 | `<get-date-scheduled-or-deadlines` — the Datascript query |
+| `src/main/frontend/db/async.cljs` | 460-466 | `<get-date-scheduled-or-deadlines` — the Datascript query |
 | `src/main/frontend/state.cljs` | 355-385 | DB-graph default config incl. DOING/TODO journal queries |
 | `src/main/frontend/state.cljs` | 505-508 | `get-scheduled-future-days` (default **7**) |
 | `src/main/frontend/state.cljs` | 605-607 | `scheduled-deadlines-disabled?` reads the flag |
 | `deps/db/src/logseq/db/frontend/inputs.cljs` | 113-133 | Resolves `-ms` / relative-date-time query inputs |
-| `src/main/frontend/date.cljs` | 95-99 | `journal-title->int`; `journal-day->utc-ms` alias |
+| `src/main/frontend/date.cljs` | 95-103 | `journal-title->int`; `journal-day->local-ms` and `journal-day-local-range-ms` aliases |
 | `src/main/frontend/schema/handler/common_config.cljc` | 14, 41-43 | Config schema for the flag & `:default-queries` |
 | `src/resources/dicts/en.edn` | 1110 | `:page/scheduled-and-deadline` → "Scheduled and Deadline" |
 
@@ -419,8 +401,8 @@ src/main/frontend/
 │   ├── page.cljs                     # mounts section (531); today-queries forces collapse (224-241)
 │   └── scheduled_deadlines.cljs      # the agenda component (hardcoded collapsed)
 ├── db/
-│   └── async.cljs                    # <get-date-scheduled-or-deadlines (228-257)
-├── date.cljs                         # journal-title->int, journal-day->utc-ms
+│   └── async.cljs                    # <get-date-scheduled-or-deadlines (460-466)
+├── date.cljs                         # journal-title->int, journal-day-local-range-ms
 ├── state.cljs                        # defaults, future-days (505-508), disabled? flag (605-607)
 └── schema/handler/
     └── common_config.cljc            # config schema: flag (14), :default-queries (41-43)

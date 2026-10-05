@@ -102,6 +102,7 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 #### [Queries](how-to/queries/)
 
 - [Advanced Queries](how-to/queries/advanced-queries.md)
+- [Customize the Journal Queries](how-to/queries/customize-journal-queries.md)
 - [Find Empty and Unused Nodes](how-to/queries/find-empty-and-unused-nodes.md)
 
 #### [Tasks](how-to/tasks/)
@@ -142,8 +143,8 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 
 #### [Configuration](reference/configuration/)
 
-- [config.edn Reference](reference/configuration/config-edn.md)
 - [Code Block Editor Options (:editor/extra-codemirror-options)](reference/configuration/codemirror-options.md)
+- [config.edn Reference](reference/configuration/config-edn.md)
 - [CSS Variables Reference](reference/configuration/css-variables.md)
 - [Keyboard Shortcuts Reference](reference/configuration/keyboard-shortcuts.md)
 
