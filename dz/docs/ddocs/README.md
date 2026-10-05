@@ -181,6 +181,10 @@ This documentation follows the [Diataxis Framework](https://diataxis.fr/), organ
 - 🟢 [Mobile Platform Differences](reference/platforms/mobile-differences.md)
 - [URI Schemes](reference/platforms/uri-schemes.md)
 
+#### [Plugin Apis](reference/plugin-apis/)
+
+- [logseq.Net: HTTP client for plugins](reference/plugin-apis/net-api.md)
+
 ##### [Plugin Apis / Pr 12395](reference/plugin-apis/pr-12395/)
 
 - [Postmate MessageChannel transport](reference/plugin-apis/pr-12395/01-postmate-message-channel.md)
